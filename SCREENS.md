@@ -98,10 +98,13 @@ Navigation pattern: **Bottom tab bar** (4 tabs) + stack navigators per tab + mod
 
 | # | Screen | Description |
 |---|---|---|
-| C-1 | **Category List** | Default + custom categories. Each row: icon, name, transaction count. |
-| C-2 | **Category Detail** | Transactions in this category. Option to edit name/icon or delete (reassign transactions). |
-| C-3 | **Add / Edit Category** (modal) | Name field + icon picker (emoji or preset icons). |
-| C-4 | **Category Rules** | List of saved merchant → category rules. Tap to edit or delete a rule. |
+| C-1 | **Category List** | Default + custom categories. Each row: icon, name, transaction count. Tap to expand sub-categories inline. |
+| C-2 | **Category Detail** | Transactions in this category. Sub-category breakdown (donut or bar). Option to edit name/icon or delete (reassign transactions). |
+| C-3 | **Sub-category Detail** | Transactions filtered to one sub-category. Spend total for period. |
+| C-4 | **Add / Edit Category** (modal) | Name field + icon picker (emoji or preset icons). |
+| C-5 | **Manage Sub-categories** | List of sub-categories for a category. Reorder, rename, add custom, delete (reassign transactions). |
+| C-6 | **Add / Edit Sub-category** (modal) | Name field + optional icon. Belongs to parent category. |
+| C-7 | **Category Rules** | List of saved merchant → category + sub-category rules. Tap to edit or delete a rule. |
 
 ---
 
@@ -167,9 +170,9 @@ Shown as a section in the More tab. Each item is a non-clickable card with a "Co
 | Accounts | 3 |
 | Budgets | 3 |
 | Subscriptions | 2 |
-| Categories | 4 |
+| Categories | 7 |
 | Reports | 2 |
 | Settings | 6 |
 | Coming Soon | 6 (UI shells only) |
 | Modals | 7 |
-| **Total** | **57** |
+| **Total** | **60** |

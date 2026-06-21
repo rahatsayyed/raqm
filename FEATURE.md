@@ -83,14 +83,31 @@ Android SMS received
 - **End-of-month summary** — monthly push notification showing this month vs last month spend
 - All summary notifications are opt-in and configurable in Settings
 
+#### Notification Replacement
+- When a bank SMS arrives, the app intercepts the raw SMS notification and replaces it with a styled app notification showing: merchant name, amount, category icon, and account
+- Raw SMS notification is cancelled; only the app notification is shown (no duplicate)
+- Requires **Notification Access** permission (`BIND_NOTIFICATION_LISTENER_SERVICE`) — user is prompted in onboarding with plain-language explanation; optional but strongly recommended
+- If permission not granted, app notification shows alongside the raw SMS notification
+
 ---
 
 ### 3. Categories
 
 - **Default categories** — Food & Dining, Transport, Shopping, Groceries, Utilities, Entertainment, Health, Education, Travel, EMI & Loans, Investments, Salary, Income, Transfer, Other
 - **Salary vs Income** — `Salary` and `Income` are distinct categories. Salary auto-detection: SMS contains "SAL" / "salary" keyword, OR same-source large credit recurring on a monthly pattern → categorized as Salary. All other incoming credits → Income. User can always reclassify manually.
+- **Sub-categories** — each category can have sub-categories for finer tracking. Default sub-categories shipped with the app:
+  - Food & Dining → Restaurants, Snacks, Beverages, Bakery, Street Food
+  - Shopping → Clothes & Fashion, Home & Kitchen, Electronics, Personal Care, Gifts
+  - Transport → Fuel, Cab & Auto, Public Transport, Parking, Vehicle Service
+  - Health → Pharmacy, Doctor, Lab Tests, Fitness, Insurance
+  - Entertainment → OTT & Streaming, Movies, Games, Events
+  - Travel → Flights, Hotels, Holidays
+  - Utilities → Mobile Recharge, Electricity, Internet, Gas, Water
+- Transactions can be assigned to a category + optional sub-category
+- Sub-categories are optional — category alone is always sufficient
+- **Custom sub-categories** — user can add sub-categories to any default or custom category
 - **Custom categories** — user can create category with custom name and icon (emoji or icon picker)
-- **Category rules** — user corrections saved as personal rules (merchant X → category Y), applied before global dictionary on next parse
+- **Category rules** — user corrections saved as personal rules (merchant X → category + sub-category), applied before global dictionary on next parse
 
 ---
 
@@ -187,6 +204,7 @@ These appear in V1 UI as non-clickable cards with a "Coming Soon" badge.
 | `READ_SMS` | Yes | Core SMS scanning |
 | `RECEIVE_SMS` | Yes | Background monitoring of new SMS |
 | `POST_NOTIFICATIONS` | Yes | Transaction notifications |
+| `BIND_NOTIFICATION_LISTENER_SERVICE` | Optional (recommended) | Replace raw bank SMS notifications with styled app notifications |
 | `ACCESS_FINE_LOCATION` | Optional | Location tagging on transactions |
 | Internet | Yes | Supabase sync, Claude Haiku categorization fallback |
 
