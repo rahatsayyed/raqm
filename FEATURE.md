@@ -53,9 +53,27 @@ Android SMS received
 - **Delete** — soft delete with undo
 
 #### Linking
-- **Self-transfer detection** — debit + credit within ±4 hours, same amount, different accounts → suggest linking, exclude from expense totals
-- **Refund linking** — credit that matches a prior debit (same amount, same merchant within 30 days) → suggest linking, net both to zero in reports
-- **Duplicate detection** — same amount + same sender + same timestamp within 60 seconds → auto-suppress duplicate, notify user
+
+**Auto-linking**
+- **Self-transfer detection** — debit + credit within ±24 hours, same amount, different accounts → suggest linking; both legs excluded from expense totals and shown as Transfer
+- **Refund detection** — credit that matches a prior debit (same amount, same or related merchant, within 30 days) → suggest linking; original expense stays in totals, refund amount is netted against it; net shown on transaction detail and category breakdown
+- **Duplicate detection** — same amount + same sender within 60 seconds → auto-suppress duplicate, notify user
+
+**Manual linking**
+- User can manually link any two transactions (e.g. gave ₹1,000 to a friend, got it back a week later)
+- Linked pair is shown as related in both transaction details with a "Linked with →" indicator
+- Linked transactions remain visible in expense totals by default
+- User can tap **Mark as Settled** on the linked pair → both legs excluded from expense totals (treated like a self-transfer)
+- Manual links can be unlinked at any time
+
+**Link visibility rules summary**
+
+| Link type | Shown in expense totals? |
+|---|---|
+| Self-transfer (auto) | No — excluded automatically |
+| Refund (auto or manual) | Original expense shown; refund nets against it |
+| Manual link (unsettled) | Both shown as normal expenses |
+| Manual link (settled) | Both excluded from totals |
 
 #### Notifications
 - Push notification on new transaction detected → tapping opens transaction detail

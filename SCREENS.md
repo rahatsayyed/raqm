@@ -36,7 +36,7 @@ Navigation pattern: **Bottom tab bar** (4 tabs) + stack navigators per tab + mod
 | T-3 | **Add Transaction** (modal) | Manual entry form: amount, type, merchant, category, date, account, notes, tags. |
 | T-4 | **Edit Transaction** (modal) | Same form as Add, pre-filled. |
 | T-5 | **Split Transaction** (modal) | Split amount across 2+ categories. Each row: category picker + amount. Must sum to original total. |
-| T-6 | **Link Transaction** (modal) | Show suggested linked transaction (self-transfer or refund). Confirm or dismiss. |
+| T-6 | **Link Transaction** (modal) | Two entry points: (1) Auto-suggestion — shown when self-transfer or refund detected, confirm or dismiss. (2) Manual — user picks any transaction to link to; set link type (Refund / Friend payback / Other). Settled toggle available on manual links. |
 | T-7 | **Group Transactions** (modal) | Select multiple transactions to group. Enter group label. |
 | T-8 | **Search & Filter** | Full-text search across merchant, notes, tags. Filters: date range, category, account, amount range, type. |
 
