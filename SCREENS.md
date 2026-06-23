@@ -105,6 +105,7 @@ Navigation pattern: **Bottom tab bar** (4 tabs) + stack navigators per tab + mod
 | C-5 | **Manage Sub-categories** | List of sub-categories for a category. Reorder, rename, add custom, delete (reassign transactions). |
 | C-6 | **Add / Edit Sub-category** (modal) | Name field + optional icon. Belongs to parent category. |
 | C-7 | **Category Rules** | List of saved merchant → category + sub-category rules. Tap to edit or delete a rule. |
+| C-8 | **Manage Merchants** | Full list of all merchants seen across transactions. Each row: merchant name, assigned category + sub-category, transaction count, total spend. Search + filter by category. Tap a merchant to reassign its category/sub-category — saves as a personal rule automatically. |
 
 ---
 
@@ -121,12 +122,13 @@ Navigation pattern: **Bottom tab bar** (4 tabs) + stack navigators per tab + mod
 
 | # | Screen | Description |
 |---|---|---|
-| SE-1 | **Settings Home** | Account, Sync, Notifications, Permissions, Privacy, About. |
+| SE-1 | **Settings Home** | Account, Appearance, Sync, Notifications, Permissions, Privacy, About. |
 | SE-2 | **Account** | Logged-in email, sign out, delete account. |
-| SE-3 | **Sync** | Last synced time, "Sync Now" button, auto-sync interval picker. |
-| SE-4 | **Notifications** | Toggle: new transaction alerts, budget alerts, end-of-day summary, end-of-week summary, end-of-month summary. |
-| SE-5 | **Permissions** | Current permission status. Deep link to Android settings to change. |
-| SE-6 | **About** | App version, open-source licences, GitHub link. |
+| SE-3 | **Appearance** | Light / Dark / System theme toggle. Color theme picker — horizontal scroll of preset swatches (Green, Blue, Purple, Amber, Rose, Monochrome). Live preview updates immediately on selection. |
+| SE-4 | **Sync** | Last synced time, "Sync Now" button, auto-sync interval picker. |
+| SE-5 | **Notifications** | Toggle: new transaction alerts, budget alerts, end-of-day summary, end-of-week summary, end-of-month summary. |
+| SE-6 | **Permissions** | Current permission status. Deep link to Android settings to change. |
+| SE-7 | **About** | App version, open-source licences, GitHub link. |
 
 ---
 
@@ -170,9 +172,9 @@ Shown as a section in the More tab. Each item is a non-clickable card with a "Co
 | Accounts | 3 |
 | Budgets | 3 |
 | Subscriptions | 2 |
-| Categories | 7 |
+| Categories | 8 |
 | Reports | 2 |
-| Settings | 6 |
+| Settings | 7 |
 | Coming Soon | 6 (UI shells only) |
 | Modals | 7 |
-| **Total** | **60** |
+| **Total** | **62** |

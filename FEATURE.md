@@ -210,6 +210,23 @@ These appear in V1 UI as non-clickable cards with a "Coming Soon" badge.
 
 ---
 
+### 11. Appearance
+
+- **Light / Dark theme** — system default or manual override in Settings
+- **Color theme** *(phase 2)* — user picks from a preset palette of accent colors; applies app-wide to buttons, icons, charts, hero gradient, and highlights
+- Default presets:
+  - 🟢 Green (default — `#52B788`)
+  - 🔵 Blue (`#3A86FF`)
+  - 🟣 Purple (`#7C6FCD`)
+  - 🟡 Amber (`#F7B731`)
+  - 🌸 Rose (`#F472B6`)
+  - ⚫ Monochrome (neutral grey)
+- Theme change applies instantly with no restart required
+- Hero section gradient uses two shades of the selected color
+- **App icon updates** *(Phase 2)* — launcher icon changes to match selected color theme
+
+---
+
 ## Out of Scope for V1
 
 - iOS SMS reading (blocked by OS — iOS users get PDF/Gmail in V2)
