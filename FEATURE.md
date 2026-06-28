@@ -28,9 +28,21 @@ Android SMS received
 
 - **Background monitoring** — catch new SMS even when app is closed (Android foreground service)
 - **Initial bulk scan** — on first launch, user picks a date range first (last 3 months / last 1 year / custom / all time), then scan runs; after scan completes, detected bank accounts are shown and user selects which ones to include
+- **Earliest SMS detection** — before showing the date range picker, app queries the oldest SMS from a known bank sender on the device; date options that exceed this are labelled with the actual earliest available date and the custom picker's minimum is capped to it
 - **Manual rescan** — pull-to-refresh or explicit button to re-run scan
 - **Known sender filtering** — only process SMS from recognised bank senders (`isKnownBankSender()`)
 - **SMS linked to transaction** — raw SMS body, UPI ref no, and location stored under "Other Info" on transaction detail
+
+#### Onboarding Permissions Flow
+Each permission is requested on its own dedicated screen with a plain-language explanation and illustration. Required permissions block progress; optional ones have a "Skip for now" option and can be re-prompted from Settings.
+
+| Permission | Required | Explanation shown to user |
+|---|---|---|
+| `READ_SMS` | Yes | "To find your bank transactions, we need to read your SMS" |
+| `RECEIVE_SMS` | Yes | "So we catch new transactions the moment they arrive" |
+| `POST_NOTIFICATIONS` | Yes | "To alert you when money moves and send spending summaries" |
+| `BIND_NOTIFICATION_LISTENER_SERVICE` | Optional | "We'll replace raw bank SMS alerts with a cleaner, richer notification" |
+| `ACCESS_FINE_LOCATION` | Optional | "To tag where each payment was made" |
 
 ---
 
@@ -77,7 +89,7 @@ Android SMS received
 
 #### Notifications
 - Push notification on new transaction detected → tapping opens transaction detail
-- From notification: update category, add tag, add note inline without opening full app
+- **Inline note from notification** — notification has a "Add Note" action button; tapping it expands an inline text input directly in the notification shade (using Android's `RemoteInput` API); user types and submits without the app ever opening; note is saved to the transaction immediately
 - **End-of-day summary** — daily push notification showing total spend for the day vs previous day; tapping opens a Today vs Yesterday comparison view
 - **End-of-week summary** — weekly push notification showing this week vs last week spend
 - **End-of-month summary** — monthly push notification showing this month vs last month spend

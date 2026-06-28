@@ -10,8 +10,12 @@ Navigation pattern: **Bottom tab bar** (4 tabs) + stack navigators per tab + mod
 | # | Screen | Description |
 |---|---|---|
 | O-1 | **Welcome** | App intro, value proposition, "Get Started" CTA |
-| O-2 | **Permissions** | Request `READ_SMS`, `RECEIVE_SMS`, `POST_NOTIFICATIONS` with plain-language explanations. Optional: `ACCESS_FINE_LOCATION` |
-| O-3 | **Initial Scan — Date Range** | Choose how far back to scan *before* scan starts: Last 3 months / Last 1 year / Custom date range / All time |
+| O-2a | **Permission — SMS Read** | Full screen: icon, plain-language explanation ("To find your bank transactions, we need to read your SMS"), grant button. Required — cannot proceed without it. |
+| O-2b | **Permission — SMS Receive** | Full screen: explains background monitoring ("So we catch new transactions the moment they arrive"). Required. |
+| O-2c | **Permission — Notifications** | Full screen: explains transaction + summary alerts. Required. |
+| O-2d | **Permission — Notification Access** | Full screen: explains SMS notification replacement ("We'll replace raw bank SMS alerts with a cleaner, richer notification"). Optional — "Skip for now" available. |
+| O-2e | **Permission — Location** | Full screen: explains location tagging on payments. Optional — "Skip for now" available. |
+| O-3 | **Initial Scan — Date Range** | Choose how far back to scan. App detects the earliest available SMS on device and disables / greys out any option that goes further back than that date (e.g. if earliest SMS is 8 months ago, "All time" and "Last 1 year" are shown but the actual range is capped and labelled "Earliest available: 14 Oct 2025"). Custom date picker also enforces this lower bound. |
 | O-4 | **Scanning Progress** | Progress bar while bulk SMS scan runs. Shows count of transactions found in real time. |
 | O-5 | **Account Selection** | After scan: list of all detected bank accounts (bank name + last4 + transaction count). User selects which accounts to include. At least one required. |
 | O-6 | **Scan Complete** | Summary — X transactions imported from Y selected accounts. "Go to Dashboard" CTA |
@@ -157,7 +161,7 @@ Shown as a section in the More tab. Each item is a non-clickable card with a "Co
 | MOD-4 | **Tag Input** | Transaction detail / Add transaction |
 | MOD-5 | **Linked Transaction Suggestion** | Auto-shown after self-transfer or refund detected |
 | MOD-6 | **Duplicate Alert** | Auto-shown when duplicate detected |
-| MOD-7 | **Notification Tray Action** | Tap on push notification — inline category/tag/note update |
+| MOD-7 | **Notification Tray — Add Note** | "Add Note" action button on transaction notification expands an inline `RemoteInput` text field in the notification shade. User types and submits without opening the app. Note saved instantly to the transaction. |
 
 ---
 
@@ -165,7 +169,7 @@ Shown as a section in the More tab. Each item is a non-clickable card with a "Co
 
 | Area | Screens |
 |---|---|
-| Onboarding | 7 |
+| Onboarding | 11 |
 | Dashboard | 1 |
 | Transactions | 8 |
 | Analytics | 8 |
@@ -177,4 +181,4 @@ Shown as a section in the More tab. Each item is a non-clickable card with a "Co
 | Settings | 7 |
 | Coming Soon | 6 (UI shells only) |
 | Modals | 7 |
-| **Total** | **62** |
+| **Total** | **66** |
