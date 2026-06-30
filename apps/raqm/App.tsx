@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { View } from 'react-native';
+import { useInAppUpdate } from './src/hooks/useInAppUpdate';
 import { useFonts } from 'expo-font';
 import { Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import { WorkSans_400Regular, WorkSans_500Medium, WorkSans_700Bold } from '@expo-google-fonts/work-sans';
@@ -22,6 +23,8 @@ export default function App() {
     DMMono_400Regular,
     DMMono_500Medium,
   });
+
+  useInAppUpdate();
 
   const onLayoutRootView = useCallback(async () => {
     if (fontsLoaded || fontError) {
