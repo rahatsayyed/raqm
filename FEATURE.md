@@ -186,7 +186,33 @@ Each permission is requested on its own dedicated screen with a plain-language e
 
 ---
 
-### 10. Reporting & Export
+### 10. Grocery List
+
+- **Multiple lists** — create named lists (Weekly Groceries, Party Supplies, Diwali Shopping, etc.)
+- **Default lists** — app ships with pre-built starter lists the user can use or customise:
+  - Weekly Essentials (Milk, Bread, Eggs, Butter, Vegetables)
+  - Monthly Staples (Rice, Dal, Oil, Sugar, Salt, Flour)
+  - Fruits & Vegetables
+  - Personal Care (Shampoo, Soap, Toothpaste)
+- **Items with estimated price** — each item has a name and optional estimated price
+- **Quick-add from list** — inline text input pinned at the bottom of the list detail; type item name and hit add without opening a modal; price can be set inline or edited after
+- **Ghost price from last list** — when adding an item previously used in any list, the last price the user typed for that item is shown as a ghost/muted placeholder in the price field; tap to accept or type to override; stored per item in local DB, no dependency on SMS
+- **Running total** — estimated cost updates live as items are added or checked off
+- **Check off while shopping** — tap to strike through items; checked items move to bottom
+- **Budget cap per list** — optional; shows warning if estimated total exceeds cap
+- **Post-purchase linking** — when a grocery/supermarket transaction is detected, app suggests linking it to the most recently active list; shows Planned vs Actual spend on the list
+- **Frequently bought suggestions** — items used in past lists surface as quick-add suggestions when creating a new list
+- **Share list** — export as plain text via system share sheet
+- **List history** — past completed lists with planned vs actual spend record
+- **Grocery analytics** — spending graphs within the grocery section:
+  - Monthly grocery spend trend (bar chart, last 6 months)
+  - Planned vs Actual comparison per list (bar chart)
+  - Top items by frequency across all lists
+  - Average monthly grocery spend
+
+---
+
+### 11. Reporting & Export
 
 - Monthly summary (total income, total expense, savings rate, top categories)
 - Export to CSV

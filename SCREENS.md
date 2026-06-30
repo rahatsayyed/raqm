@@ -65,7 +65,7 @@ Navigation pattern: **Bottom tab bar** (4 tabs) + stack navigators per tab + mod
 
 | # | Screen | Description |
 |---|---|---|
-| M-1 | **More Menu** | Entry point to: Accounts, Budgets, Subscriptions, Categories, Reports, Settings, Coming Soon section. |
+| M-1 | **More Menu** | Entry point to: Accounts, Budgets, Subscriptions, Grocery Lists, Categories, Reports, Settings, Coming Soon section. |
 
 ---
 
@@ -95,6 +95,19 @@ Navigation pattern: **Bottom tab bar** (4 tabs) + stack navigators per tab + mod
 |---|---|---|
 | S-1 | **Subscription List** | Auto-detected + manually marked subscriptions. Each card: merchant, amount, frequency, next expected date. Total monthly cost summary at top. |
 | S-2 | **Subscription Detail** | All past transactions for this subscription. Option to unmark as subscription. |
+
+---
+
+## Grocery Lists
+
+| # | Screen | Description |
+|---|---|---|
+| GL-1 | **Grocery Lists Home** | All lists: active, completed, archived. Each card shows list name, item count, estimated total, and linked transaction if any. FAB to create new list. Grocery analytics summary card at top (monthly spend trend sparkline, avg monthly spend). |
+| GL-2 | **List Detail** | Items with checkboxes. Estimated total + budget cap progress at top. Progress indicator (X of Y items checked). Inline quick-add input pinned at bottom — type item name, hit add; price editable inline. Checked items move to bottom with strikethrough. Actions: Share, Link transaction, Archive. |
+| GL-3 | **Add / Edit Item** (modal) | Full item edit: name field + estimated price field. Price field shows ghost placeholder from last used price for that item name — tap to accept or type to override. |
+| GL-4 | **Link Transaction** (modal) | Suggest matching grocery transaction(s) detected around the time the list was active. Shows Planned total vs transaction amount. Confirm to link. |
+| GL-5 | **Grocery Analytics** | Monthly grocery spend bar chart (last 6 months). Planned vs Actual comparison chart across recent lists. Top items by frequency. Average monthly spend stat. |
+| GL-6 | **List History** | All completed/archived lists. Each entry shows name, date, planned total, actual spend (if linked). Tap to view the completed list in read-only mode. |
 
 ---
 
@@ -181,4 +194,5 @@ Shown as a section in the More tab. Each item is a non-clickable card with a "Co
 | Settings | 7 |
 | Coming Soon | 6 (UI shells only) |
 | Modals | 7 |
-| **Total** | **66** |
+| Grocery Lists | 6 |
+| **Total** | **72** |
