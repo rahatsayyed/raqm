@@ -3,7 +3,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { OnboardingStackParamList } from './types';
 import { WelcomeScreen } from '../screens/onboarding/WelcomeScreen';
 import { PermissionSMSReadScreen } from '../screens/onboarding/PermissionSMSReadScreen';
-import { PermissionSMSReceiveScreen } from '../screens/onboarding/PermissionSMSReceiveScreen';
 import { PermissionNotificationsScreen } from '../screens/onboarding/PermissionNotificationsScreen';
 import { PermissionNotificationAccessScreen } from '../screens/onboarding/PermissionNotificationAccessScreen';
 import { PermissionLocationScreen } from '../screens/onboarding/PermissionLocationScreen';
@@ -22,7 +21,6 @@ export function OnboardingNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="PermissionSMSRead" component={PermissionSMSReadScreen} />
-      <Stack.Screen name="PermissionSMSReceive" component={PermissionSMSReceiveScreen} />
       <Stack.Screen name="PermissionNotifications" component={PermissionNotificationsScreen} />
       <Stack.Screen name="PermissionNotificationAccess" component={PermissionNotificationAccessScreen} />
       <Stack.Screen name="PermissionLocation" component={PermissionLocationScreen} />
