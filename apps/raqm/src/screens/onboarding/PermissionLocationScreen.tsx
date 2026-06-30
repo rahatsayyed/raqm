@@ -1,8 +1,19 @@
 import React from 'react';
+import { PermissionsAndroid } from 'react-native';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { PermissionScreen } from './PermissionScreen';
 
 export function PermissionLocationScreen({ navigation }: OnboardingScreenProps<'PermissionLocation'>) {
+  const handleCTA = async () => {
+    await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION, {
+      title: 'Location Permission',
+      message: 'Raqm uses your location to tag where each payment was made.',
+      buttonPositive: 'Allow',
+      buttonNegative: 'Deny',
+    });
+    navigation.navigate('DateRange');
+  };
+
   return (
     <PermissionScreen
       iconEmoji="📍"
@@ -14,7 +25,7 @@ export function PermissionLocationScreen({ navigation }: OnboardingScreenProps<'
         { icon: '🔒', title: 'Stored Locally', subtitle: 'GPS coordinates never leave your device.' },
       ]}
       ctaLabel="Enable Location"
-      onCTA={() => navigation.navigate('DateRange')}
+      onCTA={handleCTA}
       skipLabel="Skip for now"
       onSkip={() => navigation.navigate('DateRange')}
     />
