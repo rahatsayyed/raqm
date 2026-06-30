@@ -4,5 +4,16 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "scripts": {
+    "raqm": "npm run raqm:start",
+    "raqm:start": "npm run start --workspace=apps/raqm",
+    "raqm:android": "npm run android --workspace=apps/raqm",
+    "raqm:ios": "npm run ios --workspace=apps/raqm",
+    "raqm:web": "npm run web --workspace=apps/raqm",
+    "web": "npm run web:start",
+    "web:start": "npm run start --workspace=apps/web",
+    "web:build": "npm run build --workspace=apps/web",
+    "web:dev": "npm run dev --workspace=apps/web"
+  }
 }
