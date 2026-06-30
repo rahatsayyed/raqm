@@ -36,7 +36,7 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
             autoCapitalize="words"
             autoCorrect={false}
             returnKeyType="done"
-            onSubmitEditing={() => isValid && navigation.navigate('OTPVerification', { email: '' })}
+            onSubmitEditing={() => isValid && navigation.popToTop()}
           />
           <View style={[styles.underline, name.length > 0 && styles.underlineActive]} />
         </View>
@@ -44,7 +44,7 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
         <View style={styles.footer}>
           <PrimaryButton
             label={isValid ? `Continue as ${firstName}` : 'Continue'}
-            onPress={() => navigation.navigate('OTPVerification', { email: '' })}
+            onPress={() => navigation.popToTop()}
             disabled={!isValid}
           />
         </View>
