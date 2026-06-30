@@ -1,5 +1,5 @@
 {
-  "name": "@lifeos/bank-sms-parser",
+  "name": "@rahatsayyed/bank-sms-parser",
   "version": "1.0.0",
   "description": "TypeScript SMS parser for 120+ Indian and international banks. Extracts amount, type, merchant, and balance from bank SMS messages.",
   "main": "dist/index.js",
