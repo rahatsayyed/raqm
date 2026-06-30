@@ -10,33 +10,31 @@ import ReAnimated, {
   withDelay,
   Easing as REasing,
 } from 'react-native-reanimated';
+import { BankParserFactory } from '@rahatsayyed/bank-sms-parser';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { SmsReader } from '../../native/SmsReader';
+import { useOnboardingStore, dateRangeToTimestamps } from '../../store/onboardingStore';
 
 const RADIUS = 90;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-const TARGET_COUNT = 128;
-const DURATION = 5000;
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'ScanningProgress'>) {
-  const [count, setCount] = useState(0);
+  const { dateRange, setTransactions } = useOnboardingStore();
+  const [smsCount, setSmsCount] = useState(0);
+  const [txCount, setTxCount] = useState(0);
+  const [status, setStatus] = useState('Reading messages…');
   const progress = useRef(new Animated.Value(0)).current;
 
-  // pulse-ring: scale 0.95↔1.05, opacity 0.8↔0.4, 3s infinite with 0.5s delay
+  // pulse rings
   const pulseScale = useSharedValue(0.95);
   const pulseOpacity = useSharedValue(0.8);
   useEffect(() => {
     const cfg = { duration: 1500, easing: REasing.bezier(0.4, 0, 0.6, 1) };
-    pulseScale.value = withDelay(
-      500,
-      withRepeat(withSequence(withTiming(1.05, cfg), withTiming(0.95, cfg)), -1),
-    );
-    pulseOpacity.value = withDelay(
-      500,
-      withRepeat(withSequence(withTiming(0.4, cfg), withTiming(0.8, cfg)), -1),
-    );
+    pulseScale.value = withDelay(500, withRepeat(withSequence(withTiming(1.05, cfg), withTiming(0.95, cfg)), -1));
+    pulseOpacity.value = withDelay(500, withRepeat(withSequence(withTiming(0.4, cfg), withTiming(0.8, cfg)), -1));
   }, []);
   const pulseOuterStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulseScale.value }],
@@ -47,32 +45,50 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
     opacity: pulseOpacity.value * 0.1,
   }));
 
-  useEffect(() => {
-    Animated.timing(progress, {
-      toValue: 1,
-      duration: DURATION,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start(({ finished }) => {
-      if (finished) {
-        setTimeout(() => navigation.navigate('AccountSelection'), 800);
-      }
-    });
-
-    let current = 0;
-    const interval = setInterval(() => {
-      current = Math.min(current + Math.floor(Math.random() * 4) + 1, TARGET_COUNT);
-      setCount(current);
-      if (current >= TARGET_COUNT) clearInterval(interval);
-    }, DURATION / TARGET_COUNT);
-
-    return () => clearInterval(interval);
-  }, []);
-
   const strokeDashoffset = progress.interpolate({
     inputRange: [0, 1],
     outputRange: [CIRCUMFERENCE, 0],
   });
+
+  useEffect(() => {
+    const run = async () => {
+      try {
+        const { from, to } = dateRangeToTimestamps(dateRange);
+        setStatus('Reading messages…');
+
+        const messages = await SmsReader.readInbox(from, to);
+        setSmsCount(messages.length);
+        setStatus(`Analyzing ${messages.length} messages…`);
+
+        // animate progress ring over the parse duration
+        Animated.timing(progress, {
+          toValue: 1,
+          duration: Math.max(2000, messages.length * 10),
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }).start();
+
+        const parsed = [];
+        for (const msg of messages) {
+          const tx = BankParserFactory.parse(msg.body, msg.sender, msg.timestamp);
+          if (tx) {
+            parsed.push(tx);
+            setTxCount(parsed.length);
+          }
+        }
+
+        setTransactions(parsed);
+        setStatus(`Found ${parsed.length} transactions`);
+
+        setTimeout(() => navigation.navigate('AccountSelection'), 1200);
+      } catch (e) {
+        setStatus('Could not read SMS. Check permissions.');
+        setTimeout(() => navigation.navigate('AccountSelection'), 2000);
+      }
+    };
+
+    run();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -101,7 +117,7 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
           />
         </Svg>
         <View style={styles.centerContent}>
-          <Text style={styles.countText}>{count}</Text>
+          <Text style={styles.countText}>{txCount}</Text>
           <Text style={styles.countLabel}>Transactions found</Text>
         </View>
       </View>
@@ -109,11 +125,13 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
       <View style={styles.statusArea}>
         <View style={styles.statusPill}>
           <Text style={styles.statusIcon}>⟳</Text>
-          <Text style={styles.statusText}>Scanning Messages</Text>
+          <Text style={styles.statusText}>{status}</Text>
         </View>
         <Text style={styles.statusHeadline}>Analyzing your messages for bank alerts</Text>
         <Text style={styles.statusSubtitle}>
-          Securely identifying and categorizing financial notifications to build your spend dashboard.
+          {smsCount > 0
+            ? `Scanned ${smsCount} messages — extracting transactions.`
+            : 'Securely identifying and categorizing financial notifications.'}
         </Text>
       </View>
 

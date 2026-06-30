@@ -1,8 +1,16 @@
 import React from 'react';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { PermissionScreen } from './PermissionScreen';
+import { SmsReader } from '../../native/SmsReader';
 
 export function PermissionNotificationAccessScreen({ navigation }: OnboardingScreenProps<'PermissionNotificationAccess'>) {
+  const handleCTA = () => {
+    // Notification listener access is not a runtime permission —
+    // it requires the user to enable it manually in system settings.
+    SmsReader.openNotificationListenerSettings();
+    navigation.navigate('PermissionLocation');
+  };
+
   return (
     <PermissionScreen
       iconEmoji="✨"
@@ -14,7 +22,7 @@ export function PermissionNotificationAccessScreen({ navigation }: OnboardingScr
         { icon: '🚫', title: 'No SMS Clutter', subtitle: 'Raw bank SMS replaced with a clean alert.' },
       ]}
       ctaLabel="Enable Notification Access"
-      onCTA={() => navigation.navigate('PermissionLocation')}
+      onCTA={handleCTA}
       skipLabel="Skip for now"
       onSkip={() => navigation.navigate('PermissionLocation')}
     />
