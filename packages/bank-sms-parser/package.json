@@ -1,0 +1,47 @@
+{
+  "name": "@lifeos/bank-sms-parser",
+  "version": "1.0.0",
+  "description": "TypeScript SMS parser for 120+ Indian and international banks. Extracts amount, type, merchant, and balance from bank SMS messages.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "keywords": [
+    "india",
+    "sms",
+    "bank",
+    "parser",
+    "transaction",
+    "upi",
+    "fintech",
+    "react-native",
+    "hdfc",
+    "icici",
+    "sbi",
+    "axis"
+  ],
+  "license": "AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rahatsayyed/BankSMSParser.git"
+  },
+  "homepage": "https://github.com/rahatsayyed/BankSMSParser#readme",
+  "bugs": {
+    "url": "https://github.com/rahatsayyed/BankSMSParser/issues"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.0.0",
+    "@types/node": "^20.19.43",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.9.3"
+  }
+}
