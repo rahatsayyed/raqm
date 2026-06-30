@@ -6,6 +6,7 @@
     "packages/*"
   ],
   "scripts": {
+    "install:apps": "for dir in apps/*/; do npm install --prefix \"$dir\"; done",
     "raqm": "npm run raqm:start",
     "raqm:start": "npm run start --workspace=apps/raqm",
     "raqm:android": "npm run android --workspace=apps/raqm",

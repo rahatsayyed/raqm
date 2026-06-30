@@ -1,20 +1,75 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withDelay,
+  Easing,
+} from 'react-native-reanimated';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 
 const { width } = Dimensions.get('window');
 
-export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+function useRevealUp(delayMs: number) {
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(20);
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
-    ]).start();
+    const cfg = { duration: 800, easing: Easing.out(Easing.cubic) };
+    opacity.value = withDelay(delayMs, withTiming(1, cfg));
+    translateY.value = withDelay(delayMs, withTiming(0, cfg));
   }, []);
+
+  return useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
+}
+
+export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) {
+  // float on logo card — 4s ease-in-out infinite, -10px
+  const floatY = useSharedValue(0);
+  useEffect(() => {
+    floatY.value = withRepeat(
+      withTiming(-10, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+  }, []);
+  const floatStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: floatY.value }],
+  }));
+
+  // badge float with slight offset to feel independent
+  const badgeFloatY = useSharedValue(0);
+  useEffect(() => {
+    badgeFloatY.value = withDelay(
+      600,
+      withRepeat(
+        withTiming(-8, { duration: 2400, easing: Easing.inOut(Easing.sin) }),
+        -1,
+        true,
+      ),
+    );
+  }, []);
+  const badgeFloatStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: badgeFloatY.value }],
+  }));
+
+  // staggered revealUp: headline, subtitle, cta, trust
+  const s0 = useRevealUp(100);
+  const s1 = useRevealUp(200);
+  const s2 = useRevealUp(300);
+  const s3 = useRevealUp(400);
+
+  // button press scale
+  const btnScale = useSharedValue(1);
+  const btnStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: btnScale.value }],
+  }));
 
   return (
     <View style={styles.container}>
@@ -24,38 +79,48 @@ export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) 
       <View style={styles.illustrationArea}>
         <View style={styles.outerRing} />
         <View style={styles.innerRing} />
-        <View style={styles.logoCard}>
+        <Animated.View style={[styles.logoCard, floatStyle]}>
           <Text style={styles.logoText}>رقم</Text>
-        </View>
-        <View style={[styles.floatingBadge, styles.badgeLeft]}>
+        </Animated.View>
+        <Animated.View style={[styles.floatingBadge, styles.badgeLeft, badgeFloatStyle]}>
           <Text style={styles.badgeIcon}>💬</Text>
-        </View>
-        <View style={[styles.floatingBadge, styles.badgeRight]}>
+        </Animated.View>
+        <Animated.View style={[styles.floatingBadge, styles.badgeRight, floatStyle]}>
           <Text style={styles.badgeIcon}>📊</Text>
-        </View>
+        </Animated.View>
         <View style={[styles.floatingBadge, styles.badgeTopRight, styles.badgeSmall]}>
           <Text style={styles.badgeIconSm}>👛</Text>
         </View>
       </View>
 
-      <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-        <Text style={styles.headline}>
+      <View style={styles.content}>
+        <Animated.Text style={[styles.headline, s0]}>
           Your finances,{'\n'}
           <Text style={styles.headlineAccent}>decoded</Text> from your SMS.
-        </Text>
-        <Text style={styles.subtitle}>
-          Automatically transform your transaction notifications into a beautifully organized spending dashboard. No bank logins, no manual entry.
-        </Text>
+        </Animated.Text>
+        <Animated.Text style={[styles.subtitle, s1]}>
+          Automatically transform your transaction notifications into a beautifully organized
+          spending dashboard. No bank logins, no manual entry.
+        </Animated.Text>
 
-        <TouchableOpacity
-          style={styles.ctaButton}
-          activeOpacity={0.85}
-          onPress={() => navigation.navigate('PermissionSMSRead')}
-        >
-          <Text style={styles.ctaLabel}>Get Started →</Text>
-        </TouchableOpacity>
+        <Animated.View style={[{ width: '100%', alignItems: 'center' }, s2]}>
+          <Animated.View style={btnStyle}>
+            <Pressable
+              style={styles.ctaButton}
+              onPressIn={() => {
+                btnScale.value = withTiming(0.95, { duration: 100 });
+              }}
+              onPressOut={() => {
+                btnScale.value = withTiming(1, { duration: 150 });
+              }}
+              onPress={() => navigation.navigate('PermissionSMSRead')}
+            >
+              <Text style={styles.ctaLabel}>Get Started →</Text>
+            </Pressable>
+          </Animated.View>
+        </Animated.View>
 
-        <View style={styles.trustRow}>
+        <Animated.View style={[styles.trustRow, s3]}>
           <View style={styles.trustItem}>
             <Text style={styles.trustIcon}>🔒</Text>
             <Text style={styles.trustText}>PRIVACY FIRST</Text>
@@ -64,8 +129,8 @@ export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) 
             <Text style={styles.trustIcon}>⚡</Text>
             <Text style={styles.trustText}>INSTANT SETUP</Text>
           </View>
-        </View>
-      </Animated.View>
+        </Animated.View>
+      </View>
 
       <View style={styles.bottomOverlay} />
     </View>
@@ -79,81 +144,42 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   orbTopRight: {
-    position: 'absolute',
-    top: -80,
-    right: -80,
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: Colors.primary,
-    opacity: 0.08,
+    position: 'absolute', top: -80, right: -80,
+    width: 320, height: 320, borderRadius: 160,
+    backgroundColor: Colors.primary, opacity: 0.08,
   },
   orbBottomLeft: {
-    position: 'absolute',
-    bottom: -80,
-    left: -80,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: Colors.primaryFixed,
-    opacity: 0.15,
+    position: 'absolute', bottom: -80, left: -80,
+    width: 280, height: 280, borderRadius: 140,
+    backgroundColor: Colors.primaryFixed, opacity: 0.15,
   },
   illustrationArea: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 60,
+    flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60,
   },
   outerRing: {
-    position: 'absolute',
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    opacity: 0.15,
+    position: 'absolute', width: 260, height: 260, borderRadius: 130,
+    borderWidth: 1, borderColor: Colors.primary, opacity: 0.15,
   },
   innerRing: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    opacity: 0.12,
+    position: 'absolute', width: 200, height: 200, borderRadius: 100,
+    borderWidth: 1, borderColor: Colors.primary, opacity: 0.12,
   },
   logoCard: {
-    width: 112,
-    height: 112,
-    borderRadius: 32,
+    width: 112, height: 112, borderRadius: 32,
     backgroundColor: Colors.surfaceContainerLowest,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(0,108,72,0.05)',
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15, shadowRadius: 24, elevation: 12,
+    borderWidth: 1, borderColor: 'rgba(0,108,72,0.05)',
   },
-  logoText: {
-    fontSize: 40,
-    fontFamily: 'Manrope_700Bold',
-    color: Colors.primary,
-  },
+  logoText: { fontSize: 40, fontFamily: 'Manrope_700Bold', color: Colors.primary },
   floatingBadge: {
     position: 'absolute',
     backgroundColor: 'rgba(255,255,255,0.85)',
-    borderRadius: Radius.lg,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: Radius.lg, padding: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1, shadowRadius: 12, elevation: 6,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
   },
   badgeLeft: { left: width * 0.08, top: '30%' },
   badgeRight: { right: width * 0.08, bottom: '25%' },
@@ -182,7 +208,7 @@ const styles = StyleSheet.create({
     maxWidth: 300,
   },
   ctaButton: {
-    width: '100%',
+    width: width - Spacing.containerMargin * 2,
     maxWidth: 360,
     height: 64,
     backgroundColor: Colors.primaryContainer,
@@ -191,9 +217,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOpacity: 0.3, shadowRadius: 20, elevation: 10,
     marginBottom: Spacing.xl,
   },
   ctaLabel: {
@@ -201,25 +225,14 @@ const styles = StyleSheet.create({
     color: Colors.onPrimaryContainer,
     fontSize: 18,
   },
-  trustRow: {
-    flexDirection: 'row',
-    gap: Spacing.xl,
-    opacity: 0.6,
-  },
+  trustRow: { flexDirection: 'row', gap: Spacing.xl, opacity: 0.6 },
   trustItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   trustIcon: { fontSize: 12 },
   trustText: {
-    ...Typography.labelSm,
-    color: Colors.onSurfaceVariant,
-    fontSize: 10,
+    ...Typography.labelSm, color: Colors.onSurfaceVariant, fontSize: 10,
   },
   bottomOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 80,
-    opacity: 0.04,
-    backgroundColor: Colors.primary,
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    height: 80, opacity: 0.04, backgroundColor: Colors.primary,
   },
 });
