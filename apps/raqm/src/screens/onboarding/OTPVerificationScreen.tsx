@@ -68,10 +68,10 @@ export function OTPVerificationScreen({ navigation, route }: OnboardingScreenPro
         <View style={styles.footer}>
           <PrimaryButton
             label="Verify"
-            onPress={() => {}}
+            onPress={() => navigation.navigate('NameEntry')}
             disabled={!isComplete}
           />
-          <TouchableOpacity style={styles.resendBtn}>
+          <TouchableOpacity style={styles.resendBtn} onPress={() => setOtp(Array(OTP_LENGTH).fill(''))}>
             <Text style={styles.resendText}>
               Didn't receive it? <Text style={styles.resendLink}>Resend code</Text>
             </Text>

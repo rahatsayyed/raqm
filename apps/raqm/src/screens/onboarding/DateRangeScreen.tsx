@@ -12,8 +12,6 @@ const RANGES: { id: Range; label: string; subtitle: string; icon: string; recomm
   { id: '3months', label: 'Last 3 months', subtitle: 'Recommended for speed', icon: '⚡', recommended: true },
 ];
 
-const EARLIEST_SMS = 'Oct 14, 2025';
-
 export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange'>) {
   const { dateRange, setDateRange } = useOnboardingStore();
   const [selected, setSelected] = useState<Range>(dateRange);
@@ -62,12 +60,7 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
           })}
         </View>
 
-        <View style={styles.infoCard}>
-          <Text style={styles.infoIcon}>ℹ️</Text>
-          <Text style={styles.infoText}>
-            Earliest available SMS: <Text style={styles.infoAccent}>{EARLIEST_SMS}</Text>
-          </Text>
-        </View>
+
       </ScrollView>
 
       <View style={styles.footer}>
@@ -124,15 +117,6 @@ const styles = StyleSheet.create({
   },
   radioOuterSelected: { borderColor: Colors.primary },
   radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.primary },
-  infoCard: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    backgroundColor: Colors.surfaceVariant,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-    borderRadius: Radius.xl, padding: Spacing.md, marginBottom: Spacing.xl,
-  },
-  infoIcon: { fontSize: 16 },
-  infoText: { ...Typography.bodySm, color: Colors.onSurfaceVariant, flex: 1 },
-  infoAccent: { color: Colors.primary, fontFamily: 'WorkSans_500Medium' },
   footer: {
     paddingHorizontal: Spacing.containerMargin,
     paddingBottom: 32, paddingTop: Spacing.md, gap: Spacing.sm,
