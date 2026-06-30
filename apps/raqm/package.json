@@ -28,7 +28,8 @@
     "@expo-google-fonts/manrope": "^0.2.3",
     "@expo-google-fonts/work-sans": "^0.2.3",
     "@expo-google-fonts/dm-mono": "^0.2.3",
-    "@rahatsayyed/bank-sms-parser": "*"
+    "@rahatsayyed/bank-sms-parser": "*",
+    "react-native-in-app-updates": "^1.4.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
