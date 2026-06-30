@@ -1,19 +1,36 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { useOnboardingStore } from '../../store/onboardingStore';
 
-type Account = { id: string; bank: string; last4: string; type: string; icon: string; txCount: number };
-
-const DETECTED_ACCOUNTS: Account[] = [
-  { id: '1', bank: 'HDFC Bank', last4: '4821', type: 'Savings Account', icon: '🏦', txCount: 54 },
-  { id: '2', bank: 'ICICI Bank', last4: '9034', type: 'Credit Card', icon: '💳', txCount: 43 },
-  { id: '3', bank: 'Axis Bank', last4: '1276', type: 'Savings Account', icon: '🏦', txCount: 31 },
-];
+type Account = { id: string; bank: string; last4: string | null; type: string; icon: string; txCount: number };
 
 export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'AccountSelection'>) {
-  const [selected, setSelected] = useState<Set<string>>(new Set(DETECTED_ACCOUNTS.map(a => a.id)));
+  const { transactions } = useOnboardingStore();
+
+  const accounts = useMemo<Account[]>(() => {
+    const map = new Map<string, Account>();
+    for (const tx of transactions) {
+      const key = `${tx.bankName}|${tx.accountLast4 ?? 'unknown'}`;
+      if (map.has(key)) {
+        map.get(key)!.txCount += 1;
+      } else {
+        map.set(key, {
+          id: key,
+          bank: tx.bankName,
+          last4: tx.accountLast4,
+          type: tx.isFromCard ? 'Credit Card' : 'Bank Account',
+          icon: tx.isFromCard ? '💳' : '🏦',
+          txCount: 1,
+        });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => b.txCount - a.txCount);
+  }, [transactions]);
+
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(accounts.map(a => a.id)));
 
   const toggle = (id: string) => {
     setSelected(prev => {
@@ -23,7 +40,24 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
     });
   };
 
-  const total = DETECTED_ACCOUNTS.filter(a => selected.has(a.id)).reduce((s, a) => s + a.txCount, 0);
+  const totalTx = accounts.filter(a => selected.has(a.id)).reduce((s, a) => s + a.txCount, 0);
+
+  if (accounts.length === 0) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyIcon}>🔍</Text>
+        <Text style={styles.emptyHeadline}>No accounts detected</Text>
+        <Text style={styles.emptyBody}>
+          We couldn't find any bank transactions in your SMS. Make sure Read SMS permission was granted and try scanning again.
+        </Text>
+        <PrimaryButton
+          label="Go back"
+          onPress={() => navigation.goBack()}
+          style={styles.emptyBtn}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -34,11 +68,11 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
 
         <Text style={styles.headline}>Your accounts</Text>
         <Text style={styles.subtitle}>
-          We detected {DETECTED_ACCOUNTS.length} accounts from your messages. Select the ones to include.
+          We detected {accounts.length} account{accounts.length !== 1 ? 's' : ''} from your messages. Select the ones to include.
         </Text>
 
         <View style={styles.accountList}>
-          {DETECTED_ACCOUNTS.map(account => {
+          {accounts.map(account => {
             const isSelected = selected.has(account.id);
             return (
               <TouchableOpacity
@@ -53,7 +87,8 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
                 <View style={styles.accountInfo}>
                   <Text style={styles.accountName}>{account.bank}</Text>
                   <Text style={styles.accountMeta}>
-                    {account.type} •••• {account.last4} · {account.txCount} txns
+                    {account.type}
+                    {account.last4 ? ` •••• ${account.last4}` : ''} · {account.txCount} txns
                   </Text>
                 </View>
                 <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
@@ -66,8 +101,8 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
 
         <View style={styles.summaryCard}>
           <Text style={styles.summaryText}>
-            <Text style={styles.summaryAccent}>{total}</Text> transactions across{' '}
-            <Text style={styles.summaryAccent}>{selected.size}</Text> accounts selected
+            <Text style={styles.summaryAccent}>{totalTx}</Text> transactions across{' '}
+            <Text style={styles.summaryAccent}>{selected.size}</Text> account{selected.size !== 1 ? 's' : ''} selected
           </Text>
         </View>
       </ScrollView>
@@ -100,9 +135,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.outlineVariant,
     borderRadius: Radius.xl, padding: Spacing.md,
   },
-  accountCardSelected: {
-    borderColor: Colors.primary, backgroundColor: '#f1f8f4',
-  },
+  accountCardSelected: { borderColor: Colors.primary, backgroundColor: '#f1f8f4' },
   accountIconBox: {
     width: 48, height: 48, borderRadius: Radius.lg,
     backgroundColor: Colors.surfaceVariant,
@@ -128,4 +161,13 @@ const styles = StyleSheet.create({
   summaryText: { ...Typography.bodyMd, color: Colors.onPrimaryContainer, textAlign: 'center' },
   summaryAccent: { fontFamily: 'WorkSans_700Bold', color: Colors.primary },
   footer: { paddingHorizontal: Spacing.containerMargin, paddingBottom: 32, paddingTop: Spacing.md },
+  emptyContainer: {
+    flex: 1, backgroundColor: Colors.background,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: Spacing.containerMargin, gap: Spacing.md,
+  },
+  emptyIcon: { fontSize: 56 },
+  emptyHeadline: { ...Typography.headlineMd, color: Colors.onSurface, textAlign: 'center' },
+  emptyBody: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center', lineHeight: 24 },
+  emptyBtn: { marginTop: Spacing.lg, width: '100%' },
 });

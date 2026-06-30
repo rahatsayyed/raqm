@@ -77,7 +77,7 @@ export function SignUpScreen({ navigation }: OnboardingScreenProps<'SignUp'>) {
             <View style={styles.dividerLine} />
           </View>
 
-          <GhostButton label="Skip — keep data local only" onPress={() => {}} />
+          <GhostButton label="Skip — keep data local only" onPress={() => navigation.navigate('NameEntry')} />
         </View>
 
         <Text style={styles.terms}>

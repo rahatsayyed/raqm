@@ -1,17 +1,32 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { GhostButton } from '../../components/GhostButton';
+import { useOnboardingStore } from '../../store/onboardingStore';
 
-const STATS = [
-  { icon: '💳', value: '128', label: 'Transactions' },
-  { icon: '🏦', value: '3', label: 'Accounts' },
-  { icon: '📅', value: '6 mo', label: 'History' },
-];
+const DATE_RANGE_LABELS: Record<string, string> = {
+  all: 'All time',
+  '1year': '1 year',
+  '6months': '6 mo',
+  '3months': '3 mo',
+};
 
 export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanComplete'>) {
+  const { transactions, dateRange } = useOnboardingStore();
+
+  const accountCount = useMemo(() => {
+    const seen = new Set(transactions.map(tx => `${tx.bankName}|${tx.accountLast4 ?? ''}`));
+    return seen.size;
+  }, [transactions]);
+
+  const stats = [
+    { icon: '💳', value: String(transactions.length), label: 'Transactions' },
+    { icon: '🏦', value: String(accountCount), label: 'Accounts' },
+    { icon: '📅', value: DATE_RANGE_LABELS[dateRange] ?? dateRange, label: 'History' },
+  ];
+
   const scale = useRef(new Animated.Value(0)).current;
   const fade = useRef(new Animated.Value(0)).current;
   const slideUp = useRef(new Animated.Value(24)).current;
@@ -45,7 +60,7 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
       </Animated.View>
 
       <Animated.View style={[styles.statsRow, { opacity: fade }]}>
-        {STATS.map(stat => (
+        {stats.map(stat => (
           <View key={stat.label} style={styles.statCard}>
             <Text style={styles.statIcon}>{stat.icon}</Text>
             <Text style={styles.statValue}>{stat.value}</Text>
@@ -61,7 +76,7 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
         />
         <GhostButton
           label="Skip — explore locally"
-          onPress={() => navigation.navigate('SignUp')}
+          onPress={() => navigation.navigate('NameEntry')}
         />
       </Animated.View>
     </View>
