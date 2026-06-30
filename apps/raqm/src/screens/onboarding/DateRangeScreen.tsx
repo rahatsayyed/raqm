@@ -3,8 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { OnboardingScreenProps } from '../../navigation/types';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
-
-type Range = 'all' | '1year' | '6months' | '3months';
+import { useOnboardingStore, type DateRange as Range } from '../../store/onboardingStore';
 
 const RANGES: { id: Range; label: string; subtitle: string; icon: string; recommended?: boolean }[] = [
   { id: 'all', label: 'All time', subtitle: 'Complete transaction history', icon: '∞' },
@@ -16,7 +15,13 @@ const RANGES: { id: Range; label: string; subtitle: string; icon: string; recomm
 const EARLIEST_SMS = 'Oct 14, 2025';
 
 export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange'>) {
-  const [selected, setSelected] = useState<Range>('3months');
+  const { dateRange, setDateRange } = useOnboardingStore();
+  const [selected, setSelected] = useState<Range>(dateRange);
+
+  const handleSelect = (range: Range) => {
+    setSelected(range);
+    setDateRange(range);
+  };
 
   return (
     <View style={styles.container}>
@@ -33,7 +38,7 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
               <TouchableOpacity
                 key={range.id}
                 style={[styles.rangeCard, isSelected && styles.rangeCardSelected]}
-                onPress={() => setSelected(range.id)}
+                onPress={() => handleSelect(range.id)}
                 activeOpacity={0.8}
               >
                 <View style={styles.rangeLeft}>
