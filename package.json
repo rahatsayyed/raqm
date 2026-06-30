@@ -1,0 +1,8 @@
+{
+  "name": "raqm-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}
