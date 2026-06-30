@@ -2,9 +2,12 @@
 
 ## Scope
 
-- **V1**: Full personal finance tracking, SMS-first, Android only
-- **V2**: PDF statements, Categorization fallback, AI insights (marked "Coming Soon" in V1 UI)
-- **iOS**: no IOS support
+- **v0.0.1** *(Internal)*: SMS scan → transaction list — bare minimum working app
+- **v0.1–v0.5** *(Internal → Alpha)*: Core features built incrementally
+- **v0.6–v0.9** *(Beta)*: Full feature set, polish, sync
+- **V1 / v1.0.0** *(Production)*: Public launch — full personal finance tracking, Android only
+- **V2**: PDF statements, AI insights, icon theming
+- **iOS**: No iOS support
 
 ---
 

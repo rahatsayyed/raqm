@@ -2,6 +2,8 @@
 
 Navigation pattern: **Bottom tab bar** (4 tabs) + stack navigators per tab + modals for actions.
 
+> **v0.0.1 scope** — only screens marked `[v0]` are built in the first internal release. All others follow in subsequent versions per the roadmap in `CHANGELOG.md`.
+
 ---
 
 ## Onboarding Flow
@@ -10,15 +12,15 @@ Navigation pattern: **Bottom tab bar** (4 tabs) + stack navigators per tab + mod
 | # | Screen | Description |
 |---|---|---|
 | O-1 | **Welcome** | App intro, value proposition, "Get Started" CTA |
-| O-2a | **Permission — SMS Read** | Full screen: icon, plain-language explanation ("To find your bank transactions, we need to read your SMS"), grant button. Required — cannot proceed without it. |
-| O-2b | **Permission — SMS Receive** | Full screen: explains background monitoring ("So we catch new transactions the moment they arrive"). Required. |
-| O-2c | **Permission — Notifications** | Full screen: explains transaction + summary alerts. Required. |
+| O-2a | **Permission — SMS Read** `[v0]` | Full screen: icon, plain-language explanation ("To find your bank transactions, we need to read your SMS"), grant button. Required — cannot proceed without it. |
+| O-2b | **Permission — SMS Receive** `[v0]` | Full screen: explains background monitoring ("So we catch new transactions the moment they arrive"). Required. |
+| O-2c | **Permission — Notifications** `[v0]` | Full screen: explains transaction + summary alerts. Required. |
 | O-2d | **Permission — Notification Access** | Full screen: explains SMS notification replacement ("We'll replace raw bank SMS alerts with a cleaner, richer notification"). Optional — "Skip for now" available. |
 | O-2e | **Permission — Location** | Full screen: explains location tagging on payments. Optional — "Skip for now" available. |
-| O-3 | **Initial Scan — Date Range** | Choose how far back to scan. App detects the earliest available SMS on device and disables / greys out any option that goes further back than that date (e.g. if earliest SMS is 8 months ago, "All time" and "Last 1 year" are shown but the actual range is capped and labelled "Earliest available: 14 Oct 2025"). Custom date picker also enforces this lower bound. |
-| O-4 | **Scanning Progress** | Progress bar while bulk SMS scan runs. Shows count of transactions found in real time. |
-| O-5 | **Account Selection** | After scan: list of all detected bank accounts (bank name + last4 + transaction count). User selects which accounts to include. At least one required. |
-| O-6 | **Scan Complete** | Summary — X transactions imported from Y selected accounts. "Go to Dashboard" CTA |
+| O-3 | **Initial Scan — Date Range** `[v0]` | Choose how far back to scan. App detects the earliest available SMS on device and disables / greys out any option that goes further back than that date (e.g. if earliest SMS is 8 months ago, "All time" and "Last 1 year" are shown but the actual range is capped and labelled "Earliest available: 14 Oct 2025"). Custom date picker also enforces this lower bound. |
+| O-4 | **Scanning Progress** `[v0]` | Progress bar while bulk SMS scan runs. Shows count of transactions found in real time. |
+| O-5 | **Account Selection** `[v0]` | After scan: list of all detected bank accounts (bank name + last4 + transaction count). User selects which accounts to include. At least one required. |
+| O-6 | **Scan Complete** `[v0]` | Summary — X transactions imported from Y selected accounts. "Go to Dashboard" CTA |
 | O-7 | **Sign Up / Log In** | Email + password via Supabase Auth. Skip option (local-only mode) |
 
 ---
@@ -27,7 +29,7 @@ Navigation pattern: **Bottom tab bar** (4 tabs) + stack navigators per tab + mod
 
 | # | Screen | Description |
 |---|---|---|
-| H-1 | **Dashboard** | Income vs Expense summary card for current month. Donut chart (category split). Recent transactions list (last 5). Quick-add FAB. Shortcuts to Spending, Budgets, Subscriptions. |
+| H-1 | **Dashboard** `[v0]` | Income vs Expense summary card for current month. Donut chart (category split). Recent transactions list (last 5). Quick-add FAB. Shortcuts to Spending, Budgets, Subscriptions. |
 
 ---
 
@@ -35,8 +37,8 @@ Navigation pattern: **Bottom tab bar** (4 tabs) + stack navigators per tab + mod
 
 | # | Screen | Description |
 |---|---|---|
-| T-1 | **Transaction List** | Chronological list with date headers. Filter bar: All / Income / Expense / Transfer. Time range selector (Daily / Weekly / Monthly / Custom). Pull-to-refresh triggers rescan. |
-| T-2 | **Transaction Detail** | Full detail: amount, type, merchant, category, account, date. Tabs: Info / Other Info (raw SMS, UPI ref no, location map). Actions: Edit, Split, Link, Group, Delete. Notes + Tags section. |
+| T-1 | **Transaction List** `[v0]` | Chronological list with date headers. Filter bar: All / Income / Expense / Transfer. Time range selector (Daily / Weekly / Monthly / Custom). Pull-to-refresh triggers rescan. |
+| T-2 | **Transaction Detail** `[v0]` | Full detail: amount, type, merchant, category, account, date. Tabs: Info / Other Info (raw SMS, UPI ref no, location map). Actions: Edit, Split, Link, Group, Delete. Notes + Tags section. |
 | T-3 | **Add Transaction** (modal) | Manual entry form: amount, type, merchant, category, date, account, notes, tags. |
 | T-4 | **Edit Transaction** (modal) | Same form as Add, pre-filled. |
 | T-5 | **Split Transaction** (modal) | Split amount across 2+ categories. Each row: category picker + amount. Must sum to original total. |
