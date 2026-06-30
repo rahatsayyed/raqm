@@ -1,6 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import ReAnimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  withDelay,
+  Easing as REasing,
+} from 'react-native-reanimated';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 
@@ -14,6 +23,29 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'ScanningProgress'>) {
   const [count, setCount] = useState(0);
   const progress = useRef(new Animated.Value(0)).current;
+
+  // pulse-ring: scale 0.95↔1.05, opacity 0.8↔0.4, 3s infinite with 0.5s delay
+  const pulseScale = useSharedValue(0.95);
+  const pulseOpacity = useSharedValue(0.8);
+  useEffect(() => {
+    const cfg = { duration: 1500, easing: REasing.bezier(0.4, 0, 0.6, 1) };
+    pulseScale.value = withDelay(
+      500,
+      withRepeat(withSequence(withTiming(1.05, cfg), withTiming(0.95, cfg)), -1),
+    );
+    pulseOpacity.value = withDelay(
+      500,
+      withRepeat(withSequence(withTiming(0.4, cfg), withTiming(0.8, cfg)), -1),
+    );
+  }, []);
+  const pulseOuterStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+    opacity: pulseOpacity.value * 0.08,
+  }));
+  const pulseInnerStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value * 0.96 }],
+    opacity: pulseOpacity.value * 0.1,
+  }));
 
   useEffect(() => {
     Animated.timing(progress, {
@@ -44,8 +76,8 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
 
   return (
     <View style={styles.container}>
-      <View style={styles.pulseOuter} />
-      <View style={styles.pulseInner} />
+      <ReAnimated.View style={[styles.pulseOuter, pulseOuterStyle]} />
+      <ReAnimated.View style={[styles.pulseInner, pulseInnerStyle]} />
 
       <View style={styles.circleContainer}>
         <Svg width={220} height={220} viewBox="0 0 220 220">
@@ -109,11 +141,11 @@ const styles = StyleSheet.create({
   },
   pulseOuter: {
     position: 'absolute', width: 280, height: 280, borderRadius: 140,
-    backgroundColor: Colors.primary, opacity: 0.04,
+    backgroundColor: Colors.primary,
   },
   pulseInner: {
     position: 'absolute', width: 240, height: 240, borderRadius: 120,
-    backgroundColor: Colors.primary, opacity: 0.06,
+    backgroundColor: Colors.primary,
   },
   circleContainer: {
     width: 220, height: 220, alignItems: 'center', justifyContent: 'center',
