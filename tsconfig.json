@@ -2,5 +2,9 @@
   "compilerOptions": {
     "strict": true,
     "skipLibCheck": true
-  }
+  },
+  "references": [
+    { "path": "apps/raqm" },
+    { "path": "packages/bank-sms-parser" }
+  ]
 }
