@@ -1,5 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  withDelay,
+  Easing,
+} from 'react-native-reanimated';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
 
@@ -34,6 +43,44 @@ export function PermissionScreen({
 }: Props) {
   const headlineParts = headlineAccent ? headline.split(headlineAccent) : [headline];
 
+  // float on icon — 6s ease-in-out infinite, -15px
+  const floatY = useSharedValue(0);
+  useEffect(() => {
+    floatY.value = withRepeat(
+      withTiming(-15, { duration: 3000, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+  }, []);
+  const iconFloatStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: '12deg' }, { translateY: floatY.value }],
+  }));
+
+  // bounce on badge — 3s, up/down -8px
+  const bounceY = useSharedValue(0);
+  useEffect(() => {
+    bounceY.value = withDelay(
+      800,
+      withRepeat(
+        withSequence(
+          withTiming(-8, { duration: 500, easing: Easing.out(Easing.quad) }),
+          withTiming(0, { duration: 500, easing: Easing.in(Easing.quad) }),
+          withTiming(0, { duration: 1000 }), // pause between bounces
+        ),
+        -1,
+      ),
+    );
+  }, []);
+  const badgeBounceStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: bounceY.value }],
+  }));
+
+  // button press scale
+  const btnScale = useSharedValue(1);
+  const btnAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: btnScale.value }],
+  }));
+
   return (
     <View style={styles.container}>
       <View style={styles.orbTopRight} />
@@ -41,14 +88,14 @@ export function PermissionScreen({
 
       <View style={styles.illustrationArea}>
         <View style={styles.iconGlow} />
-        <View style={styles.iconContainer}>
+        <Animated.View style={[styles.iconContainer, iconFloatStyle]}>
           <View style={styles.iconInner}>
             <Text style={styles.iconText}>{iconEmoji}</Text>
           </View>
-        </View>
-        <View style={[styles.floatingBadge, styles.badgeTopRight]}>
+        </Animated.View>
+        <Animated.View style={[styles.floatingBadge, styles.badgeTopRight, badgeBounceStyle]}>
           <Text style={styles.badgeEmoji}>✅</Text>
-        </View>
+        </Animated.View>
         <View style={[styles.floatingBadge, styles.badgeBottomLeft]}>
           <Text style={styles.badgeEmoji}>🏦</Text>
         </View>
@@ -84,7 +131,15 @@ export function PermissionScreen({
       </View>
 
       <View style={styles.footer}>
-        <PrimaryButton label={ctaLabel} onPress={onCTA} style={styles.ctaButton} />
+        <Animated.View style={btnAnimStyle}>
+          <PrimaryButton
+            label={ctaLabel}
+            onPress={onCTA}
+            style={styles.ctaButton}
+            onPressIn={() => { btnScale.value = withTiming(0.95, { duration: 100 }); }}
+            onPressOut={() => { btnScale.value = withTiming(1, { duration: 150 }); }}
+          />
+        </Animated.View>
         {skipLabel && onSkip && (
           <TouchableOpacity onPress={onSkip} style={styles.skipButton}>
             <Text style={styles.skipLabel}>{skipLabel}</Text>
@@ -126,7 +181,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     shadowColor: Colors.primary, shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2, shadowRadius: 20, elevation: 10,
-    transform: [{ rotate: '12deg' }],
   },
   iconInner: {
     width: 112, height: 112, borderRadius: 28,

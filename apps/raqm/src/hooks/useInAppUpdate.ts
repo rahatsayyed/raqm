@@ -1,28 +1,23 @@
 import { useEffect } from 'react';
 import { AppState, AppStateStatus, Platform } from 'react-native';
-import InAppUpdates, { IAUUpdateKind } from 'react-native-in-app-updates';
-
-const updates = new InAppUpdates(__DEV__);
+import { checkForUpdate, UpdateFlow } from 'react-native-in-app-updates';
 
 export function useInAppUpdate() {
   useEffect(() => {
     if (Platform.OS !== 'android') return;
 
-    const checkForUpdate = async () => {
+    const check = async () => {
       try {
-        const { isAvailable } = await updates.checkNeedsUpdate();
-        if (isAvailable) {
-          updates.startUpdate({ updateType: IAUUpdateKind.FLEXIBLE });
-        }
+        await checkForUpdate(UpdateFlow.FLEXIBLE, __DEV__);
       } catch {
         // silently ignore — update check is best-effort
       }
     };
 
-    checkForUpdate();
+    check();
 
     const subscription = AppState.addEventListener('change', (state: AppStateStatus) => {
-      if (state === 'active') checkForUpdate();
+      if (state === 'active') check();
     });
 
     return () => subscription.remove();

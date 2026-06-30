@@ -8,12 +8,16 @@ interface Props {
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
+  onPressIn?: () => void;
+  onPressOut?: () => void;
 }
 
-export function PrimaryButton({ label, onPress, loading, disabled, style }: Props) {
+export function PrimaryButton({ label, onPress, loading, disabled, style, onPressIn, onPressOut }: Props) {
   return (
     <TouchableOpacity
       onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       disabled={disabled || loading}
       activeOpacity={0.85}
       style={[styles.button, (disabled || loading) && styles.disabled, style]}
