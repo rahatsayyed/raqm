@@ -13,20 +13,21 @@ export function PermissionSMSReadScreen({ navigation }: OnboardingScreenProps<'P
     const alreadyGranted = await PermissionsAndroid.check('android.permission.READ_SMS' as any);
     if (alreadyGranted) {
       setStatus('auto_granted');
-      setTimeout(() => navigation.navigate('PermissionSMSReceive'), 1000);
+      setTimeout(() => navigation.navigate('PermissionNotifications'), 1000);
       return;
     }
 
+    // Requesting READ_SMS also grants RECEIVE_SMS — same Android permission group
     const result = await PermissionsAndroid.request('android.permission.READ_SMS' as any, {
-      title: 'Read SMS Permission',
-      message: 'Raqm needs to read your SMS to find bank transaction alerts.',
+      title: 'SMS Access',
+      message: 'Raqm reads your SMS to find bank transactions and detects new ones in real time.',
       buttonPositive: 'Allow',
       buttonNegative: 'Deny',
     });
 
     if (result === PermissionsAndroid.RESULTS.GRANTED) {
       setStatus('granted');
-      setTimeout(() => navigation.navigate('PermissionSMSReceive'), 700);
+      setTimeout(() => navigation.navigate('PermissionNotifications'), 700);
     } else {
       setIsPermanentlyDenied(result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN);
       setModalVisible(true);
@@ -42,15 +43,13 @@ export function PermissionSMSReadScreen({ navigation }: OnboardingScreenProps<'P
         headline="Access your transactions"
         headlineAccent="transactions"
         description={
-          status === 'auto_granted'
-            ? 'Already granted. Moving to the next step…'
-            : status === 'granted'
-              ? 'SMS access granted. Moving to the next step…'
-              : 'To find your bank transactions automatically, we need permission to read your SMS. We only look for financial alerts.'
+          isGranted
+            ? 'SMS access granted. Moving to the next step…'
+            : 'To find bank transactions and catch new ones instantly, Raqm needs to read your SMS. We only look for financial alerts.'
         }
         trustItems={[
-          { icon: '🛡️', title: 'Privacy First', subtitle: 'Encrypted processing on-device.' },
-          { icon: '🔍', title: 'Smart Filters', subtitle: 'Personal texts remain private.' },
+          { icon: '🛡️', title: 'Privacy First', subtitle: 'Encrypted processing on-device. Personal texts are never read.' },
+          { icon: '⚡', title: 'Real-time Detection', subtitle: 'New transactions appear the moment they arrive.' },
         ]}
         ctaLabel="Grant SMS Access"
         onCTA={isGranted ? () => {} : requestPermission}
@@ -59,7 +58,7 @@ export function PermissionSMSReadScreen({ navigation }: OnboardingScreenProps<'P
       <PermissionRequiredModal
         visible={modalVisible}
         permissionName="Read SMS"
-        reason="Raqm cannot work without reading your SMS. This is how we find your bank transactions — no manual data entry needed."
+        reason="Raqm cannot work without SMS access. This is how we find your bank transactions — no manual data entry needed."
         isPermanentlyDenied={isPermanentlyDenied}
         onGrantPress={() => {
           setModalVisible(false);
