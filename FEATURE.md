@@ -1,4 +1,4 @@
-# LifeOS — Feature Specification
+# Raqm — Feature Specification
 
 ## Scope
 

@@ -1,4 +1,4 @@
-# LifeOS — Screen List
+# Raqm — Screen List
 
 Navigation pattern: **Bottom tab bar** (4 tabs) + stack navigators per tab + modals for actions.
 
