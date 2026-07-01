@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { View } from 'react-native';
 import { NavigationBar } from 'expo-navigation-bar';
+import { StatusBar } from 'expo-status-bar';
 import { useInAppUpdate } from './src/hooks/useInAppUpdate';
 import { useFonts } from 'expo-font';
 import { Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
@@ -21,7 +22,8 @@ function AppContent({ onLayout }: { onLayout: () => void }) {
   }, []);
 
   return (
-    <View style={{ flex: 1, paddingBottom: insets.bottom, backgroundColor: '#f8faf9' }} onLayout={onLayout}>
+    <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: '#f8faf9' }} onLayout={onLayout}>
+      <StatusBar style="dark" />
       <AppNavigator />
     </View>
   );
