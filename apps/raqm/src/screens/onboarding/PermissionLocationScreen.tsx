@@ -5,13 +5,13 @@ import { PermissionScreen } from './PermissionScreen';
 
 export function PermissionLocationScreen({ navigation }: OnboardingScreenProps<'PermissionLocation'>) {
   const handleCTA = async () => {
-    await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION, {
+    await PermissionsAndroid.request('android.permission.ACCESS_FINE_LOCATION' as any, {
       title: 'Location Permission',
       message: 'Raqm uses your location to tag where each payment was made.',
       buttonPositive: 'Allow',
       buttonNegative: 'Deny',
     });
-    navigation.navigate('DateRange');
+    navigation.replace('DateRange');
   };
 
   return (
@@ -27,7 +27,7 @@ export function PermissionLocationScreen({ navigation }: OnboardingScreenProps<'
       ctaLabel="Enable Location"
       onCTA={handleCTA}
       skipLabel="Skip for now"
-      onSkip={() => navigation.navigate('DateRange')}
+      onSkip={() => navigation.replace('DateRange')}
     />
   );
 }

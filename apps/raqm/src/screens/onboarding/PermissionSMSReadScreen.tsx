@@ -13,7 +13,7 @@ export function PermissionSMSReadScreen({ navigation }: OnboardingScreenProps<'P
     const alreadyGranted = await PermissionsAndroid.check('android.permission.READ_SMS' as any);
     if (alreadyGranted) {
       setStatus('auto_granted');
-      setTimeout(() => navigation.navigate('PermissionNotifications'), 1000);
+      setTimeout(() => navigation.replace('PermissionNotifications'), 1000);
       return;
     }
 
@@ -27,7 +27,7 @@ export function PermissionSMSReadScreen({ navigation }: OnboardingScreenProps<'P
 
     if (result === PermissionsAndroid.RESULTS.GRANTED) {
       setStatus('granted');
-      setTimeout(() => navigation.navigate('PermissionNotifications'), 700);
+      setTimeout(() => navigation.replace('PermissionNotifications'), 700);
     } else {
       setIsPermanentlyDenied(result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN);
       setModalVisible(true);

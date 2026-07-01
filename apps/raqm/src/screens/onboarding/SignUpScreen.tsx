@@ -14,7 +14,7 @@ export function SignUpScreen({ navigation }: OnboardingScreenProps<'SignUp'>) {
   const isValid = email.includes('@') && password.length >= 8;
 
   const handleContinue = () => {
-    navigation.navigate('OTPVerification', { email });
+    navigation.replace('OTPVerification', { email });
   };
 
   return (
@@ -77,7 +77,7 @@ export function SignUpScreen({ navigation }: OnboardingScreenProps<'SignUp'>) {
             <View style={styles.dividerLine} />
           </View>
 
-          <GhostButton label="Skip — keep data local only" onPress={() => navigation.navigate('NameEntry')} />
+          <GhostButton label="Skip — keep data local only" onPress={() => navigation.replace('NameEntry')} />
         </View>
 
         <Text style={styles.terms}>

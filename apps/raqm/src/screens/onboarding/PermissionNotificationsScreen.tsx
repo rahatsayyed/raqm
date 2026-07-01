@@ -5,13 +5,13 @@ import { PermissionScreen } from './PermissionScreen';
 
 export function PermissionNotificationsScreen({ navigation }: OnboardingScreenProps<'PermissionNotifications'>) {
   const handleCTA = async () => {
-    await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS, {
+    await PermissionsAndroid.request('android.permission.POST_NOTIFICATIONS' as any, {
       title: 'Notification Permission',
       message: 'Raqm needs notification access to alert you when money moves.',
       buttonPositive: 'Allow',
       buttonNegative: 'Deny',
     });
-    navigation.navigate('PermissionNotificationAccess');
+    navigation.replace('PermissionNotificationAccess');
   };
 
   return (
