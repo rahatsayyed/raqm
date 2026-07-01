@@ -145,7 +145,7 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
           display="default"
           maximumDate={pickingField === 'from' ? toDate : new Date()}
           minimumDate={pickingField === 'to' ? fromDate : (earliestTs ? new Date(earliestTs) : undefined)}
-          onValueChange={(date) => {
+          onValueChange={(_event: unknown, date?: Date) => {
             if (date) {
               if (pickingField === 'from') setFromDate(date);
               else setToDate(date);
@@ -160,7 +160,7 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
         <PrimaryButton
           label="Start Scan →"
           onPress={handleStart}
-          style={canStart ? styles.ctaButton : [styles.ctaButton, styles.ctaDisabled]}
+          style={styles.ctaButton}
           disabled={!canStart}
         />
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancelButton}>

@@ -3,13 +3,17 @@ import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform } fro
 import { OnboardingScreenProps } from '../../navigation/types';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { useAppStore } from '../../store/appStore';
 
 export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry'>) {
   const [name, setName] = useState('');
   const inputRef = useRef<TextInput>(null);
+  const setOnboardingComplete = useAppStore(s => s.setOnboardingComplete);
 
   const firstName = name.trim().split(' ')[0];
   const isValid = name.trim().length >= 2;
+
+  const finish = () => setOnboardingComplete(name.trim());
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -36,7 +40,7 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
             autoCapitalize="words"
             autoCorrect={false}
             returnKeyType="done"
-            onSubmitEditing={() => isValid && navigation.popToTop()}
+            onSubmitEditing={() => isValid && finish()}
           />
           <View style={[styles.underline, name.length > 0 && styles.underlineActive]} />
         </View>
@@ -44,7 +48,7 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
         <View style={styles.footer}>
           <PrimaryButton
             label={isValid ? `Continue as ${firstName}` : 'Continue'}
-            onPress={() => navigation.popToTop()}
+            onPress={finish}
             disabled={!isValid}
           />
         </View>
