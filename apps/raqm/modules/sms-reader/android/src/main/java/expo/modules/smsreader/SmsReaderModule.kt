@@ -40,6 +40,17 @@ class SmsReaderModule : Module() {
       results
     }
 
+    AsyncFunction("getEarliestMessageDate") {
+      val context = appContext.reactContext ?: throw Exception("No context available")
+      val resolver = context.contentResolver
+      val uri = Telephony.Sms.Inbox.CONTENT_URI
+      val projection = arrayOf(Telephony.Sms.DATE)
+      resolver.query(uri, projection, null, null, "${Telephony.Sms.DATE} ASC")?.use { cursor ->
+        if (cursor.moveToFirst()) cursor.getLong(cursor.getColumnIndexOrThrow(Telephony.Sms.DATE)).toDouble()
+        else 0.0
+      } ?: 0.0
+    }
+
     Function("openNotificationListenerSettings") {
       val context = appContext.reactContext
       if (context != null) {

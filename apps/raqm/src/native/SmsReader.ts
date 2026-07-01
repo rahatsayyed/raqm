@@ -9,6 +9,11 @@ export const SmsReader = {
     return SmsReaderModule.readInbox(fromTimestamp, toTimestamp);
   },
 
+  getEarliestMessageDate(): Promise<number> {
+    if (Platform.OS !== 'android') return Promise.resolve(0);
+    return SmsReaderModule.getEarliestMessageDate();
+  },
+
   openNotificationListenerSettings(): void {
     if (Platform.OS !== 'android') return;
     SmsReaderModule.openNotificationListenerSettings();
