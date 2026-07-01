@@ -22,7 +22,7 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'ScanningProgress'>) {
-  const { dateRange, setTransactions } = useOnboardingStore();
+  const { dateRange, customFrom, customTo, setTransactions } = useOnboardingStore();
   const [smsCount, setSmsCount] = useState(0);
   const [txCount, setTxCount] = useState(0);
   const [status, setStatus] = useState('Reading messages…');
@@ -53,7 +53,7 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
   useEffect(() => {
     const run = async () => {
       try {
-        const { from, to } = dateRangeToTimestamps(dateRange);
+        const { from, to } = dateRangeToTimestamps(dateRange, customFrom, customTo);
         setStatus('Reading messages…');
 
         const messages = await SmsReader.readInbox(from, to);
