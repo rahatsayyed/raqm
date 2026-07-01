@@ -1,5 +1,6 @@
 {
   "extends": "expo/tsconfig.base",
+  "exclude": ["dist", "node_modules", "*.config.js"],
   "compilerOptions": {
     "composite": true,
     "noEmit": false,

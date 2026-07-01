@@ -1,5 +1,11 @@
 import { create } from 'zustand';
 import type { ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
+import {
+  loadTransactions,
+  insertTransaction,
+  insertTransactions,
+  clearTransactions,
+} from '../db/database';
 
 export type DateRange = 'all' | '1year' | '6months' | '3months' | 'custom';
 
@@ -10,8 +16,10 @@ interface OnboardingStore {
   customTo: number | null;
   setCustomRange: (from: number, to: number) => void;
   transactions: ParsedTransaction[];
-  setTransactions: (txs: ParsedTransaction[]) => void;
-  addTransaction: (tx: ParsedTransaction) => void;
+  dbReady: boolean;
+  initDb: () => Promise<void>;
+  setTransactions: (txs: ParsedTransaction[]) => Promise<void>;
+  addTransaction: (tx: ParsedTransaction) => Promise<void>;
 }
 
 export const useOnboardingStore = create<OnboardingStore>((set) => ({
@@ -21,8 +29,23 @@ export const useOnboardingStore = create<OnboardingStore>((set) => ({
   customTo: null,
   setCustomRange: (customFrom, customTo) => set({ customFrom, customTo }),
   transactions: [],
-  setTransactions: (transactions) => set({ transactions }),
-  addTransaction: (tx) => set(s => ({ transactions: [tx, ...s.transactions] })),
+  dbReady: false,
+
+  initDb: async () => {
+    const txs = await loadTransactions();
+    set({ transactions: txs, dbReady: true });
+  },
+
+  setTransactions: async (txs) => {
+    await clearTransactions();
+    await insertTransactions(txs);
+    set({ transactions: txs });
+  },
+
+  addTransaction: async (tx) => {
+    await insertTransaction(tx);
+    set((s) => ({ transactions: [tx, ...s.transactions] }));
+  },
 }));
 
 export function dateRangeToTimestamps(
