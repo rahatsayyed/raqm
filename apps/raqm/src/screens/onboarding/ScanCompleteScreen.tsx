@@ -72,11 +72,11 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
       <Animated.View style={[styles.footer, { opacity: fade }]}>
         <PrimaryButton
           label="Set up my account →"
-          onPress={() => navigation.navigate('SignUp')}
+          onPress={() => navigation.replace('SignUp')}
         />
         <GhostButton
           label="Skip — explore locally"
-          onPress={() => navigation.navigate('NameEntry')}
+          onPress={() => navigation.replace('NameEntry')}
         />
       </Animated.View>
     </View>

@@ -80,10 +80,10 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
         setTransactions(parsed);
         setStatus(`Found ${parsed.length} transactions`);
 
-        setTimeout(() => navigation.navigate('AccountSelection'), 1200);
+        setTimeout(() => navigation.replace('AccountSelection'), 1200);
       } catch (e) {
         setStatus('Could not read SMS. Check permissions.');
-        setTimeout(() => navigation.navigate('AccountSelection'), 2000);
+        setTimeout(() => navigation.replace('AccountSelection'), 2000);
       }
     };
 

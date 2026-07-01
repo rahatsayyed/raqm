@@ -8,7 +8,7 @@ export function PermissionNotificationAccessScreen({ navigation }: OnboardingScr
     // Notification listener access is not a runtime permission —
     // it requires the user to enable it manually in system settings.
     SmsReader.openNotificationListenerSettings();
-    navigation.navigate('PermissionLocation');
+    navigation.replace('PermissionLocation');
   };
 
   return (
@@ -24,7 +24,7 @@ export function PermissionNotificationAccessScreen({ navigation }: OnboardingScr
       ctaLabel="Enable Notification Access"
       onCTA={handleCTA}
       skipLabel="Skip for now"
-      onSkip={() => navigation.navigate('PermissionLocation')}
+      onSkip={() => navigation.replace('PermissionLocation')}
     />
   );
 }
