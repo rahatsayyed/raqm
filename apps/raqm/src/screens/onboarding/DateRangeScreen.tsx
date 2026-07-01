@@ -66,7 +66,7 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
       <View style={styles.footer}>
         <PrimaryButton
           label="Start Scan →"
-          onPress={() => navigation.navigate('ScanningProgress')}
+          onPress={() => navigation.replace('ScanningProgress')}
           style={styles.ctaButton}
         />
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancelButton}>

@@ -110,7 +110,7 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
       <View style={styles.footer}>
         <PrimaryButton
           label={`Continue with ${selected.size} account${selected.size !== 1 ? 's' : ''}`}
-          onPress={() => navigation.navigate('ScanComplete')}
+          onPress={() => navigation.replace('ScanComplete')}
           disabled={selected.size === 0}
         />
       </View>
