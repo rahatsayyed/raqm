@@ -33,6 +33,7 @@
     },
     "plugins": [
       "expo-font",
+      ["expo-navigation-bar", { "style": "dark" }],
       [
         "expo-splash-screen",
         {
