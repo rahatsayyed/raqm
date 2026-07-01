@@ -7,6 +7,10 @@ export function readInbox(fromTimestamp: number, toTimestamp: number): Promise<S
   return native.readInbox(fromTimestamp, toTimestamp);
 }
 
+export function getEarliestMessageDate(): Promise<number> {
+  return native.getEarliestMessageDate();
+}
+
 export function openNotificationListenerSettings(): void {
   native.openNotificationListenerSettings();
 }
