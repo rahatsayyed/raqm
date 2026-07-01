@@ -11,6 +11,7 @@ interface OnboardingStore {
   setCustomRange: (from: number, to: number) => void;
   transactions: ParsedTransaction[];
   setTransactions: (txs: ParsedTransaction[]) => void;
+  addTransaction: (tx: ParsedTransaction) => void;
 }
 
 export const useOnboardingStore = create<OnboardingStore>((set) => ({
@@ -21,6 +22,7 @@ export const useOnboardingStore = create<OnboardingStore>((set) => ({
   setCustomRange: (customFrom, customTo) => set({ customFrom, customTo }),
   transactions: [],
   setTransactions: (transactions) => set({ transactions }),
+  addTransaction: (tx) => set(s => ({ transactions: [tx, ...s.transactions] })),
 }));
 
 export function dateRangeToTimestamps(

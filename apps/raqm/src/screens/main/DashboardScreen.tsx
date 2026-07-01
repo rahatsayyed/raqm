@@ -1,8 +1,10 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, Animated } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { useAppStore } from '../../store/appStore';
 import { useOnboardingStore } from '../../store/onboardingStore';
+import { SmsReader } from '../../native/SmsReader';
+import { BankParserFactory } from '@rahatsayyed/bank-sms-parser';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import type { ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
 
@@ -49,7 +51,28 @@ function isDebit(type: TransactionType): boolean {
 
 export function DashboardScreen() {
   const { userName } = useAppStore();
-  const { transactions } = useOnboardingStore();
+  const { transactions, addTransaction } = useOnboardingStore();
+  const [newTxLabel, setNewTxLabel] = React.useState<string | null>(null);
+  const toastAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const sub = SmsReader.addNewSmsListener(({ body, sender, timestamp }) => {
+      const tx = BankParserFactory.parse(body, sender, timestamp);
+      if (tx) {
+        addTransaction(tx);
+        const label = tx.merchant
+          ? `${tx.type === TransactionType.EXPENSE ? '-' : '+'}₹${tx.amount.toLocaleString('en-IN')} · ${tx.merchant}`
+          : `New transaction from ${tx.bankName}`;
+        setNewTxLabel(label);
+        Animated.sequence([
+          Animated.timing(toastAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+          Animated.delay(3000),
+          Animated.timing(toastAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+        ]).start(() => setNewTxLabel(null));
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   const stats = useMemo(() => {
     let income = 0;
@@ -87,6 +110,12 @@ export function DashboardScreen() {
   const netIsPositive = stats.net >= 0;
 
   return (
+    <View style={{ flex: 1 }}>
+    {newTxLabel && (
+      <Animated.View style={[styles.toast, { opacity: toastAnim, transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-16, 0] }) }] }]}>
+        <Text style={styles.toastText}>⚡ {newTxLabel}</Text>
+      </Animated.View>
+    )}
     <ScrollView style={styles.root} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
@@ -155,6 +184,7 @@ export function DashboardScreen() {
         </View>
       </View>
     </ScrollView>
+    </View>
   );
 }
 
@@ -256,4 +286,14 @@ const styles = StyleSheet.create({
 
   emptyTx: { padding: Spacing.xl, alignItems: 'center' },
   emptyTxText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
+
+  toast: {
+    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100,
+    margin: Spacing.md, borderRadius: Radius.xl,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.md, paddingVertical: 12,
+    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
+  },
+  toastText: { ...Typography.bodyMd, color: '#fff', fontFamily: 'WorkSans_500Medium' },
 });
