@@ -2,11 +2,11 @@ import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Animated } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { useAppStore } from '../../store/appStore';
-import { useOnboardingStore } from '../../store/onboardingStore';
+import { useTxStore } from '../../store/txStore';
 import { SmsReader } from '../../native/SmsReader';
 import { BankParserFactory } from '@rahatsayyed/bank-sms-parser';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
-import type { ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
+import type { TxRecord } from '../../db/database';
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -51,7 +51,8 @@ function isDebit(type: TransactionType): boolean {
 
 export function DashboardScreen() {
   const { userName } = useAppStore();
-  const { transactions, addTransaction } = useOnboardingStore();
+  const txs = useTxStore((s) => s.txs);
+  const addParsed = useTxStore((s) => s.addParsed);
   const [newTxLabel, setNewTxLabel] = React.useState<string | null>(null);
   const toastAnim = useRef(new Animated.Value(0)).current;
 
@@ -59,7 +60,7 @@ export function DashboardScreen() {
     const sub = SmsReader.addNewSmsListener(({ body, sender, timestamp }) => {
       const tx = BankParserFactory.parse(body, sender, timestamp);
       if (tx) {
-        addTransaction(tx);
+        addParsed(tx);
         const label = tx.merchant
           ? `${tx.type === TransactionType.EXPENSE ? '-' : '+'}₹${tx.amount.toLocaleString('en-IN')} · ${tx.merchant}`
           : `New transaction from ${tx.bankName}`;
@@ -77,7 +78,7 @@ export function DashboardScreen() {
   const stats = useMemo(() => {
     let income = 0;
     let expenses = 0;
-    for (const tx of transactions) {
+    for (const tx of txs) {
       if (tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT) {
         income += tx.amount;
       } else if (isDebit(tx.type)) {
@@ -85,11 +86,11 @@ export function DashboardScreen() {
       }
     }
     return { income, expenses, net: income - expenses };
-  }, [transactions]);
+  }, [txs]);
 
   const accounts = useMemo(() => {
     const map = new Map<string, { bank: string; last4: string | null; isCard: boolean; count: number }>();
-    for (const tx of transactions) {
+    for (const tx of txs) {
       const key = `${tx.bankName}|${tx.accountLast4 ?? ''}`;
       if (map.has(key)) {
         map.get(key)!.count += 1;
@@ -98,14 +99,14 @@ export function DashboardScreen() {
       }
     }
     return Array.from(map.values()).sort((a, b) => b.count - a.count);
-  }, [transactions]);
+  }, [txs]);
 
   const recent = useMemo(
-    () => [...transactions].sort((a, b) => b.timestamp - a.timestamp).slice(0, 15),
-    [transactions],
+    () => [...txs].sort((a, b) => b.timestamp - a.timestamp).slice(0, 15),
+    [txs],
   );
 
-  const currency = transactions[0]?.currency ?? '₹';
+  const currency = txs[0]?.currency ?? '₹';
   const firstName = userName.trim().split(' ')[0];
   const netIsPositive = stats.net >= 0;
 
@@ -145,7 +146,7 @@ export function DashboardScreen() {
             <Text style={styles.heroStatValue}>{formatAmount(stats.expenses, currency)}</Text>
           </View>
         </View>
-        <Text style={styles.heroMeta}>{transactions.length} transactions across {accounts.length} account{accounts.length !== 1 ? 's' : ''}</Text>
+        <Text style={styles.heroMeta}>{txs.length} transactions across {accounts.length} account{accounts.length !== 1 ? 's' : ''}</Text>
       </View>
 
       {/* Accounts */}
@@ -178,7 +179,7 @@ export function DashboardScreen() {
             </View>
           ) : (
             recent.map((tx, i) => (
-              <TxRow key={i} tx={tx} currency={currency} isLast={i === recent.length - 1} />
+              <TxRow key={tx.id} tx={tx} currency={currency} isLast={i === recent.length - 1} />
             ))
           )}
         </View>
@@ -188,7 +189,7 @@ export function DashboardScreen() {
   );
 }
 
-function TxRow({ tx, currency, isLast }: { tx: ParsedTransaction; currency: string; isLast: boolean }) {
+function TxRow({ tx, currency, isLast }: { tx: TxRecord; currency: string; isLast: boolean }) {
   const debit = isDebit(tx.type);
   const color = txColor(tx.type);
   const sign = debit ? '-' : '+';

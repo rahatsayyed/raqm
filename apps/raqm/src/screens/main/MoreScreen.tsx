@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { useAppStore } from '../../store/appStore';
-import { useOnboardingStore } from '../../store/onboardingStore';
+import { useTxStore } from '../../store/txStore';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../../navigation/types';
@@ -28,7 +28,7 @@ function Row({ icon, label, onPress, destructive }: RowProps) {
 
 export function MoreScreen() {
   const { userName } = useAppStore();
-  const { transactions } = useOnboardingStore();
+  const transactions = useTxStore((s) => s.txs);
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
 
   const firstName = userName.trim().split(' ')[0] || 'User';

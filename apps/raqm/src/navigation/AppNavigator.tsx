@@ -4,22 +4,22 @@ import { NavigationContainer } from '@react-navigation/native';
 import { OnboardingNavigator } from './OnboardingNavigator';
 import { MainNavigator } from './MainNavigator';
 import { useAppStore } from '../store/appStore';
-import { useOnboardingStore } from '../store/onboardingStore';
+import { useTxStore } from '../store/txStore';
 import { Colors } from '../theme';
 
 export function AppNavigator() {
   const isOnboardingComplete = useAppStore(s => s.isOnboardingComplete);
-  const initDb = useOnboardingStore(s => s.initDb);
+  const loadTxs = useTxStore(s => s.load);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     const unsub = useAppStore.persist.onFinishHydration(async () => {
-      await initDb();
+      await loadTxs();
       if (!cancelled) setReady(true);
     });
     if (useAppStore.persist.hasHydrated()) {
-      initDb().then(() => { if (!cancelled) setReady(true); });
+      loadTxs().then(() => { if (!cancelled) setReady(true); });
     }
     return () => {
       cancelled = true;
