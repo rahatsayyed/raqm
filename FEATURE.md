@@ -29,12 +29,12 @@ Android SMS received
 
 ### 1. SMS Scanning
 
-- **Background monitoring** — catch new SMS even when app is closed (Android foreground service)
-- **Initial bulk scan** — on first launch, user picks a date range first (last 3 months / last 1 year / custom / all time), then scan runs; after scan completes, detected bank accounts are shown and user selects which ones to include
-- **Earliest SMS detection** — before showing the date range picker, app queries the oldest SMS from a known bank sender on the device; date options that exceed this are labelled with the actual earliest available date and the custom picker's minimum is capped to it
-- **Manual rescan** — pull-to-refresh or explicit button to re-run scan
-- **Known sender filtering** — only process SMS from recognised bank senders (`isKnownBankSender()`)
-- **SMS linked to transaction** — raw SMS body, UPI ref no, and location stored under "Other Info" on transaction detail
+- [x] **Background monitoring** — catch new SMS even when app is closed (Android foreground service)
+- [x] **Initial bulk scan** — on first launch, user picks a date range first (last 3 months / last 1 year / custom / all time), then scan runs; after scan completes, detected bank accounts are shown and user selects which ones to include
+- [x] **Earliest SMS detection** — before showing the date range picker, app queries the oldest SMS from a known bank sender on the device; date options that exceed this are labelled with the actual earliest available date and the custom picker's minimum is capped to it
+- [ ] **Manual rescan** — pull-to-refresh or explicit button to re-run scan
+- [ ] **Known sender filtering** — only process SMS from recognised bank senders (`isKnownBankSender()`)
+- [ ] **SMS linked to transaction** — raw SMS body, UPI ref no, and location stored under "Other Info" on transaction detail
 
 #### Onboarding Permissions Flow
 Each permission is requested on its own dedicated screen with a plain-language explanation and illustration. Required permissions block progress; optional ones have a "Skip for now" option and can be re-prompted from Settings.
@@ -52,34 +52,34 @@ Each permission is requested on its own dedicated screen with a plain-language e
 ### 2. Transaction Management
 
 #### Parsing & Display
-- Auto-extract: amount, type (debit/credit/transfer), merchant, account last4, balance, bank name
-- Income detection — transactions typed as `INCOME` shown separately from expenses
+- [x] Auto-extract: amount, type (debit/credit/transfer), merchant, account last4, balance, bank name
+- [x] Income detection — transactions typed as `INCOME` shown separately from expenses
 
 #### Manual Entry
-- Add cash transactions manually (not captured by SMS)
-- Fields: amount, type, merchant/description, category, date, account, notes, tags
+- [ ] Add cash transactions manually (not captured by SMS)
+- [ ] Fields: amount, type, merchant/description, category, date, account, notes, tags
 
 #### Transaction Actions
-- **Edit** — correct category, merchant name, amount, date
-- **Notes & Tags** — free-text note + multiple tags per transaction
-- **Split** — divide one transaction across multiple categories (e.g. ₹500 = ₹300 Food + ₹200 Household)
-- **Merge** — collapse multiple transactions into one (shows single entry, no expand)
-- **Group** — bundle transactions into a folder; shows summed amount with a chevron to expand individual items
-- **Delete** — soft delete with undo
+- [ ] **Edit** — correct category, merchant name, amount, date
+- [ ] **Notes & Tags** — free-text note + multiple tags per transaction
+- [ ] **Split** — divide one transaction across multiple categories (e.g. ₹500 = ₹300 Food + ₹200 Household)
+- [ ] **Merge** — collapse multiple transactions into one (shows single entry, no expand)
+- [ ] **Group** — bundle transactions into a folder; shows summed amount with a chevron to expand individual items
+- [ ] **Delete** — soft delete with undo
 
 #### Linking
 
 **Auto-linking**
-- **Self-transfer detection** — debit + credit within ±24 hours, same amount, different accounts → suggest linking; both legs excluded from expense totals and shown as Transfer
-- **Refund detection** — credit that matches a prior debit (same amount, same or related merchant, within 30 days) → suggest linking; original expense stays in totals, refund amount is netted against it; net shown on transaction detail and category breakdown
-- **Duplicate detection** — same amount + same sender within 60 seconds → auto-suppress duplicate, notify user
+- [ ] **Self-transfer detection** — debit + credit within ±24 hours, same amount, different accounts → suggest linking; both legs excluded from expense totals and shown as Transfer
+- [ ] **Refund detection** — credit that matches a prior debit (same amount, same or related merchant, within 30 days) → suggest linking; original expense stays in totals, refund amount is netted against it; net shown on transaction detail and category breakdown
+- [ ] **Duplicate detection** — same amount + same sender within 60 seconds → auto-suppress duplicate, notify user
 
 **Manual linking**
-- User can manually link any two transactions (e.g. gave ₹1,000 to a friend, got it back a week later)
-- Linked pair is shown as related in both transaction details with a "Linked with →" indicator
-- Linked transactions remain visible in expense totals by default
-- User can tap **Mark as Settled** on the linked pair → both legs excluded from expense totals (treated like a self-transfer)
-- Manual links can be unlinked at any time
+- [ ] User can manually link any two transactions (e.g. gave ₹1,000 to a friend, got it back a week later)
+- [ ] Linked pair is shown as related in both transaction details with a "Linked with →" indicator
+- [ ] Linked transactions remain visible in expense totals by default
+- [ ] User can tap **Mark as Settled** on the linked pair → both legs excluded from expense totals (treated like a self-transfer)
+- [ ] Manual links can be unlinked at any time
 
 **Link visibility rules summary**
 
@@ -91,26 +91,27 @@ Each permission is requested on its own dedicated screen with a plain-language e
 | Manual link (settled) | Both excluded from totals |
 
 #### Notifications
-- Push notification on new transaction detected → tapping opens transaction detail
-- **Inline note from notification** — notification has a "Add Note" action button; tapping it expands an inline text input directly in the notification shade (using Android's `RemoteInput` API); user types and submits without the app ever opening; note is saved to the transaction immediately
-- **End-of-day summary** — daily push notification showing total spend for the day vs previous day; tapping opens a Today vs Yesterday comparison view
-- **End-of-week summary** — weekly push notification showing this week vs last week spend
-- **End-of-month summary** — monthly push notification showing this month vs last month spend
-- All summary notifications are opt-in and configurable in Settings
+- [x] Push notification on new transaction detected
+- [ ] Tapping a transaction notification opens transaction detail
+- [ ] **Inline note from notification** — notification has a "Add Note" action button; tapping it expands an inline text input directly in the notification shade (using Android's `RemoteInput` API); user types and submits without the app ever opening; note is saved to the transaction immediately
+- [ ] **End-of-day summary** — daily push notification showing total spend for the day vs previous day; tapping opens a Today vs Yesterday comparison view
+- [ ] **End-of-week summary** — weekly push notification showing this week vs last week spend
+- [ ] **End-of-month summary** — monthly push notification showing this month vs last month spend
+- [ ] All summary notifications are opt-in and configurable in Settings
 
 #### Notification Replacement
-- When a bank SMS arrives, the app intercepts the raw SMS notification and replaces it with a styled app notification showing: merchant name, amount, category icon, and account
-- Raw SMS notification is cancelled; only the app notification is shown (no duplicate)
-- Requires **Notification Access** permission (`BIND_NOTIFICATION_LISTENER_SERVICE`) — user is prompted in onboarding with plain-language explanation; optional but strongly recommended
-- If permission not granted, app notification shows alongside the raw SMS notification
+- [ ] When a bank SMS arrives, the app intercepts the raw SMS notification and replaces it with a styled app notification showing: merchant name, amount, category icon, and account
+- [ ] Raw SMS notification is cancelled; only the app notification is shown (no duplicate)
+- [ ] Requires **Notification Access** permission (`BIND_NOTIFICATION_LISTENER_SERVICE`) — user is prompted in onboarding with plain-language explanation; optional but strongly recommended
+- [ ] If permission not granted, app notification shows alongside the raw SMS notification
 
 ---
 
 ### 3. Categories
 
-- **Default categories** — Food & Dining, Transport, Shopping, Groceries, Utilities, Entertainment, Health, Education, Travel, EMI & Loans, Investments, Salary, Income, Transfer, Other
-- **Salary vs Income** — `Salary` and `Income` are distinct categories. Salary auto-detection: SMS contains "SAL" / "salary" keyword, OR same-source large credit recurring on a monthly pattern → categorized as Salary. All other incoming credits → Income. User can always reclassify manually.
-- **Sub-categories** — each category can have sub-categories for finer tracking. Default sub-categories shipped with the app:
+- [ ] **Default categories** — Food & Dining, Transport, Shopping, Groceries, Utilities, Entertainment, Health, Education, Travel, EMI & Loans, Investments, Salary, Income, Transfer, Other
+- [ ] **Salary vs Income** — `Salary` and `Income` are distinct categories. Salary auto-detection: SMS contains "SAL" / "salary" keyword, OR same-source large credit recurring on a monthly pattern → categorized as Salary. All other incoming credits → Income. User can always reclassify manually.
+- [ ] **Sub-categories** — each category can have sub-categories for finer tracking. Default sub-categories shipped with the app:
   - Food & Dining → Restaurants, Snacks, Beverages, Bakery, Street Food
   - Shopping → Clothes & Fashion, Home & Kitchen, Electronics, Personal Care, Gifts
   - Transport → Fuel, Cab & Auto, Public Transport, Parking, Vehicle Service
@@ -118,96 +119,98 @@ Each permission is requested on its own dedicated screen with a plain-language e
   - Entertainment → OTT & Streaming, Movies, Games, Events
   - Travel → Flights, Hotels, Holidays
   - Utilities → Mobile Recharge, Electricity, Internet, Gas, Water
-- Transactions can be assigned to a category + optional sub-category
-- Sub-categories are optional — category alone is always sufficient
-- **Custom sub-categories** — user can add sub-categories to any default or custom category
-- **Custom categories** — user can create category with custom name and icon (emoji or icon picker)
-- **Category rules** — user corrections saved as personal rules (merchant X → category + sub-category), applied before global dictionary on next parse
+- [ ] Transactions can be assigned to a category + optional sub-category
+- [ ] Sub-categories are optional — category alone is always sufficient
+- [ ] **Custom sub-categories** — user can add sub-categories to any default or custom category
+- [ ] **Custom categories** — user can create category with custom name and icon (emoji or icon picker)
+- [ ] **Category rules** — user corrections saved as personal rules (merchant X → category + sub-category), applied before global dictionary on next parse
 
 ---
 
 ### 4. Subscriptions & Recurring
 
-- **Auto-detection** — same merchant + same (or similar) amount recurring monthly/weekly → flagged as subscription
-- **Subscription list** — dedicated view showing all detected subscriptions with next expected date and monthly cost
-- **Mark as recurring** — user can manually mark any transaction as recurring
+- [ ] **Auto-detection** — same merchant + same (or similar) amount recurring monthly/weekly → flagged as subscription
+- [ ] **Subscription list** — dedicated view showing all detected subscriptions with next expected date and monthly cost
+- [ ] **Mark as recurring** — user can manually mark any transaction as recurring
 
 ---
 
 ### 5. Accounts & Cards
 
-- **Auto-discovery** — accounts inferred from SMS (bank name + account last4)
-- **Account list** — all detected accounts with last known balance
-- **Credit card view** — credit limit, current outstanding, available limit, due date (parsed from SMS where available)
-- **Manual account** — add a cash wallet or account not covered by SMS
+- [x] **Auto-discovery** — accounts inferred from SMS (bank name + account last4)
+- [ ] **Account list** — all detected accounts with last known balance
+- [ ] **Credit card view** — credit limit, current outstanding, available limit, due date (parsed from SMS where available)
+- [ ] **Manual account** — add a cash wallet or account not covered by SMS
 
 ---
 
 ### 6. Spending Views
 
 #### Time Ranges
-- Daily, Weekly, Monthly, Custom date range
+- [ ] Daily, Weekly, Monthly, Custom date range
+- [ ] **Custom month start day** — user sets which day the "month" begins on (e.g. 25th, salary day) instead of always the 1st; configurable in Settings, defaults to the 1st. All monthly views, budgets, summaries, and month-over-month comparisons use this boundary (e.g. start day 25 → "July" = Jun 25 to Jul 24). If the start day exceeds the days in a month (e.g. 31st in February), the period starts on the last day of that month.
 
 #### Granularity Levels
-- Total spend (income vs expense)
-- Per category breakdown
-- Per merchant breakdown
-- Per account breakdown
+- [ ] Total spend (income vs expense)
+- [ ] Per category breakdown
+- [ ] Per merchant breakdown
+- [ ] Per account breakdown
 
 #### Visuals
-- Bar chart — daily/weekly spend over selected period
-- Donut chart — category split for the period
-- Trend line — month-over-month comparison
-- Income vs Expense summary card
+- [ ] Bar chart — daily/weekly spend over selected period
+- [ ] Donut chart — category split for the period
+- [ ] Trend line — month-over-month comparison
+- [ ] Income vs Expense summary card
 
 ---
 
 ### 7. Budgets
 
-- Set monthly or weekly budget per category
-- Budget vs actual progress bar on category view
-- Alert when spending reaches 80% of budget (push notification)
-- Alert when budget is exceeded
-- Rollover option — unused budget carries to next weekly period(not monthly) (opt-in per category)
+- [ ] Set monthly or weekly budget per category
+- [ ] Monthly budgets follow the user's **custom month start day** (see Spending Views)
+- [ ] Budget vs actual progress bar on category view
+- [ ] Alert when spending reaches 80% of budget (push notification)
+- [ ] Alert when budget is exceeded
+- [ ] Rollover option — unused budget carries to next weekly period(not monthly) (opt-in per category)
 
 ---
 
 ### 8. Location Tagging
 
-- When a transaction is parsed, if location permission is granted, attach current GPS coordinates
-- Show location on a map in transaction detail ("Other Info" section)
-- Permission is optional — degrades gracefully if denied
+- [ ] When a transaction is parsed, if location permission is granted, attach current GPS coordinates
+- [ ] Show location on a map in transaction detail ("Other Info" section)
+- [ ] Permission is optional — degrades gracefully if denied
 
 ---
 
 ### 9. Sync & Backup
 
-- **Local-first** — all data lives in WatermelonDB (SQLite on device)
-- **Supabase sync** — user-triggered ("Sync now") or configurable auto-sync interval
-- **Multi-device** — same Supabase account → transactions available on second device
-- **Synced**: processed transactions, user categories, merchant rules, budget settings, raw SMS bodies
+- [ ] **Local-first** — all data lives in WatermelonDB (SQLite on device)
+- [ ] **Supabase sync** — user-triggered ("Sync now") or configurable auto-sync interval
+- [ ] **Multi-device** — same Supabase account → transactions available on second device
+- [ ] **Synced**: processed transactions, user categories, merchant rules, budget settings, raw SMS bodies
 
 ---
 
 ### 10. Grocery List
 
-- **Multiple lists** — create named lists (Weekly Groceries, Party Supplies, Diwali Shopping, etc.)
-- **Default lists** — app ships with pre-built starter lists the user can use or customise:
+- [ ] **Multiple lists** — create named lists (Weekly Groceries, Party Supplies, Diwali Shopping, etc.)
+- [ ] **Default lists** — app ships with pre-built starter lists the user can use or customise:
   - Weekly Essentials (Milk, Bread, Eggs, Butter, Vegetables)
   - Monthly Staples (Rice, Dal, Oil, Sugar, Salt, Flour)
   - Fruits & Vegetables
   - Personal Care (Shampoo, Soap, Toothpaste)
-- **Items with estimated price** — each item has a name and optional estimated price
-- **Quick-add from list** — inline text input pinned at the bottom of the list detail; type item name and hit add without opening a modal; price can be set inline or edited after
-- **Ghost price from last list** — when adding an item previously used in any list, the last price the user typed for that item is shown as a ghost/muted placeholder in the price field; tap to accept or type to override; stored per item in local DB, no dependency on SMS
-- **Running total** — estimated cost updates live as items are added or checked off
-- **Check off while shopping** — tap to strike through items; checked items move to bottom
-- **Budget cap per list** — optional; shows warning if estimated total exceeds cap
-- **Post-purchase linking** — when a grocery/supermarket transaction is detected, app suggests linking it to the most recently active list; shows Planned vs Actual spend on the list
-- **Frequently bought suggestions** — items used in past lists surface as quick-add suggestions when creating a new list
-- **Share list** — export as plain text via system share sheet
-- **List history** — past completed lists with planned vs actual spend record
-- **Grocery analytics** — spending graphs within the grocery section:
+- [ ] **Items with estimated price** — each item has a name and optional estimated price
+- [ ] **Quick-add from list** — inline text input pinned at the bottom of the list detail; type item name and hit add without opening a modal; price can be set inline or edited after
+- [ ] **Ghost price from last list** — when adding an item previously used in any list, the last price the user typed for that item is shown as a ghost/muted placeholder in the price field; tap to accept or type to override; stored per item in local DB, no dependency on SMS
+- [ ] **Running total** — estimated cost updates live as items are added or checked off
+- [ ] **Check off while shopping** — tap to strike through items; checked items move to bottom
+- [ ] **Budget cap per list** — optional; shows warning if estimated total exceeds cap
+- [ ] **Post-purchase linking** — when a grocery/supermarket transaction is detected, app suggests linking it to the most recently active list; shows Planned vs Actual spend on the list
+- [ ] **Frequently bought suggestions** — items used in past lists surface as quick-add suggestions when creating a new list
+- [ ] **Share list** — export as plain text via system share sheet
+- [ ] **List history** — past completed lists with planned vs actual spend record
+- [ ] **Grocery analytics** — spending graphs within the grocery section:
   - Monthly grocery spend trend (bar chart, last 6 months)
   - Planned vs Actual comparison per list (bar chart)
   - Top items by frequency across all lists
@@ -217,9 +220,9 @@ Each permission is requested on its own dedicated screen with a plain-language e
 
 ### 11. Reporting & Export
 
-- Monthly summary (total income, total expense, savings rate, top categories)
-- Export to CSV
-- Export to PDF (styled monthly statement)
+- [ ] Monthly summary (total income, total expense, savings rate, top categories) — respects custom month start day
+- [ ] Export to CSV
+- [ ] Export to PDF (styled monthly statement)
 
 ---
 
@@ -251,20 +254,20 @@ These appear in V1 UI as non-clickable cards with a "Coming Soon" badge.
 
 ---
 
-### 11. Appearance
+### 12. Appearance
 
-- **Light / Dark theme** — system default or manual override in Settings
-- **Color theme** *(phase 2)* — user picks from a preset palette of accent colors; applies app-wide to buttons, icons, charts, hero gradient, and highlights
-- Default presets:
-  - 🟢 Green (default — `#52B788`)
-  - 🔵 Blue (`#3A86FF`)
-  - 🟣 Purple (`#7C6FCD`)
-  - 🟡 Amber (`#F7B731`)
-  - 🌸 Rose (`#F472B6`)
-  - ⚫ Monochrome (neutral grey)
-- Theme change applies instantly with no restart required
-- Hero section gradient uses two shades of the selected color
-- **App icon updates** *(Phase 2)* — launcher icon changes to match selected color theme
+- [ ] **Light / Dark theme** — system default or manual override in Settings
+- [ ] **Color theme** *(phase 2)* — user picks from a preset palette of accent colors; applies app-wide to buttons, icons, charts, hero gradient, and highlights
+  - Default presets:
+    - 🟢 Green (default — `#52B788`)
+    - 🔵 Blue (`#3A86FF`)
+    - 🟣 Purple (`#7C6FCD`)
+    - 🟡 Amber (`#F7B731`)
+    - 🌸 Rose (`#F472B6`)
+    - ⚫ Monochrome (neutral grey)
+- [ ] Theme change applies instantly with no restart required
+- [ ] Hero section gradient uses two shades of the selected color
+- [ ] **App icon updates** *(Phase 2)* — launcher icon changes to match selected color theme
 
 ---
 
