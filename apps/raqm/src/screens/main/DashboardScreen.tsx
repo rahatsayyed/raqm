@@ -131,7 +131,7 @@ export function DashboardScreen() {
       {/* Net flow hero card */}
       <View style={styles.heroCard}>
         <Text style={styles.heroLabel}>Net cash flow</Text>
-        <Text style={[styles.heroAmount, { color: netIsPositive ? '#fff' : '#ffd5d5' }]}>
+        <Text style={[styles.heroAmount, { color: netIsPositive ? Colors.onPrimary : Colors.onError }]}>
           {netIsPositive ? '+' : '-'}{formatAmount(stats.net, currency)}
         </Text>
         <View style={styles.heroRow}>
@@ -239,14 +239,14 @@ const styles = StyleSheet.create({
     shadowColor: Colors.primary, shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3, shadowRadius: 20, elevation: 8,
   },
-  heroLabel: { ...Typography.labelSm, color: 'rgba(255,255,255,0.65)', letterSpacing: 0.8 },
-  heroAmount: { ...Typography.numericXl, color: '#fff' },
+  heroLabel: { ...Typography.labelSm, color: Colors.onPrimary, letterSpacing: 0.8 },
+  heroAmount: { ...Typography.numericXl, color: Colors.onPrimary },
   heroRow: { flexDirection: 'row', marginTop: Spacing.sm },
   heroStat: { flex: 1, gap: 4 },
-  heroSeparator: { width: 1, backgroundColor: 'rgba(255,255,255,0.2)', marginHorizontal: Spacing.md },
-  heroStatLabel: { ...Typography.labelSm, color: 'rgba(255,255,255,0.65)' },
-  heroStatValue: { ...Typography.numericMd, color: '#fff', fontSize: 18 },
-  heroMeta: { ...Typography.labelSm, color: 'rgba(255,255,255,0.5)', marginTop: 4 },
+  heroSeparator: { width: 1, backgroundColor: 'rgba(0,56,35,0.2)', marginHorizontal: Spacing.md },
+  heroStatLabel: { ...Typography.labelSm, color: Colors.onPrimary },
+  heroStatValue: { ...Typography.numericMd, color: Colors.onPrimary, fontSize: 18 },
+  heroMeta: { ...Typography.labelSm, color: Colors.onPrimary, marginTop: 4 },
 
   section: { marginTop: Spacing.xl, paddingHorizontal: Spacing.containerMargin },
   sectionTitle: { ...Typography.titleLg, color: Colors.onSurface, marginBottom: Spacing.md, fontSize: 16 },
@@ -295,5 +295,5 @@ const styles = StyleSheet.create({
     shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
   },
-  toastText: { ...Typography.bodyMd, color: '#fff', fontFamily: 'WorkSans_500Medium' },
+  toastText: { ...Typography.bodyMd, color: Colors.onPrimaryContainer, fontFamily: 'WorkSans_500Medium' },
 });

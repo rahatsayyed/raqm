@@ -175,11 +175,11 @@ const styles = StyleSheet.create({
   logoText: { fontSize: 40, fontFamily: 'Manrope_700Bold', color: Colors.primary },
   floatingBadge: {
     position: 'absolute',
-    backgroundColor: 'rgba(255,255,255,0.85)',
+    backgroundColor: Colors.bgSurfaceRaised,
     borderRadius: Radius.lg, padding: 12,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1, shadowRadius: 12, elevation: 6,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
+    borderWidth: 1, borderColor: Colors.borderSubtle,
   },
   badgeLeft: { left: width * 0.08, top: '30%' },
   badgeRight: { right: width * 0.08, bottom: '25%' },

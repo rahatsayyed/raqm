@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     shadowColor: Colors.primary, shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35, shadowRadius: 16, elevation: 8,
   },
-  successIcon: { fontSize: 40, color: '#fff', fontWeight: '700' },
+  successIcon: { fontSize: 40, color: Colors.onPrimary, fontWeight: '700' },
   textArea: { alignItems: 'center', marginBottom: Spacing.xxl, gap: Spacing.sm },
   headline: { ...Typography.displayLg, color: Colors.onSurface, textAlign: 'center' },
   subtitle: {
@@ -119,12 +119,12 @@ const styles = StyleSheet.create({
   },
   statsRow: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.xxl, width: '100%' },
   statCard: {
-    flex: 1, backgroundColor: 'rgba(255,255,255,0.7)',
+    flex: 1, backgroundColor: Colors.bgSurfaceRaised,
     borderRadius: Radius.xl, padding: Spacing.md,
     alignItems: 'center', gap: 4,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)',
+    borderWidth: 1, borderColor: Colors.borderSubtle,
   },
   statIcon: { fontSize: 22 },
   statValue: { ...Typography.headlineMd, color: Colors.primary },

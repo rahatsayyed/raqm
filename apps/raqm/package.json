@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@expo-google-fonts/dm-mono": "^0.2.3",
+    "@expo-google-fonts/fraunces": "^0.4.1",
+    "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/manrope": "^0.2.3",
     "@expo-google-fonts/work-sans": "^0.2.3",
     "@rahatsayyed/bank-sms-parser": "*",

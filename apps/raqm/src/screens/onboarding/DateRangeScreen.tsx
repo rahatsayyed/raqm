@@ -145,11 +145,9 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
           display="default"
           maximumDate={pickingField === 'from' ? toDate : new Date()}
           minimumDate={pickingField === 'to' ? fromDate : (earliestTs ? new Date(earliestTs) : undefined)}
-          onValueChange={(_event: unknown, date?: Date) => {
-            if (date) {
-              if (pickingField === 'from') setFromDate(date);
-              else setToDate(date);
-            }
+          onValueChange={(_event, date) => {
+            if (pickingField === 'from') setFromDate(date ?? fromDate);
+            else setToDate(date ?? toDate);
             setPickingField(null);
           }}
           onDismiss={() => setPickingField(null)}
@@ -197,7 +195,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.xl, padding: Spacing.md,
   },
   rangeCardSelected: {
-    borderColor: Colors.primary, backgroundColor: '#f1f8f4',
+    borderColor: Colors.primary, backgroundColor: Colors.primaryContainer,
     shadowColor: Colors.primary, shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
   },

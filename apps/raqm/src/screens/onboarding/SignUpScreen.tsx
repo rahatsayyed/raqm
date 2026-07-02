@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
   },
-  logoText: { fontSize: 24, color: '#fff', fontFamily: 'Manrope_700Bold' },
+  logoText: { fontSize: 24, color: Colors.onPrimary, fontFamily: 'Manrope_700Bold' },
   headline: { ...Typography.headlineMd, color: Colors.onSurface, textAlign: 'center' },
   subtitle: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center', maxWidth: 280, lineHeight: 22 },
   form: { gap: Spacing.md },

@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.outlineVariant,
     borderRadius: Radius.xl, padding: Spacing.md,
   },
-  accountCardSelected: { borderColor: Colors.primary, backgroundColor: '#f1f8f4' },
+  accountCardSelected: { borderColor: Colors.primary, backgroundColor: Colors.primaryContainer },
   accountIconBox: {
     width: 48, height: 48, borderRadius: Radius.lg,
     backgroundColor: Colors.surfaceVariant,
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   checkboxSelected: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  checkmark: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  checkmark: { color: Colors.onPrimary, fontSize: 13, fontWeight: '700' },
   summaryCard: {
     backgroundColor: Colors.primaryContainer,
     borderRadius: Radius.xl, padding: Spacing.md,
