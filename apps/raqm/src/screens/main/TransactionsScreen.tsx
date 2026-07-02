@@ -1,9 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
-import { useOnboardingStore } from '../../store/onboardingStore';
+import { useTxStore } from '../../store/txStore';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { MainStackParamList } from '../../navigation/types';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
-import type { ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
+import type { TxRecord } from '../../db/database';
 
 function formatAmount(n: number, currency = '₹'): string {
   return `${currency}${Math.abs(n).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -38,11 +41,11 @@ function txTypeLabel(type: TransactionType): string {
   }
 }
 
-function TxItem({ tx, currency }: { tx: ParsedTransaction; currency: string }) {
+function TxItem({ tx, currency, onPress }: { tx: TxRecord; currency: string; onPress: () => void }) {
   const debit = isDebit(tx.type);
   const color = txColor(tx.type);
   return (
-    <View style={styles.item}>
+    <TouchableOpacity style={styles.item} onPress={onPress} activeOpacity={0.7}>
       <View style={[styles.dot, { backgroundColor: `${color}20` }]}>
         <Text style={[styles.dotText, { color }]}>{debit ? '↓' : '↑'}</Text>
       </View>
@@ -57,19 +60,20 @@ function TxItem({ tx, currency }: { tx: ParsedTransaction; currency: string }) {
       <Text style={[styles.itemAmount, { color }]}>
         {debit ? '-' : '+'}{formatAmount(tx.amount, currency)}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
 export function TransactionsScreen() {
-  const { transactions } = useOnboardingStore();
+  const txs = useTxStore((s) => s.txs);
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const [query, setQuery] = useState('');
 
-  const currency = transactions[0]?.currency ?? '₹';
+  const currency = txs[0]?.currency ?? '₹';
 
   const sorted = useMemo(
-    () => [...transactions].sort((a, b) => b.timestamp - a.timestamp),
-    [transactions],
+    () => [...txs].sort((a, b) => b.timestamp - a.timestamp),
+    [txs],
   );
 
   const filtered = useMemo(() => {
@@ -101,8 +105,14 @@ export function TransactionsScreen() {
 
       <FlatList
         data={filtered}
-        keyExtractor={(_, i) => String(i)}
-        renderItem={({ item }) => <TxItem tx={item} currency={currency} />}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={({ item }) => (
+          <TxItem
+            tx={item}
+            currency={currency}
+            onPress={() => navigation.navigate('TransactionDetail', { transactionId: item.id })}
+          />
+        )}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.sep} />}
@@ -112,6 +122,14 @@ export function TransactionsScreen() {
           </View>
         }
       />
+
+      <TouchableOpacity
+        style={styles.fab}
+        activeOpacity={0.85}
+        onPress={() => navigation.navigate('AddTransaction')}
+      >
+        <Text style={styles.fabIcon}>＋</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -131,7 +149,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md, paddingVertical: 10,
     ...Typography.bodyMd, color: Colors.onSurface,
   },
-  list: { paddingHorizontal: Spacing.containerMargin, paddingBottom: 32 },
+  list: { paddingHorizontal: Spacing.containerMargin, paddingBottom: 96 },
   item: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
     paddingVertical: Spacing.sm,
@@ -149,4 +167,13 @@ const styles = StyleSheet.create({
   sep: { height: 1, backgroundColor: Colors.outlineVariant, marginLeft: 56 },
   empty: { paddingTop: 80, alignItems: 'center' },
   emptyText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
+  fab: {
+    position: 'absolute', right: Spacing.containerMargin, bottom: Spacing.xl,
+    width: 56, height: 56, borderRadius: Radius.full,
+    backgroundColor: Colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35, shadowRadius: 14, elevation: 8,
+  },
+  fabIcon: { fontSize: 26, color: Colors.onPrimary, lineHeight: 28 },
 });

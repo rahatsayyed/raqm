@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
-import { useOnboardingStore } from '../../store/onboardingStore';
+import { useTxStore } from '../../store/txStore';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 
 function formatAmount(n: number, currency = '₹'): string {
@@ -19,7 +19,7 @@ function monthLabel(key: string): string {
 }
 
 export function AnalyticsScreen() {
-  const { transactions } = useOnboardingStore();
+  const transactions = useTxStore((s) => s.txs);
   const currency = transactions[0]?.currency ?? '₹';
 
   const byMonth = useMemo(() => {
