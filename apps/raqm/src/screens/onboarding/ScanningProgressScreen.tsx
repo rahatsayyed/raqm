@@ -192,11 +192,11 @@ const styles = StyleSheet.create({
   },
   bentoGrid: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.xxl, width: '100%' },
   bentoCard: {
-    flex: 1, backgroundColor: 'rgba(255,255,255,0.7)',
+    flex: 1, backgroundColor: Colors.bgSurfaceRaised,
     borderRadius: Radius.xl, padding: Spacing.md, gap: 6,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
+    borderWidth: 1, borderColor: Colors.borderSubtle,
   },
   bentoIcon: { fontSize: 22 },
   bentoTitle: { ...Typography.labelLg, color: Colors.onSurface, fontSize: 13, letterSpacing: 0 },

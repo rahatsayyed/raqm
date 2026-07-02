@@ -1,4 +1,6 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
 
 export type OnboardingStackParamList = {
   Welcome: undefined;
@@ -19,8 +21,28 @@ export type MainTabParamList = {
   Home: undefined;
   Transactions: undefined;
   Analytics: undefined;
+  Grocery: undefined;
   More: undefined;
+};
+
+// Push screens that sit on top of the tab navigator
+export type MainStackParamList = {
+  Tabs: undefined;
+  TransactionDetail: { transactionId: number };
+  AddTransaction: undefined;
+  EditTransaction: { transactionId: number };
+  CategoryPicker: { onSelect: (categoryId: number, subcategoryId?: number) => void };
+  AccountDetail: { bankName: string; last4?: string };
+  GroceryListDetail: { listId: number; listName: string };
+  Settings: undefined;
+  CategoryDetail: { categoryId: number; categoryName: string; period?: string };
 };
 
 export type OnboardingScreenProps<T extends keyof OnboardingStackParamList> =
   NativeStackScreenProps<OnboardingStackParamList, T>;
+
+export type MainTabScreenProps<T extends keyof MainTabParamList> =
+  BottomTabScreenProps<MainTabParamList, T>;
+
+export type MainStackScreenProps<T extends keyof MainStackParamList> =
+  NativeStackScreenProps<MainStackParamList, T>;

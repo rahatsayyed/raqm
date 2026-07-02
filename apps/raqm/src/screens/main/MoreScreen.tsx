@@ -3,6 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { useAppStore } from '../../store/appStore';
 import { useOnboardingStore } from '../../store/onboardingStore';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { MainStackParamList } from '../../navigation/types';
 
 interface RowProps {
   icon: string;
@@ -26,6 +29,7 @@ function Row({ icon, label, onPress, destructive }: RowProps) {
 export function MoreScreen() {
   const { userName } = useAppStore();
   const { transactions } = useOnboardingStore();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
 
   const firstName = userName.trim().split(' ')[0] || 'User';
 
@@ -58,7 +62,7 @@ export function MoreScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>APP</Text>
         <View style={styles.card}>
-          <Row icon="🔔" label="Notification settings" />
+          <Row icon="⚙️" label="Settings" onPress={() => navigation.navigate('Settings')} />
           <View style={styles.sep} />
           <Row icon="📍" label="Location permissions" />
           <View style={styles.sep} />

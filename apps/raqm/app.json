@@ -10,14 +10,14 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#f8faf9"
+      "backgroundColor": "#0e1512"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png",
-        "backgroundColor": "#f8faf9"
+        "backgroundColor": "#0e1512"
       },
       "package": "com.raqm.money",
       "predictiveBackGestureEnabled": false,
@@ -37,13 +37,14 @@
       [
         "expo-navigation-bar",
         {
-          "style": "dark"
+          "style": "dark",
+          "backgroundColor": "#0e1512"
         }
       ],
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#f8faf9",
+          "backgroundColor": "#0e1512",
           "image": "./assets/splash-icon.png",
           "resizeMode": "contain"
         }

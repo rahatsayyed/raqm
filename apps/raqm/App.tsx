@@ -7,10 +7,13 @@ import { useFonts } from 'expo-font';
 import { Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import { WorkSans_400Regular, WorkSans_500Medium, WorkSans_700Bold } from '@expo-google-fonts/work-sans';
 import { DMMono_400Regular, DMMono_500Medium } from '@expo-google-fonts/dm-mono';
+import { Fraunces_500Medium } from '@expo-google-fonts/fraunces';
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { Colors } from './src/theme';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -22,8 +25,8 @@ function AppContent({ onLayout }: { onLayout: () => void }) {
   }, []);
 
   return (
-    <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: '#f8faf9' }} onLayout={onLayout}>
-      <StatusBar style="dark" />
+    <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: Colors.surface }} onLayout={onLayout}>
+      <StatusBar style="light" />
       <AppNavigator />
     </View>
   );
@@ -39,6 +42,10 @@ export default function App() {
     WorkSans_700Bold,
     DMMono_400Regular,
     DMMono_500Medium,
+    Fraunces_500Medium,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
   });
 
   useInAppUpdate();

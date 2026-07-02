@@ -184,13 +184,13 @@ const styles = StyleSheet.create({
   },
   iconInner: {
     width: 112, height: 112, borderRadius: 28,
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 2, borderColor: Colors.borderSubtle,
     alignItems: 'center', justifyContent: 'center',
   },
   iconText: { fontSize: 52 },
   floatingBadge: {
     position: 'absolute',
-    backgroundColor: 'rgba(255,255,255,0.75)',
+    backgroundColor: Colors.bgSurfaceRaised,
     borderRadius: Radius.xl, padding: 12,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1, shadowRadius: 12, elevation: 6,
@@ -216,9 +216,9 @@ const styles = StyleSheet.create({
   trustList: { gap: Spacing.sm },
   trustItem: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: Colors.bgSurfaceRaised,
     borderRadius: Radius.xl, padding: Spacing.md,
-    borderWidth: 1, borderColor: `${Colors.primary}1A`,
+    borderWidth: 1, borderColor: Colors.borderSubtle,
   },
   trustIconBox: {
     width: 40, height: 40, borderRadius: Radius.lg,

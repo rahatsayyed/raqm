@@ -91,4 +91,64 @@ export const Typography = {
     fontWeight: '400' as TextStyle['fontWeight'],
     lineHeight: 20,
   },
+
+  // ── New tokens: Fraunces (serif) + Inter (grotesk) ──────────────────────
+
+  statementLg: {
+    fontFamily: 'Fraunces_500Medium',
+    fontSize: 32,
+    fontWeight: '500' as TextStyle['fontWeight'],
+    lineHeight: 40,
+    letterSpacing: -0.64,
+  },
+  statementMobile: {
+    fontFamily: 'Fraunces_500Medium',
+    fontSize: 28,
+    fontWeight: '500' as TextStyle['fontWeight'],
+    lineHeight: 34,
+  },
+  metricHero: {
+    fontFamily: 'Fraunces_500Medium',
+    fontSize: 48,
+    fontWeight: '500' as TextStyle['fontWeight'],
+    lineHeight: 56,
+  },
+  sectionHeader: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    fontWeight: '600' as TextStyle['fontWeight'],
+    lineHeight: 16,
+    letterSpacing: 1.04,
+  },
+  insightReading: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 17,
+    fontWeight: '500' as TextStyle['fontWeight'],
+    lineHeight: 24,
+  },
+  bodyStandard: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 15,
+    fontWeight: '400' as TextStyle['fontWeight'],
+    lineHeight: 22,
+  },
+  supportingText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    fontWeight: '400' as TextStyle['fontWeight'],
+    lineHeight: 18,
+  },
+  annotation: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    fontWeight: '400' as TextStyle['fontWeight'],
+    lineHeight: 16,
+  },
+  labelCaps: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    fontWeight: '600' as TextStyle['fontWeight'],
+    lineHeight: 14,
+    letterSpacing: 0.55,
+  },
 } as const;
