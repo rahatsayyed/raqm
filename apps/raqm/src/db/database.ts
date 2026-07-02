@@ -285,6 +285,16 @@ export interface Subcategory {
   isCustom: boolean;
 }
 
+function parseTags(raw: unknown): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw as string);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function rowToTxRecord(row: Record<string, unknown>): TxRecord {
   return {
     id: row.id as number,
@@ -300,7 +310,7 @@ function rowToTxRecord(row: Record<string, unknown>): TxRecord {
     categoryId: (row.category_id as number | null) ?? null,
     subcategoryId: (row.subcategory_id as number | null) ?? null,
     notes: (row.notes as string | null) ?? null,
-    tags: row.tags ? (JSON.parse(row.tags as string) as string[]) : [],
+    tags: parseTags(row.tags),
     rawSms: (row.raw_sms as string | null) ?? null,
     lat: (row.lat as number | null) ?? null,
     lng: (row.lng as number | null) ?? null,
@@ -583,43 +593,49 @@ const DEFAULT_GROCERY_LISTS = ['Weekly Groceries', 'Monthly Staples', 'Household
 
 export async function seedDefaults(): Promise<void> {
   const database = await getDb();
-
-  const catCountRow = await database.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count FROM categories`,
-  );
-  if ((catCountRow?.count ?? 0) === 0) {
-    const idByName = new Map<string, number>();
-    for (const [name, emoji] of DEFAULT_CATEGORIES) {
-      const result = await database.runAsync(
-        `INSERT INTO categories (name, emoji, is_custom) VALUES (?, ?, 0)`,
-        name,
-        emoji,
-      );
-      idByName.set(name, result.lastInsertRowId);
+  await database.runAsync('BEGIN');
+  try {
+    const catCountRow = await database.getFirstAsync<{ count: number }>(
+      `SELECT COUNT(*) as count FROM categories`,
+    );
+    if ((catCountRow?.count ?? 0) === 0) {
+      const idByName = new Map<string, number>();
+      for (const [name, emoji] of DEFAULT_CATEGORIES) {
+        const result = await database.runAsync(
+          `INSERT INTO categories (name, emoji, is_custom) VALUES (?, ?, 0)`,
+          name,
+          emoji,
+        );
+        idByName.set(name, result.lastInsertRowId);
+      }
+      for (const [parentName, children] of DEFAULT_SUBCATEGORIES) {
+        const categoryId = idByName.get(parentName);
+        if (categoryId === undefined) continue;
+        for (const child of children) {
+          await database.runAsync(
+            `INSERT INTO subcategories (category_id, name, is_custom) VALUES (?, ?, 0)`,
+            categoryId,
+            child,
+          );
+        }
+      }
     }
-    for (const [parentName, children] of DEFAULT_SUBCATEGORIES) {
-      const categoryId = idByName.get(parentName);
-      if (categoryId === undefined) continue;
-      for (const child of children) {
+
+    const listCountRow = await database.getFirstAsync<{ count: number }>(
+      `SELECT COUNT(*) as count FROM grocery_lists`,
+    );
+    if ((listCountRow?.count ?? 0) === 0) {
+      for (const name of DEFAULT_GROCERY_LISTS) {
         await database.runAsync(
-          `INSERT INTO subcategories (category_id, name, is_custom) VALUES (?, ?, 0)`,
-          categoryId,
-          child,
+          `INSERT INTO grocery_lists (name, budget_cap, completed_at) VALUES (?, NULL, NULL)`,
+          name,
         );
       }
     }
-  }
-
-  const listCountRow = await database.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) as count FROM grocery_lists`,
-  );
-  if ((listCountRow?.count ?? 0) === 0) {
-    for (const name of DEFAULT_GROCERY_LISTS) {
-      await database.runAsync(
-        `INSERT INTO grocery_lists (name, budget_cap, completed_at) VALUES (?, NULL, NULL)`,
-        name,
-      );
-    }
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
   }
 }
 
