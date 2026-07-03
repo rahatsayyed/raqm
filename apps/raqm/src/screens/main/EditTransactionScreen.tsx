@@ -28,6 +28,7 @@ export function EditTransactionScreen({ route, navigation }: MainStackScreenProp
   const [notes, setNotes] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -81,23 +82,28 @@ export function EditTransactionScreen({ route, navigation }: MainStackScreenProp
   const removeTag = (tag: string) => setTags(tags.filter((t) => t !== tag));
 
   const handleSave = async () => {
-    if (!canSave) return;
-    const trimmedMerchant = merchant.trim();
-    await updateTx(transactionId, {
-      amount: parsedAmount,
-      type,
-      merchant: trimmedMerchant || null,
-      timestamp: date.getTime(),
-      categoryId,
-      subcategoryId: subcategoryId ?? null,
-      notes: notes.trim() || null,
-      tags,
-    });
-    // C7: remember merchant → category mapping for future auto-categorization.
-    if (trimmedMerchant && categoryId != null) {
-      await upsertCategoryRule(trimmedMerchant, categoryId, subcategoryId ?? null);
+    if (!canSave || saving) return;
+    setSaving(true);
+    try {
+      const trimmedMerchant = merchant.trim();
+      await updateTx(transactionId, {
+        amount: parsedAmount,
+        type,
+        merchant: trimmedMerchant || null,
+        timestamp: date.getTime(),
+        categoryId,
+        subcategoryId: subcategoryId ?? null,
+        notes: notes.trim() || null,
+        tags,
+      });
+      // C7: remember merchant → category mapping for future auto-categorization.
+      if (trimmedMerchant && categoryId != null) {
+        await upsertCategoryRule(trimmedMerchant, categoryId, subcategoryId ?? null);
+      }
+      navigation.goBack();
+    } finally {
+      setSaving(false);
     }
-    navigation.goBack();
   };
 
   if (loading) {
@@ -164,11 +170,10 @@ export function EditTransactionScreen({ route, navigation }: MainStackScreenProp
             mode="date"
             display="default"
             maximumDate={new Date()}
-            onValueChange={(_event, selected) => {
+            onChange={(_event, selected) => {
               setShowDatePicker(false);
               if (selected) setDate(selected);
             }}
-            onDismiss={() => setShowDatePicker(false)}
           />
         )}
 
@@ -215,9 +220,9 @@ export function EditTransactionScreen({ route, navigation }: MainStackScreenProp
         </View>
 
         <TouchableOpacity
-          style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+          style={[styles.saveButton, (!canSave || saving) && styles.saveButtonDisabled]}
           onPress={handleSave}
-          disabled={!canSave}
+          disabled={!canSave || saving}
         >
           <Text style={styles.saveButtonText}>Save changes</Text>
         </TouchableOpacity>

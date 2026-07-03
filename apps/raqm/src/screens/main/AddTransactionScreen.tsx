@@ -27,6 +27,7 @@ export function AddTransactionScreen({ navigation }: MainStackScreenProps<'AddTr
   const [notes, setNotes] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const parsedAmount = parseFloat(amount);
   const canSave = !Number.isNaN(parsedAmount) && parsedAmount > 0 && bankName.trim().length > 0;
@@ -56,20 +57,25 @@ export function AddTransactionScreen({ navigation }: MainStackScreenProps<'AddTr
   const removeTag = (tag: string) => setTags(tags.filter((t) => t !== tag));
 
   const handleSave = async () => {
-    if (!canSave) return;
-    await addTx({
-      amount: parsedAmount,
-      type,
-      merchant: merchant.trim() || null,
-      bankName: bankName.trim(),
-      timestamp: date.getTime(),
-      categoryId,
-      subcategoryId: subcategoryId ?? null,
-      notes: notes.trim() || null,
-      tags,
-      isManual: true,
-    });
-    navigation.goBack();
+    if (!canSave || saving) return;
+    setSaving(true);
+    try {
+      await addTx({
+        amount: parsedAmount,
+        type,
+        merchant: merchant.trim() || null,
+        bankName: bankName.trim(),
+        timestamp: date.getTime(),
+        categoryId,
+        subcategoryId: subcategoryId ?? null,
+        notes: notes.trim() || null,
+        tags,
+        isManual: true,
+      });
+      navigation.goBack();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -137,11 +143,10 @@ export function AddTransactionScreen({ navigation }: MainStackScreenProps<'AddTr
             mode="date"
             display="default"
             maximumDate={new Date()}
-            onValueChange={(_event, selected) => {
+            onChange={(_event, selected) => {
               setShowDatePicker(false);
               if (selected) setDate(selected);
             }}
-            onDismiss={() => setShowDatePicker(false)}
           />
         )}
 
@@ -188,9 +193,9 @@ export function AddTransactionScreen({ navigation }: MainStackScreenProps<'AddTr
         </View>
 
         <TouchableOpacity
-          style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+          style={[styles.saveButton, (!canSave || saving) && styles.saveButtonDisabled]}
           onPress={handleSave}
-          disabled={!canSave}
+          disabled={!canSave || saving}
         >
           <Text style={styles.saveButtonText}>Save transaction</Text>
         </TouchableOpacity>

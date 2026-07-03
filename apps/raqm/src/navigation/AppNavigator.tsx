@@ -27,6 +27,12 @@ export function AppNavigator() {
     };
   }, []);
 
+  useEffect(() => {
+    if (isOnboardingComplete) {
+      useTxStore.getState().refresh();
+    }
+  }, [isOnboardingComplete]);
+
   if (!ready) {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' }}>

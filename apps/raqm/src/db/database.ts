@@ -465,13 +465,37 @@ export async function insertTx(input: NewTxInput): Promise<number> {
   return result.lastInsertRowId;
 }
 
-export async function insertParsedTx(tx: ParsedTransaction): Promise<number> {
+let cachedSalaryCategoryId: number | null | undefined;
+
+async function getSalaryCategoryId(): Promise<number | null> {
+  if (cachedSalaryCategoryId !== undefined) return cachedSalaryCategoryId;
+  const database = await getDb();
+  const salaryCat = await database.getFirstAsync<{ id: number }>(
+    `SELECT id FROM categories WHERE name = 'Salary' LIMIT 1`,
+  );
+  cachedSalaryCategoryId = salaryCat ? salaryCat.id : null;
+  return cachedSalaryCategoryId;
+}
+
+// Shared categorization decision used by both insertParsedTx and insertParsedTxs.
+// ruleCache lets batch callers avoid repeat DB lookups for the same merchant.
+async function categorizeParsedTx(
+  tx: ParsedTransaction,
+  ruleCache?: Map<string, { categoryId: number; subcategoryId: number | null } | null>,
+): Promise<{ categoryId: number | null; subcategoryId: number | null }> {
   let categoryId: number | null = null;
   let subcategoryId: number | null = null;
 
   // C7: apply an existing category rule for this merchant, if any.
   if (tx.merchant) {
-    const rule = await getCategoryRuleForMerchant(tx.merchant);
+    const merchantKey = tx.merchant.toLowerCase();
+    let rule: { categoryId: number; subcategoryId: number | null } | null | undefined;
+    if (ruleCache && ruleCache.has(merchantKey)) {
+      rule = ruleCache.get(merchantKey);
+    } else {
+      rule = await getCategoryRuleForMerchant(tx.merchant);
+      ruleCache?.set(merchantKey, rule ?? null);
+    }
     if (rule) {
       categoryId = rule.categoryId;
       subcategoryId = rule.subcategoryId;
@@ -484,13 +508,15 @@ export async function insertParsedTx(tx: ParsedTransaction): Promise<number> {
     const salaryRegex = /salary|sal credited/i;
     const matchesSalary = salaryRegex.test(tx.smsBody) || (!!tx.merchant && salaryRegex.test(tx.merchant));
     if (isCredit && matchesSalary) {
-      const database = await getDb();
-      const salaryCat = await database.getFirstAsync<{ id: number }>(
-        `SELECT id FROM categories WHERE name = 'Salary' LIMIT 1`,
-      );
-      if (salaryCat) categoryId = salaryCat.id;
+      categoryId = await getSalaryCategoryId();
     }
   }
+
+  return { categoryId, subcategoryId };
+}
+
+export async function insertParsedTx(tx: ParsedTransaction): Promise<number> {
+  const { categoryId, subcategoryId } = await categorizeParsedTx(tx);
 
   return insertTx({
     amount: tx.amount,
@@ -507,6 +533,45 @@ export async function insertParsedTx(tx: ParsedTransaction): Promise<number> {
     rawSms: tx.smsBody,
     isManual: false,
   });
+}
+
+export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
+  if (txs.length === 0) return;
+
+  // Resolve categorization outside the transaction, caching rule lookups per unique merchant.
+  const ruleCache = new Map<string, { categoryId: number; subcategoryId: number | null } | null>();
+  const decisions = await Promise.all(txs.map((tx) => categorizeParsedTx(tx, ruleCache)));
+
+  const database = await getDb();
+  await database.runAsync('BEGIN');
+  try {
+    for (let i = 0; i < txs.length; i++) {
+      const tx = txs[i];
+      const { categoryId, subcategoryId } = decisions[i];
+      await database.runAsync(
+        `INSERT INTO transactions
+           (amount, type, merchant, bankName, accountLast4, timestamp, balance, currency, isFromCard,
+            category_id, subcategory_id, raw_sms, is_manual)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+        tx.amount,
+        tx.type,
+        tx.merchant ?? null,
+        tx.bankName,
+        tx.accountLast4 ?? null,
+        tx.timestamp,
+        tx.balance ?? null,
+        tx.currency ?? '₹',
+        tx.isFromCard ? 1 : 0,
+        categoryId,
+        subcategoryId,
+        tx.smsBody ?? null,
+      );
+    }
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
 }
 
 export async function updateTx(id: number, patch: TxPatch): Promise<void> {
