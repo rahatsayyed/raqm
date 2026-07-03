@@ -779,3 +779,178 @@ export async function upsertCategoryRule(
     );
   }
 }
+
+// ── Multi-row transaction ops (Plan 3) ─────────────────────────────────────────
+
+export async function splitTx(
+  parentId: number,
+  parts: { amount: number; merchant?: string | null; categoryId?: number | null }[],
+): Promise<void> {
+  const parent = await getTxById(parentId);
+  if (!parent) throw new Error(`splitTx: parent ${parentId} not found`);
+  const partsSum = parts.reduce((s, p) => s + p.amount, 0);
+  if (Math.abs(partsSum - parent.amount) > 0.01) {
+    throw new Error(`splitTx: parts sum ${partsSum} does not match parent amount ${parent.amount}`);
+  }
+  const database = await getDb();
+  await database.runAsync('BEGIN');
+  try {
+    await database.runAsync(`UPDATE transactions SET deleted_at = ? WHERE id = ?`, Date.now(), parentId);
+    for (const part of parts) {
+      await database.runAsync(
+        `INSERT INTO transactions
+           (amount, type, merchant, bankName, accountLast4, timestamp, balance, currency,
+            isFromCard, category_id, raw_sms, is_manual, is_split_child, split_parent_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?)`,
+        part.amount,
+        parent.type,
+        part.merchant ?? parent.merchant,
+        parent.bankName,
+        parent.accountLast4,
+        parent.timestamp,
+        null,
+        parent.currency,
+        parent.isFromCard ? 1 : 0,
+        part.categoryId ?? null,
+        parent.rawSms,
+        parentId,
+      );
+    }
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+}
+
+export async function mergeTxs(ids: number[], merchant: string): Promise<number> {
+  if (ids.length < 2) throw new Error('mergeTxs: need at least 2 ids');
+  const rows = await Promise.all(ids.map(id => getTxById(id)));
+  const txs = rows.filter((t): t is NonNullable<typeof t> => t !== null);
+  if (txs.length !== ids.length) throw new Error('mergeTxs: some ids not found');
+  const sum = txs.reduce((s, t) => s + t.amount, 0);
+  const earliest = txs.reduce((min, t) => Math.min(min, t.timestamp), txs[0].timestamp);
+  const first = txs[0];
+
+  const database = await getDb();
+  let newId = 0;
+  await database.runAsync('BEGIN');
+  try {
+    const result = await database.runAsync(
+      `INSERT INTO transactions
+         (amount, type, merchant, bankName, accountLast4, timestamp, balance, currency, isFromCard, is_manual)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      sum,
+      first.type,
+      merchant,
+      first.bankName,
+      first.accountLast4,
+      earliest,
+      null,
+      first.currency,
+      first.isFromCard ? 1 : 0,
+    );
+    newId = result.lastInsertRowId;
+    const placeholders = ids.map(() => '?').join(',');
+    await database.runAsync(
+      `UPDATE transactions SET deleted_at = ? WHERE id IN (${placeholders})`,
+      Date.now(),
+      ...ids,
+    );
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+  return newId;
+}
+
+export async function groupTxs(ids: number[], name: string): Promise<number> {
+  if (ids.length < 2) throw new Error('groupTxs: need at least 2 ids');
+  const database = await getDb();
+  let groupId = 0;
+  await database.runAsync('BEGIN');
+  try {
+    const result = await database.runAsync(`INSERT INTO transaction_groups (name) VALUES (?)`, name);
+    groupId = result.lastInsertRowId;
+    const placeholders = ids.map(() => '?').join(',');
+    await database.runAsync(
+      `UPDATE transactions SET group_id = ? WHERE id IN (${placeholders})`,
+      groupId,
+      ...ids,
+    );
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+  return groupId;
+}
+
+export async function ungroupTx(id: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`UPDATE transactions SET group_id = NULL WHERE id = ?`, id);
+}
+
+export async function linkTxs(
+  aId: number,
+  bId: number,
+  type: 'manual' | 'self_transfer' | 'refund',
+): Promise<void> {
+  const database = await getDb();
+  await database.runAsync('BEGIN');
+  try {
+    await database.runAsync(
+      `UPDATE transactions SET link_type = ?, link_partner_id = ? WHERE id = ?`,
+      type, bId, aId,
+    );
+    await database.runAsync(
+      `UPDATE transactions SET link_type = ?, link_partner_id = ? WHERE id = ?`,
+      type, aId, bId,
+    );
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+}
+
+export async function unlinkTxs(aId: number): Promise<void> {
+  const a = await getTxById(aId);
+  if (!a) return;
+  const database = await getDb();
+  await database.runAsync('BEGIN');
+  try {
+    await database.runAsync(
+      `UPDATE transactions SET link_type = NULL, link_partner_id = NULL, link_settled = 0 WHERE id = ?`,
+      aId,
+    );
+    if (a.linkPartnerId != null) {
+      await database.runAsync(
+        `UPDATE transactions SET link_type = NULL, link_partner_id = NULL, link_settled = 0 WHERE id = ?`,
+        a.linkPartnerId,
+      );
+    }
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+}
+
+export async function setLinkSettled(aId: number, settled: boolean): Promise<void> {
+  const a = await getTxById(aId);
+  if (!a) return;
+  const database = await getDb();
+  await database.runAsync('BEGIN');
+  try {
+    await database.runAsync(`UPDATE transactions SET link_settled = ? WHERE id = ?`, settled ? 1 : 0, aId);
+    if (a.linkPartnerId != null) {
+      await database.runAsync(`UPDATE transactions SET link_settled = ? WHERE id = ?`, settled ? 1 : 0, a.linkPartnerId);
+    }
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+}
