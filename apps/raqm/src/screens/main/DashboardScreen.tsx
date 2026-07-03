@@ -7,7 +7,8 @@ import { SmsReader } from '../../native/SmsReader';
 import { BankParserFactory } from '@rahatsayyed/bank-sms-parser';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import type { TxRecord } from '../../db/database';
-import { isDuplicateSms, countsTowardTotals } from '../../services/txIntelligence';
+import { countsTowardTotals } from '../../services/txIntelligence';
+import { postTxNotification } from '../../notifications/notifications';
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -55,35 +56,43 @@ export function DashboardScreen() {
   const txs = useTxStore((s) => s.txs);
   const [newTxLabel, setNewTxLabel] = React.useState<string | null>(null);
   const toastAnim = useRef(new Animated.Value(0)).current;
-  const lastInsertedRef = useRef<{ amount: number; sender: string; timestamp: number } | null>(null);
 
   useEffect(() => {
-    const sub = SmsReader.addNewSmsListener(({ body, sender, timestamp }) => {
-      const tx = BankParserFactory.parse(body, sender, timestamp);
-      if (!tx) return;
+    const sub = SmsReader.addNewSmsListener(async ({ body, sender, timestamp }) => {
+      try {
+        const tx = BankParserFactory.parse(body, sender, timestamp);
+        if (!tx) return;
 
-      if (isDuplicateSms(lastInsertedRef.current, { amount: tx.amount, sender, timestamp })) {
-        setNewTxLabel('Duplicate SMS ignored');
+        const id = await useTxStore.getState().addParsedWithLocation(tx);
+        if (id === null) {
+          // duplicate SMS suppressed per T13 - show user feedback
+          setNewTxLabel('Duplicate SMS ignored');
+          Animated.sequence([
+            Animated.timing(toastAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+            Animated.delay(2000),
+            Animated.timing(toastAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+          ]).start(() => setNewTxLabel(null));
+          return;
+        }
+
+        const sign = tx.type === TransactionType.EXPENSE ? '-' : '+';
+        const label = tx.merchant
+          ? `${sign}₹${tx.amount.toLocaleString('en-IN')} · ${tx.merchant}`
+          : `New transaction from ${tx.bankName}`;
+        setNewTxLabel(label);
         Animated.sequence([
           Animated.timing(toastAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-          Animated.delay(2000),
+          Animated.delay(3000),
           Animated.timing(toastAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
         ]).start(() => setNewTxLabel(null));
-        return;
+
+        const notifBody = tx.merchant
+          ? `${sign}₹${tx.amount.toLocaleString('en-IN')} · ${tx.merchant}`
+          : `${sign}₹${tx.amount.toLocaleString('en-IN')} · ${tx.bankName}`;
+        await postTxNotification(id, 'New transaction', notifBody);
+      } catch (error) {
+        console.warn('SMS listener error:', error);
       }
-
-      lastInsertedRef.current = { amount: tx.amount, sender, timestamp };
-      useTxStore.getState().addParsedWithLocation(tx);
-
-      const label = tx.merchant
-        ? `${tx.type === TransactionType.EXPENSE ? '-' : '+'}₹${tx.amount.toLocaleString('en-IN')} · ${tx.merchant}`
-        : `New transaction from ${tx.bankName}`;
-      setNewTxLabel(label);
-      Animated.sequence([
-        Animated.timing(toastAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.delay(3000),
-        Animated.timing(toastAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-      ]).start(() => setNewTxLabel(null));
     });
     return () => sub.remove();
   }, []);
