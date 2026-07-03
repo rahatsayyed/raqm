@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { useTxStore } from '../../store/txStore';
@@ -40,11 +41,23 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
   const [categories, setCategories] = useState<Category[]>([]);
   const [budgetStatuses, setBudgetStatuses] = useState<BudgetStatus[]>([]);
 
-  useEffect(() => {
+  const loadMeta = useCallback(() => {
     getCategories().then(setCategories);
     getSetting('month_start_day').then((v) => setMonthStartDay(v ? Number(v) : 1));
     getBudgetStatuses().then(setBudgetStatuses);
   }, [txs]);
+
+  useEffect(() => {
+    loadMeta();
+  }, [loadMeta]);
+
+  // Re-read month_start_day (and budgets) when returning from Settings — this screen
+  // stays mounted beneath the pushed Settings screen, so [txs] alone won't re-fire.
+  useFocusEffect(
+    useCallback(() => {
+      loadMeta();
+    }, [loadMeta]),
+  );
 
   // Clamp so a corrupted/legacy setting can't push the reference date into an adjacent month.
   const clampedMonthStartDay = Math.min(28, Math.max(1, monthStartDay));
@@ -123,35 +136,43 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
 
   // V4 — category breakdown, sorted desc, with B3 budget bars
   const categoryBreakdown = useMemo(() => {
+    // Refund credits usually carry no categoryId of their own — resolve the refunded
+    // expense's category through the link partner so the refund nets against the
+    // category (and its budget bar), not the Uncategorized bucket.
+    const byId = new Map(txs.map((t) => [t.id, t]));
     const map = new Map<number, number>();
     let uncategorizedTotal = 0;
     for (const tx of periodTxs) {
       const isCredit = tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
-      if (tx.categoryId == null) {
-        // Uncategorized bucket nets refunds against expenses the same way topMerchants does.
-        if (isCredit && tx.linkType === 'refund') {
-          uncategorizedTotal -= tx.amount;
-        } else if (tx.type === TransactionType.EXPENSE) {
-          uncategorizedTotal += tx.amount;
-        }
+      if (isCredit && tx.linkType === 'refund') {
+        const partner = tx.linkPartnerId != null ? byId.get(tx.linkPartnerId) : undefined;
+        const cat = partner?.categoryId ?? tx.categoryId ?? null;
+        if (cat == null) uncategorizedTotal -= tx.amount;
+        else map.set(cat, (map.get(cat) ?? 0) - tx.amount);
         continue;
       }
       if (tx.type !== TransactionType.EXPENSE) continue;
+      if (tx.categoryId == null) {
+        uncategorizedTotal += tx.amount;
+        continue;
+      }
       map.set(tx.categoryId, (map.get(tx.categoryId) ?? 0) + tx.amount);
     }
     const rows: { categoryId: number | null; name: string; emoji: string; total: number; budget: BudgetStatus | undefined }[] =
-      Array.from(map.entries()).map(([categoryId, total]) => {
-        const cat = categories.find((c) => c.id === categoryId);
-        const budget = budgetStatuses.find((bs) => bs.budget.categoryId === categoryId);
-        return { categoryId, name: cat?.name ?? 'Unknown', emoji: cat?.emoji ?? '📦', total, budget };
-      });
+      Array.from(map.entries())
+        .filter(([, total]) => total > 0)
+        .map(([categoryId, total]) => {
+          const cat = categories.find((c) => c.id === categoryId);
+          const budget = budgetStatuses.find((bs) => bs.budget.categoryId === categoryId);
+          return { categoryId, name: cat?.name ?? 'Unknown', emoji: cat?.emoji ?? '📦', total, budget };
+        });
     if (uncategorizedTotal > 0) {
       rows.push({ categoryId: null, name: 'Uncategorized', emoji: '❔', total: uncategorizedTotal, budget: undefined });
     }
     rows.sort((a, b) => b.total - a.total);
     const max = Math.max(...rows.map((r) => r.total), 1);
     return rows.map((r) => ({ ...r, pct: r.total / max }));
-  }, [periodTxs, categories, budgetStatuses]);
+  }, [txs, periodTxs, categories, budgetStatuses]);
 
   // V8 — donut data from category breakdown
   const donutData = useMemo(

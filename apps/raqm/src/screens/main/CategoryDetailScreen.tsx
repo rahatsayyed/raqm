@@ -71,9 +71,30 @@ export function CategoryDetailScreen({ route, navigation }: MainStackScreenProps
     [txs, categoryId, bounds],
   );
 
+  // Refund credits linked to this category's expenses net against the total —
+  // resolved via the link partner since the credit usually carries no categoryId.
+  const refundNet = useMemo(() => {
+    if (!bounds) return 0;
+    const byId = new Map(txs.map((t) => [t.id, t]));
+    let net = 0;
+    for (const tx of txs) {
+      if (tx.timestamp < bounds.from || tx.timestamp > bounds.to) continue;
+      if (!countsTowardTotals(tx)) continue;
+      const credit = tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
+      if (!credit || tx.linkType !== 'refund') continue;
+      const partner = tx.linkPartnerId != null ? byId.get(tx.linkPartnerId) : undefined;
+      if ((partner?.categoryId ?? tx.categoryId) === categoryId) net += tx.amount;
+    }
+    return net;
+  }, [txs, categoryId, bounds]);
+
   const total = useMemo(
-    () => categoryTxs.filter((tx) => tx.type === TransactionType.EXPENSE).reduce((s, tx) => s + tx.amount, 0),
-    [categoryTxs],
+    () =>
+      Math.max(
+        0,
+        categoryTxs.filter((tx) => tx.type === TransactionType.EXPENSE).reduce((s, tx) => s + tx.amount, 0) - refundNet,
+      ),
+    [categoryTxs, refundNet],
   );
 
   const subBreakdown = useMemo(() => {
