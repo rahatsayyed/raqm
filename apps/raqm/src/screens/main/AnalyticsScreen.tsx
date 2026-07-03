@@ -1,68 +1,161 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import type { NavigationProp } from '@react-navigation/native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { useTxStore } from '../../store/txStore';
-import { TransactionType } from '@rahatsayyed/bank-sms-parser';
+import { getCategories, getSetting, type Category, type TxRecord } from '../../db/database';
 import { countsTowardTotals } from '../../services/txIntelligence';
-import type { TxRecord } from '../../db/database';
+import { getBudgetStatuses, type BudgetStatus } from '../../services/budgets';
+import { getDayBounds, getWeekBounds, getMonthBounds, type PeriodType, type PeriodBounds } from '../../utils/period';
+import { DonutChart } from '../../components/DonutChart';
+import { TrendLine } from '../../components/TrendLine';
+import { TransactionType } from '@rahatsayyed/bank-sms-parser';
+import { MainTabScreenProps, MainStackParamList } from '../../navigation/types';
+
+const CHART_COLORS = [Colors.primary, Colors.mossStructure, Colors.secondary, Colors.tertiary, Colors.errorMuted, Colors.outline];
 
 function formatAmount(n: number, currency = '₹'): string {
   return `${currency}${Math.abs(n).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
-function monthKey(ts: number): string {
-  const d = new Date(ts);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+function monthLabel(d: Date): string {
+  return d.toLocaleDateString('en-IN', { month: 'short' });
 }
 
-function monthLabel(key: string): string {
-  const [y, m] = key.split('-');
-  return new Date(Number(y), Number(m) - 1).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+/** Whether a transaction should be included in analytics at all (soft-deleted rows are always excluded). */
+function isCounted(tx: TxRecord): boolean {
+  return !tx.deletedAt && countsTowardTotals(tx);
 }
 
-export function AnalyticsScreen() {
-  const transactions = useTxStore((s) => s.txs);
-  const currency = transactions[0]?.currency ?? '₹';
+export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>) {
+  const { txs } = useTxStore();
+  const currency = txs[0]?.currency ?? '₹';
+  const [periodType, setPeriodType] = useState<PeriodType>('monthly');
+  const [monthStartDay, setMonthStartDay] = useState(1);
+  const [customFrom, setCustomFrom] = useState<Date>(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+  const [customTo, setCustomTo] = useState<Date>(new Date());
+  const [showFromPicker, setShowFromPicker] = useState(false);
+  const [showToPicker, setShowToPicker] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [budgetStatuses, setBudgetStatuses] = useState<BudgetStatus[]>([]);
 
-  const byMonth = useMemo(() => {
-    const map = new Map<string, { income: number; expenses: number }>();
-    for (const tx of transactions) {
-      if (tx.deletedAt) continue;
-      if (!countsTowardTotals(tx)) continue;
-      const key = monthKey(tx.timestamp);
-      if (!map.has(key)) map.set(key, { income: 0, expenses: 0 });
-      const entry = map.get(key)!;
-      const isCredit = tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
-      if (isCredit && tx.linkType === 'refund') {
-        entry.expenses -= tx.amount; // refund nets against expense, not counted as income
-      } else if (isCredit) {
-        entry.income += tx.amount;
-      } else if (tx.type === TransactionType.EXPENSE) {
-        entry.expenses += tx.amount;
+  useEffect(() => {
+    getCategories().then(setCategories);
+    getSetting('month_start_day').then((v) => setMonthStartDay(v ? Number(v) : 1));
+    getBudgetStatuses().then(setBudgetStatuses);
+  }, [txs]);
+
+  const bounds: PeriodBounds = useMemo(() => {
+    const now = new Date();
+    if (periodType === 'daily') return getDayBounds(now);
+    if (periodType === 'weekly') return getWeekBounds(now);
+    if (periodType === 'monthly') return getMonthBounds(now, monthStartDay);
+    return { from: customFrom.getTime(), to: customTo.getTime() };
+  }, [periodType, monthStartDay, customFrom, customTo]);
+
+  const periodTxs = useMemo(
+    () => txs.filter((tx) => tx.timestamp >= bounds.from && tx.timestamp <= bounds.to && isCounted(tx)),
+    [txs, bounds],
+  );
+
+  // V7 — bar chart, bucketed by day (last 14 days) / week (last 8 weeks) / calendar month (last 6)
+  const barBuckets = useMemo(() => {
+    const now = new Date();
+    const buckets: { key: string; label: string; expenses: number }[] = [];
+
+    if (periodType === 'daily') {
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        const b = getDayBounds(d);
+        const expenses = txs
+          .filter((tx) => tx.timestamp >= b.from && tx.timestamp <= b.to && isCounted(tx) && tx.type === TransactionType.EXPENSE)
+          .reduce((s, tx) => s + tx.amount, 0);
+        buckets.push({ key: String(b.from), label: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }), expenses });
+      }
+    } else if (periodType === 'weekly') {
+      for (let i = 7; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i * 7);
+        const b = getWeekBounds(d);
+        const expenses = txs
+          .filter((tx) => tx.timestamp >= b.from && tx.timestamp <= b.to && isCounted(tx) && tx.type === TransactionType.EXPENSE)
+          .reduce((s, tx) => s + tx.amount, 0);
+        buckets.push({ key: String(b.from), label: `Wk ${new Date(b.from).getDate()}`, expenses });
+      }
+    } else {
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const b = getMonthBounds(new Date(d.getFullYear(), d.getMonth(), monthStartDay), monthStartDay);
+        const expenses = txs
+          .filter((tx) => tx.timestamp >= b.from && tx.timestamp <= b.to && isCounted(tx) && tx.type === TransactionType.EXPENSE)
+          .reduce((s, tx) => s + tx.amount, 0);
+        buckets.push({ key: String(b.from), label: monthLabel(d), expenses });
       }
     }
-    return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-6);
-  }, [transactions]);
+    return buckets;
+  }, [txs, periodType, monthStartDay]);
 
+  const maxExpense = Math.max(...barBuckets.map((b) => b.expenses), 1);
+
+  // V5 — top merchants, period-filtered (refunds net against the merchant's expense total)
   const topMerchants = useMemo(() => {
     const map = new Map<string, number>();
-    for (const tx of transactions) {
-      if (tx.deletedAt) continue;
-      if (!countsTowardTotals(tx)) continue;
-      if (tx.type !== TransactionType.EXPENSE) continue;
+    for (const tx of periodTxs) {
+      const isCredit = tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
       const name = tx.merchant || tx.bankName;
-      map.set(name, (map.get(name) ?? 0) + tx.amount);
+      if (isCredit && tx.linkType === 'refund') {
+        map.set(name, (map.get(name) ?? 0) - tx.amount);
+      } else if (tx.type === TransactionType.EXPENSE) {
+        map.set(name, (map.get(name) ?? 0) + tx.amount);
+      }
     }
-    return Array.from(map.entries())
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 8);
-  }, [transactions]);
+    return Array.from(map.entries()).sort(([, a], [, b]) => b - a).slice(0, 8);
+  }, [periodTxs]);
 
+  // V4 — category breakdown, sorted desc, with B3 budget bars
+  const categoryBreakdown = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const tx of periodTxs) {
+      if (tx.type !== TransactionType.EXPENSE || tx.categoryId == null) continue;
+      map.set(tx.categoryId, (map.get(tx.categoryId) ?? 0) + tx.amount);
+    }
+    const rows = Array.from(map.entries())
+      .map(([categoryId, total]) => {
+        const cat = categories.find((c) => c.id === categoryId);
+        const budget = budgetStatuses.find((bs) => bs.budget.categoryId === categoryId);
+        return { categoryId, name: cat?.name ?? 'Unknown', emoji: cat?.emoji ?? '📦', total, budget };
+      })
+      .sort((a, b) => b.total - a.total);
+    const max = Math.max(...rows.map((r) => r.total), 1);
+    return rows.map((r) => ({ ...r, pct: r.total / max }));
+  }, [periodTxs, categories, budgetStatuses]);
+
+  // V8 — donut data from category breakdown
+  const donutData = useMemo(
+    () => categoryBreakdown.map((r, i) => ({ label: r.name, value: r.total, color: CHART_COLORS[i % CHART_COLORS.length] })),
+    [categoryBreakdown],
+  );
+
+  // V9 — trend line: last 6 calendar months of expenses, independent of active period
+  const trendData = useMemo(() => {
+    const now = new Date();
+    const out: { label: string; value: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const from = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+      const to = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+      const value = txs
+        .filter((tx) => tx.timestamp >= from && tx.timestamp <= to && isCounted(tx) && tx.type === TransactionType.EXPENSE)
+        .reduce((s, tx) => s + tx.amount, 0);
+      out.push({ label: monthLabel(d), value });
+    }
+    return out;
+  }, [txs]);
+
+  // Subscriptions (recurring merchants), carried over from prior version — not period-filtered.
   const subscriptions = useMemo(() => {
     const groups = new Map<string, TxRecord[]>();
-    for (const tx of transactions) {
+    for (const tx of txs) {
       if (!tx.recurring || !tx.merchant || tx.deletedAt) continue;
       const key = tx.merchant.trim().toLowerCase();
       if (!groups.has(key)) groups.set(key, []);
@@ -84,29 +177,83 @@ export function AnalyticsScreen() {
         nextExpected,
       };
     });
-  }, [transactions]);
+  }, [txs]);
 
-  const maxExpense = Math.max(...byMonth.map(([, d]) => d.expenses), 1);
+  function onCategoryPress(categoryId: number, categoryName: string) {
+    navigation.getParent<NavigationProp<MainStackParamList>>()?.navigate('CategoryDetail', {
+      categoryId,
+      categoryName,
+      period: `${bounds.from}-${bounds.to}`,
+    });
+  }
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <Text style={styles.pageTitle}>Analytics</Text>
 
-      {/* Monthly spending bar chart */}
+      {/* V1 — period picker */}
+      <View style={styles.chipsRow}>
+        {(['daily', 'weekly', 'monthly', 'custom'] as PeriodType[]).map((p) => (
+          <TouchableOpacity
+            key={p}
+            style={[styles.chip, periodType === p && styles.chipActive]}
+            onPress={() => setPeriodType(p)}
+          >
+            <Text style={[styles.chipText, periodType === p && styles.chipTextActive]}>
+              {p === 'daily' ? 'Daily' : p === 'weekly' ? 'Weekly' : p === 'monthly' ? 'Monthly' : 'Custom'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {periodType === 'custom' && (
+        <View style={styles.customRow}>
+          <TouchableOpacity style={styles.dateBtn} onPress={() => setShowFromPicker(true)}>
+            <Text style={styles.dateBtnText}>{customFrom.toLocaleDateString('en-IN')}</Text>
+          </TouchableOpacity>
+          <Text style={styles.customSep}>to</Text>
+          <TouchableOpacity style={styles.dateBtn} onPress={() => setShowToPicker(true)}>
+            <Text style={styles.dateBtnText}>{customTo.toLocaleDateString('en-IN')}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {showFromPicker && (
+        <DateTimePicker
+          value={customFrom}
+          mode="date"
+          display={Platform.OS === 'android' ? 'default' : 'spinner'}
+          onChange={(_, date) => {
+            setShowFromPicker(false);
+            if (date) setCustomFrom(date);
+          }}
+        />
+      )}
+      {showToPicker && (
+        <DateTimePicker
+          value={customTo}
+          mode="date"
+          display={Platform.OS === 'android' ? 'default' : 'spinner'}
+          onChange={(_, date) => {
+            setShowToPicker(false);
+            if (date) setCustomTo(date);
+          }}
+        />
+      )}
+
+      {/* V7 — spending bar chart */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Monthly spending</Text>
+        <Text style={styles.sectionTitle}>Spending</Text>
         <View style={styles.chartCard}>
           <View style={styles.bars}>
-            {byMonth.map(([key, data]) => {
-              const pct = data.expenses / maxExpense;
+            {barBuckets.map((b) => {
+              const pct = b.expenses / maxExpense;
               return (
-                <View key={key} style={styles.barCol}>
-                  <Text style={styles.barAmount}>{formatAmount(data.expenses, currency)}</Text>
+                <View key={b.key} style={styles.barCol}>
                   <View style={styles.barTrack}>
                     <View style={[styles.barFill, { flex: pct }]} />
                     <View style={{ flex: 1 - pct }} />
                   </View>
-                  <Text style={styles.barLabel}>{monthLabel(key)}</Text>
+                  <Text style={styles.barLabel}>{b.label}</Text>
                 </View>
               );
             })}
@@ -114,9 +261,70 @@ export function AnalyticsScreen() {
         </View>
       </View>
 
-      {/* Top merchants */}
+      {/* V8 — donut chart */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Top merchants by spend</Text>
+        <Text style={styles.sectionTitle}>Category split</Text>
+        <View style={[styles.chartCard, styles.donutCard]}>
+          <DonutChart data={donutData} />
+          <View style={styles.legend}>
+            {donutData.slice(0, 6).map((d) => (
+              <View key={d.label} style={styles.legendRow}>
+                <View style={[styles.legendDot, { backgroundColor: d.color }]} />
+                <Text style={styles.legendLabel} numberOfLines={1}>{d.label}</Text>
+              </View>
+            ))}
+            {donutData.length === 0 && <Text style={styles.emptyText}>No expenses this period</Text>}
+          </View>
+        </View>
+      </View>
+
+      {/* V4 + B3 — category breakdown */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>By category</Text>
+        <View style={styles.merchantList}>
+          {categoryBreakdown.map((row) => (
+            <TouchableOpacity key={row.categoryId} onPress={() => onCategoryPress(row.categoryId, row.name)} style={styles.categoryRow}>
+              <View style={styles.merchantTopRow}>
+                <Text style={styles.merchantName}>{row.emoji} {row.name}</Text>
+                <Text style={styles.merchantAmount}>{formatAmount(row.total, currency)}</Text>
+              </View>
+              <View style={styles.merchantBar}>
+                <View style={[styles.merchantBarFill, { width: `${Math.round(row.pct * 100)}%` }]} />
+              </View>
+              {row.budget && (
+                <View style={styles.budgetBarTrack}>
+                  <View
+                    style={[
+                      styles.budgetBarFill,
+                      {
+                        width: `${Math.min(100, Math.round(row.budget.pct))}%`,
+                        backgroundColor:
+                          row.budget.pct > 100 ? Colors.errorMuted : row.budget.pct >= 80 ? Colors.secondary : Colors.primary,
+                      },
+                    ]}
+                  />
+                  <Text style={styles.budgetBarLabel}>
+                    {formatAmount(row.budget.spent)} / {formatAmount(row.budget.limit)} budget
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          ))}
+          {categoryBreakdown.length === 0 && <Text style={styles.emptyText}>No expense data yet</Text>}
+        </View>
+      </View>
+
+      {/* V9 — trend line */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>6-month trend</Text>
+        <View style={styles.chartCard}>
+          <TrendLine data={trendData} />
+        </View>
+      </View>
+
+      {/* V5 — top merchants */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Top merchants</Text>
         <View style={styles.merchantList}>
           {topMerchants.map(([name, amount], i) => {
             const pct = amount / (topMerchants[0]?.[1] ?? 1);
@@ -137,9 +345,7 @@ export function AnalyticsScreen() {
               </View>
             );
           })}
-          {topMerchants.length === 0 && (
-            <Text style={styles.emptyText}>No expense data yet</Text>
-          )}
+          {topMerchants.length === 0 && <Text style={styles.emptyText}>No expense data yet</Text>}
         </View>
       </View>
 
@@ -150,7 +356,7 @@ export function AnalyticsScreen() {
           {subscriptions.length === 0 ? (
             <Text style={styles.emptyText}>No recurring subscriptions detected yet</Text>
           ) : (
-            subscriptions.map(sub => (
+            subscriptions.map((sub) => (
               <View key={sub.merchant} style={styles.merchantRow}>
                 <View style={styles.merchantInfo}>
                   <View style={styles.merchantTopRow}>
@@ -173,43 +379,50 @@ export function AnalyticsScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
   content: { paddingBottom: 32 },
-  pageTitle: {
-    ...Typography.headlineSm, color: Colors.onSurface,
-    paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.lg, paddingBottom: Spacing.md,
-  },
+  pageTitle: { ...Typography.headlineSm, color: Colors.onSurface, paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.lg, paddingBottom: Spacing.md },
+
+  chipsRow: { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.containerMargin, marginBottom: Spacing.md },
+  chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.outlineVariant, backgroundColor: Colors.surfaceContainerLowest },
+  chipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  chipText: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0 },
+  chipTextActive: { color: Colors.onPrimary, fontFamily: 'WorkSans_500Medium' },
+
+  customRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.containerMargin, marginBottom: Spacing.md },
+  dateBtn: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.outlineVariant, backgroundColor: Colors.surfaceContainerLowest },
+  dateBtnText: { ...Typography.bodySm, color: Colors.onSurface },
+  customSep: { ...Typography.labelSm, color: Colors.onSurfaceVariant },
 
   section: { paddingHorizontal: Spacing.containerMargin, marginBottom: Spacing.xl },
   sectionTitle: { ...Typography.titleLg, color: Colors.onSurface, marginBottom: Spacing.md, fontSize: 16 },
 
-  chartCard: {
-    backgroundColor: Colors.surfaceContainerLowest,
-    borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.outlineVariant,
-    padding: Spacing.md, paddingTop: Spacing.lg,
-  },
-  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 160 },
+  chartCard: { backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.outlineVariant, padding: Spacing.md, paddingTop: Spacing.lg },
+  donutCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.lg },
+  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 140 },
   barCol: { flex: 1, alignItems: 'center', gap: 6 },
-  barAmount: { ...Typography.labelSm, color: Colors.onSurfaceVariant, fontSize: 9, letterSpacing: 0, textAlign: 'center' },
   barTrack: { flex: 1, width: '100%', flexDirection: 'column-reverse' },
   barFill: { backgroundColor: Colors.primary, borderRadius: 4, minHeight: 4 },
-  barLabel: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, fontSize: 10, textAlign: 'center' },
+  barLabel: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, fontSize: 9, textAlign: 'center' },
 
-  merchantList: {
-    backgroundColor: Colors.surfaceContainerLowest,
-    borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.outlineVariant,
-    padding: Spacing.md, gap: Spacing.md,
-  },
+  legend: { flex: 1, gap: 6 },
+  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendLabel: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, flexShrink: 1 },
+
+  merchantList: { backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.outlineVariant, padding: Spacing.md, gap: Spacing.md },
+  categoryRow: { gap: 6 },
   merchantRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  merchantRank: {
-    width: 28, height: 28, borderRadius: 8,
-    backgroundColor: Colors.surfaceVariant,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  merchantRank: { width: 28, height: 28, borderRadius: 8, backgroundColor: Colors.surfaceVariant, alignItems: 'center', justifyContent: 'center' },
   merchantRankText: { ...Typography.labelSm, color: Colors.onSurfaceVariant, fontSize: 11, letterSpacing: 0 },
   merchantInfo: { flex: 1, gap: 6 },
   merchantTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   merchantName: { ...Typography.bodySm, color: Colors.onSurface, flex: 1, fontFamily: 'WorkSans_500Medium' },
-  merchantAmount: { ...Typography.numericSm, color: Colors.error, fontSize: 13, marginLeft: 8 },
+  merchantAmount: { ...Typography.numericSm, color: Colors.errorMuted, fontSize: 13, marginLeft: 8 },
   merchantBar: { height: 4, backgroundColor: Colors.surfaceVariant, borderRadius: 2, overflow: 'hidden' },
-  merchantBarFill: { height: '100%', backgroundColor: `${Colors.error}80`, borderRadius: 2 },
+  merchantBarFill: { height: '100%', backgroundColor: `${Colors.errorMuted}80`, borderRadius: 2 },
+
+  budgetBarTrack: { height: 4, backgroundColor: Colors.surfaceVariant, borderRadius: 2, overflow: 'hidden', position: 'relative' },
+  budgetBarFill: { height: '100%', borderRadius: 2 },
+  budgetBarLabel: { ...Typography.annotation, color: Colors.onSurfaceVariant, marginTop: 2 },
+
   emptyText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center', padding: Spacing.md },
 });

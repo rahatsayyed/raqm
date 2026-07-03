@@ -2,7 +2,6 @@ import * as SQLite from 'expo-sqlite';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import type { ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
 
-let db: SQLite.SQLiteDatabase | null = null;
 
 async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
   await database.runAsync(
@@ -176,11 +175,24 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
   }
 }
 
-export async function getDb(): Promise<SQLite.SQLiteDatabase> {
-  if (db) return db;
-  db = await SQLite.openDatabaseAsync('raqm.db');
-  await runMigrations(db);
-  return db;
+let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
+
+export function getDb(): Promise<SQLite.SQLiteDatabase> {
+  // Cache the promise, not the handle: concurrent callers during startup must all
+  // await the same open+migrate sequence. Caching the handle after migrations let a
+  // second caller open a duplicate connection (finalized handle → prepareAsync NPE)
+  // or query a half-migrated database.
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      const database = await SQLite.openDatabaseAsync('raqm.db');
+      await runMigrations(database);
+      return database;
+    })().catch((e) => {
+      dbPromise = null; // allow retry after a failed open/migration
+      throw e;
+    });
+  }
+  return dbPromise;
 }
 
 // ── Type helpers ─────────────────────────────────────────────────────────────
