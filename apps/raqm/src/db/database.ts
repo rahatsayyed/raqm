@@ -788,6 +788,7 @@ export async function splitTx(
 ): Promise<void> {
   const parent = await getTxById(parentId);
   if (!parent) throw new Error(`splitTx: parent ${parentId} not found`);
+  if (parts.length === 0) throw new Error(`splitTx: parts array is empty`);
   const partsSum = parts.reduce((s, p) => s + p.amount, 0);
   if (Math.abs(partsSum - parent.amount) > 0.01) {
     throw new Error(`splitTx: parts sum ${partsSum} does not match parent amount ${parent.amount}`);
@@ -897,9 +898,31 @@ export async function linkTxs(
   bId: number,
   type: 'manual' | 'self_transfer' | 'refund',
 ): Promise<void> {
+  if (aId === bId) throw new Error(`linkTxs: cannot link transaction to itself (id=${aId})`);
+
+  const a = await getTxById(aId);
+  const b = await getTxById(bId);
+  if (!a) throw new Error(`linkTxs: transaction ${aId} not found`);
+  if (!b) throw new Error(`linkTxs: transaction ${bId} not found`);
+
   const database = await getDb();
   await database.runAsync('BEGIN');
   try {
+    // Clear existing partners of aId and bId before linking
+    if (a.linkPartnerId != null && a.linkPartnerId !== bId) {
+      await database.runAsync(
+        `UPDATE transactions SET link_type = NULL, link_partner_id = NULL, link_settled = 0 WHERE id = ?`,
+        a.linkPartnerId,
+      );
+    }
+    if (b.linkPartnerId != null && b.linkPartnerId !== aId) {
+      await database.runAsync(
+        `UPDATE transactions SET link_type = NULL, link_partner_id = NULL, link_settled = 0 WHERE id = ?`,
+        b.linkPartnerId,
+      );
+    }
+
+    // Set the new mutual link
     await database.runAsync(
       `UPDATE transactions SET link_type = ?, link_partner_id = ? WHERE id = ?`,
       type, bId, aId,
