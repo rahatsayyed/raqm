@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Animated } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { useAppStore } from '../../store/appStore';
 import { useTxStore } from '../../store/txStore';
@@ -7,8 +8,10 @@ import { SmsReader } from '../../native/SmsReader';
 import { BankParserFactory } from '@rahatsayyed/bank-sms-parser';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import type { TxRecord } from '../../db/database';
+import { getSetting } from '../../db/database';
 import { countsTowardTotals } from '../../services/txIntelligence';
 import { postTxNotification } from '../../notifications/notifications';
+import { getMonthBounds } from '../../utils/period';
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -97,23 +100,50 @@ export function DashboardScreen() {
     return () => sub.remove();
   }, []);
 
-  const stats = useMemo(() => {
-    let income = 0;
-    let expenses = 0;
-    for (const tx of txs) {
-      if (tx.deletedAt) continue;
-      if (!countsTowardTotals(tx)) continue;
-      const isCredit = tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
-      if (isCredit && tx.linkType === 'refund') {
-        expenses -= tx.amount; // refund nets against expense, not counted as income
-      } else if (isCredit) {
-        income += tx.amount;
-      } else if (tx.type === TransactionType.EXPENSE || tx.type === TransactionType.TRANSFER || tx.type === TransactionType.INVESTMENT) {
-        expenses += tx.amount;
+  const [stats, setStats] = useState({ income: 0, expenses: 0, net: 0 });
+
+  // Extract stats computation into useCallback for reuse in both effect and focus hook.
+  // getMonthBounds internally clamps startDay to [1, 28], so pass raw value.
+  const computeStats = useCallback(() => {
+    let cancelled = false;
+    (async () => {
+      const startDayStr = await getSetting('month_start_day');
+      const startDay = startDayStr ? Number(startDayStr) : 1;
+      const { from, to } = getMonthBounds(new Date(), startDay);
+      let income = 0;
+      let expenses = 0;
+      for (const tx of txs) {
+        if (tx.timestamp < from || tx.timestamp > to) continue;
+        if (tx.deletedAt) continue;
+        if (!countsTowardTotals(tx)) continue;
+        const isCredit = tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
+        if (isCredit && tx.linkType === 'refund') {
+          expenses -= tx.amount; // refund nets against expense, not counted as income
+        } else if (isCredit) {
+          income += tx.amount;
+        } else if (tx.type === TransactionType.EXPENSE || tx.type === TransactionType.TRANSFER || tx.type === TransactionType.INVESTMENT) {
+          expenses += tx.amount;
+        }
       }
-    }
-    return { income, expenses, net: income - expenses };
+      if (!cancelled) setStats({ income, expenses, net: income - expenses });
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [txs]);
+
+  // Recompute stats when txs change.
+  useEffect(() => {
+    const cleanup = computeStats();
+    return cleanup;
+  }, [computeStats]);
+
+  // Recompute stats when screen gains focus (e.g., after Settings change).
+  useFocusEffect(
+    useCallback(() => {
+      return computeStats(); // chain the cancelled-flag cleanup on blur/unfocus
+    }, [computeStats]),
+  );
 
   const accounts = useMemo(() => {
     const map = new Map<string, { bank: string; last4: string | null; isCard: boolean; count: number }>();
@@ -158,7 +188,7 @@ export function DashboardScreen() {
 
       {/* Net flow hero card */}
       <View style={styles.heroCard}>
-        <Text style={styles.heroLabel}>Net cash flow</Text>
+        <Text style={styles.heroLabel}>Net cash flow (this month)</Text>
         <Text style={[styles.heroAmount, { color: netIsPositive ? Colors.onPrimary : Colors.onError }]}>
           {netIsPositive ? '+' : '-'}{formatAmount(stats.net, currency)}
         </Text>
