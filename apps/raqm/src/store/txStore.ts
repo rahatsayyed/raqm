@@ -8,12 +8,12 @@ import {
   softDeleteTx,
   restoreTx,
   seedDefaults,
-  getTxById,
   type TxRecord,
   type NewTxInput,
   type TxPatch,
 } from '../db/database';
 import { getCurrentCoords } from '../services/location';
+import { isDuplicateSms } from '../services/txIntelligence';
 
 interface TxStore {
   txs: TxRecord[];
@@ -55,15 +55,23 @@ export const useTxStore = create<TxStore>((set, get) => ({
   },
 
   addParsedWithLocation: async (tx) => {
-    const coords = await getCurrentCoords();
+    const state = get();
+    const last = state.txs[0]
+      ? { amount: state.txs[0].amount, sender: state.txs[0].bankName, timestamp: state.txs[0].timestamp }
+      : null;
+
+    if (isDuplicateSms(last, { amount: tx.amount, sender: tx.bankName, timestamp: tx.timestamp })) {
+      return null;
+    }
+
     const id = await insertParsedTx(tx);
+
+    const coords = await getCurrentCoords();
     if (coords) {
       await updateTx(id, { lat: coords.lat, lng: coords.lng });
     }
-    const row = await getTxById(id);
-    if (row) {
-      set((state) => ({ txs: [row, ...state.txs] }));
-    }
+
+    await get().refresh();
     return id;
   },
 

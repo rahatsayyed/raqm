@@ -6,6 +6,8 @@ import { MainNavigator } from './MainNavigator';
 import { useAppStore } from '../store/appStore';
 import { useTxStore } from '../store/txStore';
 import { runDetectionJobs } from '../services/txIntelligence';
+import { navigationRef } from './navigationRef';
+import { initNotifications, attachNotificationHandlers, scheduleSummaries } from '../notifications/notifications';
 import { Colors } from '../theme';
 
 export function AppNavigator() {
@@ -19,12 +21,20 @@ export function AppNavigator() {
       await loadTxs();
       await runDetectionJobs();
       useTxStore.getState().refresh();
+      if (cancelled) return;
+      await initNotifications();
+      if (cancelled) return;
+      await scheduleSummaries();
       if (!cancelled) setReady(true);
     });
     if (useAppStore.persist.hasHydrated()) {
       loadTxs().then(async () => {
         await runDetectionJobs();
         useTxStore.getState().refresh();
+        if (cancelled) return;
+        await initNotifications();
+        if (cancelled) return;
+        await scheduleSummaries();
         if (!cancelled) setReady(true);
       });
     }
@@ -40,6 +50,11 @@ export function AppNavigator() {
     }
   }, [isOnboardingComplete]);
 
+  useEffect(() => {
+    const detach = attachNotificationHandlers(navigationRef);
+    return detach;
+  }, []);
+
   if (!ready) {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' }}>
@@ -49,7 +64,7 @@ export function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       {isOnboardingComplete ? <MainNavigator /> : <OnboardingNavigator />}
     </NavigationContainer>
   );
