@@ -1,9 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Pressable, FlatList,
+} from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { MainStackScreenProps } from '../../navigation/types';
 import { useTxStore } from '../../store/txStore';
-import { getCategories, getSubcategories, getTxById } from '../../db/database';
+import {
+  getCategories, getSubcategories, getTxById, splitTx, linkTxs, unlinkTxs, setLinkSettled,
+} from '../../db/database';
 import type { Category, Subcategory, TxRecord } from '../../db/database';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 
@@ -36,9 +40,11 @@ function isDebit(type: TransactionType): boolean {
 export function TransactionDetailScreen({ route, navigation }: MainStackScreenProps<'TransactionDetail'>) {
   const { transactionId } = route.params;
   const storeTx = useTxStore((s) => s.txs.find((t) => t.id === transactionId));
+  const allTxs = useTxStore((s) => s.txs);
   const removeTx = useTxStore((s) => s.remove);
   const restoreTx = useTxStore((s) => s.restore);
   const updateTx = useTxStore((s) => s.update);
+  const refreshStore = useTxStore((s) => s.refresh);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
@@ -46,6 +52,9 @@ export function TransactionDetailScreen({ route, navigation }: MainStackScreenPr
   const [tagsDraft, setTagsDraft] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [partner, setPartner] = useState<TxRecord | null>(null);
+  const [splitVisible, setSplitVisible] = useState(false);
+  const [linkVisible, setLinkVisible] = useState(false);
   // Snapshot taken right before a soft-delete so the row filtered out of the
   // store doesn't make `tx` disappear (and the undo snackbar with it).
   const [snapshot, setSnapshot] = useState<TxRecord | null>(null);
@@ -101,6 +110,21 @@ export function TransactionDetailScreen({ route, navigation }: MainStackScreenPr
       cancelled = true;
     };
   }, [storeTx, snapshot, deleting, transactionId]);
+
+  // Keep the linked partner's summary (merchant/bank) in sync with tx.linkPartnerId.
+  useEffect(() => {
+    let cancelled = false;
+    if (tx?.linkPartnerId != null) {
+      getTxById(tx.linkPartnerId).then((row) => {
+        if (!cancelled) setPartner(row);
+      });
+    } else {
+      setPartner(null);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [tx?.linkPartnerId]);
 
   // Flush an unsaved notes edit if the screen unmounts before onBlur fires.
   useEffect(() => {
@@ -206,6 +230,32 @@ export function TransactionDetailScreen({ route, navigation }: MainStackScreenPr
     }, 5000);
   };
 
+  const toggleRecurring = () => {
+    updateTx(tx.id, { recurring: !tx.recurring });
+  };
+
+  const handleSplitDone = async () => {
+    setSplitVisible(false);
+    await refreshStore();
+    navigation.goBack();
+  };
+
+  const handleLinkPick = async (partnerId: number) => {
+    await linkTxs(tx.id, partnerId, 'manual');
+    setLinkVisible(false);
+    await refreshStore();
+  };
+
+  const handleUnlink = async () => {
+    await unlinkTxs(tx.id);
+    await refreshStore();
+  };
+
+  const toggleSettled = async () => {
+    await setLinkSettled(tx.id, !tx.linkSettled);
+    await refreshStore();
+  };
+
   return (
     <View style={styles.root}>
       <View style={styles.headerRow}>
@@ -222,6 +272,8 @@ export function TransactionDetailScreen({ route, navigation }: MainStackScreenPr
           {sign}{formatAmount(tx.amount, tx.currency)}
         </Text>
         <Text style={styles.merchant}>{tx.merchant || tx.bankName}</Text>
+
+        {tx.recurring && <Text style={styles.badge}>↻ Recurring</Text>}
 
         <View style={styles.card}>
           <Row label="Type" value={txTypeLabel(tx.type)} />
@@ -282,10 +334,56 @@ export function TransactionDetailScreen({ route, navigation }: MainStackScreenPr
           <Text style={styles.rawSmsBody}>{tx.rawSms ?? 'No raw SMS stored (manual entry).'}</Text>
         </View>
 
+        <Text style={styles.sectionLabel}>ACTIONS</Text>
+
+        {tx.linkType && partner ? (
+          <View style={styles.card}>
+            <View style={styles.linkedCardInner}>
+              <Text style={styles.cardTitle}>Linked with → {partner.merchant || partner.bankName}</Text>
+              <Text style={styles.cardSub}>Type: {tx.linkType}</Text>
+              <View style={styles.linkButtonRow}>
+                <TouchableOpacity style={styles.pillBtn} onPress={toggleSettled}>
+                  <Text style={styles.pillBtnText}>{tx.linkSettled ? '✓ Settled' : 'Mark Settled'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.pillBtn, styles.pillBtnDanger]} onPress={handleUnlink}>
+                  <Text style={styles.pillBtnText}>Unlink</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity style={styles.actionRow} onPress={() => setLinkVisible(true)}>
+            <Text style={styles.actionRowText}>🔗 Link to another transaction</Text>
+          </TouchableOpacity>
+        )}
+
+        {!tx.isSplitChild && (
+          <TouchableOpacity style={styles.actionRow} onPress={() => setSplitVisible(true)}>
+            <Text style={styles.actionRowText}>✂️ Split transaction</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity style={styles.actionRow} onPress={toggleRecurring}>
+          <Text style={styles.actionRowText}>{tx.recurring ? '↻ Unmark as recurring' : '↻ Mark as recurring'}</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
           <Text style={styles.deleteButtonText}>Delete transaction</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <SplitModal
+        visible={splitVisible}
+        onClose={() => setSplitVisible(false)}
+        tx={tx}
+        onDone={handleSplitDone}
+      />
+      <LinkPicker
+        visible={linkVisible}
+        onClose={() => setLinkVisible(false)}
+        candidates={allTxs.filter((t) => t.id !== tx.id && !t.deletedAt && !t.isSplitChild)}
+        onPick={handleLinkPick}
+      />
     </View>
   );
 }
@@ -296,6 +394,103 @@ function Row({ label, value, last }: { label: string; value: string; last?: bool
       <Text style={styles.rowLabel}>{label}</Text>
       <Text style={styles.rowValue}>{value}</Text>
     </View>
+  );
+}
+
+function SplitModal({
+  visible, onClose, tx, onDone,
+}: { visible: boolean; onClose: () => void; tx: TxRecord; onDone: () => void }) {
+  const [amounts, setAmounts] = useState<string[]>(['', '']);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      setAmounts(['', '']);
+      setError(null);
+    }
+  }, [visible]);
+
+  function setAmountAt(i: number, v: string) {
+    setAmounts((prev) => prev.map((a, idx) => (idx === i ? v : a)));
+  }
+
+  function addRow() {
+    setAmounts((prev) => [...prev, '']);
+  }
+
+  async function confirm() {
+    const parsed = amounts.map((a) => Number(a));
+    if (parsed.some((n) => !Number.isFinite(n) || n <= 0)) {
+      setError('Enter valid positive amounts');
+      return;
+    }
+    const sum = parsed.reduce((s, n) => s + n, 0);
+    if (Math.abs(sum - tx.amount) > 0.01) {
+      setError(`Amounts must sum to ${formatAmount(tx.amount, tx.currency)}`);
+      return;
+    }
+    try {
+      await splitTx(tx.id, parsed.map((amount) => ({ amount })));
+      onDone();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Split failed');
+    }
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.modalBackdrop} onPress={onClose}>
+        <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+          <Text style={styles.modalTitle}>
+            Split {formatAmount(tx.amount, tx.currency)} into {amounts.length} parts
+          </Text>
+          {amounts.map((a, i) => (
+            <TextInput
+              key={i}
+              style={styles.modalInput}
+              placeholder={`Part ${i + 1} amount`}
+              placeholderTextColor={Colors.outline}
+              keyboardType="numeric"
+              value={a}
+              onChangeText={(v) => setAmountAt(i, v)}
+            />
+          ))}
+          {error && <Text style={styles.errorText}>{error}</Text>}
+          <TouchableOpacity style={styles.pillBtn} onPress={addRow}>
+            <Text style={styles.pillBtnText}>+ Add part</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.modalConfirm} onPress={confirm}>
+            <Text style={styles.modalConfirmText}>Split</Text>
+          </TouchableOpacity>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function LinkPicker({
+  visible, onClose, candidates, onPick,
+}: { visible: boolean; onClose: () => void; candidates: TxRecord[]; onPick: (id: number) => void }) {
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.modalBackdrop} onPress={onClose}>
+        <Pressable style={[styles.modalCard, styles.modalCardTall]} onPress={(e) => e.stopPropagation()}>
+          <Text style={styles.modalTitle}>Link to…</Text>
+          <FlatList
+            data={candidates}
+            keyExtractor={(t) => String(t.id)}
+            renderItem={({ item }) => (
+              <TouchableOpacity style={styles.pickerRow} onPress={() => onPick(item.id)}>
+                <Text style={styles.pickerRowText} numberOfLines={1}>
+                  {item.merchant || item.bankName} · {formatAmount(item.amount, item.currency)}
+                </Text>
+              </TouchableOpacity>
+            )}
+            ListEmptyComponent={<Text style={styles.pickerRowText}>No other transactions available.</Text>}
+          />
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -377,4 +572,42 @@ const styles = StyleSheet.create({
   },
   snackbarText: { ...Typography.bodyMd, color: Colors.inkHeadline },
   snackbarUndo: { ...Typography.bodyMd, color: Colors.primary, fontFamily: 'WorkSans_500Medium' },
+
+  badge: {
+    alignSelf: 'flex-start', ...Typography.labelSm, color: Colors.mossStructure, letterSpacing: 0,
+    backgroundColor: `${Colors.mossStructure}20`, paddingHorizontal: Spacing.sm, paddingVertical: 4,
+    borderRadius: Radius.full, marginBottom: Spacing.sm,
+  },
+  linkedCardInner: { padding: Spacing.md, gap: Spacing.sm },
+  cardTitle: { ...Typography.bodyMd, color: Colors.onSurface, fontFamily: 'WorkSans_500Medium' },
+  cardSub: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
+  linkButtonRow: { flexDirection: 'row', gap: Spacing.sm },
+  actionRow: {
+    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl,
+    borderWidth: 1, borderColor: Colors.outlineVariant, padding: Spacing.md, marginBottom: Spacing.sm,
+  },
+  actionRowText: { ...Typography.bodyMd, color: Colors.onSurface },
+  pillBtn: {
+    backgroundColor: Colors.surfaceVariant, borderRadius: Radius.full,
+    paddingHorizontal: Spacing.md, paddingVertical: 8, alignSelf: 'flex-start',
+  },
+  pillBtnDanger: { backgroundColor: `${Colors.error}30` },
+  pillBtnText: { ...Typography.labelSm, color: Colors.onSurface, letterSpacing: 0 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
+  modalCard: {
+    width: '85%', backgroundColor: Colors.bgSurfaceRaised, borderRadius: Radius.xl,
+    borderWidth: 1, borderColor: Colors.borderSubtle, padding: Spacing.lg, gap: Spacing.md,
+  },
+  modalCardTall: { maxHeight: '70%' },
+  modalTitle: { ...Typography.titleLg, color: Colors.onSurface, fontSize: 16 },
+  modalInput: {
+    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.lg,
+    borderWidth: 1, borderColor: Colors.outlineVariant, paddingHorizontal: Spacing.md, paddingVertical: 10,
+    ...Typography.bodyMd, color: Colors.onSurface,
+  },
+  modalConfirm: { backgroundColor: Colors.primary, borderRadius: Radius.lg, paddingVertical: Spacing.sm, alignItems: 'center' },
+  modalConfirmText: { ...Typography.bodyMd, color: Colors.onPrimary, fontFamily: 'WorkSans_500Medium' },
+  errorText: { ...Typography.bodySm, color: Colors.error },
+  pickerRow: { paddingVertical: Spacing.sm, borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant },
+  pickerRowText: { ...Typography.bodyMd, color: Colors.onSurface },
 });
