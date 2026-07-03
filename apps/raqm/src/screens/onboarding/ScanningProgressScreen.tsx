@@ -15,6 +15,7 @@ import { OnboardingScreenProps } from '../../navigation/types';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { SmsReader } from '../../native/SmsReader';
 import { useOnboardingStore, dateRangeToTimestamps } from '../../store/onboardingStore';
+import { runDetectionJobs } from '../../services/txIntelligence';
 
 const RADIUS = 90;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -70,6 +71,7 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
 
         const parsed = [];
         for (const msg of messages) {
+          if (!BankParserFactory.isKnownBankSender(msg.sender)) continue; // S5
           const tx = BankParserFactory.parse(msg.body, msg.sender, msg.timestamp);
           if (tx) {
             parsed.push(tx);
@@ -79,6 +81,7 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
 
         setTransactions(parsed);
         setStatus(`Found ${parsed.length} transactions`);
+        await runDetectionJobs();
 
         setTimeout(() => navigation.replace('AccountSelection'), 1200);
       } catch (e) {

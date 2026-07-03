@@ -8,10 +8,12 @@ import {
   softDeleteTx,
   restoreTx,
   seedDefaults,
+  getTxById,
   type TxRecord,
   type NewTxInput,
   type TxPatch,
 } from '../db/database';
+import { getCurrentCoords } from '../services/location';
 
 interface TxStore {
   txs: TxRecord[];
@@ -20,6 +22,7 @@ interface TxStore {
   refresh: () => Promise<void>;
   add: (input: NewTxInput) => Promise<number>;
   addParsed: (tx: ParsedTransaction) => Promise<void>;
+  addParsedWithLocation: (tx: ParsedTransaction) => Promise<number | null>;
   update: (id: number, patch: TxPatch) => Promise<void>;
   remove: (id: number) => Promise<void>;
   restore: (id: number) => Promise<void>;
@@ -49,6 +52,19 @@ export const useTxStore = create<TxStore>((set, get) => ({
   addParsed: async (tx) => {
     await insertParsedTx(tx);
     await get().refresh();
+  },
+
+  addParsedWithLocation: async (tx) => {
+    const coords = await getCurrentCoords();
+    const id = await insertParsedTx(tx);
+    if (coords) {
+      await updateTx(id, { lat: coords.lat, lng: coords.lng });
+    }
+    const row = await getTxById(id);
+    if (row) {
+      set((state) => ({ txs: [row, ...state.txs] }));
+    }
+    return id;
   },
 
   update: async (id, patch) => {

@@ -7,6 +7,7 @@ import { SmsReader } from '../../native/SmsReader';
 import { BankParserFactory } from '@rahatsayyed/bank-sms-parser';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import type { TxRecord } from '../../db/database';
+import { isDuplicateSms } from '../../services/txIntelligence';
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -52,25 +53,37 @@ function isDebit(type: TransactionType): boolean {
 export function DashboardScreen() {
   const { userName } = useAppStore();
   const txs = useTxStore((s) => s.txs);
-  const addParsed = useTxStore((s) => s.addParsed);
   const [newTxLabel, setNewTxLabel] = React.useState<string | null>(null);
   const toastAnim = useRef(new Animated.Value(0)).current;
+  const lastInsertedRef = useRef<{ amount: number; sender: string; timestamp: number } | null>(null);
 
   useEffect(() => {
     const sub = SmsReader.addNewSmsListener(({ body, sender, timestamp }) => {
       const tx = BankParserFactory.parse(body, sender, timestamp);
-      if (tx) {
-        addParsed(tx);
-        const label = tx.merchant
-          ? `${tx.type === TransactionType.EXPENSE ? '-' : '+'}₹${tx.amount.toLocaleString('en-IN')} · ${tx.merchant}`
-          : `New transaction from ${tx.bankName}`;
-        setNewTxLabel(label);
+      if (!tx) return;
+
+      if (isDuplicateSms(lastInsertedRef.current, { amount: tx.amount, sender, timestamp })) {
+        setNewTxLabel('Duplicate SMS ignored');
         Animated.sequence([
           Animated.timing(toastAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-          Animated.delay(3000),
+          Animated.delay(2000),
           Animated.timing(toastAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
         ]).start(() => setNewTxLabel(null));
+        return;
       }
+
+      lastInsertedRef.current = { amount: tx.amount, sender, timestamp };
+      useTxStore.getState().addParsedWithLocation(tx);
+
+      const label = tx.merchant
+        ? `${tx.type === TransactionType.EXPENSE ? '-' : '+'}₹${tx.amount.toLocaleString('en-IN')} · ${tx.merchant}`
+        : `New transaction from ${tx.bankName}`;
+      setNewTxLabel(label);
+      Animated.sequence([
+        Animated.timing(toastAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.delay(3000),
+        Animated.timing(toastAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start(() => setNewTxLabel(null));
     });
     return () => sub.remove();
   }, []);
