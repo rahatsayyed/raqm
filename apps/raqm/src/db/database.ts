@@ -173,6 +173,22 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 3) {
+    await database.runAsync(`BEGIN`);
+    try {
+      try {
+        await database.runAsync(`ALTER TABLE grocery_lists ADD COLUMN linked_tx_id INTEGER`);
+      } catch {
+        // column already exists — safe to ignore
+      }
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (3)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -1106,4 +1122,155 @@ export async function upsertBudget(
 export async function deleteBudget(id: number): Promise<void> {
   const database = await getDb();
   await database.runAsync(`DELETE FROM budgets WHERE id = ?`, id);
+}
+
+// ── Grocery ───────────────────────────────────────────────────────────────────
+
+export interface GroceryList {
+  id: number;
+  name: string;
+  budgetCap: number | null;
+  completedAt: number | null;
+  createdAt: number;
+  linkedTxId: number | null;
+}
+
+export interface GroceryItem {
+  id: number;
+  listId: number;
+  name: string;
+  price: number | null;
+  checkedAt: number | null;
+  sortOrder: number;
+}
+
+function rowToGroceryList(row: Record<string, unknown>): GroceryList {
+  return {
+    id: row.id as number,
+    name: row.name as string,
+    budgetCap: (row.budget_cap as number | null) ?? null,
+    completedAt: (row.completed_at as number | null) ?? null,
+    createdAt: row.created_at as number,
+    linkedTxId: (row.linked_tx_id as number | null) ?? null,
+  };
+}
+
+function rowToGroceryItem(row: Record<string, unknown>): GroceryItem {
+  return {
+    id: row.id as number,
+    listId: row.list_id as number,
+    name: row.name as string,
+    price: (row.price as number | null) ?? null,
+    checkedAt: (row.checked_at as number | null) ?? null,
+    sortOrder: row.sort_order as number,
+  };
+}
+
+export async function getGroceryLists(): Promise<GroceryList[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<Record<string, unknown>>(
+    `SELECT * FROM grocery_lists
+     ORDER BY (completed_at IS NOT NULL) ASC, created_at DESC`,
+  );
+  return rows.map(rowToGroceryList);
+}
+
+export async function addGroceryList(name: string, budgetCap: number | null): Promise<number> {
+  const database = await getDb();
+  const result = await database.runAsync(
+    `INSERT INTO grocery_lists (name, budget_cap) VALUES (?, ?)`,
+    name,
+    budgetCap,
+  );
+  return result.lastInsertRowId;
+}
+
+export async function updateGroceryList(
+  id: number,
+  patch: { name?: string; budgetCap?: number | null; completedAt?: number | null },
+): Promise<void> {
+  const database = await getDb();
+  const fields: string[] = [];
+  const values: (string | number | null)[] = [];
+  if (patch.name !== undefined) { fields.push('name = ?'); values.push(patch.name); }
+  if (patch.budgetCap !== undefined) { fields.push('budget_cap = ?'); values.push(patch.budgetCap); }
+  if (patch.completedAt !== undefined) { fields.push('completed_at = ?'); values.push(patch.completedAt); }
+  if (fields.length === 0) return;
+  values.push(id);
+  await database.runAsync(`UPDATE grocery_lists SET ${fields.join(', ')} WHERE id = ?`, ...values);
+}
+
+export async function getGroceryItems(listId: number): Promise<GroceryItem[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<Record<string, unknown>>(
+    `SELECT * FROM grocery_items WHERE list_id = ?
+     ORDER BY (checked_at IS NOT NULL) ASC, checked_at DESC, sort_order ASC`,
+    listId,
+  );
+  return rows.map(rowToGroceryItem);
+}
+
+export async function addGroceryItem(listId: number, name: string, price: number | null): Promise<number> {
+  const database = await getDb();
+  const maxRow = await database.getFirstAsync<{ m: number | null }>(
+    `SELECT MAX(sort_order) as m FROM grocery_items WHERE list_id = ?`,
+    listId,
+  );
+  const nextOrder = (maxRow?.m ?? -1) + 1;
+  const result = await database.runAsync(
+    `INSERT INTO grocery_items (list_id, name, price, sort_order) VALUES (?, ?, ?, ?)`,
+    listId,
+    name,
+    price,
+    nextOrder,
+  );
+  return result.lastInsertRowId;
+}
+
+export async function updateGroceryItem(
+  id: number,
+  patch: { name?: string; price?: number | null; checkedAt?: number | null },
+): Promise<void> {
+  const database = await getDb();
+  const fields: string[] = [];
+  const values: (string | number | null)[] = [];
+  if (patch.name !== undefined) { fields.push('name = ?'); values.push(patch.name); }
+  if (patch.price !== undefined) { fields.push('price = ?'); values.push(patch.price); }
+  if (patch.checkedAt !== undefined) { fields.push('checked_at = ?'); values.push(patch.checkedAt); }
+  if (fields.length === 0) return;
+  values.push(id);
+  await database.runAsync(`UPDATE grocery_items SET ${fields.join(', ')} WHERE id = ?`, ...values);
+}
+
+export async function deleteGroceryItem(id: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`DELETE FROM grocery_items WHERE id = ?`, id);
+}
+
+export async function getLastPriceForItem(name: string): Promise<number | null> {
+  const database = await getDb();
+  const row = await database.getFirstAsync<{ price: number | null }>(
+    `SELECT price FROM grocery_items
+     WHERE LOWER(name) = LOWER(?) AND price IS NOT NULL
+     ORDER BY created_at DESC LIMIT 1`,
+    name,
+  );
+  return row?.price ?? null;
+}
+
+export async function getFrequentItems(limit: number): Promise<{ name: string; count: number }[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{ name: string; count: number }>(
+    `SELECT MIN(name) as name, COUNT(*) as count FROM grocery_items
+     GROUP BY LOWER(name)
+     ORDER BY count DESC, MAX(created_at) DESC
+     LIMIT ?`,
+    limit,
+  );
+  return rows;
+}
+
+export async function linkTxToList(listId: number, txId: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`UPDATE grocery_lists SET linked_tx_id = ? WHERE id = ?`, txId, listId);
 }
