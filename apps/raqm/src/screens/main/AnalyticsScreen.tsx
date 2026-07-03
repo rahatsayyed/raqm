@@ -46,13 +46,20 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
     getBudgetStatuses().then(setBudgetStatuses);
   }, [txs]);
 
+  // Clamp so a corrupted/legacy setting can't push the reference date into an adjacent month.
+  const clampedMonthStartDay = Math.min(28, Math.max(1, monthStartDay));
+
   const bounds: PeriodBounds = useMemo(() => {
     const now = new Date();
     if (periodType === 'daily') return getDayBounds(now);
     if (periodType === 'weekly') return getWeekBounds(now);
-    if (periodType === 'monthly') return getMonthBounds(now, monthStartDay);
-    return { from: customFrom.getTime(), to: customTo.getTime() };
-  }, [periodType, monthStartDay, customFrom, customTo]);
+    if (periodType === 'monthly') return getMonthBounds(now, clampedMonthStartDay);
+    // Guard against an inverted range (from > to) by swapping rather than rendering empty.
+    const from = customFrom.getTime();
+    const to = customTo.getTime();
+    const [lo, hi] = from <= to ? [from, to] : [to, from];
+    return { from: lo, to: hi };
+  }, [periodType, clampedMonthStartDay, customFrom, customTo]);
 
   const periodTxs = useMemo(
     () => txs.filter((tx) => tx.timestamp >= bounds.from && tx.timestamp <= bounds.to && isCounted(tx)),
@@ -83,9 +90,11 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
         buckets.push({ key: String(b.from), label: `Wk ${new Date(b.from).getDate()}`, expenses });
       }
     } else {
+      // `custom` intentionally falls back to these monthly buckets (last 6 calendar months) —
+      // there's no natural bucket size for an arbitrary custom range.
       for (let i = 5; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const b = getMonthBounds(new Date(d.getFullYear(), d.getMonth(), monthStartDay), monthStartDay);
+        const b = getMonthBounds(new Date(d.getFullYear(), d.getMonth(), clampedMonthStartDay), clampedMonthStartDay);
         const expenses = txs
           .filter((tx) => tx.timestamp >= b.from && tx.timestamp <= b.to && isCounted(tx) && tx.type === TransactionType.EXPENSE)
           .reduce((s, tx) => s + tx.amount, 0);
@@ -93,7 +102,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
       }
     }
     return buckets;
-  }, [txs, periodType, monthStartDay]);
+  }, [txs, periodType, clampedMonthStartDay]);
 
   const maxExpense = Math.max(...barBuckets.map((b) => b.expenses), 1);
 
@@ -115,17 +124,31 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
   // V4 — category breakdown, sorted desc, with B3 budget bars
   const categoryBreakdown = useMemo(() => {
     const map = new Map<number, number>();
+    let uncategorizedTotal = 0;
     for (const tx of periodTxs) {
-      if (tx.type !== TransactionType.EXPENSE || tx.categoryId == null) continue;
+      const isCredit = tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
+      if (tx.categoryId == null) {
+        // Uncategorized bucket nets refunds against expenses the same way topMerchants does.
+        if (isCredit && tx.linkType === 'refund') {
+          uncategorizedTotal -= tx.amount;
+        } else if (tx.type === TransactionType.EXPENSE) {
+          uncategorizedTotal += tx.amount;
+        }
+        continue;
+      }
+      if (tx.type !== TransactionType.EXPENSE) continue;
       map.set(tx.categoryId, (map.get(tx.categoryId) ?? 0) + tx.amount);
     }
-    const rows = Array.from(map.entries())
-      .map(([categoryId, total]) => {
+    const rows: { categoryId: number | null; name: string; emoji: string; total: number; budget: BudgetStatus | undefined }[] =
+      Array.from(map.entries()).map(([categoryId, total]) => {
         const cat = categories.find((c) => c.id === categoryId);
         const budget = budgetStatuses.find((bs) => bs.budget.categoryId === categoryId);
         return { categoryId, name: cat?.name ?? 'Unknown', emoji: cat?.emoji ?? '📦', total, budget };
-      })
-      .sort((a, b) => b.total - a.total);
+      });
+    if (uncategorizedTotal > 0) {
+      rows.push({ categoryId: null, name: 'Uncategorized', emoji: '❔', total: uncategorizedTotal, budget: undefined });
+    }
+    rows.sort((a, b) => b.total - a.total);
     const max = Math.max(...rows.map((r) => r.total), 1);
     return rows.map((r) => ({ ...r, pct: r.total / max }));
   }, [periodTxs, categories, budgetStatuses]);
@@ -282,34 +305,49 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>By category</Text>
         <View style={styles.merchantList}>
-          {categoryBreakdown.map((row) => (
-            <TouchableOpacity key={row.categoryId} onPress={() => onCategoryPress(row.categoryId, row.name)} style={styles.categoryRow}>
-              <View style={styles.merchantTopRow}>
-                <Text style={styles.merchantName}>{row.emoji} {row.name}</Text>
-                <Text style={styles.merchantAmount}>{formatAmount(row.total, currency)}</Text>
-              </View>
-              <View style={styles.merchantBar}>
-                <View style={[styles.merchantBarFill, { width: `${Math.round(row.pct * 100)}%` }]} />
-              </View>
-              {row.budget && (
-                <View style={styles.budgetBarTrack}>
-                  <View
-                    style={[
-                      styles.budgetBarFill,
-                      {
-                        width: `${Math.min(100, Math.round(row.budget.pct))}%`,
-                        backgroundColor:
-                          row.budget.pct > 100 ? Colors.errorMuted : row.budget.pct >= 80 ? Colors.secondary : Colors.primary,
-                      },
-                    ]}
-                  />
-                  <Text style={styles.budgetBarLabel}>
-                    {formatAmount(row.budget.spent)} / {formatAmount(row.budget.limit)} budget
-                  </Text>
+          {categoryBreakdown.map((row) => {
+            const rowContent = (
+              <>
+                <View style={styles.merchantTopRow}>
+                  <Text style={styles.merchantName}>{row.emoji} {row.name}</Text>
+                  <Text style={styles.merchantAmount}>{formatAmount(row.total, currency)}</Text>
                 </View>
-              )}
-            </TouchableOpacity>
-          ))}
+                <View style={styles.merchantBar}>
+                  <View style={[styles.merchantBarFill, { width: `${Math.round(row.pct * 100)}%` }]} />
+                </View>
+                {row.budget && (
+                  <View style={styles.budgetBarTrack}>
+                    <View
+                      style={[
+                        styles.budgetBarFill,
+                        {
+                          width: `${Math.min(100, Math.round(row.budget.pct))}%`,
+                          backgroundColor:
+                            row.budget.pct > 100 ? Colors.errorMuted : row.budget.pct >= 80 ? Colors.secondary : Colors.primary,
+                        },
+                      ]}
+                    />
+                    <Text style={styles.budgetBarLabel}>
+                      {formatAmount(row.budget.spent)} / {formatAmount(row.budget.limit)} budget
+                    </Text>
+                  </View>
+                )}
+              </>
+            );
+            // The Uncategorized pseudo-row has no categoryId to navigate with — render it inert.
+            if (row.categoryId == null) {
+              return (
+                <View key="uncategorized" style={styles.categoryRow}>
+                  {rowContent}
+                </View>
+              );
+            }
+            return (
+              <TouchableOpacity key={row.categoryId} onPress={() => onCategoryPress(row.categoryId as number, row.name)} style={styles.categoryRow}>
+                {rowContent}
+              </TouchableOpacity>
+            );
+          })}
           {categoryBreakdown.length === 0 && <Text style={styles.emptyText}>No expense data yet</Text>}
         </View>
       </View>
