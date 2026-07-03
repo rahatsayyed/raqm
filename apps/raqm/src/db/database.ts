@@ -796,7 +796,24 @@ export async function splitTx(
   const database = await getDb();
   await database.runAsync('BEGIN');
   try {
+    // Clear link state if parent is linked
+    if (parent.linkPartnerId != null) {
+      // Clear partner's link state
+      await database.runAsync(
+        `UPDATE transactions SET link_type = NULL, link_partner_id = NULL, link_settled = 0 WHERE id = ?`,
+        parent.linkPartnerId,
+      );
+      // Clear parent's link state
+      await database.runAsync(
+        `UPDATE transactions SET link_type = NULL, link_partner_id = NULL, link_settled = 0 WHERE id = ?`,
+        parentId,
+      );
+    }
+
+    // Soft-delete parent
     await database.runAsync(`UPDATE transactions SET deleted_at = ? WHERE id = ?`, Date.now(), parentId);
+
+    // Insert split children
     for (const part of parts) {
       await database.runAsync(
         `INSERT INTO transactions
@@ -837,6 +854,23 @@ export async function mergeTxs(ids: number[], merchant: string): Promise<number>
   let newId = 0;
   await database.runAsync('BEGIN');
   try {
+    // Clear link state for any merged transactions that are linked
+    for (const tx of txs) {
+      if (tx.linkPartnerId != null) {
+        // Clear partner's link state
+        await database.runAsync(
+          `UPDATE transactions SET link_type = NULL, link_partner_id = NULL, link_settled = 0 WHERE id = ?`,
+          tx.linkPartnerId,
+        );
+        // Clear tx's link state
+        await database.runAsync(
+          `UPDATE transactions SET link_type = NULL, link_partner_id = NULL, link_settled = 0 WHERE id = ?`,
+          tx.id,
+        );
+      }
+    }
+
+    // Create merged transaction
     const result = await database.runAsync(
       `INSERT INTO transactions
          (amount, type, merchant, bankName, accountLast4, timestamp, balance, currency, isFromCard, is_manual)
@@ -852,6 +886,8 @@ export async function mergeTxs(ids: number[], merchant: string): Promise<number>
       first.isFromCard ? 1 : 0,
     );
     newId = result.lastInsertRowId;
+
+    // Soft-delete original transactions
     const placeholders = ids.map(() => '?').join(',');
     await database.runAsync(
       `UPDATE transactions SET deleted_at = ? WHERE id IN (${placeholders})`,
