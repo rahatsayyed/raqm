@@ -1032,3 +1032,66 @@ export async function setLinkSettled(aId: number, settled: boolean): Promise<voi
     throw e;
   }
 }
+
+// ── Budgets ────────────────────────────────────────────────────────────────
+
+export interface Budget {
+  id: number;
+  categoryId: number;
+  amount: number;
+  periodType: 'monthly' | 'weekly';
+  rollover: boolean;
+}
+
+function rowToBudget(row: Record<string, unknown>): Budget {
+  return {
+    id: row.id as number,
+    categoryId: row.category_id as number,
+    amount: row.amount as number,
+    periodType: row.period_type as 'monthly' | 'weekly',
+    rollover: (row.rollover as number) === 1,
+  };
+}
+
+export async function getBudgets(): Promise<Budget[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<Record<string, unknown>>(
+    `SELECT * FROM budgets ORDER BY created_at ASC`,
+  );
+  return rows.map(rowToBudget);
+}
+
+export async function upsertBudget(
+  categoryId: number,
+  amount: number,
+  periodType: 'monthly' | 'weekly',
+  rollover: boolean,
+): Promise<void> {
+  const database = await getDb();
+  const existing = await database.getFirstAsync<{ id: number }>(
+    `SELECT id FROM budgets WHERE category_id = ?`,
+    categoryId,
+  );
+  if (existing) {
+    await database.runAsync(
+      `UPDATE budgets SET amount = ?, period_type = ?, rollover = ? WHERE id = ?`,
+      amount,
+      periodType,
+      rollover ? 1 : 0,
+      existing.id,
+    );
+  } else {
+    await database.runAsync(
+      `INSERT INTO budgets (category_id, amount, period_type, rollover) VALUES (?, ?, ?, ?)`,
+      categoryId,
+      amount,
+      periodType,
+      rollover ? 1 : 0,
+    );
+  }
+}
+
+export async function deleteBudget(id: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`DELETE FROM budgets WHERE id = ?`, id);
+}

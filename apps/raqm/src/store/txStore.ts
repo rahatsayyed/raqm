@@ -14,6 +14,7 @@ import {
 } from '../db/database';
 import { getCurrentCoords } from '../services/location';
 import { isDuplicateSms } from '../services/txIntelligence';
+import { checkBudgetAlerts } from '../services/budgets';
 
 interface TxStore {
   txs: TxRecord[];
@@ -46,12 +47,14 @@ export const useTxStore = create<TxStore>((set, get) => ({
   add: async (input) => {
     const id = await insertTx(input);
     await get().refresh();
+    checkBudgetAlerts().catch(() => {});
     return id;
   },
 
   addParsed: async (tx) => {
     await insertParsedTx(tx);
     await get().refresh();
+    checkBudgetAlerts().catch(() => {});
   },
 
   addParsedWithLocation: async (tx) => {
@@ -72,12 +75,14 @@ export const useTxStore = create<TxStore>((set, get) => ({
     }
 
     await get().refresh();
+    checkBudgetAlerts().catch(() => {});
     return id;
   },
 
   update: async (id, patch) => {
     await updateTx(id, patch);
     await get().refresh();
+    checkBudgetAlerts().catch(() => {});
   },
 
   remove: async (id) => {
