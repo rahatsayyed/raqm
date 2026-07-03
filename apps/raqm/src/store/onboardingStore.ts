@@ -3,7 +3,7 @@ import type { ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
 import {
   loadTransactions,
   insertTransaction,
-  insertTransactions,
+  insertParsedTxs,
   clearTransactions,
 } from '../db/database';
 
@@ -38,7 +38,7 @@ export const useOnboardingStore = create<OnboardingStore>((set) => ({
 
   setTransactions: async (txs) => {
     await clearTransactions();
-    await insertTransactions(txs);
+    await insertParsedTxs(txs);
     set({ transactions: txs });
   },
 
