@@ -79,7 +79,7 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
           }
         }
 
-        setTransactions(parsed);
+        await setTransactions(parsed);
         setStatus(`Found ${parsed.length} transactions`);
         await runDetectionJobs();
 
