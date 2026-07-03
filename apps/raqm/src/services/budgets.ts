@@ -15,16 +15,30 @@ function isExpense(tx: TxRecord): boolean {
   return tx.type === TransactionType.EXPENSE;
 }
 
+function isCredit(tx: TxRecord): boolean {
+  return tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
+}
+
 async function sumSpend(txs: TxRecord[], categoryId: number, bounds: PeriodBounds): Promise<number> {
+  // Refund credits net against the refunded expense's category (resolved via the link
+  // partner, since the credit itself usually carries no categoryId) — otherwise a
+  // refunded purchase counts against its budget forever. Clamped at 0 so pct can't go negative.
+  const byId = new Map(txs.map((t) => [t.id, t]));
   let total = 0;
   for (const tx of txs) {
-    if (tx.categoryId !== categoryId) continue;
-    if (!isExpense(tx)) continue;
     if (tx.timestamp < bounds.from || tx.timestamp > bounds.to) continue;
     if (!countsTowardTotals(tx)) continue;
+    if (isCredit(tx) && tx.linkType === 'refund') {
+      const partner = tx.linkPartnerId != null ? byId.get(tx.linkPartnerId) : undefined;
+      const cat = partner?.categoryId ?? tx.categoryId;
+      if (cat === categoryId) total -= tx.amount;
+      continue;
+    }
+    if (!isExpense(tx)) continue;
+    if (tx.categoryId !== categoryId) continue;
     total += tx.amount;
   }
-  return total;
+  return Math.max(0, total);
 }
 
 async function currentBounds(budget: Budget, now: Date): Promise<PeriodBounds> {
