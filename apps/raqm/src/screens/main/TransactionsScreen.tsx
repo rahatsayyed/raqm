@@ -55,6 +55,7 @@ export function TransactionsScreen() {
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set());
   const [modal, setModal] = useState<null | 'merge' | 'group'>(null);
   const [modalName, setModalName] = useState('');
+  const [modalError, setModalError] = useState<string | null>(null);
 
   const currency = txs[0]?.currency ?? '₹';
 
@@ -107,11 +108,16 @@ export function TransactionsScreen() {
 
   async function confirmMerge() {
     if (!modalName.trim() || selected.size < 2) return;
-    await mergeTxs(Array.from(selected), modalName.trim());
-    await refresh();
-    setModal(null);
-    setModalName('');
-    exitSelectMode();
+    setModalError(null);
+    try {
+      await mergeTxs(Array.from(selected), modalName.trim());
+      await refresh();
+      setModal(null);
+      setModalName('');
+      exitSelectMode();
+    } catch (e) {
+      setModalError(e instanceof Error ? e.message : 'Could not merge transactions');
+    }
   }
 
   async function confirmGroup() {
@@ -211,10 +217,10 @@ export function TransactionsScreen() {
 
       {selectMode && selected.size >= 2 && (
         <View style={styles.actionBar}>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => setModal('merge')}>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => { setModalError(null); setModal('merge'); }}>
             <Text style={styles.actionBtnText}>Merge ({selected.size})</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => setModal('group')}>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => { setModalError(null); setModal('group'); }}>
             <Text style={styles.actionBtnText}>Group ({selected.size})</Text>
           </TouchableOpacity>
         </View>
@@ -230,8 +236,8 @@ export function TransactionsScreen() {
         </TouchableOpacity>
       )}
 
-      <Modal visible={modal !== null} transparent animationType="fade" onRequestClose={() => setModal(null)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setModal(null)}>
+      <Modal visible={modal !== null} transparent animationType="fade" onRequestClose={() => { setModal(null); setModalError(null); }}>
+        <Pressable style={styles.modalBackdrop} onPress={() => { setModal(null); setModalError(null); }}>
           <Pressable style={styles.modalCard} onPress={e => e.stopPropagation()}>
             <Text style={styles.modalTitle}>{modal === 'merge' ? 'Merge into' : 'Group name'}</Text>
             <TextInput
@@ -242,6 +248,7 @@ export function TransactionsScreen() {
               onChangeText={setModalName}
               autoFocus
             />
+            {modalError && <Text style={styles.modalErrorText}>{modalError}</Text>}
             <TouchableOpacity
               style={styles.modalConfirm}
               onPress={modal === 'merge' ? confirmMerge : confirmGroup}
@@ -355,6 +362,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.borderSubtle, padding: Spacing.lg, gap: Spacing.md,
   },
   modalTitle: { ...Typography.titleLg, color: Colors.onSurface, fontSize: 16 },
+  modalErrorText: { ...Typography.bodySm, color: Colors.error },
   modalInput: {
     backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.lg,
     borderWidth: 1, borderColor: Colors.outlineVariant, paddingHorizontal: Spacing.md, paddingVertical: 10,

@@ -841,11 +841,30 @@ export async function splitTx(
   }
 }
 
+function isDebitType(type: TransactionType): boolean {
+  return (
+    type === TransactionType.EXPENSE ||
+    type === TransactionType.TRANSFER ||
+    type === TransactionType.INVESTMENT
+  );
+}
+
+function isCreditType(type: TransactionType): boolean {
+  return type === TransactionType.INCOME || type === TransactionType.CREDIT;
+}
+
 export async function mergeTxs(ids: number[], merchant: string): Promise<number> {
   if (ids.length < 2) throw new Error('mergeTxs: need at least 2 ids');
   const rows = await Promise.all(ids.map(id => getTxById(id)));
   const txs = rows.filter((t): t is NonNullable<typeof t> => t !== null);
   if (txs.length !== ids.length) throw new Error('mergeTxs: some ids not found');
+
+  const hasDebit = txs.some((t) => isDebitType(t.type));
+  const hasCredit = txs.some((t) => isCreditType(t.type));
+  if (hasDebit && hasCredit) {
+    throw new Error('Cannot merge debit and credit transactions together');
+  }
+
   const sum = txs.reduce((s, t) => s + t.amount, 0);
   const earliest = txs.reduce((min, t) => Math.min(min, t.timestamp), txs[0].timestamp);
   const first = txs[0];
