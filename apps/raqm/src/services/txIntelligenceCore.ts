@@ -1,0 +1,117 @@
+import { TransactionType } from '@rahatsayyed/bank-sms-parser';
+import type { TxRecord } from '../db/database';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function isDebitType(t: TransactionType): boolean {
+  return t === TransactionType.EXPENSE || t === TransactionType.TRANSFER || t === TransactionType.INVESTMENT;
+}
+
+function isCreditType(t: TransactionType): boolean {
+  return t === TransactionType.INCOME || t === TransactionType.CREDIT;
+}
+
+function accountKey(tx: TxRecord): string {
+  return `${tx.bankName}|${tx.accountLast4 ?? ''}`;
+}
+
+function isLinked(tx: TxRecord): boolean {
+  return tx.linkType !== null;
+}
+
+/** T11: pairs [debitId, creditId] — same amount, different account, within 24h, neither already linked. */
+export function pairSelfTransfers(txs: TxRecord[]): [number, number][] {
+  const pairs: [number, number][] = [];
+  const usedCredit = new Set<number>();
+  const debits = txs.filter(t => isDebitType(t.type) && !isLinked(t) && !t.isSplitChild);
+  const credits = txs.filter(t => isCreditType(t.type) && !isLinked(t) && !t.isSplitChild);
+  for (const debit of debits) {
+    for (const credit of credits) {
+      if (usedCredit.has(credit.id)) continue;
+      if (credit.amount !== debit.amount) continue;
+      if (accountKey(credit) === accountKey(debit)) continue; // must be a different account
+      if (Math.abs(credit.timestamp - debit.timestamp) > DAY_MS) continue;
+      pairs.push([debit.id, credit.id]);
+      usedCredit.add(credit.id);
+      break;
+    }
+  }
+  return pairs;
+}
+
+/** T12: pairs [debitId, creditId] — same amount + same merchant (case-insensitive), credit within 0–30 days after debit. */
+export function pairRefunds(txs: TxRecord[]): [number, number][] {
+  const pairs: [number, number][] = [];
+  const usedDebit = new Set<number>();
+  const debits = txs.filter(t => isDebitType(t.type) && !isLinked(t) && !t.isSplitChild);
+  const credits = txs.filter(t => isCreditType(t.type) && !isLinked(t) && !t.isSplitChild);
+  for (const credit of credits) {
+    let best: TxRecord | null = null;
+    for (const debit of debits) {
+      if (usedDebit.has(debit.id)) continue;
+      if (debit.amount !== credit.amount) continue;
+      if (!debit.merchant || !credit.merchant) continue;
+      if (debit.merchant.toLowerCase() !== credit.merchant.toLowerCase()) continue;
+      const gap = credit.timestamp - debit.timestamp;
+      if (gap < 0 || gap > 30 * DAY_MS) continue;
+      if (!best || debit.timestamp > best.timestamp) best = debit;
+    }
+    if (best) {
+      pairs.push([best.id, credit.id]);
+      usedDebit.add(best.id);
+    }
+  }
+  return pairs;
+}
+
+/**
+ * R1: ids that should be flagged recurring=1. Groups debit-type transactions by merchant
+ * (case-insensitive, trimmed). Within a merchant group, any adjacent pair (sorted by timestamp)
+ * with amount within ±5% and a 25–35 day gap marks BOTH members of that pair as recurring.
+ */
+export function computeRecurringIds(txs: TxRecord[]): number[] {
+  const groups = new Map<string, TxRecord[]>();
+  for (const tx of txs) {
+    if (!tx.merchant || tx.isSplitChild || !isDebitType(tx.type)) continue;
+    const key = tx.merchant.trim().toLowerCase();
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(tx);
+  }
+  const result = new Set<number>();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const sorted = [...group].sort((a, b) => a.timestamp - b.timestamp);
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1];
+      const cur = sorted[i];
+      const amountDiff = Math.abs(cur.amount - prev.amount) / prev.amount;
+      const gapDays = (cur.timestamp - prev.timestamp) / DAY_MS;
+      if (amountDiff <= 0.05 && gapDays >= 25 && gapDays <= 35) {
+        result.add(prev.id);
+        result.add(cur.id);
+      }
+    }
+  }
+  return Array.from(result);
+}
+
+/** T13: same amount + same SMS sender within 60 seconds → duplicate. */
+export function isDuplicateSms(
+  prev: { amount: number; sender: string; timestamp: number } | null,
+  next: { amount: number; sender: string; timestamp: number },
+): boolean {
+  if (!prev) return false;
+  if (prev.amount !== next.amount) return false;
+  if (prev.sender !== next.sender) return false;
+  return Math.abs(next.timestamp - prev.timestamp) <= 60_000;
+}
+
+/**
+ * THE canonical totals filter (contract §3). Excludes settled links and self-transfers.
+ * Refund credits are NOT excluded here — the caller nets them against expense (see Task 6).
+ */
+export function countsTowardTotals(tx: TxRecord): boolean {
+  if (tx.linkSettled) return false;
+  if (tx.linkType === 'self_transfer') return false;
+  return true;
+}
