@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { useTxStore } from '../../store/txStore';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
+import { countsTowardTotals } from '../../services/txIntelligence';
+import type { TxRecord } from '../../db/database';
 
 function formatAmount(n: number, currency = '₹'): string {
   return `${currency}${Math.abs(n).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -25,10 +27,15 @@ export function AnalyticsScreen() {
   const byMonth = useMemo(() => {
     const map = new Map<string, { income: number; expenses: number }>();
     for (const tx of transactions) {
+      if (tx.deletedAt) continue;
+      if (!countsTowardTotals(tx)) continue;
       const key = monthKey(tx.timestamp);
       if (!map.has(key)) map.set(key, { income: 0, expenses: 0 });
       const entry = map.get(key)!;
-      if (tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT) {
+      const isCredit = tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
+      if (isCredit && tx.linkType === 'refund') {
+        entry.expenses -= tx.amount; // refund nets against expense, not counted as income
+      } else if (isCredit) {
         entry.income += tx.amount;
       } else if (tx.type === TransactionType.EXPENSE) {
         entry.expenses += tx.amount;
@@ -42,6 +49,8 @@ export function AnalyticsScreen() {
   const topMerchants = useMemo(() => {
     const map = new Map<string, number>();
     for (const tx of transactions) {
+      if (tx.deletedAt) continue;
+      if (!countsTowardTotals(tx)) continue;
       if (tx.type !== TransactionType.EXPENSE) continue;
       const name = tx.merchant || tx.bankName;
       map.set(name, (map.get(name) ?? 0) + tx.amount);
@@ -49,6 +58,32 @@ export function AnalyticsScreen() {
     return Array.from(map.entries())
       .sort(([, a], [, b]) => b - a)
       .slice(0, 8);
+  }, [transactions]);
+
+  const subscriptions = useMemo(() => {
+    const groups = new Map<string, TxRecord[]>();
+    for (const tx of transactions) {
+      if (!tx.recurring || !tx.merchant || tx.deletedAt) continue;
+      const key = tx.merchant.trim().toLowerCase();
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(tx);
+    }
+    return Array.from(groups.entries()).map(([key, group]) => {
+      const sorted = [...group].sort((a, b) => a.timestamp - b.timestamp);
+      const last = sorted[sorted.length - 1];
+      const gaps: number[] = [];
+      for (let i = 1; i < sorted.length; i++) {
+        gaps.push((sorted[i].timestamp - sorted[i - 1].timestamp) / (24 * 60 * 60 * 1000));
+      }
+      gaps.sort((a, b) => a - b);
+      const medianGap = gaps.length ? gaps[Math.floor(gaps.length / 2)] : 30;
+      const nextExpected = last.timestamp + medianGap * 24 * 60 * 60 * 1000;
+      return {
+        merchant: last.merchant || key,
+        amount: last.amount,
+        nextExpected,
+      };
+    });
   }, [transactions]);
 
   const maxExpense = Math.max(...byMonth.map(([, d]) => d.expenses), 1);
@@ -104,6 +139,30 @@ export function AnalyticsScreen() {
           })}
           {topMerchants.length === 0 && (
             <Text style={styles.emptyText}>No expense data yet</Text>
+          )}
+        </View>
+      </View>
+
+      {/* Subscriptions */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Subscriptions</Text>
+        <View style={styles.merchantList}>
+          {subscriptions.length === 0 ? (
+            <Text style={styles.emptyText}>No recurring subscriptions detected yet</Text>
+          ) : (
+            subscriptions.map(sub => (
+              <View key={sub.merchant} style={styles.merchantRow}>
+                <View style={styles.merchantInfo}>
+                  <View style={styles.merchantTopRow}>
+                    <Text style={styles.merchantName} numberOfLines={1}>{sub.merchant}</Text>
+                    <Text style={styles.merchantAmount}>{formatAmount(sub.amount, currency)}</Text>
+                  </View>
+                  <Text style={styles.emptyText}>
+                    Next expected {new Date(sub.nextExpected).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  </Text>
+                </View>
+              </View>
+            ))
           )}
         </View>
       </View>

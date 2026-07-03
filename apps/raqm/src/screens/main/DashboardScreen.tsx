@@ -7,7 +7,7 @@ import { SmsReader } from '../../native/SmsReader';
 import { BankParserFactory } from '@rahatsayyed/bank-sms-parser';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import type { TxRecord } from '../../db/database';
-import { isDuplicateSms } from '../../services/txIntelligence';
+import { isDuplicateSms, countsTowardTotals } from '../../services/txIntelligence';
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -92,9 +92,14 @@ export function DashboardScreen() {
     let income = 0;
     let expenses = 0;
     for (const tx of txs) {
-      if (tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT) {
+      if (tx.deletedAt) continue;
+      if (!countsTowardTotals(tx)) continue;
+      const isCredit = tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
+      if (isCredit && tx.linkType === 'refund') {
+        expenses -= tx.amount; // refund nets against expense, not counted as income
+      } else if (isCredit) {
         income += tx.amount;
-      } else if (isDebit(tx.type)) {
+      } else if (tx.type === TransactionType.EXPENSE || tx.type === TransactionType.TRANSFER || tx.type === TransactionType.INVESTMENT) {
         expenses += tx.amount;
       }
     }
