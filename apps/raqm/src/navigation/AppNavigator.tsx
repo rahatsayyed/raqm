@@ -5,6 +5,7 @@ import { OnboardingNavigator } from './OnboardingNavigator';
 import { MainNavigator } from './MainNavigator';
 import { useAppStore } from '../store/appStore';
 import { useTxStore } from '../store/txStore';
+import { runDetectionJobs } from '../services/txIntelligence';
 import { Colors } from '../theme';
 
 export function AppNavigator() {
@@ -16,10 +17,16 @@ export function AppNavigator() {
     let cancelled = false;
     const unsub = useAppStore.persist.onFinishHydration(async () => {
       await loadTxs();
+      await runDetectionJobs();
+      useTxStore.getState().refresh();
       if (!cancelled) setReady(true);
     });
     if (useAppStore.persist.hasHydrated()) {
-      loadTxs().then(() => { if (!cancelled) setReady(true); });
+      loadTxs().then(async () => {
+        await runDetectionJobs();
+        useTxStore.getState().refresh();
+        if (!cancelled) setReady(true);
+      });
     }
     return () => {
       cancelled = true;
