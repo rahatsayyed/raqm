@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { MainStackScreenProps } from '../../navigation/types';
 import { useTxStore } from '../../store/txStore';
-import { getCategories, getSubcategories } from '../../db/database';
-import type { Category, Subcategory } from '../../db/database';
+import { getCategories, getSubcategories, getTxById } from '../../db/database';
+import type { Category, Subcategory, TxRecord } from '../../db/database';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 
 function formatAmount(n: number, currency = '₹'): string {
@@ -35,17 +35,31 @@ function isDebit(type: TransactionType): boolean {
 
 export function TransactionDetailScreen({ route, navigation }: MainStackScreenProps<'TransactionDetail'>) {
   const { transactionId } = route.params;
-  const tx = useTxStore((s) => s.txs.find((t) => t.id === transactionId));
+  const storeTx = useTxStore((s) => s.txs.find((t) => t.id === transactionId));
   const removeTx = useTxStore((s) => s.remove);
   const restoreTx = useTxStore((s) => s.restore);
   const updateTx = useTxStore((s) => s.update);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const [notesDraft, setNotesDraft] = useState(tx?.notes ?? '');
-  const [tagsDraft, setTagsDraft] = useState<string[]>(tx?.tags ?? []);
+  const [notesDraft, setNotesDraft] = useState('');
+  const [tagsDraft, setTagsDraft] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
   const [deleting, setDeleting] = useState(false);
+  // Snapshot taken right before a soft-delete so the row filtered out of the
+  // store doesn't make `tx` disappear (and the undo snackbar with it).
+  const [snapshot, setSnapshot] = useState<TxRecord | null>(null);
+  // Fallback lookup for when the store hasn't loaded this row yet (e.g. deep link).
+  const [fallbackTx, setFallbackTx] = useState<TxRecord | null>(null);
+  const [fallbackChecked, setFallbackChecked] = useState(false);
+
+  const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notesDraftRef = useRef('');
+  const savedNotesRef = useRef<string | null>(null);
+  const updateTxRef = useRef(updateTx);
+  updateTxRef.current = updateTx;
+
+  const tx = snapshot ?? storeTx ?? fallbackTx;
 
   useEffect(() => {
     getCategories().then(setCategories);
@@ -62,6 +76,44 @@ export function TransactionDetailScreen({ route, navigation }: MainStackScreenPr
   useEffect(() => {
     setNotesDraft(tx?.notes ?? '');
     setTagsDraft(tx?.tags ?? []);
+    savedNotesRef.current = tx?.notes ?? '';
+  }, [tx?.id]);
+
+  useEffect(() => {
+    notesDraftRef.current = notesDraft;
+  }, [notesDraft]);
+
+  // Store lookup missed and we're not mid-delete: try the db directly (e.g.
+  // screen opened before the store has finished loading).
+  useEffect(() => {
+    if (storeTx || snapshot || deleting) {
+      setFallbackChecked(false);
+      return;
+    }
+    let cancelled = false;
+    getTxById(transactionId).then((row) => {
+      if (!cancelled) {
+        setFallbackTx(row);
+        setFallbackChecked(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [storeTx, snapshot, deleting, transactionId]);
+
+  // Flush an unsaved notes edit if the screen unmounts before onBlur fires.
+  useEffect(() => {
+    return () => {
+      if (deleteTimerRef.current) {
+        clearTimeout(deleteTimerRef.current);
+      }
+      const currentId = tx?.id;
+      if (currentId != null && notesDraftRef.current !== (savedNotesRef.current ?? '')) {
+        updateTxRef.current(currentId, { notes: notesDraftRef.current });
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tx?.id]);
 
   const category = useMemo(
@@ -73,7 +125,38 @@ export function TransactionDetailScreen({ route, navigation }: MainStackScreenPr
     [subcategories, tx?.subcategoryId],
   );
 
+  const handleUndo = (id: number) => {
+    if (deleteTimerRef.current) {
+      clearTimeout(deleteTimerRef.current);
+      deleteTimerRef.current = null;
+    }
+    restoreTx(id);
+    setDeleting(false);
+    setSnapshot(null);
+  };
+
+  if (deleting && snapshot) {
+    return (
+      <View style={styles.root}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
+            <Text style={styles.backText}>← Back</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.snackbar}>
+          <Text style={styles.snackbarText}>Transaction deleted</Text>
+          <TouchableOpacity onPress={() => handleUndo(snapshot.id)}>
+            <Text style={styles.snackbarUndo}>UNDO</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   if (!tx) {
+    if (!fallbackChecked) {
+      return <View style={styles.root} />;
+    }
     return (
       <View style={styles.root}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
@@ -86,10 +169,11 @@ export function TransactionDetailScreen({ route, navigation }: MainStackScreenPr
 
   const debit = isDebit(tx.type);
   const sign = debit ? '-' : '+';
-  const color = debit ? Colors.error : Colors.primary;
+  const amountColor = debit ? Colors.error : Colors.primary;
 
   const saveNotes = () => {
     if (notesDraft !== (tx.notes ?? '')) {
+      savedNotesRef.current = notesDraft;
       updateTx(tx.id, { notes: notesDraft });
     }
   };
@@ -113,16 +197,13 @@ export function TransactionDetailScreen({ route, navigation }: MainStackScreenPr
   };
 
   const handleDelete = () => {
-    removeTx(tx.id);
+    setSnapshot(tx);
     setDeleting(true);
-    setTimeout(() => {
+    removeTx(tx.id);
+    deleteTimerRef.current = setTimeout(() => {
+      deleteTimerRef.current = null;
       navigation.goBack();
     }, 5000);
-  };
-
-  const handleUndo = () => {
-    restoreTx(tx.id);
-    setDeleting(false);
   };
 
   return (
@@ -137,7 +218,7 @@ export function TransactionDetailScreen({ route, navigation }: MainStackScreenPr
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.amount}>
+        <Text style={[styles.amount, { color: amountColor }]}>
           {sign}{formatAmount(tx.amount, tx.currency)}
         </Text>
         <Text style={styles.merchant}>{tx.merchant || tx.bankName}</Text>
@@ -205,15 +286,6 @@ export function TransactionDetailScreen({ route, navigation }: MainStackScreenPr
           <Text style={styles.deleteButtonText}>Delete transaction</Text>
         </TouchableOpacity>
       </ScrollView>
-
-      {deleting && (
-        <View style={styles.snackbar}>
-          <Text style={styles.snackbarText}>Transaction deleted</Text>
-          <TouchableOpacity onPress={handleUndo}>
-            <Text style={styles.snackbarUndo}>UNDO</Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </View>
   );
 }
