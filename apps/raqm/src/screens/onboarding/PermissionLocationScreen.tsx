@@ -1,9 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { PermissionsAndroid } from 'react-native';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { PermissionScreen } from './PermissionScreen';
 
 export function PermissionLocationScreen({ navigation }: OnboardingScreenProps<'PermissionLocation'>) {
+  // Already granted — skip this page.
+  useEffect(() => {
+    let cancelled = false;
+    PermissionsAndroid.check('android.permission.ACCESS_FINE_LOCATION' as any).then((granted) => {
+      if (granted && !cancelled) navigation.replace('DateRange');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [navigation]);
+
   const handleCTA = async () => {
     await PermissionsAndroid.request('android.permission.ACCESS_FINE_LOCATION' as any, {
       title: 'Location Permission',

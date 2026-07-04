@@ -29,7 +29,10 @@ export async function initNotifications(): Promise<void> {
     }),
   });
 
-  await Notifications.requestPermissionsAsync();
+  // Check-only: the POST_NOTIFICATIONS request belongs to the onboarding
+  // PermissionNotifications page — requesting here fired the system dialog at
+  // every app open before onboarding reached that page.
+  await Notifications.getPermissionsAsync();
 
   await Notifications.setNotificationChannelAsync(TX_CHANNEL_ID, {
     name: 'Transactions',

@@ -1,9 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { PermissionsAndroid } from 'react-native';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { PermissionScreen } from './PermissionScreen';
 
 export function PermissionNotificationsScreen({ navigation }: OnboardingScreenProps<'PermissionNotifications'>) {
+  // Already granted — skip this page.
+  useEffect(() => {
+    let cancelled = false;
+    PermissionsAndroid.check('android.permission.POST_NOTIFICATIONS' as any).then((granted) => {
+      if (granted && !cancelled) navigation.replace('PermissionNotificationAccess');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [navigation]);
+
   const handleCTA = async () => {
     await PermissionsAndroid.request('android.permission.POST_NOTIFICATIONS' as any, {
       title: 'Notification Permission',
