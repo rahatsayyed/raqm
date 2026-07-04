@@ -308,8 +308,9 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
         <View style={[styles.chartCard, styles.donutCard]}>
           <DonutChart data={donutData} />
           <View style={styles.legend}>
-            {donutData.slice(0, 6).map((d) => (
-              <View key={d.label} style={styles.legendRow}>
+            {donutData.slice(0, 6).map((d, i) => (
+              // labels can collide (e.g. two 'Unknown' before categories load) — key by position
+              <View key={`${i}-${d.label}`} style={styles.legendRow}>
                 <View style={[styles.legendDot, { backgroundColor: d.color }]} />
                 <Text style={styles.legendLabel} numberOfLines={1}>{d.label}</Text>
               </View>

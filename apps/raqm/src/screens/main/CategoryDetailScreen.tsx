@@ -148,8 +148,8 @@ export function CategoryDetailScreen({ route, navigation }: MainStackScreenProps
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>By sub-category</Text>
           <View style={styles.card}>
-            {subBreakdown.map((row) => (
-              <View key={row.name} style={styles.subRow}>
+            {subBreakdown.map((row, i) => (
+              <View key={`${i}-${row.name}`} style={styles.subRow}>
                 <Text style={styles.subName}>{row.name}</Text>
                 <Text style={styles.subAmount}>{formatAmount(row.amount)}</Text>
               </View>
