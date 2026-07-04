@@ -7,6 +7,7 @@ import { useAppStore } from '../store/appStore';
 import { useTxStore } from '../store/txStore';
 import { runDetectionJobs } from '../services/txIntelligence';
 import { navigationRef } from './navigationRef';
+import { syncDiscoveredAccounts } from '../db/database';
 import { initNotifications, attachNotificationHandlers, scheduleSummaries } from '../notifications/notifications';
 import { Colors } from '../theme';
 
@@ -19,6 +20,7 @@ export function AppNavigator() {
     let cancelled = false;
     const unsub = useAppStore.persist.onFinishHydration(async () => {
       await loadTxs();
+      await syncDiscoveredAccounts();
       await runDetectionJobs();
       useTxStore.getState().refresh();
       if (cancelled) return;
@@ -29,6 +31,7 @@ export function AppNavigator() {
     });
     if (useAppStore.persist.hasHydrated()) {
       loadTxs().then(async () => {
+        await syncDiscoveredAccounts();
         await runDetectionJobs();
         useTxStore.getState().refresh();
         if (cancelled) return;

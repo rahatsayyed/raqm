@@ -1274,3 +1274,118 @@ export async function linkTxToList(listId: number, txId: number): Promise<void> 
   const database = await getDb();
   await database.runAsync(`UPDATE grocery_lists SET linked_tx_id = ? WHERE id = ?`, txId, listId);
 }
+
+// ── Accounts ───────────────────────────────────────────────────────────────
+
+export interface Account {
+  id: number;
+  bankName: string;
+  last4: string | null;
+  isCard: boolean;
+  isManual: boolean;
+  nickname: string | null;
+  creditLimit: number | null;
+  dueDate: string | null;
+}
+
+function rowToAccount(row: Record<string, unknown>): Account {
+  return {
+    id: row.id as number,
+    bankName: row.bank_name as string,
+    last4: (row.last4 as string | null) ?? null,
+    isCard: (row.is_card as number) === 1,
+    isManual: (row.is_manual as number) === 1,
+    nickname: (row.nickname as string | null) ?? null,
+    creditLimit: (row.credit_limit as number | null) ?? null,
+    dueDate: (row.due_date as string | null) ?? null,
+  };
+}
+
+export async function getAccounts(): Promise<Account[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<Record<string, unknown>>(
+    `SELECT * FROM accounts ORDER BY bank_name ASC, last4 ASC`,
+  );
+  return rows.map(rowToAccount);
+}
+
+export async function addAccount(input: {
+  bankName: string;
+  last4?: string | null;
+  isCard?: boolean;
+  nickname?: string | null;
+  creditLimit?: number | null;
+  dueDate?: string | null;
+}): Promise<number> {
+  const database = await getDb();
+  const result = await database.runAsync(
+    `INSERT INTO accounts (bank_name, last4, is_card, is_manual, nickname, credit_limit, due_date)
+     VALUES (?, ?, ?, 1, ?, ?, ?)`,
+    input.bankName,
+    input.last4 ?? null,
+    input.isCard ? 1 : 0,
+    input.nickname ?? null,
+    input.creditLimit ?? null,
+    input.dueDate ?? null,
+  );
+  return result.lastInsertRowId;
+}
+
+export async function updateAccount(
+  id: number,
+  patch: Partial<Omit<Account, 'id' | 'isManual'>>,
+): Promise<void> {
+  const database = await getDb();
+  const colByKey: Record<string, string> = {
+    bankName: 'bank_name',
+    last4: 'last4',
+    isCard: 'is_card',
+    nickname: 'nickname',
+    creditLimit: 'credit_limit',
+    dueDate: 'due_date',
+  };
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  for (const [key, col] of Object.entries(colByKey)) {
+    if (!(key in patch)) continue;
+    const v = (patch as Record<string, unknown>)[key];
+    sets.push(`${col} = ?`);
+    values.push(key === 'isCard' ? (v ? 1 : 0) : v);
+  }
+  if (sets.length === 0) return;
+  values.push(id);
+  await database.runAsync(`UPDATE accounts SET ${sets.join(', ')} WHERE id = ?`, ...values as never[]);
+}
+
+/**
+ * Upserts accounts rows from distinct (bankName, accountLast4, isFromCard) tuples seen in
+ * transactions. Skips tuples that already have a matching accounts row (matched on
+ * bankName + last4 — last4 null matches null). Idempotent; safe to call on every app start.
+ * Credit-limit enrichment (A3) is intentionally NOT attempted here: ParsedTransaction.creditLimit
+ * is not persisted on TxRecord (see contract §2), so newly-discovered card accounts get
+ * `creditLimit: null` and rely on the manual edit fields in AccountDetailScreen (Task 2).
+ */
+export async function syncDiscoveredAccounts(): Promise<void> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    bankName: string;
+    accountLast4: string | null;
+    isFromCard: number;
+  }>(
+    `SELECT DISTINCT bankName, accountLast4, isFromCard
+     FROM transactions
+     WHERE deleted_at IS NULL`,
+  );
+  const existing = await getAccounts();
+  const seen = new Set(existing.map(a => `${a.bankName}|${a.last4 ?? ''}`));
+  for (const row of rows) {
+    const key = `${row.bankName}|${row.accountLast4 ?? ''}`;
+    if (seen.has(key)) continue;
+    await addAccount({
+      bankName: row.bankName,
+      last4: row.accountLast4,
+      isCard: row.isFromCard === 1,
+    });
+    seen.add(key);
+  }
+}
