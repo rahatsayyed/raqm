@@ -81,14 +81,31 @@ export function computeRecurringIds(txs: TxRecord[]): number[] {
   for (const group of groups.values()) {
     if (group.length < 2) continue;
     const sorted = [...group].sort((a, b) => a.timestamp - b.timestamp);
+    // Two ways to qualify (tightened after device testing flagged too many false
+    // positives from ordinary repeat purchases):
+    //  - a chain of >=2 consecutive monthly-ish gaps (i.e. >=3 occurrences), amounts within 5%
+    //  - a single gap, but only with IDENTICAL amounts and a tight 28-32 day gap
+    const qualifying: Array<[TxRecord, TxRecord]> = [];
     for (let i = 1; i < sorted.length; i++) {
       const prev = sorted[i - 1];
       const cur = sorted[i];
       const amountDiff = Math.abs(cur.amount - prev.amount) / prev.amount;
       const gapDays = (cur.timestamp - prev.timestamp) / DAY_MS;
       if (amountDiff <= 0.05 && gapDays >= 25 && gapDays <= 35) {
-        result.add(prev.id);
-        result.add(cur.id);
+        qualifying.push([prev, cur]);
+      }
+    }
+    if (qualifying.length >= 2) {
+      for (const [a, b] of qualifying) {
+        result.add(a.id);
+        result.add(b.id);
+      }
+    } else if (qualifying.length === 1) {
+      const [a, b] = qualifying[0];
+      const gapDays = (b.timestamp - a.timestamp) / DAY_MS;
+      if (a.amount === b.amount && gapDays >= 28 && gapDays <= 32) {
+        result.add(a.id);
+        result.add(b.id);
       }
     }
   }
