@@ -63,6 +63,9 @@ export function DashboardScreen() {
   const toastAnim = useRef(new Animated.Value(0)).current;
   const [linkPromptTxId, setLinkPromptTxId] = useState<number | null>(null);
   const [showListPicker, setShowListPicker] = useState(false);
+  // Snapshot of the tx id for the open picker — the toast's auto-dismiss timer clears
+  // linkPromptTxId independently, which would otherwise null it under an open modal.
+  const [pickerTxId, setPickerTxId] = useState<number | null>(null);
   const [activeGroceryLists, setActiveGroceryLists] = useState<GroceryList[]>([]);
   const [groceriesCategoryId, setGroceriesCategoryId] = useState<number | null>(null);
 
@@ -203,15 +206,35 @@ export function DashboardScreen() {
       <Animated.View style={[styles.toast, { opacity: toastAnim, transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-16, 0] }) }] }]}>
         <Text style={styles.toastText}>⚡ {newTxLabel}</Text>
         {linkPromptTxId !== null && (
-          <TouchableOpacity onPress={() => setShowListPicker(true)} style={styles.toastLinkBtn}>
+          <TouchableOpacity
+            onPress={() => {
+              setPickerTxId(linkPromptTxId);
+              setShowListPicker(true);
+            }}
+            style={styles.toastLinkBtn}
+          >
             <Text style={styles.toastLinkText}>Link to list?</Text>
           </TouchableOpacity>
         )}
       </Animated.View>
     )}
 
-    <Modal visible={showListPicker} transparent animationType="fade" onRequestClose={() => setShowListPicker(false)}>
-      <Pressable style={styles.modalBackdrop} onPress={() => setShowListPicker(false)}>
+    <Modal
+      visible={showListPicker}
+      transparent
+      animationType="fade"
+      onRequestClose={() => {
+        setShowListPicker(false);
+        setPickerTxId(null);
+      }}
+    >
+      <Pressable
+        style={styles.modalBackdrop}
+        onPress={() => {
+          setShowListPicker(false);
+          setPickerTxId(null);
+        }}
+      >
         <View style={styles.modalCard}>
           <Text style={styles.modalTitle}>Link to which list?</Text>
           {activeGroceryLists.map((l) => (
@@ -219,8 +242,9 @@ export function DashboardScreen() {
               key={l.id}
               style={styles.modalRow}
               onPress={async () => {
-                if (linkPromptTxId !== null) await linkTxToList(l.id, linkPromptTxId);
+                if (pickerTxId !== null) await linkTxToList(l.id, pickerTxId);
                 setShowListPicker(false);
+                setPickerTxId(null);
                 setLinkPromptTxId(null);
               }}
             >
