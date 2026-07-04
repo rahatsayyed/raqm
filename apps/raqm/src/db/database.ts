@@ -417,6 +417,11 @@ export async function clearTransactions(): Promise<void> {
   await database.runAsync('DELETE FROM transactions');
 }
 
+export async function clearScannedTransactions(): Promise<void> {
+  const database = await getDb();
+  await database.runAsync('DELETE FROM transactions WHERE is_manual = 0');
+}
+
 export async function getTransactionCount(): Promise<number> {
   const database = await getDb();
   const row = await database.getFirstAsync<{ count: number }>(
@@ -540,7 +545,50 @@ async function categorizeParsedTx(
     }
   }
 
+  // Starter keyword rules — user-taught rules (above) always win; this is the
+  // fallback so a fresh scan isn't 100% Uncategorized.
+  if (categoryId === null && tx.merchant) {
+    const cat = matchDefaultKeywordCategory(tx.merchant);
+    if (cat) {
+      categoryId = await getCategoryIdByName(cat);
+    }
+  }
+
   return { categoryId, subcategoryId };
+}
+
+// Merchant-keyword → default category name. Ordered: first match wins.
+const DEFAULT_KEYWORD_RULES: Array<[RegExp, string]> = [
+  [/bigbasket|blinkit|zepto|instamart|dmart|grofers|grocer|supermarket|kirana/i, 'Groceries'],
+  [/swiggy|zomato|dominos|mcdonald|kfc|pizza|burger|biryani|restaurant|cafe|eatfit|faasos/i, 'Food & Dining'],
+  [/\buber\b|\bola\b|rapido|irctc|redbus|metro card|petrol|fuel|hpcl|iocl|bpcl|fastag/i, 'Transport'],
+  [/amazon|flipkart|myntra|ajio|meesho|nykaa|snapdeal|tatacliq/i, 'Shopping'],
+  [/netflix|spotify|hotstar|primevideo|prime video|bookmyshow|sonyliv|zee5|gaana|youtube/i, 'Entertainment'],
+  [/jio|airtel|\bvi\b|vodafone|bsnl|electricity|broadband|\bdth\b|tata power|bescom|recharge/i, 'Bills & Utilities'],
+  [/pharmacy|apollo|medplus|1mg|pharmeasy|netmeds|hospital|clinic|diagnostic/i, 'Health'],
+  [/makemytrip|goibibo|\boyo\b|air india|indigo|spicejet|vistara|cleartrip|airbnb/i, 'Travel'],
+  [/udemy|coursera|byjus|unacademy|school|college|tuition/i, 'Education'],
+];
+
+function matchDefaultKeywordCategory(merchant: string): string | null {
+  for (const [pattern, category] of DEFAULT_KEYWORD_RULES) {
+    if (pattern.test(merchant)) return category;
+  }
+  return null;
+}
+
+const categoryIdByNameCache = new Map<string, number | null>();
+
+async function getCategoryIdByName(name: string): Promise<number | null> {
+  if (categoryIdByNameCache.has(name)) return categoryIdByNameCache.get(name)!;
+  const database = await getDb();
+  const row = await database.getFirstAsync<{ id: number }>(
+    `SELECT id FROM categories WHERE name = ?`,
+    name,
+  );
+  const id = row?.id ?? null;
+  categoryIdByNameCache.set(name, id);
+  return id;
 }
 
 export async function insertParsedTx(tx: ParsedTransaction): Promise<number> {
