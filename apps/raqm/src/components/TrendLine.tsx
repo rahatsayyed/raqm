@@ -41,15 +41,15 @@ export function TrendLine({ data, height = 120 }: Props) {
         {width > 0 && (
           <>
             <Polyline points={polylinePoints} fill="none" stroke={Colors.primary} strokeWidth={2} />
-            {points.map((p) => (
-              <Circle key={p.label} cx={p.x} cy={p.y} r={3} fill={Colors.primary} />
+            {points.map((p, i) => (
+              <Circle key={`${i}-${p.label}`} cx={p.x} cy={p.y} r={3} fill={Colors.primary} />
             ))}
           </>
         )}
       </Svg>
       <View style={styles.labelRow}>
-        {data.map((d) => (
-          <Text key={d.label} style={styles.label} numberOfLines={1}>
+        {data.map((d, i) => (
+          <Text key={`${i}-${d.label}`} style={styles.label} numberOfLines={1}>
             {d.label}
           </Text>
         ))}

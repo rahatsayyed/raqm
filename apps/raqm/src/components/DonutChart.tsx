@@ -41,14 +41,15 @@ export function DonutChart({ data, size = 160, strokeWidth = 24 }: Props) {
 
   const arcs = data
     .filter((d) => d.value > 0)
-    .map((d) => {
+    .map((d, i) => {
       const rawSweep = total0 ? 0 : (d.value / total) * 360;
       // A single slice covering the whole total would have start === end point; cap just short of 360.
       const sweep = Math.min(rawSweep, 359.99);
       const startAngle = cumulativeAngle;
       const endAngle = startAngle + sweep;
       cumulativeAngle = startAngle + rawSweep;
-      return { key: d.label, d: describeArc(cx, cy, radius, startAngle, endAngle), color: d.color };
+      // labels can collide (e.g. duplicate 'Unknown') — key by position instead
+      return { key: `${i}-${d.label}`, d: describeArc(cx, cy, radius, startAngle, endAngle), color: d.color };
     });
 
   return (
