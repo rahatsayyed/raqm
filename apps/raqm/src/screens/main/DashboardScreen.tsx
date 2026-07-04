@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Animated, Modal, Pressable, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { useAppStore } from '../../store/appStore';
@@ -7,11 +7,13 @@ import { useTxStore } from '../../store/txStore';
 import { SmsReader } from '../../native/SmsReader';
 import { BankParserFactory } from '@rahatsayyed/bank-sms-parser';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
-import type { TxRecord } from '../../db/database';
-import { getSetting } from '../../db/database';
+import type { TxRecord, GroceryList } from '../../db/database';
+import { getSetting, getCategories, getGroceryLists, linkTxToList } from '../../db/database';
 import { countsTowardTotals } from '../../services/txIntelligence';
 import { postTxNotification } from '../../notifications/notifications';
 import { getMonthBounds } from '../../utils/period';
+
+const GROCERY_KEYWORDS = /grocer|bigbasket|blinkit|zepto|dmart|instamart/i;
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -59,6 +61,16 @@ export function DashboardScreen() {
   const txs = useTxStore((s) => s.txs);
   const [newTxLabel, setNewTxLabel] = React.useState<string | null>(null);
   const toastAnim = useRef(new Animated.Value(0)).current;
+  const [linkPromptTxId, setLinkPromptTxId] = useState<number | null>(null);
+  const [showListPicker, setShowListPicker] = useState(false);
+  const [activeGroceryLists, setActiveGroceryLists] = useState<GroceryList[]>([]);
+  const [groceriesCategoryId, setGroceriesCategoryId] = useState<number | null>(null);
+
+  useEffect(() => {
+    getCategories().then((cats) => {
+      setGroceriesCategoryId(cats.find((c) => c.name === 'Groceries')?.id ?? null);
+    });
+  }, []);
 
   useEffect(() => {
     const sub = SmsReader.addNewSmsListener(async ({ body, sender, timestamp }) => {
@@ -83,11 +95,29 @@ export function DashboardScreen() {
           ? `${sign}₹${tx.amount.toLocaleString('en-IN')} · ${tx.merchant}`
           : `New transaction from ${tx.bankName}`;
         setNewTxLabel(label);
+
+        const newTx = useTxStore.getState().txs.find((t) => t.id === id) ?? null;
+        const isGrocery =
+          (newTx?.categoryId !== null && newTx?.categoryId === groceriesCategoryId) ||
+          (tx.merchant ? GROCERY_KEYWORDS.test(tx.merchant) : false);
+
+        if (isGrocery) {
+          setLinkPromptTxId(id);
+          const lists = await getGroceryLists();
+          setActiveGroceryLists(lists.filter((l) => l.completedAt === null));
+        } else {
+          setLinkPromptTxId(null);
+        }
+
+        const dismissDelay = isGrocery ? 6000 : 3000;
         Animated.sequence([
           Animated.timing(toastAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-          Animated.delay(3000),
+          Animated.delay(dismissDelay),
           Animated.timing(toastAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-        ]).start(() => setNewTxLabel(null));
+        ]).start(() => {
+          setNewTxLabel(null);
+          setLinkPromptTxId(null);
+        });
 
         const notifBody = tx.merchant
           ? `${sign}₹${tx.amount.toLocaleString('en-IN')} · ${tx.merchant}`
@@ -98,7 +128,7 @@ export function DashboardScreen() {
       }
     });
     return () => sub.remove();
-  }, []);
+  }, [groceriesCategoryId]);
 
   const [stats, setStats] = useState({ income: 0, expenses: 0, net: 0 });
 
@@ -172,8 +202,35 @@ export function DashboardScreen() {
     {newTxLabel && (
       <Animated.View style={[styles.toast, { opacity: toastAnim, transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-16, 0] }) }] }]}>
         <Text style={styles.toastText}>⚡ {newTxLabel}</Text>
+        {linkPromptTxId !== null && (
+          <TouchableOpacity onPress={() => setShowListPicker(true)} style={styles.toastLinkBtn}>
+            <Text style={styles.toastLinkText}>Link to list?</Text>
+          </TouchableOpacity>
+        )}
       </Animated.View>
     )}
+
+    <Modal visible={showListPicker} transparent animationType="fade" onRequestClose={() => setShowListPicker(false)}>
+      <Pressable style={styles.modalBackdrop} onPress={() => setShowListPicker(false)}>
+        <View style={styles.modalCard}>
+          <Text style={styles.modalTitle}>Link to which list?</Text>
+          {activeGroceryLists.map((l) => (
+            <TouchableOpacity
+              key={l.id}
+              style={styles.modalRow}
+              onPress={async () => {
+                if (linkPromptTxId !== null) await linkTxToList(l.id, linkPromptTxId);
+                setShowListPicker(false);
+                setLinkPromptTxId(null);
+              }}
+            >
+              <Text style={styles.modalRowText}>{l.name}</Text>
+            </TouchableOpacity>
+          ))}
+          {activeGroceryLists.length === 0 && <Text style={styles.modalEmpty}>No active lists</Text>}
+        </View>
+      </Pressable>
+    </Modal>
     <ScrollView style={styles.root} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
@@ -354,4 +411,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
   },
   toastText: { ...Typography.bodyMd, color: Colors.onPrimaryContainer, fontFamily: 'WorkSans_500Medium' },
+  toastLinkBtn: { marginTop: Spacing.sm, alignSelf: 'flex-start' },
+  toastLinkText: { ...Typography.labelLg, color: Colors.onPrimaryContainer, textDecorationLine: 'underline' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: Spacing.xl },
+  modalCard: {
+    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl,
+    borderWidth: 1, borderColor: Colors.outlineVariant, padding: Spacing.lg, gap: Spacing.sm,
+  },
+  modalTitle: { ...Typography.titleLg, color: Colors.onSurface, marginBottom: Spacing.sm },
+  modalRow: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant },
+  modalRowText: { ...Typography.bodyMd, color: Colors.onSurface },
+  modalEmpty: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center', paddingVertical: 12 },
 });
