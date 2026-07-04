@@ -1,11 +1,15 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { useAppStore } from '../../store/appStore';
 import { useTxStore } from '../../store/txStore';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../../navigation/types';
+import { rescanTransactions } from '../../services/rescan';
+import { buildMonthlySummary, exportCsv, exportPdf } from '../../services/export';
+import { AddAccountModal } from '../../components/AddAccountModal';
+import { syncDiscoveredAccounts } from '../../db/database';
 
 interface RowProps {
   icon: string;
@@ -33,6 +37,83 @@ export function MoreScreen() {
 
   const firstName = userName.trim().split(' ')[0] || 'User';
 
+  const [rescanStatus, setRescanStatus] = useState<'idle' | 'scanning' | 'done'>('idle');
+  const [rescanCount, setRescanCount] = useState(0);
+  const [addAccountVisible, setAddAccountVisible] = useState(false);
+
+  const handleRescan = () => {
+    Alert.alert(
+      'Re-scan SMS',
+      'Re-scanning will refresh SMS-derived transactions; categories and notes you added to those will be reset. Manually added transactions are not affected.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Re-scan',
+          onPress: async () => {
+            setRescanStatus('scanning');
+            setRescanCount(0);
+            try {
+              const { found } = await rescanTransactions(count => setRescanCount(count));
+              await syncDiscoveredAccounts();
+              setRescanStatus('done');
+              Alert.alert('Re-scan complete', `${found} transaction${found === 1 ? '' : 's'} found.`);
+            } catch (e) {
+              setRescanStatus('idle');
+              Alert.alert('Re-scan failed', e instanceof Error ? e.message : 'Unknown error');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleExport = async () => {
+    try {
+      const summary = await buildMonthlySummary(new Date());
+      Alert.alert(
+        'Export transactions',
+        `This month: income ₹${summary.income.toFixed(0)} · spent ₹${summary.expense.toFixed(0)} · savings ${summary.savingsRate.toFixed(0)}%`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Export CSV',
+            onPress: async () => {
+              try {
+                await exportCsv();
+              } catch (e) {
+                Alert.alert('Export failed', e instanceof Error ? e.message : 'Unknown error');
+              }
+            },
+          },
+          {
+            text: 'Export PDF (this month)',
+            onPress: async () => {
+              try {
+                await exportPdf(new Date());
+              } catch (e) {
+                Alert.alert('Export failed', e instanceof Error ? e.message : 'Unknown error');
+              }
+            },
+          },
+        ],
+      );
+    } catch (e) {
+      Alert.alert('Export failed', e instanceof Error ? e.message : 'Unknown error');
+    }
+  };
+
+  const handleAbout = () => {
+    const version = require('../../../app.json').expo.version as string;
+    Alert.alert('About Raqm', `Raqm v${version}\nA private, on-device finance tracker.`);
+  };
+
+  const handleLocationPermissions = () => {
+    Linking.openSettings();
+  };
+
+  const rescanLabel =
+    rescanStatus === 'scanning' ? `Re-scanning… ${rescanCount} found` : 'Re-scan SMS';
+
   return (
     <View style={styles.root}>
       <Text style={styles.pageTitle}>More</Text>
@@ -52,9 +133,15 @@ export function MoreScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>DATA</Text>
         <View style={styles.card}>
-          <Row icon="🔄" label="Re-scan SMS" />
+          <Row
+            icon="🔄"
+            label={rescanLabel}
+            onPress={rescanStatus === 'scanning' ? undefined : handleRescan}
+          />
           <View style={styles.sep} />
-          <Row icon="📤" label="Export transactions" />
+          <Row icon="📤" label="Export transactions" onPress={handleExport} />
+          <View style={styles.sep} />
+          <Row icon="🏦" label="Add account" onPress={() => setAddAccountVisible(true)} />
         </View>
       </View>
 
@@ -64,11 +151,17 @@ export function MoreScreen() {
         <View style={styles.card}>
           <Row icon="⚙️" label="Settings" onPress={() => navigation.navigate('Settings')} />
           <View style={styles.sep} />
-          <Row icon="📍" label="Location permissions" />
+          <Row icon="📍" label="Location permissions" onPress={handleLocationPermissions} />
           <View style={styles.sep} />
-          <Row icon="ℹ️" label="About Raqm" />
+          <Row icon="ℹ️" label="About Raqm" onPress={handleAbout} />
         </View>
       </View>
+
+      <AddAccountModal
+        visible={addAccountVisible}
+        onClose={() => setAddAccountVisible(false)}
+        onAdded={() => { /* AccountDetail/Dashboard re-read accounts on their own effects */ }}
+      />
     </View>
   );
 }
