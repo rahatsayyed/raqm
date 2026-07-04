@@ -15,10 +15,7 @@ import {
   getLastPriceForItem,
   getFrequentItems,
 } from '../../db/database';
-
-function formatAmount(n: number): string {
-  return `₹${Math.round(n).toLocaleString('en-IN')}`;
-}
+import { formatAmount } from '../../utils/format';
 
 export function GroceryListDetailScreen({ route, navigation }: MainStackScreenProps<'GroceryListDetail'>) {
   const { listId, listName } = route.params;

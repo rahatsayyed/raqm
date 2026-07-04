@@ -29,9 +29,9 @@ export type MainTabParamList = {
 export type MainStackParamList = {
   Tabs: undefined;
   TransactionDetail: { transactionId: number };
-  AddTransaction: undefined;
-  EditTransaction: { transactionId: number };
-  CategoryPicker: { onSelect: (categoryId: number, subcategoryId?: number) => void };
+  AddTransaction: { pickedCategoryId?: number; pickedSubcategoryId?: number } | undefined;
+  EditTransaction: { transactionId: number; pickedCategoryId?: number; pickedSubcategoryId?: number };
+  CategoryPicker: { returnTo: 'AddTransaction' | 'EditTransaction'; transactionId?: number };
   AccountDetail: { bankName: string; last4?: string };
   GroceryListDetail: { listId: number; listName: string };
   Settings: undefined;

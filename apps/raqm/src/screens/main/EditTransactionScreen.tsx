@@ -58,16 +58,22 @@ export function EditTransactionScreen({ route, navigation }: MainStackScreenProp
   const canSave = !Number.isNaN(parsedAmount) && parsedAmount > 0;
 
   const openCategoryPicker = () => {
-    navigation.navigate('CategoryPicker', {
-      onSelect: async (selectedCategoryId: number, selectedSubcategoryId?: number) => {
-        setCategoryId(selectedCategoryId);
-        setSubcategoryId(selectedSubcategoryId);
-        const categories: Category[] = await getCategories();
-        const cat = categories.find((c) => c.id === selectedCategoryId);
-        setCategoryLabel(cat ? `${cat.emoji} ${cat.name}` : null);
-      },
-    });
+    navigation.navigate('CategoryPicker', { returnTo: 'EditTransaction', transactionId });
   };
+
+  useEffect(() => {
+    const pickedCategoryId = route.params?.pickedCategoryId;
+    const pickedSubcategoryId = route.params?.pickedSubcategoryId;
+    if (pickedCategoryId == null) return;
+
+    setCategoryId(pickedCategoryId);
+    setSubcategoryId(pickedSubcategoryId);
+    getCategories().then((categories: Category[]) => {
+      const cat = categories.find((c) => c.id === pickedCategoryId);
+      setCategoryLabel(cat ? `${cat.emoji} ${cat.name}` : null);
+    });
+    navigation.setParams({ pickedCategoryId: undefined, pickedSubcategoryId: undefined });
+  }, [route.params?.pickedCategoryId, route.params?.pickedSubcategoryId]);
 
   const addTag = () => {
     const trimmed = newTag.trim();

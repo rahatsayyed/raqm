@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
@@ -12,7 +12,7 @@ function fmtDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-export function AddTransactionScreen({ navigation }: MainStackScreenProps<'AddTransaction'>) {
+export function AddTransactionScreen({ route, navigation }: MainStackScreenProps<'AddTransaction'>) {
   const addTx = useTxStore((s) => s.add);
 
   const [amount, setAmount] = useState('');
@@ -33,16 +33,22 @@ export function AddTransactionScreen({ navigation }: MainStackScreenProps<'AddTr
   const canSave = !Number.isNaN(parsedAmount) && parsedAmount > 0 && bankName.trim().length > 0;
 
   const openCategoryPicker = () => {
-    navigation.navigate('CategoryPicker', {
-      onSelect: async (selectedCategoryId: number, selectedSubcategoryId?: number) => {
-        setCategoryId(selectedCategoryId);
-        setSubcategoryId(selectedSubcategoryId);
-        const categories: Category[] = await getCategories();
-        const cat = categories.find((c) => c.id === selectedCategoryId);
-        setCategoryLabel(cat ? `${cat.emoji} ${cat.name}` : null);
-      },
-    });
+    navigation.navigate('CategoryPicker', { returnTo: 'AddTransaction' });
   };
+
+  useEffect(() => {
+    const pickedCategoryId = route.params?.pickedCategoryId;
+    const pickedSubcategoryId = route.params?.pickedSubcategoryId;
+    if (pickedCategoryId == null) return;
+
+    setCategoryId(pickedCategoryId);
+    setSubcategoryId(pickedSubcategoryId);
+    getCategories().then((categories: Category[]) => {
+      const cat = categories.find((c) => c.id === pickedCategoryId);
+      setCategoryLabel(cat ? `${cat.emoji} ${cat.name}` : null);
+    });
+    navigation.setParams({ pickedCategoryId: undefined, pickedSubcategoryId: undefined });
+  }, [route.params?.pickedCategoryId, route.params?.pickedSubcategoryId]);
 
   const addTag = () => {
     const trimmed = newTag.trim();
