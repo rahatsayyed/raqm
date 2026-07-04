@@ -614,9 +614,15 @@ export async function insertParsedTx(tx: ParsedTransaction): Promise<number> {
 export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
   if (txs.length === 0) return;
 
-  // Resolve categorization outside the transaction, caching rule lookups per unique merchant.
+  // Resolve categorization outside the transaction — SEQUENTIALLY. Promise.all here
+  // fired thousands of concurrent statements (every call misses the ruleCache before
+  // any lookup resolves), which both defeated the cache and could crash expo-sqlite
+  // on large scans. Sequential, the cache limits DB reads to one per unique merchant.
   const ruleCache = new Map<string, { categoryId: number; subcategoryId: number | null } | null>();
-  const decisions = await Promise.all(txs.map((tx) => categorizeParsedTx(tx, ruleCache)));
+  const decisions: Array<{ categoryId: number | null; subcategoryId: number | null }> = [];
+  for (const tx of txs) {
+    decisions.push(await categorizeParsedTx(tx, ruleCache));
+  }
 
   const database = await getDb();
   await database.runAsync('BEGIN');

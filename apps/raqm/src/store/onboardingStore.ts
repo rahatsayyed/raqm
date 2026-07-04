@@ -23,7 +23,7 @@ interface OnboardingStore {
 }
 
 export const useOnboardingStore = create<OnboardingStore>((set) => ({
-  dateRange: '3months',
+  dateRange: 'all',
   setDateRange: (dateRange) => set({ dateRange }),
   customFrom: null,
   customTo: null,

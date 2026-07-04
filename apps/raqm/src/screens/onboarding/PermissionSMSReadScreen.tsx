@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PermissionsAndroid } from 'react-native';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { PermissionScreen } from './PermissionScreen';
@@ -8,6 +8,17 @@ export function PermissionSMSReadScreen({ navigation }: OnboardingScreenProps<'P
   const [modalVisible, setModalVisible] = useState(false);
   const [isPermanentlyDenied, setIsPermanentlyDenied] = useState(false);
   const [status, setStatus] = useState<'idle' | 'granted' | 'auto_granted'>('idle');
+
+  // Already granted (e.g. reinstall, or user backed out mid-onboarding) — skip this page.
+  useEffect(() => {
+    let cancelled = false;
+    PermissionsAndroid.check('android.permission.READ_SMS' as any).then((granted) => {
+      if (granted && !cancelled) navigation.replace('PermissionNotifications');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [navigation]);
 
   const requestPermission = async () => {
     const alreadyGranted = await PermissionsAndroid.check('android.permission.READ_SMS' as any);

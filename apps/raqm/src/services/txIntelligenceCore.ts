@@ -25,10 +25,19 @@ export function pairSelfTransfers(txs: TxRecord[]): [number, number][] {
   const usedCredit = new Set<number>();
   const debits = txs.filter(t => isDebitType(t.type) && !isLinked(t) && !t.isSplitChild);
   const credits = txs.filter(t => isCreditType(t.type) && !isLinked(t) && !t.isSplitChild);
+  // Pairing requires identical amounts, so bucket credits by amount first —
+  // the naive debits×credits scan was O(n²) and froze the scan at ~5k transactions.
+  const creditsByAmount = new Map<number, TxRecord[]>();
+  for (const credit of credits) {
+    const bucket = creditsByAmount.get(credit.amount);
+    if (bucket) bucket.push(credit);
+    else creditsByAmount.set(credit.amount, [credit]);
+  }
   for (const debit of debits) {
-    for (const credit of credits) {
+    const bucket = creditsByAmount.get(debit.amount);
+    if (!bucket) continue;
+    for (const credit of bucket) {
       if (usedCredit.has(credit.id)) continue;
-      if (credit.amount !== debit.amount) continue;
       if (accountKey(credit) === accountKey(debit)) continue; // must be a different account
       if (Math.abs(credit.timestamp - debit.timestamp) > DAY_MS) continue;
       pairs.push([debit.id, credit.id]);
@@ -45,13 +54,22 @@ export function pairRefunds(txs: TxRecord[]): [number, number][] {
   const usedDebit = new Set<number>();
   const debits = txs.filter(t => isDebitType(t.type) && !isLinked(t) && !t.isSplitChild);
   const credits = txs.filter(t => isCreditType(t.type) && !isLinked(t) && !t.isSplitChild);
+  // Same-amount + same-merchant requirement → bucket debits by amount|merchant (O(n) instead of O(n²)).
+  const debitsByKey = new Map<string, TxRecord[]>();
+  for (const debit of debits) {
+    if (!debit.merchant) continue;
+    const key = `${debit.amount}|${debit.merchant.toLowerCase()}`;
+    const bucket = debitsByKey.get(key);
+    if (bucket) bucket.push(debit);
+    else debitsByKey.set(key, [debit]);
+  }
   for (const credit of credits) {
+    if (!credit.merchant) continue;
+    const bucket = debitsByKey.get(`${credit.amount}|${credit.merchant.toLowerCase()}`);
+    if (!bucket) continue;
     let best: TxRecord | null = null;
-    for (const debit of debits) {
+    for (const debit of bucket) {
       if (usedDebit.has(debit.id)) continue;
-      if (debit.amount !== credit.amount) continue;
-      if (!debit.merchant || !credit.merchant) continue;
-      if (debit.merchant.toLowerCase() !== credit.merchant.toLowerCase()) continue;
       const gap = credit.timestamp - debit.timestamp;
       if (gap < 0 || gap > 30 * DAY_MS) continue;
       if (!best || debit.timestamp > best.timestamp) best = debit;

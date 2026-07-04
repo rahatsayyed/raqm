@@ -85,8 +85,27 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
 
         setTimeout(() => navigation.replace('AccountSelection'), 1200);
       } catch (e) {
-        setStatus('Could not read SMS. Check permissions.');
-        setTimeout(() => navigation.replace('AccountSelection'), 2000);
+        // Don't silently land on an empty AccountSelection pretending success —
+        // surface the failure and give the DB write a second chance before moving on.
+        console.warn('Onboarding scan failed:', e);
+        setStatus('Something went wrong while saving. Retrying…');
+        try {
+          const { from, to } = dateRangeToTimestamps(dateRange, customFrom, customTo);
+          const messages = await SmsReader.readInbox(from, to);
+          const parsed = [];
+          for (const msg of messages) {
+            if (!BankParserFactory.isKnownBankSender(msg.sender)) continue;
+            const tx = BankParserFactory.parse(msg.body, msg.sender, msg.timestamp);
+            if (tx) parsed.push(tx);
+          }
+          await setTransactions(parsed);
+          setStatus(`Found ${parsed.length} transactions`);
+          setTimeout(() => navigation.replace('AccountSelection'), 1200);
+        } catch (retryError) {
+          console.warn('Onboarding scan retry failed:', retryError);
+          setStatus('Scan failed. You can re-scan later from More → Re-scan SMS.');
+          setTimeout(() => navigation.replace('AccountSelection'), 2500);
+        }
       }
     };
 
