@@ -6,7 +6,7 @@ import { getCategories, getSubcategories, addCategory, addSubcategory } from '..
 import type { Category, Subcategory } from '../../db/database';
 
 export function CategoryPickerScreen({ route, navigation }: MainStackScreenProps<'CategoryPicker'>) {
-  const { onSelect } = route.params;
+  const { returnTo, transactionId } = route.params;
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategoriesByCategory, setSubcategoriesByCategory] = useState<Record<number, Subcategory[]>>({});
@@ -39,14 +39,28 @@ export function CategoryPickerScreen({ route, navigation }: MainStackScreenProps
     }
   };
 
+  const returnWithSelection = (categoryId: number, subcategoryId?: number) => {
+    if (returnTo === 'EditTransaction') {
+      navigation.popTo(
+        'EditTransaction',
+        { transactionId: transactionId!, pickedCategoryId: categoryId, pickedSubcategoryId: subcategoryId },
+        { merge: true }
+      );
+    } else {
+      navigation.popTo(
+        'AddTransaction',
+        { pickedCategoryId: categoryId, pickedSubcategoryId: subcategoryId },
+        { merge: true }
+      );
+    }
+  };
+
   const handleSelectCategory = (categoryId: number) => {
-    onSelect(categoryId, undefined);
-    navigation.goBack();
+    returnWithSelection(categoryId, undefined);
   };
 
   const handleSelectSubcategory = (categoryId: number, subcategoryId: number) => {
-    onSelect(categoryId, subcategoryId);
-    navigation.goBack();
+    returnWithSelection(categoryId, subcategoryId);
   };
 
   const handleAddCategory = async () => {

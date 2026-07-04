@@ -8,10 +8,7 @@ import { countsTowardTotals } from '../../services/txIntelligence';
 import { getBudgetStatuses, type BudgetStatus } from '../../services/budgets';
 import { getMonthBounds, type PeriodBounds } from '../../utils/period';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
-
-function formatAmount(n: number, currency = '₹'): string {
-  return `${currency}${Math.abs(n).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-}
+import { formatAmount } from '../../utils/format';
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });

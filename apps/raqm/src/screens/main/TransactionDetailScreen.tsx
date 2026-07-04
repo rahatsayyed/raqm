@@ -10,10 +10,7 @@ import {
 } from '../../db/database';
 import type { Category, Subcategory, TxRecord } from '../../db/database';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
-
-function formatAmount(n: number, currency = '₹'): string {
-  return `${currency}${Math.abs(n).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-}
+import { formatAmount } from '../../utils/format';
 
 function formatDateTime(ts: number): string {
   return new Date(ts).toLocaleString('en-IN', {

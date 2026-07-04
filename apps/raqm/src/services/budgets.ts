@@ -3,6 +3,7 @@ import { getBudgets, loadTxRecords, getSetting, setSetting, type Budget, type Tx
 import { countsTowardTotals } from './txIntelligence';
 import { getMonthBounds, getWeekBounds, type PeriodBounds } from '../utils/period';
 import { postBudgetAlert } from '../notifications/notifications';
+import { formatAmount } from '../utils/format';
 
 export interface BudgetStatus {
   budget: Budget;
@@ -95,7 +96,7 @@ export async function checkBudgetAlerts(): Promise<void> {
       if (!(await alreadySent(key))) {
         await postBudgetAlert(
           'Budget exceeded',
-          `You've spent ₹${Math.round(status.spent).toLocaleString('en-IN')} of your ₹${Math.round(status.limit).toLocaleString('en-IN')} budget.`,
+          `You've spent ${formatAmount(status.spent)} of your ${formatAmount(status.limit)} budget.`,
         );
         await setSetting(key, '1');
       }

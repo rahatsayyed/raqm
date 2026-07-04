@@ -17,10 +17,7 @@ import {
 import { useTxStore } from '../../store/txStore';
 import { getMonthBounds } from '../../utils/period';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
-
-function formatAmount(n: number): string {
-  return `₹${Math.round(n).toLocaleString('en-IN')}`;
-}
+import { formatAmount } from '../../utils/format';
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });

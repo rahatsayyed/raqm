@@ -13,12 +13,9 @@ import { DonutChart } from '../../components/DonutChart';
 import { TrendLine } from '../../components/TrendLine';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { MainTabScreenProps, MainStackParamList } from '../../navigation/types';
+import { formatAmount } from '../../utils/format';
 
 const CHART_COLORS = [Colors.primary, Colors.mossStructure, Colors.secondary, Colors.tertiary, Colors.errorMuted, Colors.outline];
-
-function formatAmount(n: number, currency = '₹'): string {
-  return `${currency}${Math.abs(n).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-}
 
 function monthLabel(d: Date): string {
   return d.toLocaleDateString('en-IN', { month: 'short' });

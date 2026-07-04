@@ -14,6 +14,7 @@ import { countsTowardTotals } from '../../services/txIntelligence';
 import { postTxNotification } from '../../notifications/notifications';
 import { getMonthBounds } from '../../utils/period';
 import type { MainStackParamList } from '../../navigation/types';
+import { formatAmount } from '../../utils/format';
 
 const GROCERY_KEYWORDS = /grocer|bigbasket|blinkit|zepto|dmart|instamart/i;
 
@@ -22,10 +23,6 @@ function greeting(): string {
   if (h < 12) return 'Good morning';
   if (h < 17) return 'Good afternoon';
   return 'Good evening';
-}
-
-function formatAmount(n: number, currency = '₹'): string {
-  return `${currency}${Math.abs(n).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
 function formatDate(ts: number): string {
@@ -98,7 +95,7 @@ export function DashboardScreen() {
 
         const sign = tx.type === TransactionType.EXPENSE ? '-' : '+';
         const label = tx.merchant
-          ? `${sign}₹${tx.amount.toLocaleString('en-IN')} · ${tx.merchant}`
+          ? `${sign}${formatAmount(tx.amount, tx.currency)} · ${tx.merchant}`
           : `New transaction from ${tx.bankName}`;
         setNewTxLabel(label);
 
@@ -126,8 +123,8 @@ export function DashboardScreen() {
         });
 
         const notifBody = tx.merchant
-          ? `${sign}₹${tx.amount.toLocaleString('en-IN')} · ${tx.merchant}`
-          : `${sign}₹${tx.amount.toLocaleString('en-IN')} · ${tx.bankName}`;
+          ? `${sign}${formatAmount(tx.amount, tx.currency)} · ${tx.merchant}`
+          : `${sign}${formatAmount(tx.amount, tx.currency)} · ${tx.bankName}`;
         await postTxNotification(id, 'New transaction', notifBody);
       } catch (error) {
         console.warn('SMS listener error:', error);
