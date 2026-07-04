@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Animated, Modal, Pressable, TouchableOpacity } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { useAppStore } from '../../store/appStore';
 import { useTxStore } from '../../store/txStore';
@@ -12,6 +13,7 @@ import { getSetting, getCategories, getGroceryLists, linkTxToList } from '../../
 import { countsTowardTotals } from '../../services/txIntelligence';
 import { postTxNotification } from '../../notifications/notifications';
 import { getMonthBounds } from '../../utils/period';
+import type { MainStackParamList } from '../../navigation/types';
 
 const GROCERY_KEYWORDS = /grocer|bigbasket|blinkit|zepto|dmart|instamart/i;
 
@@ -58,6 +60,7 @@ function isDebit(type: TransactionType): boolean {
 
 export function DashboardScreen() {
   const { userName } = useAppStore();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const txs = useTxStore((s) => s.txs);
   const [newTxLabel, setNewTxLabel] = React.useState<string | null>(null);
   const toastAnim = useRef(new Animated.Value(0)).current;
@@ -293,7 +296,12 @@ export function DashboardScreen() {
           <Text style={styles.sectionTitle}>Accounts</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountsRow}>
             {accounts.map((acc, i) => (
-              <View key={i} style={styles.accountChip}>
+              <TouchableOpacity
+                key={i}
+                style={styles.accountChip}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('AccountDetail', { bankName: acc.bank, last4: acc.last4 ?? undefined })}
+              >
                 <Text style={styles.accountChipIcon}>{acc.isCard ? '💳' : '🏦'}</Text>
                 <View>
                   <Text style={styles.accountChipBank}>{acc.bank}</Text>
@@ -301,7 +309,7 @@ export function DashboardScreen() {
                     {acc.last4 ? `•••• ${acc.last4}` : 'Account'} · {acc.count} txns
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
