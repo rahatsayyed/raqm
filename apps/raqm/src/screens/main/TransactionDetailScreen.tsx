@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Pressable, FlatList,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Pressable, FlatList, Linking,
 } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { MainStackScreenProps } from '../../navigation/types';
@@ -329,6 +329,16 @@ export function TransactionDetailScreen({ route, navigation }: MainStackScreenPr
         <View style={styles.card}>
           <Text style={styles.rawSmsLabel}>Raw SMS</Text>
           <Text style={styles.rawSmsBody}>{tx.rawSms ?? 'No raw SMS stored (manual entry).'}</Text>
+          {tx.lat != null && tx.lng != null && (
+            <View style={styles.otherInfoRow}>
+              <Text style={styles.otherInfoLabel}>📍 Location captured</Text>
+              <TouchableOpacity
+                onPress={() => Linking.openURL(`geo:${tx.lat},${tx.lng}?q=${tx.lat},${tx.lng}`)}
+              >
+                <Text style={styles.mapLink}>Open in Maps</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         <Text style={styles.sectionLabel}>ACTIONS</Text>
@@ -553,6 +563,12 @@ const styles = StyleSheet.create({
 
   rawSmsLabel: { ...Typography.labelSm, color: Colors.onSurfaceVariant, padding: Spacing.md, paddingBottom: 0 },
   rawSmsBody: { ...Typography.bodySm, color: Colors.onSurface, padding: Spacing.md, lineHeight: 20 },
+  otherInfoRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+  },
+  otherInfoLabel: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
+  mapLink: { ...Typography.bodyMd, color: Colors.primary, fontFamily: 'WorkSans_500Medium' },
 
   deleteButton: {
     marginTop: Spacing.sm, paddingVertical: Spacing.md, alignItems: 'center',
