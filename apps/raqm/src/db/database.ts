@@ -934,6 +934,7 @@ export async function splitTx(
 ): Promise<void> {
   const parent = await getTxById(parentId);
   if (!parent) throw new Error(`splitTx: parent ${parentId} not found`);
+  if (parent.deletedAt != null) throw new Error('This transaction was already split or deleted');
   if (parts.length === 0) throw new Error(`splitTx: parts array is empty`);
   const partsSum = parts.reduce((s, p) => s + p.amount, 0);
   if (Math.abs(partsSum - parent.amount) > 0.01) {
@@ -1004,6 +1005,11 @@ export async function mergeTxs(ids: number[], merchant: string): Promise<number>
   const rows = await Promise.all(ids.map(id => getTxById(id)));
   const txs = rows.filter((t): t is NonNullable<typeof t> => t !== null);
   if (txs.length !== ids.length) throw new Error('mergeTxs: some ids not found');
+  // Backstop against duplicate invocations: a second call with the same ids would
+  // otherwise re-merge the already-soft-deleted originals into a second merged row.
+  if (txs.some(t => t.deletedAt != null)) {
+    throw new Error('These transactions were already merged or deleted');
+  }
 
   const hasDebit = txs.some((t) => isDebitType(t.type));
   const hasCredit = txs.some((t) => isCreditType(t.type));
