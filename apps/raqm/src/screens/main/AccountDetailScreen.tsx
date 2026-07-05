@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { MainStackScreenProps } from '../../navigation/types';
 import { useTxStore } from '../../store/txStore';
-import { getAccounts, updateAccount, Account } from '../../db/database';
+import { getAccounts, updateAccount, softDeleteAccountTxs, restoreAccountTxs, loadDeletedTxRecords, Account } from '../../db/database';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import type { TxRecord } from '../../db/database';
 import { formatAmount } from '../../utils/format';
+import { rescanTransactions } from '../../services/rescan';
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -84,6 +85,72 @@ export function AccountDetailScreen({ route, navigation }: MainStackScreenProps<
     }
   };
 
+  const [removedCount, setRemovedCount] = useState(0);
+  const [accountBusy, setAccountBusy] = useState(false);
+
+  const loadRemovedCount = async () => {
+    const deleted = await loadDeletedTxRecords();
+    setRemovedCount(
+      deleted.filter(t => t.bankName === bankName && (t.accountLast4 ?? '') === (last4 ?? '')).length,
+    );
+  };
+
+  useEffect(() => {
+    loadRemovedCount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bankName, last4, txs]);
+
+  const handleRemoveAll = () => {
+    Alert.alert(
+      'Remove all transactions?',
+      `All ${accountTxs.length} transactions of this account will be moved to Deleted transactions. You can restore them any time, and scans will not re-add them.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove all',
+          style: 'destructive',
+          onPress: async () => {
+            setAccountBusy(true);
+            try {
+              await softDeleteAccountTxs(bankName, last4 ?? null);
+              await useTxStore.getState().refresh();
+              await loadRemovedCount();
+            } catch (e) {
+              Alert.alert('Remove failed', e instanceof Error ? e.message : 'Unknown error');
+            } finally {
+              setAccountBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleReAdd = () => {
+    Alert.alert(
+      'Re-add transactions?',
+      `${removedCount} removed transaction${removedCount === 1 ? '' : 's'} will be restored with categories and notes intact, then the last 30 days are scanned for anything missing.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Re-add',
+          onPress: async () => {
+            setAccountBusy(true);
+            try {
+              await restoreAccountTxs(bankName, last4 ?? null);
+              await rescanTransactions(); // missing-only, serialized; refreshes the store
+              await loadRemovedCount();
+            } catch (e) {
+              Alert.alert('Re-add failed', e instanceof Error ? e.message : 'Unknown error');
+            } finally {
+              setAccountBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -153,6 +220,31 @@ export function AccountDetailScreen({ route, navigation }: MainStackScreenProps<
           </View>
         )}
 
+        {/* Account actions: remove-all soft-deletes (recoverable); re-add restores + fills missing */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Manage</Text>
+          <View style={styles.actionsCard}>
+            {accountTxs.length > 0 && (
+              <TouchableOpacity style={styles.actionRow} onPress={accountBusy ? undefined : handleRemoveAll}>
+                <Text style={styles.actionDanger}>
+                  {accountBusy ? 'Working…' : 'Remove all transactions'}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {accountTxs.length > 0 && removedCount > 0 && <View style={styles.actionSep} />}
+            {removedCount > 0 && (
+              <TouchableOpacity style={styles.actionRow} onPress={accountBusy ? undefined : handleReAdd}>
+                <Text style={styles.actionPrimary}>
+                  {accountBusy ? 'Working…' : `Re-add ${removedCount} removed transaction${removedCount === 1 ? '' : 's'}`}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {accountTxs.length === 0 && removedCount === 0 && (
+              <Text style={styles.actionsEmpty}>No transactions to manage.</Text>
+            )}
+          </View>
+        </View>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Transactions ({accountTxs.length})</Text>
           <View style={styles.txList}>
@@ -202,6 +294,16 @@ const styles = StyleSheet.create({
   content: { padding: Spacing.containerMargin, paddingBottom: 40 },
   back: { marginBottom: Spacing.md },
   backText: { ...Typography.bodyMd, color: Colors.primary },
+
+  actionsCard: {
+    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl,
+    borderWidth: 1, borderColor: Colors.outlineVariant, overflow: 'hidden',
+  },
+  actionRow: { paddingHorizontal: Spacing.md, paddingVertical: 14 },
+  actionDanger: { ...Typography.bodyMd, color: Colors.errorMuted },
+  actionPrimary: { ...Typography.bodyMd, color: Colors.primary },
+  actionSep: { height: 1, backgroundColor: Colors.outlineVariant },
+  actionsEmpty: { ...Typography.bodySm, color: Colors.onSurfaceVariant, padding: Spacing.md },
 
   headerCard: {
     backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl,

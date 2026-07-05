@@ -435,6 +435,57 @@ export async function getNewestScannedTimestamp(): Promise<number | null> {
   return row?.m ?? null;
 }
 
+/**
+ * Identity keys (`bankName|amount|timestamp`) of every scanned transaction in a window,
+ * INCLUDING soft-deleted rows — a missing-only scan must treat user-deleted transactions
+ * as "already seen" so it never re-adds them.
+ */
+export async function getScannedIdentitiesSince(from: number): Promise<Set<string>> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{ bankName: string; amount: number; timestamp: number }>(
+    'SELECT bankName, amount, timestamp FROM transactions WHERE is_manual = 0 AND timestamp >= ?',
+    from,
+  );
+  return new Set(rows.map(r => `${r.bankName}|${r.amount}|${r.timestamp}`));
+}
+
+/** Soft-deleted transactions, newest deletion first — the "Deleted transactions" screen. */
+export async function loadDeletedTxRecords(): Promise<TxRecord[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<Record<string, unknown>>(
+    'SELECT * FROM transactions WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC',
+  );
+  return rows.map(rowToTxRecord);
+}
+
+/** Soft-deletes every live transaction of an account (recoverable via the Deleted screen). */
+export async function softDeleteAccountTxs(bankName: string, last4: string | null): Promise<number> {
+  const database = await getDb();
+  const result = await database.runAsync(
+    `UPDATE transactions SET deleted_at = ?
+     WHERE deleted_at IS NULL AND bankName = ? AND COALESCE(accountLast4, '') = ?`,
+    Date.now(),
+    bankName,
+    last4 ?? '',
+  );
+  return result.changes;
+}
+
+/**
+ * Restores every soft-deleted transaction of an account — their categories, notes, tags,
+ * and links come back intact, which is why account re-add restores instead of re-inserting.
+ */
+export async function restoreAccountTxs(bankName: string, last4: string | null): Promise<number> {
+  const database = await getDb();
+  const result = await database.runAsync(
+    `UPDATE transactions SET deleted_at = NULL
+     WHERE deleted_at IS NOT NULL AND bankName = ? AND COALESCE(accountLast4, '') = ?`,
+    bankName,
+    last4 ?? '',
+  );
+  return result.changes;
+}
+
 export async function getTransactionCount(): Promise<number> {
   const database = await getDb();
   const row = await database.getFirstAsync<{ count: number }>(
