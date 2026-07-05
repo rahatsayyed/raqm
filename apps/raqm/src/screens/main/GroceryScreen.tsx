@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 32 },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.lg, paddingBottom: Spacing.md,
+    paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, paddingBottom: Spacing.md,
   },
   pageTitle: { ...Typography.headlineSm, color: Colors.onSurface },
   newBtn: {

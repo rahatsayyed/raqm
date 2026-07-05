@@ -309,7 +309,7 @@ function TxItem({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
   header: {
-    paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.lg, paddingBottom: Spacing.sm,
+    paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, paddingBottom: Spacing.sm,
     flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',
   },
   title: { ...Typography.headlineSm, color: Colors.onSurface },

@@ -25,7 +25,9 @@ function AppContent({ onLayout }: { onLayout: () => void }) {
   }, []);
 
   return (
-    <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: Colors.surface }} onLayout={onLayout}>
+    // Top inset only: the bottom tab bar applies the bottom inset itself —
+    // padding here too doubled the gap above the system nav bar.
+    <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: Colors.surface }} onLayout={onLayout}>
       <StatusBar style="light" />
       <AppNavigator />
     </View>

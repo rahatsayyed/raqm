@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.lg,
+    paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm,
   },
   headerActions: { flexDirection: 'row', gap: Spacing.md },
   headerBtn: { paddingVertical: 4 },

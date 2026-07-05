@@ -89,7 +89,7 @@ export function DeletedTransactionsScreen({ navigation }: MainStackScreenProps<'
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background, padding: Spacing.containerMargin },
-  back: { marginTop: Spacing.lg },
+  back: { marginTop: Spacing.sm },
   backText: { ...Typography.bodyMd, color: Colors.primary },
   title: { ...Typography.headlineSm, color: Colors.onSurface, marginTop: Spacing.md },
   sub: { ...Typography.supportingText, color: Colors.onSurfaceVariant, marginTop: Spacing.sm, marginBottom: Spacing.md },
