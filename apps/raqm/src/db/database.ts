@@ -422,6 +422,19 @@ export async function clearScannedTransactions(): Promise<void> {
   await database.runAsync('DELETE FROM transactions WHERE is_manual = 0');
 }
 
+/**
+ * Newest scanned-transaction timestamp INCLUDING soft-deleted rows — the incremental
+ * scan uses this as its lower bound, so a pulled refresh never resurrects an SMS the
+ * user deleted (deleted rows still mark their timestamp as "already seen").
+ */
+export async function getNewestScannedTimestamp(): Promise<number | null> {
+  const database = await getDb();
+  const row = await database.getFirstAsync<{ m: number | null }>(
+    'SELECT MAX(timestamp) as m FROM transactions WHERE is_manual = 0',
+  );
+  return row?.m ?? null;
+}
+
 export async function getTransactionCount(): Promise<number> {
   const database = await getDb();
   const row = await database.getFirstAsync<{ count: number }>(
