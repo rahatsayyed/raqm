@@ -15,6 +15,7 @@ import { AccountDetailScreen } from '../screens/main/AccountDetailScreen';
 import { GroceryListDetailScreen } from '../screens/main/GroceryListDetailScreen';
 import { SettingsScreen } from '../screens/main/SettingsScreen';
 import { CategoryDetailScreen } from '../screens/main/CategoryDetailScreen';
+import { DeletedTransactionsScreen } from '../screens/main/DeletedTransactionsScreen';
 import { HomeIcon, TransactionsIcon, AnalyticsIcon, MoreIcon, GroceryIcon } from '../components/TabIcon';
 import { Colors } from '../theme';
 
@@ -83,6 +84,7 @@ export function MainNavigator() {
       <Stack.Screen name="GroceryListDetail" component={GroceryListDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="DeletedTransactions" component={DeletedTransactionsScreen} options={{ animation: 'slide_from_right' }} />
     </Stack.Navigator>
   );
 }

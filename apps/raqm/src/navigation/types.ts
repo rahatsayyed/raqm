@@ -36,6 +36,7 @@ export type MainStackParamList = {
   GroceryListDetail: { listId: number; listName: string };
   Settings: undefined;
   CategoryDetail: { categoryId: number; categoryName: string; period?: string };
+  DeletedTransactions: undefined;
 };
 
 export type OnboardingScreenProps<T extends keyof OnboardingStackParamList> =

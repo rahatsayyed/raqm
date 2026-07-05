@@ -1,17 +1,19 @@
 import { SmsReader } from '../native/SmsReader';
 import { BankParserFactory } from '@rahatsayyed/bank-sms-parser';
 import type { ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
-import { clearScannedTransactions, insertParsedTxs, getNewestScannedTimestamp } from '../db/database';
+import { insertParsedTxs, getScannedIdentitiesSince } from '../db/database';
 import { useTxStore } from '../store/txStore';
 import { runDetectionJobs } from './txIntelligence';
-import { useOnboardingStore, dateRangeToTimestamps } from '../store/onboardingStore';
 
 export interface RescanResult {
   found: number;
 }
 
-// Serialize scan operations: a pull-to-refresh interleaving with a full rescan's
-// clear→insert window could wipe freshly-added rows or duplicate them.
+const DAY_MS = 24 * 60 * 60 * 1000;
+const PULL_WINDOW_MS = 7 * DAY_MS; // pull-to-refresh
+const BUTTON_WINDOW_MS = 30 * DAY_MS; // More → Re-scan
+
+// Serialize scan operations so two scans can't interleave their read→insert windows.
 let scanInFlight: Promise<RescanResult> | null = null;
 
 function serialize(op: () => Promise<RescanResult>): Promise<RescanResult> {
@@ -24,78 +26,26 @@ function serialize(op: () => Promise<RescanResult>): Promise<RescanResult> {
 }
 
 /**
- * Re-reads the SMS inbox over the currently-configured onboarding date range (S4), filters to
- * known bank senders (S5), parses, replaces all previously-scanned (is_manual = 0) transactions
- * with the fresh set, then reruns Plan 3's detection jobs. Manually added transactions are never
- * touched. See Task 3 notes in the Plan 7 doc for the category/notes-loss caveat.
+ * Missing-only scan core: reads the inbox over [from, now], parses bank SMS (S5 filter),
+ * and inserts ONLY transactions whose identity (`bankName|amount|smsTimestamp`) exists in
+ * no row at all — live OR soft-deleted. Never clears, never touches existing rows, so user
+ * categories, notes, tags, links, and deletions all survive every scan.
  */
-export function rescanTransactions(
-  onProgress?: (count: number) => void,
-): Promise<RescanResult> {
-  return serialize(() => rescanTransactionsInner(onProgress));
-}
-
-async function rescanTransactionsInner(
-  onProgress?: (count: number) => void,
-): Promise<RescanResult> {
-  const { dateRange, customFrom, customTo } = useOnboardingStore.getState();
-  const { from, to } = dateRangeToTimestamps(dateRange, customFrom, customTo);
-
-  const messages = await SmsReader.readInbox(from, to);
-  const knownSenderMessages = messages.filter(m => BankParserFactory.isKnownBankSender(m.sender));
-
-  const parsed: ParsedTransaction[] = [];
-  for (const msg of knownSenderMessages) {
-    const tx = BankParserFactory.parse(msg.body, msg.sender, msg.timestamp);
-    if (tx) parsed.push(tx);
-  }
-
-  onProgress?.(parsed.length);
-
-  // Batched, categorizing insert (single BEGIN/COMMIT) — a mid-flight failure rolls the
-  // insert back rather than leaving a half-reinserted table after the clear.
-  await clearScannedTransactions();
-  await insertParsedTxs(parsed);
-
-  // Detection writes link/recurring flags directly to the DB, so it must run BEFORE the
-  // store refresh (same ordering as AppNavigator) or the UI shows stale rows.
-  await runDetectionJobs();
-  await useTxStore.getState().refresh();
-
-  return { found: parsed.length };
-}
-
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-
-/**
- * Pull-to-refresh scan: reads only SMS NEWER than the newest scanned transaction and
- * appends parsed results. Non-destructive — never clears rows, so user edits, categories,
- * and links on existing transactions survive (unlike the full rescanTransactions above).
- * Falls back to the last 30 days when nothing has been scanned yet.
- */
-export function incrementalScan(): Promise<RescanResult> {
-  return serialize(incrementalScanInner);
-}
-
-async function incrementalScanInner(): Promise<RescanResult> {
-  // DB max INCLUDING soft-deleted rows — the store excludes them, and using the store's
-  // max could resurrect an SMS the user deleted.
-  const newestScanned = await getNewestScannedTimestamp();
-  const from = newestScanned != null ? newestScanned + 1 : Date.now() - THIRTY_DAYS_MS;
-
-  const messages = await SmsReader.readInbox(from, Date.now());
-
-  // Guard against the live-SMS listener inserting the same message mid-pull:
-  // skip anything already present (same bank + amount + SMS timestamp).
-  const existing = new Set(
-    useTxStore.getState().txs.map(t => `${t.bankName}|${t.amount}|${t.timestamp}`),
-  );
+async function scanMissing(from: number): Promise<RescanResult> {
+  const [messages, seen] = await Promise.all([
+    SmsReader.readInbox(from, Date.now()),
+    getScannedIdentitiesSince(from),
+  ]);
 
   const parsed: ParsedTransaction[] = [];
   for (const msg of messages) {
     if (!BankParserFactory.isKnownBankSender(msg.sender)) continue; // S5
     const tx = BankParserFactory.parse(msg.body, msg.sender, msg.timestamp);
-    if (tx && !existing.has(`${tx.bankName}|${tx.amount}|${tx.timestamp}`)) parsed.push(tx);
+    if (!tx) continue;
+    const identity = `${tx.bankName}|${tx.amount}|${tx.timestamp}`;
+    if (seen.has(identity)) continue; // already present (or user-deleted) — skip
+    seen.add(identity); // also dedupes repeats within this batch
+    parsed.push(tx);
   }
 
   if (parsed.length > 0) {
@@ -106,4 +56,23 @@ async function incrementalScanInner(): Promise<RescanResult> {
   await useTxStore.getState().refresh();
 
   return { found: parsed.length };
+}
+
+/** Pull-to-refresh: fill in any missing transactions from the last 7 days. */
+export function incrementalScan(): Promise<RescanResult> {
+  return serialize(() => scanMissing(Date.now() - PULL_WINDOW_MS));
+}
+
+/**
+ * More → Re-scan SMS: fill in any missing transactions from the last 30 days (S4).
+ * Non-destructive — this used to clear and rebuild all scanned rows; it no longer does.
+ */
+export function rescanTransactions(
+  onProgress?: (count: number) => void,
+): Promise<RescanResult> {
+  return serialize(async () => {
+    const result = await scanMissing(Date.now() - BUTTON_WINDOW_MS);
+    onProgress?.(result.found);
+    return result;
+  });
 }

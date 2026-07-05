@@ -44,7 +44,7 @@ export function MoreScreen() {
   const handleRescan = () => {
     Alert.alert(
       'Re-scan SMS',
-      'Re-scanning will refresh SMS-derived transactions; categories and notes you added to those will be reset. Manually added transactions are not affected.',
+      'Scans the last 30 days for transactions that are missing. Your categories, notes, and edits are untouched, and deleted transactions stay deleted.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -56,7 +56,10 @@ export function MoreScreen() {
               const { found } = await rescanTransactions(count => setRescanCount(count));
               await syncDiscoveredAccounts();
               setRescanStatus('done');
-              Alert.alert('Re-scan complete', `${found} transaction${found === 1 ? '' : 's'} found.`);
+              Alert.alert(
+                'Re-scan complete',
+                found === 0 ? 'No missing transactions found.' : `${found} missing transaction${found === 1 ? '' : 's'} added.`,
+              );
             } catch (e) {
               setRescanStatus('idle');
               Alert.alert('Re-scan failed', e instanceof Error ? e.message : 'Unknown error');
@@ -142,6 +145,8 @@ export function MoreScreen() {
           <Row icon="📤" label="Export transactions" onPress={handleExport} />
           <View style={styles.sep} />
           <Row icon="🏦" label="Add account" onPress={() => setAddAccountVisible(true)} />
+          <View style={styles.sep} />
+          <Row icon="🗑️" label="Deleted transactions" onPress={() => navigation.navigate('DeletedTransactions')} />
         </View>
       </View>
 

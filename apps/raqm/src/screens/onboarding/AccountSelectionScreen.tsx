@@ -4,6 +4,7 @@ import { OnboardingScreenProps } from '../../navigation/types';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { useOnboardingStore } from '../../store/onboardingStore';
+import { softDeleteAccountTxs } from '../../db/database';
 
 type Account = { id: string; bank: string; last4: string | null; type: string; icon: string; txCount: number };
 
@@ -110,7 +111,21 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
       <View style={styles.footer}>
         <PrimaryButton
           label={`Continue with ${selected.size} account${selected.size !== 1 ? 's' : ''}`}
-          onPress={() => navigation.replace('ScanComplete')}
+          onPress={async () => {
+            // Deselected accounts: soft-delete their transactions — recoverable later from
+            // More → Deleted transactions or the account's Re-add action.
+            try {
+              for (const acc of accounts) {
+                if (!selected.has(acc.id)) {
+                  await softDeleteAccountTxs(acc.bank, acc.last4 ?? null);
+                }
+              }
+            } catch (e) {
+              // Non-fatal: nothing is lost — proceed rather than stranding the user here.
+              console.warn('Deselect cleanup failed:', e);
+            }
+            navigation.replace('ScanComplete');
+          }}
           disabled={selected.size === 0}
         />
       </View>
