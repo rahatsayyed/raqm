@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Modal, Pressable, RefreshControl } from 'react-native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { useTxStore } from '../../store/txStore';
 import { useNavigation } from '@react-navigation/native';
@@ -8,6 +8,7 @@ import type { MainStackParamList } from '../../navigation/types';
 import { mergeTxs, groupTxs, type TxRecord } from '../../db/database';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { formatAmount } from '../../utils/format';
+import { incrementalScan } from '../../services/rescan';
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -53,6 +54,18 @@ export function TransactionsScreen() {
   const [modal, setModal] = useState<null | 'merge' | 'group'>(null);
   const [modalName, setModalName] = useState('');
   const [modalError, setModalError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onPullRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await incrementalScan(); // appends new SMS txs; never touches existing rows
+    } catch (e) {
+      console.warn('Pull-to-refresh scan failed:', e);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const currency = txs[0]?.currency ?? '₹';
 
@@ -154,6 +167,15 @@ export function TransactionsScreen() {
       <FlatList
         data={rows}
         keyExtractor={(r) => (r.kind === 'group' ? `g${r.groupId}` : `t${r.tx.id}`)}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onPullRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+            progressBackgroundColor={Colors.surfaceContainerLowest}
+          />
+        }
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.sep} />}

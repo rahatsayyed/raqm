@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Animated, Modal, Pressable, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Animated, Modal, Pressable, TouchableOpacity, RefreshControl } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
@@ -13,6 +13,7 @@ import { getSetting, getCategories, getGroceryLists, linkTxToList } from '../../
 import { countsTowardTotals } from '../../services/txIntelligence';
 import { postTxNotification } from '../../notifications/notifications';
 import { getMonthBounds } from '../../utils/period';
+import { incrementalScan } from '../../services/rescan';
 import type { MainStackParamList } from '../../navigation/types';
 import { formatAmount } from '../../utils/format';
 
@@ -134,6 +135,18 @@ export function DashboardScreen() {
   }, [groceriesCategoryId]);
 
   const [stats, setStats] = useState({ income: 0, expenses: 0, net: 0 });
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onPullRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await incrementalScan(); // appends new SMS txs; never touches existing rows
+    } catch (e) {
+      console.warn('Pull-to-refresh scan failed:', e);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Extract stats computation into useCallback for reuse in both effect and focus hook.
   // getMonthBounds internally clamps startDay to [1, 28], so pass raw value.
@@ -255,7 +268,20 @@ export function DashboardScreen() {
         </View>
       </Pressable>
     </Modal>
-    <ScrollView style={styles.root} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onPullRefresh}
+          tintColor={Colors.primary}
+          colors={[Colors.primary]}
+          progressBackgroundColor={Colors.surfaceContainerLowest}
+        />
+      }
+    >
       {/* Header */}
       <View style={styles.header}>
         <View>
