@@ -1,7 +1,4 @@
 {
-  "enabledPlugins": {
-    "expo@claude-plugins-official": true
-  },
   "hooks": {
     "PostToolUse": [
       {
@@ -27,5 +24,8 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "expo@claude-plugins-official": true
   }
 }
