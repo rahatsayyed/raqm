@@ -146,6 +146,8 @@ export function MoreScreen() {
           <View style={styles.sep} />
           <Row icon="🏦" label="Add account" onPress={() => setAddAccountVisible(true)} />
           <View style={styles.sep} />
+          <Row icon="🛒" label="Grocery lists" onPress={() => navigation.navigate('Grocery')} />
+          <View style={styles.sep} />
           <Row icon="🗑️" label="Deleted transactions" onPress={() => navigation.navigate('DeletedTransactions')} />
         </View>
       </View>
