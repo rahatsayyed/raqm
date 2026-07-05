@@ -116,8 +116,13 @@ export function TransactionsScreen() {
     setSelected(new Set());
   }
 
+  // In-flight guard: a double-tap on Confirm used to run mergeTxs twice, producing
+  // two merged rows (the second call re-merged the already-soft-deleted originals).
+  const [modalBusy, setModalBusy] = useState(false);
+
   async function confirmMerge() {
-    if (!modalName.trim() || selected.size < 2) return;
+    if (!modalName.trim() || selected.size < 2 || modalBusy) return;
+    setModalBusy(true);
     setModalError(null);
     try {
       await mergeTxs(Array.from(selected), modalName.trim());
@@ -127,16 +132,25 @@ export function TransactionsScreen() {
       exitSelectMode();
     } catch (e) {
       setModalError(e instanceof Error ? e.message : 'Could not merge transactions');
+    } finally {
+      setModalBusy(false);
     }
   }
 
   async function confirmGroup() {
-    if (!modalName.trim() || selected.size < 2) return;
-    await groupTxs(Array.from(selected), modalName.trim());
-    await refresh();
-    setModal(null);
-    setModalName('');
-    exitSelectMode();
+    if (!modalName.trim() || selected.size < 2 || modalBusy) return;
+    setModalBusy(true);
+    try {
+      await groupTxs(Array.from(selected), modalName.trim());
+      await refresh();
+      setModal(null);
+      setModalName('');
+      exitSelectMode();
+    } catch (e) {
+      setModalError(e instanceof Error ? e.message : 'Could not group transactions');
+    } finally {
+      setModalBusy(false);
+    }
   }
 
   return (
