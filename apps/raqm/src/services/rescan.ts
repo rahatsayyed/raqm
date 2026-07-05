@@ -10,7 +10,6 @@ export interface RescanResult {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const PULL_WINDOW_MS = 7 * DAY_MS; // pull-to-refresh
 const BUTTON_WINDOW_MS = 30 * DAY_MS; // More → Re-scan
 
 // Serialize scan operations so two scans can't interleave their read→insert windows.
@@ -56,11 +55,6 @@ async function scanMissing(from: number): Promise<RescanResult> {
   await useTxStore.getState().refresh();
 
   return { found: parsed.length };
-}
-
-/** Pull-to-refresh: fill in any missing transactions from the last 7 days. */
-export function incrementalScan(): Promise<RescanResult> {
-  return serialize(() => scanMissing(Date.now() - PULL_WINDOW_MS));
 }
 
 /**
