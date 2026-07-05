@@ -11,3 +11,5 @@ web-build/
 .env
 .env.local
 .yarn/cache
+# Added by code-review-graph
+.code-review-graph/
