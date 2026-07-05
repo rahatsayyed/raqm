@@ -64,3 +64,33 @@ export function GroceryIcon({ color, size }: { color: string; size: number }) {
     </Svg>
   );
 }
+
+export function WalletIcon({ color, size = 24 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M3 7a2 2 0 012-2h13a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path d="M3 9h17" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
+      <Circle cx="16.5" cy="13.5" r="1.2" fill={color} />
+    </Svg>
+  );
+}
+
+export function LightbulbIcon({ color, size = 24 }: { color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M9 18h6M10 21h4M12 3a6 6 0 00-3.6 10.8c.6.5 1 1.2 1.1 2l.1 1.2h4.8l.1-1.2c.1-.8.5-1.5 1.1-2A6 6 0 0012 3z"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}

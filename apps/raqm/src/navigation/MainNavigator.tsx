@@ -16,57 +16,58 @@ import { GroceryListDetailScreen } from '../screens/main/GroceryListDetailScreen
 import { SettingsScreen } from '../screens/main/SettingsScreen';
 import { CategoryDetailScreen } from '../screens/main/CategoryDetailScreen';
 import { DeletedTransactionsScreen } from '../screens/main/DeletedTransactionsScreen';
-import { HomeIcon, TransactionsIcon, AnalyticsIcon, MoreIcon, GroceryIcon } from '../components/TabIcon';
+import { HomeIcon, WalletIcon, LightbulbIcon, MoreIcon } from '../components/TabIcon';
 import { Colors } from '../theme';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
+// Spring Green Design System: 4-item nav — Home / Timeline / Briefing / More.
+// Grocery lives under More as a push screen.
 function TabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.outline,
+        tabBarInactiveTintColor: Colors.onSurfaceVariant,
         tabBarStyle: {
-          backgroundColor: Colors.surfaceContainerLowest,
-          borderTopColor: Colors.outlineVariant,
+          backgroundColor: Colors.surface,
+          borderTopColor: Colors.borderSubtle,
           borderTopWidth: 1,
           elevation: 0,
           shadowOpacity: 0,
+          height: 64,
+          paddingTop: 6,
         },
         tabBarLabelStyle: {
-          fontFamily: 'WorkSans_500Medium',
-          fontSize: 11,
-          marginBottom: 4,
+          fontFamily: 'Inter_600SemiBold',
+          fontSize: 9,
+          letterSpacing: 1.1,
+          textTransform: 'uppercase',
+          marginBottom: 6,
         },
       }}
     >
       <Tab.Screen
         name="Home"
         component={DashboardScreen}
-        options={{ tabBarLabel: 'Home', tabBarIcon: ({ color, size }) => <HomeIcon color={color} size={size} /> }}
+        options={{ tabBarLabel: 'HOME', tabBarIcon: ({ color }) => <HomeIcon color={color} size={22} /> }}
       />
       <Tab.Screen
         name="Transactions"
         component={TransactionsScreen}
-        options={{ tabBarLabel: 'Transactions', tabBarIcon: ({ color, size }) => <TransactionsIcon color={color} size={size} /> }}
+        options={{ tabBarLabel: 'TIMELINE', tabBarIcon: ({ color }) => <WalletIcon color={color} size={22} /> }}
       />
       <Tab.Screen
         name="Analytics"
         component={AnalyticsScreen}
-        options={{ tabBarLabel: 'Analytics', tabBarIcon: ({ color, size }) => <AnalyticsIcon color={color} size={size} /> }}
-      />
-      <Tab.Screen
-        name="Grocery"
-        component={GroceryScreen}
-        options={{ tabBarLabel: 'Grocery', tabBarIcon: ({ color, size }) => <GroceryIcon color={color} size={size} /> }}
+        options={{ tabBarLabel: 'BRIEFING', tabBarIcon: ({ color }) => <LightbulbIcon color={color} size={22} /> }}
       />
       <Tab.Screen
         name="More"
         component={MoreScreen}
-        options={{ tabBarLabel: 'More', tabBarIcon: ({ color, size }) => <MoreIcon color={color} size={size} /> }}
+        options={{ tabBarLabel: 'MORE', tabBarIcon: ({ color }) => <MoreIcon color={color} size={22} /> }}
       />
     </Tab.Navigator>
   );
@@ -81,6 +82,7 @@ export function MainNavigator() {
       <Stack.Screen name="EditTransaction" component={EditTransactionScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="CategoryPicker" component={CategoryPickerScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="AccountDetail" component={AccountDetailScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="Grocery" component={GroceryScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="GroceryListDetail" component={GroceryListDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} options={{ animation: 'slide_from_right' }} />

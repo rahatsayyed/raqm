@@ -21,7 +21,6 @@ export type MainTabParamList = {
   Home: undefined;
   Transactions: undefined;
   Analytics: undefined;
-  Grocery: undefined;
   More: undefined;
 };
 
@@ -37,6 +36,7 @@ export type MainStackParamList = {
   Settings: undefined;
   CategoryDetail: { categoryId: number; categoryName: string; period?: string };
   DeletedTransactions: undefined;
+  Grocery: undefined;
 };
 
 export type OnboardingScreenProps<T extends keyof OnboardingStackParamList> =

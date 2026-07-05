@@ -1,9 +1,8 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import type { NavigationProp } from '@react-navigation/native';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
-import type { MainStackParamList, MainTabScreenProps } from '../../navigation/types';
+import type { MainStackScreenProps } from '../../navigation/types';
 import {
   GroceryList,
   getGroceryLists,
@@ -38,7 +37,7 @@ interface MonthBucket {
   total: number;
 }
 
-export function GroceryScreen({ navigation }: MainTabScreenProps<'Grocery'>) {
+export function GroceryScreen({ navigation }: MainStackScreenProps<'Grocery'>) {
   const [summaries, setSummaries] = useState<ListSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewForm, setShowNewForm] = useState(false);
@@ -144,14 +143,14 @@ export function GroceryScreen({ navigation }: MainTabScreenProps<'Grocery'>) {
   };
 
   function onListPress(listId: number, listName: string) {
-    navigation.getParent<NavigationProp<MainStackParamList>>()?.navigate('GroceryListDetail', {
-      listId,
-      listName,
-    });
+    navigation.navigate('GroceryListDetail', { listId, listName });
   }
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
+        <Text style={styles.backText}>← Back</Text>
+      </TouchableOpacity>
       <View style={styles.header}>
         <Text style={styles.pageTitle}>Grocery</Text>
         <TouchableOpacity onPress={() => setShowNewForm((v) => !v)} style={styles.newBtn} activeOpacity={0.8}>
@@ -298,6 +297,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, paddingBottom: Spacing.md,
   },
+  back: { marginBottom: Spacing.sm },
+  backText: { ...Typography.bodyMd, color: Colors.primary },
   pageTitle: { ...Typography.headlineSm, color: Colors.onSurface },
   newBtn: {
     backgroundColor: Colors.primary, borderRadius: Radius.full,
