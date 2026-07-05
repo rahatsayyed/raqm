@@ -242,7 +242,7 @@ export function SettingsScreen({ navigation }: MainStackScreenProps<'Settings'>)
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.containerMargin, paddingBottom: 40 },
+  content: { padding: Spacing.containerMargin, paddingTop: Spacing.sm, paddingBottom: 40 },
   back: { marginBottom: Spacing.md },
   backText: { ...Typography.bodyMd, color: Colors.primary },
   title: { ...Typography.headlineSm, color: Colors.onSurface, marginBottom: Spacing.lg },

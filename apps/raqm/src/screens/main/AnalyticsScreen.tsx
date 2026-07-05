@@ -436,7 +436,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
   content: { paddingBottom: 32 },
-  pageTitle: { ...Typography.headlineSm, color: Colors.onSurface, paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.lg, paddingBottom: Spacing.md },
+  pageTitle: { ...Typography.headlineSm, color: Colors.onSurface, paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, paddingBottom: Spacing.md },
 
   chipsRow: { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.containerMargin, marginBottom: Spacing.md },
   chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.outlineVariant, backgroundColor: Colors.surfaceContainerLowest },

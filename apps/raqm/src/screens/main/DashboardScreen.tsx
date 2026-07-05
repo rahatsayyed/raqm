@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.lg, paddingBottom: Spacing.md,
+    paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, paddingBottom: Spacing.md,
   },
   greetingLabel: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
   greetingName: { ...Typography.headlineSm, color: Colors.onSurface, marginTop: 2 },
