@@ -17,6 +17,7 @@ import { SettingsScreen } from '../screens/main/SettingsScreen';
 import { CategoryDetailScreen } from '../screens/main/CategoryDetailScreen';
 import { DeletedTransactionsScreen } from '../screens/main/DeletedTransactionsScreen';
 import { HomeIcon, WalletIcon, LightbulbIcon, MoreIcon } from '../components/TabIcon';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../theme';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -25,6 +26,9 @@ const Stack = createNativeStackNavigator<MainStackParamList>();
 // Spring Green Design System: 4-item nav — Home / Timeline / Briefing / More.
 // Grocery lives under More as a push screen.
 function TabNavigator() {
+  // A fixed tab-bar height overrides react-navigation's inset-aware sizing and
+  // pushes the bar behind the system nav — add the bottom inset back explicitly.
+  const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
       screenOptions={{
@@ -37,7 +41,8 @@ function TabNavigator() {
           borderTopWidth: 1,
           elevation: 0,
           shadowOpacity: 0,
-          height: 64,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom,
           paddingTop: 6,
         },
         tabBarLabelStyle: {
