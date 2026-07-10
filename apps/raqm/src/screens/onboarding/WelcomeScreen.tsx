@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15, shadowRadius: 24, elevation: 12,
     borderWidth: 1, borderColor: 'rgba(0,108,72,0.05)',
   },
-  logoText: { fontSize: 40, fontFamily: 'Manrope_700Bold', color: Colors.primary },
+  logoText: { fontSize: 40, fontFamily: 'Inter_700Bold', color: Colors.primary },
   floatingBadge: {
     position: 'absolute',
     backgroundColor: Colors.bgSurfaceRaised,

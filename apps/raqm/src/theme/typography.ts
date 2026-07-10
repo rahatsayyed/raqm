@@ -1,98 +1,102 @@
 import { TextStyle } from 'react-native';
 
+// Raqm Design Language — finalized font stack:
+//   Fraunces  → headlines/statements only (Statement roles)
+//   Inter     → everything else (titles, body, labels, section headers)
+//   JetBrains Mono → every number/amount (Metric + numeric roles)
 export const Typography = {
-  // Headlines — Manrope
+  // Headlines — Inter
   displayLg: {
-    fontFamily: 'Manrope_700Bold',
+    fontFamily: 'Inter_700Bold',
     fontSize: 36,
     fontWeight: '700' as TextStyle['fontWeight'],
     lineHeight: 44,
     letterSpacing: -0.72,
   },
   headlineMd: {
-    fontFamily: 'Manrope_600SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 24,
     fontWeight: '600' as TextStyle['fontWeight'],
     lineHeight: 32,
   },
   headlineSm: {
-    fontFamily: 'Manrope_700Bold',
+    fontFamily: 'Inter_700Bold',
     fontSize: 20,
     fontWeight: '700' as TextStyle['fontWeight'],
     lineHeight: 28,
   },
   titleLg: {
-    fontFamily: 'Manrope_700Bold',
+    fontFamily: 'Inter_700Bold',
     fontSize: 18,
     fontWeight: '700' as TextStyle['fontWeight'],
     lineHeight: 26,
   },
 
-  // Body — Work Sans
+  // Body — Inter
   bodyLg: {
-    fontFamily: 'WorkSans_400Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 18,
     fontWeight: '400' as TextStyle['fontWeight'],
     lineHeight: 28,
   },
   bodyMd: {
-    fontFamily: 'WorkSans_400Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 16,
     fontWeight: '400' as TextStyle['fontWeight'],
     lineHeight: 24,
   },
   bodySm: {
-    fontFamily: 'WorkSans_400Regular',
+    fontFamily: 'Inter_400Regular',
     fontSize: 14,
     fontWeight: '400' as TextStyle['fontWeight'],
     lineHeight: 20,
   },
 
-  // Labels — Geist (falls back to system monospace until Geist package is added)
+  // Labels — JetBrains Mono (data-adjacent labels: badges, codes)
   labelLg: {
-    fontFamily: 'DMMono_500Medium',
+    fontFamily: 'JetBrainsMono_500Medium',
     fontSize: 14,
     fontWeight: '500' as TextStyle['fontWeight'],
     lineHeight: 20,
     letterSpacing: 0.7,
   },
   labelSm: {
-    fontFamily: 'DMMono_400Regular',
+    fontFamily: 'JetBrainsMono_400Regular',
     fontSize: 12,
     fontWeight: '400' as TextStyle['fontWeight'],
     lineHeight: 16,
     letterSpacing: 0.6,
   },
 
-  // Numeric — DM Mono (amounts, balances, counters, OTP, stats)
+  // Numeric — JetBrains Mono (amounts, balances, counters, OTP, stats)
   numericXl: {
-    fontFamily: 'DMMono_500Medium',
+    fontFamily: 'JetBrainsMono_500Medium',
     fontSize: 48,
     fontWeight: '500' as TextStyle['fontWeight'],
     lineHeight: 56,
     letterSpacing: -0.5,
   },
   numericLg: {
-    fontFamily: 'DMMono_500Medium',
+    fontFamily: 'JetBrainsMono_500Medium',
     fontSize: 32,
     fontWeight: '500' as TextStyle['fontWeight'],
     lineHeight: 40,
     letterSpacing: -0.3,
   },
   numericMd: {
-    fontFamily: 'DMMono_500Medium',
+    fontFamily: 'JetBrainsMono_500Medium',
     fontSize: 20,
     fontWeight: '500' as TextStyle['fontWeight'],
     lineHeight: 28,
   },
   numericSm: {
-    fontFamily: 'DMMono_400Regular',
+    fontFamily: 'JetBrainsMono_400Regular',
     fontSize: 14,
     fontWeight: '400' as TextStyle['fontWeight'],
     lineHeight: 20,
   },
 
-  // ── New tokens: Fraunces (serif) + Inter (grotesk) ──────────────────────
+  // ── RDL roles: Fraunces (statements) + Inter (function) + Mono (metrics) ──
 
   statementLg: {
     fontFamily: 'Fraunces_500Medium',
@@ -107,11 +111,13 @@ export const Typography = {
     fontWeight: '500' as TextStyle['fontWeight'],
     lineHeight: 34,
   },
+  // Metric role — hero amounts are numbers, so they carry the mono voice.
   metricHero: {
-    fontFamily: 'Fraunces_500Medium',
-    fontSize: 48,
+    fontFamily: 'JetBrainsMono_500Medium',
+    fontSize: 44,
     fontWeight: '500' as TextStyle['fontWeight'],
-    lineHeight: 56,
+    lineHeight: 52,
+    letterSpacing: -0.5,
   },
   sectionHeader: {
     fontFamily: 'Inter_600SemiBold',

@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   subtitle: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, lineHeight: 24, maxWidth: 280 },
   inputArea: { gap: 4 },
   input: {
-    fontSize: 28, fontFamily: 'Manrope_700Bold',
+    fontSize: 28, fontFamily: 'Inter_700Bold',
     color: Colors.onSurface, paddingBottom: 8,
     minHeight: 48,
   },

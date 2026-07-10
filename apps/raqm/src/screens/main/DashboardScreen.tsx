@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg, padding: Spacing.gutter, justifyContent: 'space-between',
   },
   statLabel: { ...Typography.labelCaps, color: Colors.inkLabel },
-  statValue: { ...Typography.statementLg, color: Colors.onSurface },
+  statValue: { ...Typography.numericLg, color: Colors.onSurface },
   statMeta: { ...Typography.annotation, marginTop: 4 },
 
   section: { marginHorizontal: Spacing.containerMargin, marginBottom: Spacing.xl },
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
   activityInfo: { flex: 1 },
   activityName: { ...Typography.bodyStandard, color: Colors.onSurface },
   activityMeta: { ...Typography.annotation, color: Colors.inkLabel, marginTop: 2 },
-  activityAmount: { ...Typography.bodyStandard, color: Colors.onSurface },
+  activityAmount: { ...Typography.numericSm, color: Colors.onSurface },
 
   upcomingRow: { gap: Spacing.gutter, paddingRight: Spacing.containerMargin },
   upcomingCard: {
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
   },
   upcomingWhen: { ...Typography.labelCaps, color: Colors.inkLabel, marginBottom: Spacing.md },
   upcomingName: { ...Typography.bodyStandard, color: Colors.onSurface, marginBottom: 4 },
-  upcomingAmount: { ...Typography.statementLg, color: Colors.onSurface },
+  upcomingAmount: { ...Typography.numericMd, color: Colors.onSurface },
 
   accountsRow: { gap: Spacing.sm, paddingRight: Spacing.containerMargin },
   accountChip: {
@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md, paddingVertical: 12,
   },
-  toastText: { ...Typography.bodyMd, color: Colors.onPrimaryContainer, fontFamily: 'WorkSans_500Medium' },
+  toastText: { ...Typography.bodyMd, color: Colors.onPrimaryContainer, fontFamily: 'Inter_500Medium' },
   toastLinkBtn: { marginTop: 8, alignSelf: 'flex-start' },
   toastLinkText: { ...Typography.labelSm, color: Colors.onPrimary, textDecorationLine: 'underline' },
 

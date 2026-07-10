@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary, borderRadius: Radius.lg,
     paddingVertical: 10, alignItems: 'center', marginTop: Spacing.sm,
   },
-  saveBtnText: { ...Typography.bodyMd, color: Colors.onPrimary, fontFamily: 'WorkSans_500Medium' },
+  saveBtnText: { ...Typography.bodyMd, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
   hint: { ...Typography.labelSm, color: Colors.outline, marginTop: 4 },
 
   section: {},
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   txDot: { width: 40, height: 40, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
   txDotText: { fontSize: 16, fontWeight: '700' },
   txInfo: { flex: 1 },
-  txMerchant: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'WorkSans_500Medium' },
+  txMerchant: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'Inter_500Medium' },
   txMeta: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, marginTop: 2 },
   txAmount: { ...Typography.numericSm, fontSize: 15 },
   empty: { padding: Spacing.xl, alignItems: 'center' },

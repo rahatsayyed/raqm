@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   list: { paddingBottom: 32 },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.sm },
   info: { flex: 1 },
-  merchant: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'WorkSans_500Medium' },
+  merchant: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'Inter_500Medium' },
   meta: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, marginTop: 2 },
   amount: { ...Typography.numericSm, fontSize: 14 },
   restoreBtn: {

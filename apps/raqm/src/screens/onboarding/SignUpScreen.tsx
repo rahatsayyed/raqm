@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
   },
-  logoText: { fontSize: 24, color: Colors.onPrimary, fontFamily: 'Manrope_700Bold' },
+  logoText: { fontSize: 24, color: Colors.onPrimary, fontFamily: 'Inter_700Bold' },
   headline: { ...Typography.headlineMd, color: Colors.onSurface, textAlign: 'center' },
   subtitle: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center', maxWidth: 280, lineHeight: 22 },
   form: { gap: Spacing.md },
@@ -129,5 +129,5 @@ const styles = StyleSheet.create({
   dividerLine: { flex: 1, height: 1, backgroundColor: Colors.outlineVariant },
   dividerText: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
   terms: { ...Typography.bodySm, color: Colors.onSurfaceVariant, textAlign: 'center', marginTop: Spacing.xxl, lineHeight: 20 },
-  termsLink: { color: Colors.primary, fontFamily: 'WorkSans_500Medium' },
+  termsLink: { color: Colors.primary, fontFamily: 'Inter_500Medium' },
 });

@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   },
   segmentActive: { backgroundColor: Colors.primaryContainer, borderColor: Colors.primary },
   segmentText: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
-  segmentTextActive: { color: Colors.onPrimaryContainer, fontFamily: 'WorkSans_500Medium' },
+  segmentTextActive: { color: Colors.onPrimaryContainer, fontFamily: 'Inter_500Medium' },
 
   textInput: {
     ...Typography.bodyMd, color: Colors.onSurface,
@@ -317,12 +317,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md, alignItems: 'center', justifyContent: 'center',
     backgroundColor: Colors.primary, borderRadius: Radius.lg,
   },
-  tagAddButtonText: { ...Typography.bodySm, color: Colors.onPrimary, fontFamily: 'WorkSans_500Medium' },
+  tagAddButtonText: { ...Typography.bodySm, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
 
   saveButton: {
     marginTop: Spacing.xl, paddingVertical: Spacing.md, alignItems: 'center',
     backgroundColor: Colors.primary, borderRadius: Radius.xl,
   },
   saveButtonDisabled: { opacity: 0.4 },
-  saveButtonText: { ...Typography.bodyMd, color: Colors.onPrimary, fontFamily: 'WorkSans_500Medium' },
+  saveButtonText: { ...Typography.bodyMd, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
 });
