@@ -94,13 +94,13 @@ const styles = StyleSheet.create({
   iconText: { fontSize: 32 },
   headline: { ...Typography.headlineMd, color: Colors.onSurface, textAlign: 'center' },
   subtitle: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center', lineHeight: 24 },
-  emailAccent: { color: Colors.primary, fontFamily: 'WorkSans_700Bold' },
+  emailAccent: { color: Colors.primary, fontFamily: 'Inter_700Bold' },
   otpRow: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm },
   otpBox: {
     width: 48, height: 60, borderRadius: Radius.lg,
     borderWidth: 1.5, borderColor: Colors.outlineVariant,
     backgroundColor: Colors.surfaceContainerLowest,
-    textAlign: 'center', fontSize: 24, fontFamily: 'Manrope_700Bold',
+    textAlign: 'center', fontSize: 24, fontFamily: 'Inter_700Bold',
     color: Colors.onSurface,
   },
   otpBoxFilled: {
@@ -109,5 +109,5 @@ const styles = StyleSheet.create({
   footer: { gap: Spacing.md },
   resendBtn: { alignItems: 'center', paddingVertical: 8 },
   resendText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-  resendLink: { color: Colors.primary, fontFamily: 'WorkSans_500Medium' },
+  resendLink: { color: Colors.primary, fontFamily: 'Inter_500Medium' },
 });

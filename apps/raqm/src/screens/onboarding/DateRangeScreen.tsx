@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   earliestText: { ...Typography.bodySm, color: Colors.onSecondaryContainer },
-  earliestDate: { fontFamily: 'WorkSans_500Medium' },
+  earliestDate: { fontFamily: 'Inter_500Medium' },
   rangeList: { gap: Spacing.sm, marginBottom: Spacing.xl },
   rangeCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   rangeLabel: { ...Typography.titleLg, color: Colors.onSurface, fontSize: 16 },
   rangeLabelSelected: { color: Colors.onSurface },
   rangeSubtitle: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
-  rangeSubtitleRecommended: { color: Colors.primary, fontFamily: 'WorkSans_500Medium' },
+  rangeSubtitleRecommended: { color: Colors.primary, fontFamily: 'Inter_500Medium' },
   radioOuter: {
     width: 22, height: 22, borderRadius: 11,
     borderWidth: 2, borderColor: Colors.outline,
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   },
   dateDivider: { height: 1, backgroundColor: Colors.outlineVariant, marginHorizontal: Spacing.md },
   dateRowLabel: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-  dateRowValue: { ...Typography.bodyMd, color: Colors.primary, fontFamily: 'WorkSans_500Medium' },
+  dateRowValue: { ...Typography.bodyMd, color: Colors.primary, fontFamily: 'Inter_500Medium' },
   dateError: {
     ...Typography.bodySm, color: '#c0392b',
     paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm,

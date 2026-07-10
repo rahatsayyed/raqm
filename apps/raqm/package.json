@@ -10,11 +10,9 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "@expo-google-fonts/dm-mono": "^0.2.3",
     "@expo-google-fonts/fraunces": "^0.4.1",
     "@expo-google-fonts/inter": "^0.4.2",
-    "@expo-google-fonts/manrope": "^0.2.3",
-    "@expo-google-fonts/work-sans": "^0.2.3",
+    "@expo-google-fonts/jetbrains-mono": "^0.4.1",
     "@rahatsayyed/bank-sms-parser": "*",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "9.1.0",

@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   summaryText: { ...Typography.bodyMd, color: Colors.onPrimaryContainer, textAlign: 'center' },
-  summaryAccent: { fontFamily: 'WorkSans_700Bold', color: Colors.primary },
+  summaryAccent: { fontFamily: 'Inter_700Bold', color: Colors.primary },
   footer: { paddingHorizontal: Spacing.containerMargin, paddingBottom: 32, paddingTop: Spacing.md },
   emptyContainer: {
     flex: 1, backgroundColor: Colors.background,

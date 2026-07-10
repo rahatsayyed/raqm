@@ -105,5 +105,5 @@ const styles = StyleSheet.create({
   cancelText: { ...Typography.bodyMd, color: Colors.onSurface },
   addBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: Radius.lg, backgroundColor: Colors.primary },
   addBtnDisabled: { opacity: 0.5 },
-  addText: { ...Typography.bodyMd, color: Colors.onPrimary, fontFamily: 'WorkSans_500Medium' },
+  addText: { ...Typography.bodyMd, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
 });

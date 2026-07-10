@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   },
   dotText: { fontSize: 16, fontWeight: '700' },
   itemInfo: { flex: 1 },
-  itemMerchant: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'WorkSans_500Medium' },
+  itemMerchant: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'Inter_500Medium' },
   itemMeta: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, marginTop: 2 },
   itemDate: { ...Typography.labelSm, color: Colors.outline, letterSpacing: 0, marginTop: 1 },
   itemAmount: { ...Typography.numericSm, fontSize: 15 },
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: Colors.primary, borderRadius: Radius.lg,
     paddingVertical: Spacing.sm, alignItems: 'center',
   },
-  actionBtnText: { ...Typography.bodyMd, color: Colors.onPrimary, fontFamily: 'WorkSans_500Medium' },
+  actionBtnText: { ...Typography.bodyMd, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
   modalCard: {
     width: '85%', backgroundColor: Colors.bgSurfaceRaised, borderRadius: Radius.xl,
@@ -380,5 +380,5 @@ const styles = StyleSheet.create({
     ...Typography.bodyMd, color: Colors.onSurface,
   },
   modalConfirm: { backgroundColor: Colors.primary, borderRadius: Radius.lg, paddingVertical: Spacing.sm, alignItems: 'center' },
-  modalConfirmText: { ...Typography.bodyMd, color: Colors.onPrimary, fontFamily: 'WorkSans_500Medium' },
+  modalConfirmText: { ...Typography.bodyMd, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
 });

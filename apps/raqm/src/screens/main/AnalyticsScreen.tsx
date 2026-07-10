@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
   chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.outlineVariant, backgroundColor: Colors.surfaceContainerLowest },
   chipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   chipText: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0 },
-  chipTextActive: { color: Colors.onPrimary, fontFamily: 'WorkSans_500Medium' },
+  chipTextActive: { color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
 
   customRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.containerMargin, marginBottom: Spacing.md },
   dateBtn: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.outlineVariant, backgroundColor: Colors.surfaceContainerLowest },
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
   merchantRankText: { ...Typography.labelSm, color: Colors.onSurfaceVariant, fontSize: 11, letterSpacing: 0 },
   merchantInfo: { flex: 1, gap: 6 },
   merchantTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  merchantName: { ...Typography.bodySm, color: Colors.onSurface, flex: 1, fontFamily: 'WorkSans_500Medium' },
+  merchantName: { ...Typography.bodySm, color: Colors.onSurface, flex: 1, fontFamily: 'Inter_500Medium' },
   merchantAmount: { ...Typography.numericSm, color: Colors.errorMuted, fontSize: 13, marginLeft: 8 },
   merchantBar: { height: 4, backgroundColor: Colors.surfaceVariant, borderRadius: 2, overflow: 'hidden' },
   merchantBarFill: { height: '100%', backgroundColor: `${Colors.errorMuted}80`, borderRadius: 2 },

@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
   },
   back: {},
   backText: { ...Typography.bodyMd, color: Colors.primary },
-  editText: { ...Typography.bodyMd, color: Colors.primary, fontFamily: 'WorkSans_500Medium' },
+  editText: { ...Typography.bodyMd, color: Colors.primary, fontFamily: 'Inter_500Medium' },
   content: { paddingHorizontal: Spacing.containerMargin, paddingBottom: 48 },
   title: { ...Typography.headlineSm, color: Colors.onSurface, marginTop: Spacing.md },
 
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
   },
   rowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant },
   rowLabel: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
-  rowValue: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'WorkSans_500Medium' },
+  rowValue: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'Inter_500Medium' },
 
   sectionLabel: { ...Typography.labelSm, color: Colors.onSurfaceVariant, marginBottom: Spacing.sm, marginLeft: 4 },
 
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md, alignItems: 'center', justifyContent: 'center',
     backgroundColor: Colors.primary, borderRadius: Radius.lg,
   },
-  tagAddButtonText: { ...Typography.bodySm, color: Colors.onPrimary, fontFamily: 'WorkSans_500Medium' },
+  tagAddButtonText: { ...Typography.bodySm, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
 
   rawSmsLabel: { ...Typography.labelSm, color: Colors.onSurfaceVariant, padding: Spacing.md, paddingBottom: 0 },
   rawSmsBody: { ...Typography.bodySm, color: Colors.onSurface, padding: Spacing.md, lineHeight: 20 },
@@ -568,13 +568,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
   },
   otherInfoLabel: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-  mapLink: { ...Typography.bodyMd, color: Colors.primary, fontFamily: 'WorkSans_500Medium' },
+  mapLink: { ...Typography.bodyMd, color: Colors.primary, fontFamily: 'Inter_500Medium' },
 
   deleteButton: {
     marginTop: Spacing.sm, paddingVertical: Spacing.md, alignItems: 'center',
     borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.error,
   },
-  deleteButtonText: { ...Typography.bodyMd, color: Colors.error, fontFamily: 'WorkSans_500Medium' },
+  deleteButtonText: { ...Typography.bodyMd, color: Colors.error, fontFamily: 'Inter_500Medium' },
 
   snackbar: {
     position: 'absolute', left: Spacing.containerMargin, right: Spacing.containerMargin, bottom: Spacing.xl,
@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.borderSubtle,
   },
   snackbarText: { ...Typography.bodyMd, color: Colors.inkHeadline },
-  snackbarUndo: { ...Typography.bodyMd, color: Colors.primary, fontFamily: 'WorkSans_500Medium' },
+  snackbarUndo: { ...Typography.bodyMd, color: Colors.primary, fontFamily: 'Inter_500Medium' },
 
   badge: {
     alignSelf: 'flex-start', ...Typography.labelSm, color: Colors.mossStructure, letterSpacing: 0,
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full, marginBottom: Spacing.sm,
   },
   linkedCardInner: { padding: Spacing.md, gap: Spacing.sm },
-  cardTitle: { ...Typography.bodyMd, color: Colors.onSurface, fontFamily: 'WorkSans_500Medium' },
+  cardTitle: { ...Typography.bodyMd, color: Colors.onSurface, fontFamily: 'Inter_500Medium' },
   cardSub: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
   linkButtonRow: { flexDirection: 'row', gap: Spacing.sm },
   actionRow: {
@@ -619,7 +619,7 @@ const styles = StyleSheet.create({
     ...Typography.bodyMd, color: Colors.onSurface,
   },
   modalConfirm: { backgroundColor: Colors.primary, borderRadius: Radius.lg, paddingVertical: Spacing.sm, alignItems: 'center' },
-  modalConfirmText: { ...Typography.bodyMd, color: Colors.onPrimary, fontFamily: 'WorkSans_500Medium' },
+  modalConfirmText: { ...Typography.bodyMd, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
   errorText: { ...Typography.bodySm, color: Colors.error },
   pickerRow: { paddingVertical: Spacing.sm, borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant },
   pickerRowText: { ...Typography.bodyMd, color: Colors.onSurface },

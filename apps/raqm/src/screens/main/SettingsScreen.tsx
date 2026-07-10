@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   segmentBtn: { paddingVertical: 8, paddingHorizontal: 12, backgroundColor: Colors.surfaceContainerLowest },
   segmentBtnActive: { backgroundColor: Colors.primary },
   segmentText: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0 },
-  segmentTextActive: { color: Colors.onPrimary, fontFamily: 'WorkSans_500Medium' },
+  segmentTextActive: { color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
   rolloverRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4 },
   rolloverLabel: { ...Typography.supportingText, color: Colors.onSurfaceVariant },
 
@@ -275,5 +275,5 @@ const styles = StyleSheet.create({
   dayCell: { flex: 1, aspectRatio: 1, margin: 2, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.surfaceContainer },
   dayCellActive: { backgroundColor: Colors.primary },
   dayCellText: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0 },
-  dayCellTextActive: { color: Colors.onPrimary, fontFamily: 'WorkSans_500Medium' },
+  dayCellTextActive: { color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
 });

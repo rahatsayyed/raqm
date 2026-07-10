@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   headerBtn: { paddingVertical: 4 },
   headerBtnText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
   backText: { ...Typography.bodyMd, color: Colors.primary },
-  completeText: { ...Typography.bodyMd, color: Colors.primary, fontFamily: 'WorkSans_500Medium' },
+  completeText: { ...Typography.bodyMd, color: Colors.primary, fontFamily: 'Inter_500Medium' },
   titleRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
     paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.md, paddingBottom: Spacing.sm,
@@ -283,5 +283,5 @@ const styles = StyleSheet.create({
   inputName: { flex: 2 },
   inputPrice: { flex: 1 },
   addBtn: { backgroundColor: Colors.primary, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: 10 },
-  addBtnText: { ...Typography.bodySm, color: Colors.onPrimary, fontFamily: 'WorkSans_500Medium' },
+  addBtnText: { ...Typography.bodySm, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
 });

@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md, paddingVertical: 14,
   },
   categoryEmoji: { fontSize: 22 },
-  categoryName: { ...Typography.bodyMd, color: Colors.onSurface, flex: 1, fontFamily: 'WorkSans_500Medium' },
+  categoryName: { ...Typography.bodyMd, color: Colors.onSurface, flex: 1, fontFamily: 'Inter_500Medium' },
   chevron: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, paddingHorizontal: Spacing.xs },
 
   subList: { borderTopWidth: 1, borderTopColor: Colors.outlineVariant },
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm, paddingVertical: Spacing.md, alignItems: 'center',
     borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.outlineVariant, borderStyle: 'dashed',
   },
-  newCategoryButtonText: { ...Typography.bodyMd, color: Colors.primary, fontFamily: 'WorkSans_500Medium' },
+  newCategoryButtonText: { ...Typography.bodyMd, color: Colors.primary, fontFamily: 'Inter_500Medium' },
 
   addCategoryCard: {
     marginTop: Spacing.sm, padding: Spacing.md,
@@ -257,5 +257,5 @@ const styles = StyleSheet.create({
   addCategoryCancel: { paddingVertical: 8, paddingHorizontal: Spacing.md },
   addCategoryCancelText: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
   addCategoryConfirm: { paddingVertical: 8, paddingHorizontal: Spacing.md, backgroundColor: Colors.primary, borderRadius: Radius.md },
-  addCategoryConfirmText: { ...Typography.bodySm, color: Colors.onPrimary, fontFamily: 'WorkSans_500Medium' },
+  addCategoryConfirmText: { ...Typography.bodySm, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
 });

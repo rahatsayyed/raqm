@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   centerContent: { position: 'absolute', alignItems: 'center' },
   countText: {
     ...Typography.displayLg, color: Colors.primary,
-    fontSize: 44, fontFamily: 'Manrope_700Bold',
+    fontSize: 44, fontFamily: 'Inter_700Bold',
   },
   countLabel: { ...Typography.bodySm, color: Colors.onSurfaceVariant, marginTop: 4 },
   statusArea: { alignItems: 'center', marginTop: Spacing.xxl, gap: Spacing.sm },

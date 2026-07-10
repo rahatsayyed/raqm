@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   trustTitle: {
     ...Typography.labelLg,
     color: Colors.onSurface,
-    fontFamily: 'WorkSans_500Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 14,
   },
   trustSubtitle: {

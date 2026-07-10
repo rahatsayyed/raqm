@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary, borderRadius: Radius.md,
     paddingVertical: 10, alignItems: 'center',
   },
-  addBtnText: { ...Typography.bodySm, color: Colors.onPrimary, fontFamily: 'WorkSans_500Medium' },
+  addBtnText: { ...Typography.bodySm, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
 
   section: { paddingHorizontal: Spacing.containerMargin, marginBottom: Spacing.xl },
   sectionTitle: { ...Typography.titleLg, color: Colors.onSurface, marginBottom: Spacing.md, fontSize: 16 },
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   },
   listRowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant },
   listRowInfo: { flex: 1 },
-  listName: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'WorkSans_500Medium' },
+  listName: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'Inter_500Medium' },
   listMeta: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, marginTop: 2 },
   listTotal: { ...Typography.numericSm, color: Colors.onSurface, fontSize: 15 },
 

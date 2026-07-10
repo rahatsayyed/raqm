@@ -90,13 +90,13 @@ const styles = StyleSheet.create({
   title: {
     ...Typography.titleLg,
     color: Colors.onSurface,
-    fontFamily: 'WorkSans_600SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 20,
   },
   permName: {
     ...Typography.labelLg,
     color: Colors.error,
-    fontFamily: 'WorkSans_500Medium',
+    fontFamily: 'Inter_500Medium',
     fontSize: 14,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   primaryBtnLabel: {
     ...Typography.labelLg,
     color: Colors.onPrimary,
-    fontFamily: 'WorkSans_600SemiBold',
+    fontFamily: 'Inter_600SemiBold',
     fontSize: 16,
     letterSpacing: 0,
   },

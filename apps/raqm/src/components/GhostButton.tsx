@@ -26,6 +26,6 @@ const styles = StyleSheet.create({
   label: {
     ...Typography.bodyMd,
     color: Colors.onSurfaceVariant,
-    fontFamily: 'WorkSans_500Medium',
+    fontFamily: 'Inter_500Medium',
   },
 });

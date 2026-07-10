@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   txRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
   txRowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant },
   txInfo: { flex: 1 },
-  txMerchant: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'WorkSans_500Medium' },
+  txMerchant: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'Inter_500Medium' },
   txMeta: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, marginTop: 2 },
   txAmount: { ...Typography.numericSm, fontSize: 15 },
 
