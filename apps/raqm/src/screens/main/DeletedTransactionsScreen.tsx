@@ -1,7 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { MainStackScreenProps } from '../../navigation/types';
 import { loadDeletedTxRecords, type TxRecord } from '../../db/database';
 import { useTxStore } from '../../store/txStore';
@@ -34,12 +33,12 @@ export function DeletedTransactionsScreen({ navigation }: MainStackScreenProps<'
   };
 
   return (
-    <View style={styles.root}>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-        <Text style={styles.backText}>← Back</Text>
+    <View className="flex-1 bg-background p-container-margin">
+      <TouchableOpacity onPress={() => navigation.goBack()} className="mt-sm">
+        <Text className="font-inter text-body-md text-primary">← Back</Text>
       </TouchableOpacity>
-      <Text style={styles.title}>Deleted transactions</Text>
-      <Text style={styles.sub}>
+      <Text className="font-inter-bold text-headline-sm text-on-surface mt-md">Deleted transactions</Text>
+      <Text className="font-inter text-supporting-text text-on-surface-variant mt-sm mb-md">
         Deleted transactions are never re-added by scans. Restore one to bring it back with its
         category, notes, and tags intact.
       </Text>
@@ -47,13 +46,13 @@ export function DeletedTransactionsScreen({ navigation }: MainStackScreenProps<'
       <FlatList
         data={deleted}
         keyExtractor={(tx) => String(tx.id)}
-        contentContainerStyle={styles.list}
+        contentContainerClassName="pb-[32px]"
         showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View style={styles.sep} />}
+        ItemSeparatorComponent={() => <View className="h-[1px] bg-outline-variant" />}
         ListEmptyComponent={
           loaded ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyText}>Nothing here — no deleted transactions.</Text>
+            <View className="pt-[60px] items-center">
+              <Text className="font-inter text-body-md text-on-surface-variant">Nothing here — no deleted transactions.</Text>
             </View>
           ) : null
         }
@@ -63,21 +62,21 @@ export function DeletedTransactionsScreen({ navigation }: MainStackScreenProps<'
             tx.type === TransactionType.TRANSFER ||
             tx.type === TransactionType.INVESTMENT;
           return (
-            <View style={styles.row}>
-              <View style={styles.info}>
-                <Text style={styles.merchant} numberOfLines={1}>
+            <View className="flex-row items-center gap-sm py-sm">
+              <View className="flex-1">
+                <Text className="font-inter-medium text-body-sm text-on-surface" numberOfLines={1}>
                   {tx.merchant || tx.bankName}
                 </Text>
-                <Text style={styles.meta}>
+                <Text className="font-mono text-label-sm text-on-surface-variant tracking-[0] mt-[2px]">
                   {formatDate(tx.timestamp)} · deleted {tx.deletedAt ? formatDate(tx.deletedAt) : '—'}
                 </Text>
               </View>
-              <Text style={[styles.amount, { color: debit ? Colors.errorMuted : Colors.primary }]}>
+              <Text className={`font-mono text-numeric-sm ${debit ? 'text-error-muted' : 'text-primary'}`}>
                 {debit ? '-' : '+'}
                 {formatAmount(tx.amount, tx.currency)}
               </Text>
-              <TouchableOpacity style={styles.restoreBtn} onPress={() => handleRestore(tx)}>
-                <Text style={styles.restoreText}>Restore</Text>
+              <TouchableOpacity className="border border-primary rounded-md px-sm py-[6px]" onPress={() => handleRestore(tx)}>
+                <Text className="font-mono text-label-sm text-primary tracking-[0]">Restore</Text>
               </TouchableOpacity>
             </View>
           );
@@ -86,28 +85,3 @@ export function DeletedTransactionsScreen({ navigation }: MainStackScreenProps<'
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background, padding: Spacing.containerMargin },
-  back: { marginTop: Spacing.sm },
-  backText: { ...Typography.bodyMd, color: Colors.primary },
-  title: { ...Typography.headlineSm, color: Colors.onSurface, marginTop: Spacing.md },
-  sub: { ...Typography.supportingText, color: Colors.onSurfaceVariant, marginTop: Spacing.sm, marginBottom: Spacing.md },
-  list: { paddingBottom: 32 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.sm },
-  info: { flex: 1 },
-  merchant: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'Inter_500Medium' },
-  meta: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, marginTop: 2 },
-  amount: { ...Typography.numericSm, fontSize: 14 },
-  restoreBtn: {
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
-  },
-  restoreText: { ...Typography.labelSm, color: Colors.primary, letterSpacing: 0 },
-  sep: { height: 1, backgroundColor: Colors.outlineVariant },
-  empty: { paddingTop: 60, alignItems: 'center' },
-  emptyText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-});

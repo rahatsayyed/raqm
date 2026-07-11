@@ -1,7 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { OnboardingScreenProps } from '../../navigation/types';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
 
 const OTP_LENGTH = 6;
@@ -34,25 +33,27 @@ export function OTPVerificationScreen({ navigation, route }: OnboardingScreenPro
   const maskedEmail = email ? email.replace(/(.{2})(.*)(@.*)/, (_, a, b, c) => a + b.replace(/./g, '•') + c) : '';
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={styles.inner}>
-        <View style={styles.header}>
-          <View style={styles.iconBadge}>
-            <Text style={styles.iconText}>✉️</Text>
+    <KeyboardAvoidingView className="flex-1 bg-surface" behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View className="flex-1 px-container-margin pt-20 pb-10 justify-between">
+        <View className="items-center gap-md">
+          <View className="w-[72px] h-[72px] rounded-xl bg-primary-container items-center justify-center">
+            <Text className="text-[32px]">✉️</Text>
           </View>
-          <Text style={styles.headline}>Check your email</Text>
-          <Text style={styles.subtitle}>
+          <Text className="font-inter-semibold text-headline-md text-on-surface text-center">Check your email</Text>
+          <Text className="font-inter text-body-md text-on-surface-variant text-center leading-6">
             We sent a 6-digit code to{'\n'}
-            <Text style={styles.emailAccent}>{maskedEmail || 'your email'}</Text>
+            <Text className="text-primary font-inter-bold">{maskedEmail || 'your email'}</Text>
           </Text>
         </View>
 
-        <View style={styles.otpRow}>
+        <View className="flex-row justify-center gap-sm">
           {Array.from({ length: OTP_LENGTH }).map((_, i) => (
             <TextInput
               key={i}
               ref={r => { inputRefs.current[i] = r; }}
-              style={[styles.otpBox, otp[i] ? styles.otpBoxFilled : null]}
+              className={`w-12 h-[60px] rounded-lg border-[1.5px] bg-surface-container-lowest text-center text-2xl font-inter-bold text-on-surface ${
+                otp[i] ? 'border-primary bg-[#75daa810]' : 'border-outline-variant'
+              }`}
               value={otp[i]}
               onChangeText={v => handleChange(v, i)}
               onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, i)}
@@ -65,15 +66,15 @@ export function OTPVerificationScreen({ navigation, route }: OnboardingScreenPro
           ))}
         </View>
 
-        <View style={styles.footer}>
+        <View className="gap-md">
           <PrimaryButton
             label="Verify"
             onPress={() => navigation.replace('NameEntry')}
             disabled={!isComplete}
           />
-          <TouchableOpacity style={styles.resendBtn} onPress={() => setOtp(Array(OTP_LENGTH).fill(''))}>
-            <Text style={styles.resendText}>
-              Didn't receive it? <Text style={styles.resendLink}>Resend code</Text>
+          <TouchableOpacity className="items-center py-2" onPress={() => setOtp(Array(OTP_LENGTH).fill(''))}>
+            <Text className="font-inter text-body-md text-on-surface-variant">
+              Didn't receive it? <Text className="text-primary font-inter-medium">Resend code</Text>
             </Text>
           </TouchableOpacity>
         </View>
@@ -81,33 +82,3 @@ export function OTPVerificationScreen({ navigation, route }: OnboardingScreenPro
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.surface },
-  inner: { flex: 1, paddingHorizontal: Spacing.containerMargin, paddingTop: 80, paddingBottom: 40, justifyContent: 'space-between' },
-  header: { alignItems: 'center', gap: Spacing.md },
-  iconBadge: {
-    width: 72, height: 72, borderRadius: Radius.xl,
-    backgroundColor: Colors.primaryContainer,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  iconText: { fontSize: 32 },
-  headline: { ...Typography.headlineMd, color: Colors.onSurface, textAlign: 'center' },
-  subtitle: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center', lineHeight: 24 },
-  emailAccent: { color: Colors.primary, fontFamily: 'Inter_700Bold' },
-  otpRow: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm },
-  otpBox: {
-    width: 48, height: 60, borderRadius: Radius.lg,
-    borderWidth: 1.5, borderColor: Colors.outlineVariant,
-    backgroundColor: Colors.surfaceContainerLowest,
-    textAlign: 'center', fontSize: 24, fontFamily: 'Inter_700Bold',
-    color: Colors.onSurface,
-  },
-  otpBoxFilled: {
-    borderColor: Colors.primary, backgroundColor: `${Colors.primary}10`,
-  },
-  footer: { gap: Spacing.md },
-  resendBtn: { alignItems: 'center', paddingVertical: 8 },
-  resendText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-  resendLink: { color: Colors.primary, fontFamily: 'Inter_500Medium' },
-});

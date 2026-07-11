@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { View, Text, Animated, Easing } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import ReAnimated, {
   useSharedValue,
@@ -12,7 +12,7 @@ import ReAnimated, {
 } from 'react-native-reanimated';
 import { BankParserFactory } from '@rahatsayyed/bank-sms-parser';
 import { OnboardingScreenProps } from '../../navigation/types';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors } from '../../theme';
 import { SmsReader } from '../../native/SmsReader';
 import { useOnboardingStore, dateRangeToTimestamps } from '../../store/onboardingStore';
 import { runDetectionJobs } from '../../services/txIntelligence';
@@ -21,6 +21,19 @@ const RADIUS = 90;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+// ReAnimated.View isn't wrapped by NativeWind's interop — keep the static layout
+// alongside the Reanimated-driven transform/opacity in a single style array.
+const pulseOuterBaseStyle = {
+  position: 'absolute' as const,
+  width: 280, height: 280, borderRadius: 140,
+  backgroundColor: Colors.primary,
+};
+const pulseInnerBaseStyle = {
+  position: 'absolute' as const,
+  width: 240, height: 240, borderRadius: 120,
+  backgroundColor: Colors.primary,
+};
 
 export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'ScanningProgress'>) {
   const { dateRange, customFrom, customTo, setTransactions } = useOnboardingStore();
@@ -113,11 +126,15 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
   }, []);
 
   return (
-    <View style={styles.container}>
-      <ReAnimated.View style={[styles.pulseOuter, pulseOuterStyle]} />
-      <ReAnimated.View style={[styles.pulseInner, pulseInnerStyle]} />
+    <View className="flex-1 bg-surface items-center justify-center px-container-margin py-xxl">
+      <ReAnimated.View
+        style={[pulseOuterBaseStyle, pulseOuterStyle]}
+      />
+      <ReAnimated.View
+        style={[pulseInnerBaseStyle, pulseInnerStyle]}
+      />
 
-      <View style={styles.circleContainer}>
+      <View className="w-[220px] h-[220px] items-center justify-center">
         <Svg width={220} height={220} viewBox="0 0 220 220">
           <Defs>
             <LinearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -138,89 +155,43 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
             origin="110, 110"
           />
         </Svg>
-        <View style={styles.centerContent}>
-          <Text style={styles.countText}>{txCount}</Text>
-          <Text style={styles.countLabel}>Transactions found</Text>
+        <View className="absolute items-center">
+          <Text className="font-inter-bold text-[44px] text-primary">{txCount}</Text>
+          <Text className="font-inter text-body-sm text-on-surface-variant mt-[4px]">Transactions found</Text>
         </View>
       </View>
 
-      <View style={styles.statusArea}>
-        <View style={styles.statusPill}>
-          <Text style={styles.statusIcon}>⟳</Text>
-          <Text style={styles.statusText}>{status}</Text>
+      <View className="items-center mt-xxl gap-sm">
+        <View className="flex-row items-center gap-[6px] px-md py-[8px] rounded-full bg-secondary-container">
+          <Text className="text-[14px]">⟳</Text>
+          <Text className="font-mono-medium text-[13px] leading-[20px] text-on-secondary-container">{status}</Text>
         </View>
-        <Text style={styles.statusHeadline}>Analyzing your messages for bank alerts</Text>
-        <Text style={styles.statusSubtitle}>
+        <Text className="font-inter-bold text-title-lg text-on-surface text-center mt-sm">Analyzing your messages for bank alerts</Text>
+        <Text className="font-inter text-body-sm text-on-surface-variant text-center max-w-[280px]">
           {smsCount > 0
             ? `Scanned ${smsCount} messages — extracting transactions.`
             : 'Securely identifying and categorizing financial notifications.'}
         </Text>
       </View>
 
-      <View style={styles.bentoGrid}>
-        <View style={styles.bentoCard}>
-          <Text style={styles.bentoIcon}>🔐</Text>
-          <Text style={styles.bentoTitle}>Secure Sync</Text>
-          <Text style={styles.bentoSubtitle}>End-to-end encrypted local processing.</Text>
+      <View className="flex-row gap-md mt-xxl w-full">
+        <View
+          className="flex-1 bg-bg-surface-raised rounded-xl p-md gap-[6px] border border-border-subtle"
+          style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}
+        >
+          <Text className="text-[22px]">🔐</Text>
+          <Text className="font-mono-medium text-[13px] leading-[20px] text-on-surface">Secure Sync</Text>
+          <Text className="font-mono text-[10px] leading-[16px] text-on-surface-variant">End-to-end encrypted local processing.</Text>
         </View>
-        <View style={styles.bentoCard}>
-          <Text style={styles.bentoIcon}>✨</Text>
-          <Text style={styles.bentoTitle}>AI Sorting</Text>
-          <Text style={styles.bentoSubtitle}>Auto-detecting merchants and categories.</Text>
+        <View
+          className="flex-1 bg-bg-surface-raised rounded-xl p-md gap-[6px] border border-border-subtle"
+          style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}
+        >
+          <Text className="text-[22px]">✨</Text>
+          <Text className="font-mono-medium text-[13px] leading-[20px] text-on-surface">AI Sorting</Text>
+          <Text className="font-mono text-[10px] leading-[16px] text-on-surface-variant">Auto-detecting merchants and categories.</Text>
         </View>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1, backgroundColor: Colors.surface,
-    alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: Spacing.containerMargin, paddingVertical: Spacing.xxl,
-  },
-  pulseOuter: {
-    position: 'absolute', width: 280, height: 280, borderRadius: 140,
-    backgroundColor: Colors.primary,
-  },
-  pulseInner: {
-    position: 'absolute', width: 240, height: 240, borderRadius: 120,
-    backgroundColor: Colors.primary,
-  },
-  circleContainer: {
-    width: 220, height: 220, alignItems: 'center', justifyContent: 'center',
-  },
-  centerContent: { position: 'absolute', alignItems: 'center' },
-  countText: {
-    ...Typography.displayLg, color: Colors.primary,
-    fontSize: 44, fontFamily: 'Inter_700Bold',
-  },
-  countLabel: { ...Typography.bodySm, color: Colors.onSurfaceVariant, marginTop: 4 },
-  statusArea: { alignItems: 'center', marginTop: Spacing.xxl, gap: Spacing.sm },
-  statusPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: Spacing.md, paddingVertical: 8,
-    borderRadius: Radius.full, backgroundColor: Colors.secondaryContainer,
-  },
-  statusIcon: { fontSize: 14 },
-  statusText: {
-    ...Typography.labelLg, color: Colors.onSecondaryContainer, fontSize: 13, letterSpacing: 0,
-  },
-  statusHeadline: {
-    ...Typography.titleLg, color: Colors.onSurface, textAlign: 'center', marginTop: Spacing.sm,
-  },
-  statusSubtitle: {
-    ...Typography.bodySm, color: Colors.onSurfaceVariant, textAlign: 'center', maxWidth: 280,
-  },
-  bentoGrid: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.xxl, width: '100%' },
-  bentoCard: {
-    flex: 1, backgroundColor: Colors.bgSurfaceRaised,
-    borderRadius: Radius.xl, padding: Spacing.md, gap: 6,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
-    borderWidth: 1, borderColor: Colors.borderSubtle,
-  },
-  bentoIcon: { fontSize: 22 },
-  bentoTitle: { ...Typography.labelLg, color: Colors.onSurface, fontSize: 13, letterSpacing: 0 },
-  bentoSubtitle: { ...Typography.labelSm, color: Colors.onSurfaceVariant, fontSize: 10, letterSpacing: 0 },
-});

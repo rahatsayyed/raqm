@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Linking } from 'react-native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Linking } from 'react-native';
+import { Colors } from '../../theme';
 import { useAppStore } from '../../store/appStore';
 import { useTxStore } from '../../store/txStore';
 import { useNavigation } from '@react-navigation/native';
@@ -27,13 +27,13 @@ type SectionDef = { title: string; rows: RowDef[] };
 function Row({ row, isLast }: { row: RowDef; isLast: boolean }) {
   return (
     <TouchableOpacity
-      style={[styles.row, !isLast && styles.rowBorder]}
+      className={`flex-row items-center justify-between p-md ${!isLast ? 'border-b border-border-subtle' : ''}`}
       onPress={row.onPress}
       activeOpacity={0.7}
     >
-      <View style={styles.rowLeft}>
+      <View className="flex-row items-center gap-[12px]">
         <row.Icon color={Colors.inkLabel} size={20} />
-        <Text style={styles.rowLabel}>{row.label}</Text>
+        <Text className="font-inter-medium text-insight-reading text-on-surface">{row.label}</Text>
       </View>
       <ChevronRightIcon color={Colors.inkLabel} size={18} />
     </TouchableOpacity>
@@ -177,36 +177,36 @@ export function MoreScreen() {
   const version = require('../../../app.json').expo.version as string;
 
   return (
-    <View style={styles.root}>
+    <View className="flex-1 bg-background">
       {/* Top bar: settings action left, centered title */}
-      <View style={styles.topBar}>
+      <View className="flex-row justify-between items-center px-container-margin pt-sm pb-md border-b border-border-subtle">
         <TouchableOpacity onPress={() => navigation.navigate('Settings')} hitSlop={8}>
           <GearIcon color={Colors.primary} size={22} />
         </TouchableOpacity>
-        <Text style={styles.topBarTitle}>More</Text>
-        <View style={{ width: 22 }} />
+        <Text className="font-fraunces text-[22px] leading-[28px] text-on-surface">More</Text>
+        <View className="w-[22px]" />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerClassName="p-container-margin pb-[40px]" showsVerticalScrollIndicator={false}>
         {/* Profile */}
-        <TouchableOpacity style={styles.profileCard} activeOpacity={0.7} onPress={() => navigation.navigate('Settings')}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
+        <TouchableOpacity className="flex-row items-center gap-md bg-bg-surface border border-border-subtle rounded-xl p-md mb-lg" activeOpacity={0.7} onPress={() => navigation.navigate('Settings')}>
+          <View className="w-[56px] h-[56px] rounded-[28px] bg-primary-container items-center justify-center">
+            <Text className="font-fraunces text-[20px] leading-[26px] text-on-primary-container">{initials}</Text>
           </View>
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{userName || 'User'}</Text>
-            <Text style={styles.profileMeta}>{transactions.length} transactions on record</Text>
+          <View className="flex-1">
+            <Text className="font-inter-medium text-insight-reading text-ink-headline">{userName || 'User'}</Text>
+            <Text className="font-inter text-annotation text-ink-label mt-[2px]">{transactions.length} transactions on record</Text>
           </View>
           <ChevronRightIcon color={Colors.inkLabel} size={18} />
         </TouchableOpacity>
 
         {/* Search (filters the rows below) */}
-        <View style={styles.searchWrap}>
-          <View style={styles.searchIcon}>
+        <View className="relative mb-lg">
+          <View className="absolute left-md top-0 bottom-0 justify-center z-[1]">
             <SearchIcon color={Colors.inkLabel} size={18} />
           </View>
           <TextInput
-            style={styles.searchInput}
+            className="bg-bg-surface border border-border-subtle rounded-xl py-[14px] pl-[44px] pr-md font-inter text-body-standard text-on-surface"
             placeholder="Search settings…"
             placeholderTextColor={Colors.inkLabel}
             value={query}
@@ -218,9 +218,9 @@ export function MoreScreen() {
 
         {/* Sections */}
         {visibleSections.map((section) => (
-          <View key={section.title} style={styles.section}>
-            <Text style={styles.sectionHeader}>{section.title}</Text>
-            <View style={styles.card}>
+          <View key={section.title} className="mb-xl">
+            <Text className="font-inter-semibold text-section-header text-ink-label mb-md px-[2px]">{section.title}</Text>
+            <View className="bg-bg-surface border border-border-subtle rounded-xl overflow-hidden">
               {section.rows.map((row, i) => (
                 <Row key={row.key} row={row} isLast={i === section.rows.length - 1} />
               ))}
@@ -228,11 +228,11 @@ export function MoreScreen() {
           </View>
         ))}
         {visibleSections.length === 0 && (
-          <Text style={styles.emptyText}>Nothing matches "{query.trim()}".</Text>
+          <Text className="font-inter text-supporting-text text-ink-body text-center py-xl">Nothing matches "{query.trim()}".</Text>
         )}
 
         {/* Footer */}
-        <Text style={styles.footer}>Version {version}{'\n'}Made with care by Rahat Sayyed.</Text>
+        <Text className="font-inter text-[12px] leading-[18px] text-ink-label opacity-60 text-center mt-md">Version {version}{'\n'}Made with care by Rahat Sayyed.</Text>
       </ScrollView>
 
       <AddAccountModal
@@ -243,60 +243,3 @@ export function MoreScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
-
-  topBar: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, paddingBottom: Spacing.md,
-    borderBottomWidth: 1, borderBottomColor: Colors.borderSubtle,
-  },
-  topBarTitle: { ...Typography.statementMobile, fontSize: 22, lineHeight: 28, color: Colors.onSurface },
-
-  content: { padding: Spacing.containerMargin, paddingBottom: 40 },
-
-  profileCard: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    backgroundColor: Colors.bgSurface, borderWidth: 1, borderColor: Colors.borderSubtle,
-    borderRadius: Radius.xl, padding: Spacing.md, marginBottom: Spacing.lg,
-  },
-  avatar: {
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: Colors.primaryContainer,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  avatarText: { ...Typography.statementMobile, fontSize: 20, lineHeight: 26, color: Colors.onPrimaryContainer },
-  profileInfo: { flex: 1 },
-  profileName: { ...Typography.insightReading, color: Colors.inkHeadline },
-  profileMeta: { ...Typography.annotation, color: Colors.inkLabel, marginTop: 2 },
-
-  searchWrap: { position: 'relative', marginBottom: Spacing.lg },
-  searchIcon: { position: 'absolute', left: Spacing.md, top: 0, bottom: 0, justifyContent: 'center', zIndex: 1 },
-  searchInput: {
-    backgroundColor: Colors.bgSurface, borderWidth: 1, borderColor: Colors.borderSubtle,
-    borderRadius: Radius.xl, paddingVertical: 14, paddingLeft: 44, paddingRight: Spacing.md,
-    ...Typography.bodyStandard, color: Colors.onSurface,
-  },
-
-  section: { marginBottom: Spacing.xl },
-  sectionHeader: { ...Typography.sectionHeader, color: Colors.inkLabel, marginBottom: Spacing.md, paddingHorizontal: 2 },
-  card: {
-    backgroundColor: Colors.bgSurface, borderWidth: 1, borderColor: Colors.borderSubtle,
-    borderRadius: Radius.xl, overflow: 'hidden',
-  },
-  row: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: Spacing.md,
-  },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.borderSubtle },
-  rowLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm + 4 },
-  rowLabel: { ...Typography.insightReading, color: Colors.onSurface },
-
-  emptyText: { ...Typography.supportingText, color: Colors.inkBody, textAlign: 'center', paddingVertical: Spacing.xl },
-
-  footer: {
-    ...Typography.annotation, color: Colors.inkLabel, opacity: 0.6,
-    textAlign: 'center', marginTop: Spacing.md, lineHeight: 18,
-  },
-});

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors } from '../../theme';
 import { MainStackScreenProps } from '../../navigation/types';
 import { useTxStore } from '../../store/txStore';
 import { getCategories } from '../../db/database';
@@ -85,19 +85,19 @@ export function AddTransactionScreen({ route, navigation }: MainStackScreenProps
   };
 
   return (
-    <View style={styles.root}>
-      <View style={styles.headerRow}>
+    <View className="flex-1 bg-background">
+      <View className="flex-row items-center justify-between px-container-margin pt-sm pb-md">
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.closeText}>✕ Close</Text>
+          <Text className="font-inter text-body-md text-primary w-[70px]">✕ Close</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Add Transaction</Text>
-        <View style={{ width: 60 }} />
+        <Text className="font-inter-bold text-title-lg text-on-surface">Add Transaction</Text>
+        <View className="w-[60px]" />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.label}>Amount</Text>
+      <ScrollView contentContainerClassName="px-container-margin pb-[48px]" showsVerticalScrollIndicator={false}>
+        <Text className="font-mono text-label-sm text-on-surface-variant mt-lg mb-sm">Amount</Text>
         <TextInput
-          style={styles.amountInput}
+          className="font-mono-medium text-numeric-lg text-on-surface bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-md"
           placeholder="0"
           placeholderTextColor={Colors.outline}
           value={amount}
@@ -105,43 +105,70 @@ export function AddTransactionScreen({ route, navigation }: MainStackScreenProps
           keyboardType="decimal-pad"
         />
 
-        <Text style={styles.label}>Type</Text>
-        <View style={styles.segmentRow}>
+        <Text className="font-mono text-label-sm text-on-surface-variant mt-lg mb-sm">Type</Text>
+        <View className="flex-row gap-sm">
           <TouchableOpacity
-            style={[styles.segment, type === TransactionType.EXPENSE && styles.segmentActive]}
+            className={`flex-1 items-center py-[12px] rounded-lg border ${
+              type === TransactionType.EXPENSE
+                ? 'bg-primary-container border-primary'
+                : 'bg-surface-container-lowest border-outline-variant'
+            }`}
             onPress={() => setType(TransactionType.EXPENSE)}
           >
-            <Text style={[styles.segmentText, type === TransactionType.EXPENSE && styles.segmentTextActive]}>Expense</Text>
+            <Text
+              className={`text-body-sm ${
+                type === TransactionType.EXPENSE
+                  ? 'font-inter-medium text-on-primary-container'
+                  : 'font-inter text-on-surface-variant'
+              }`}
+            >
+              Expense
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.segment, type === TransactionType.INCOME && styles.segmentActive]}
+            className={`flex-1 items-center py-[12px] rounded-lg border ${
+              type === TransactionType.INCOME
+                ? 'bg-primary-container border-primary'
+                : 'bg-surface-container-lowest border-outline-variant'
+            }`}
             onPress={() => setType(TransactionType.INCOME)}
           >
-            <Text style={[styles.segmentText, type === TransactionType.INCOME && styles.segmentTextActive]}>Income</Text>
+            <Text
+              className={`text-body-sm ${
+                type === TransactionType.INCOME
+                  ? 'font-inter-medium text-on-primary-container'
+                  : 'font-inter text-on-surface-variant'
+              }`}
+            >
+              Income
+            </Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.label}>Merchant</Text>
+        <Text className="font-mono text-label-sm text-on-surface-variant mt-lg mb-sm">Merchant</Text>
         <TextInput
-          style={styles.textInput}
+          className="font-inter text-body-md text-on-surface bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-[12px]"
           placeholder="e.g. Blue Tokai Coffee"
           placeholderTextColor={Colors.outline}
           value={merchant}
           onChangeText={setMerchant}
         />
 
-        <Text style={styles.label}>Account / Bank</Text>
+        <Text className="font-mono text-label-sm text-on-surface-variant mt-lg mb-sm">Account / Bank</Text>
         <TextInput
-          style={styles.textInput}
+          className="font-inter text-body-md text-on-surface bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-[12px]"
           placeholder="e.g. Cash, HDFC"
           placeholderTextColor={Colors.outline}
           value={bankName}
           onChangeText={setBankName}
         />
 
-        <Text style={styles.label}>Date</Text>
-        <TouchableOpacity style={styles.dateRow} onPress={() => setShowDatePicker(true)}>
-          <Text style={styles.dateRowText}>{fmtDate(date.getTime())}</Text>
+        <Text className="font-mono text-label-sm text-on-surface-variant mt-lg mb-sm">Date</Text>
+        <TouchableOpacity
+          className="bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-[12px]"
+          onPress={() => setShowDatePicker(true)}
+        >
+          <Text className="font-inter text-body-md text-on-surface">{fmtDate(date.getTime())}</Text>
         </TouchableOpacity>
         {showDatePicker && (
           <DateTimePicker
@@ -156,15 +183,19 @@ export function AddTransactionScreen({ route, navigation }: MainStackScreenProps
           />
         )}
 
-        <Text style={styles.label}>Category</Text>
-        <TouchableOpacity style={styles.categoryRow} onPress={openCategoryPicker}>
-          <Text style={styles.categoryRowText}>{categoryLabel ?? 'Choose a category'}</Text>
-          <Text style={styles.chevron}>›</Text>
+        <Text className="font-mono text-label-sm text-on-surface-variant mt-lg mb-sm">Category</Text>
+        <TouchableOpacity
+          className="flex-row items-center justify-between bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-[12px]"
+          onPress={openCategoryPicker}
+        >
+          <Text className="font-inter text-body-md text-on-surface">{categoryLabel ?? 'Choose a category'}</Text>
+          <Text className="font-inter text-body-md text-on-surface-variant">›</Text>
         </TouchableOpacity>
 
-        <Text style={styles.label}>Notes</Text>
+        <Text className="font-mono text-label-sm text-on-surface-variant mt-lg mb-sm">Notes</Text>
         <TextInput
-          style={styles.notesInput}
+          className="font-inter text-body-md text-on-surface bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-[12px] min-h-[72px]"
+          style={{ textAlignVertical: 'top' }}
           placeholder="Optional note…"
           placeholderTextColor={Colors.outline}
           value={notes}
@@ -172,20 +203,20 @@ export function AddTransactionScreen({ route, navigation }: MainStackScreenProps
           multiline
         />
 
-        <Text style={styles.label}>Tags</Text>
-        <View style={styles.tagsWrap}>
+        <Text className="font-mono text-label-sm text-on-surface-variant mt-lg mb-sm">Tags</Text>
+        <View className="flex-row flex-wrap gap-sm">
           {tags.map((tag) => (
-            <View key={tag} style={styles.tagChip}>
-              <Text style={styles.tagChipText}>{tag}</Text>
+            <View key={tag} className="flex-row items-center gap-[6px] bg-surface-variant rounded-full px-sm py-[6px]">
+              <Text className="font-mono text-label-sm text-on-surface-variant tracking-[0]">{tag}</Text>
               <TouchableOpacity onPress={() => removeTag(tag)}>
-                <Text style={styles.tagChipRemove}>✕</Text>
+                <Text className="font-mono text-label-sm text-on-surface-variant tracking-[0]">✕</Text>
               </TouchableOpacity>
             </View>
           ))}
         </View>
-        <View style={styles.tagInputRow}>
+        <View className="flex-row gap-sm mt-sm">
           <TextInput
-            style={styles.tagInput}
+            className="flex-1 font-inter text-body-md text-on-surface bg-surface-container-lowest rounded-lg border border-outline-variant px-md py-[8px]"
             placeholder="Add tag…"
             placeholderTextColor={Colors.outline}
             value={newTag}
@@ -193,108 +224,19 @@ export function AddTransactionScreen({ route, navigation }: MainStackScreenProps
             onSubmitEditing={addTag}
             autoCapitalize="none"
           />
-          <TouchableOpacity onPress={addTag} style={styles.tagAddButton}>
-            <Text style={styles.tagAddButtonText}>Add</Text>
+          <TouchableOpacity onPress={addTag} className="px-md items-center justify-center bg-primary rounded-lg">
+            <Text className="font-inter-medium text-body-sm text-on-primary">Add</Text>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity
-          style={[styles.saveButton, (!canSave || saving) && styles.saveButtonDisabled]}
+          className={`mt-xl py-md items-center bg-primary rounded-xl ${!canSave || saving ? 'opacity-40' : ''}`}
           onPress={handleSave}
           disabled={!canSave || saving}
         >
-          <Text style={styles.saveButtonText}>Save transaction</Text>
+          <Text className="font-inter-medium text-body-md text-on-primary">Save transaction</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
-  headerRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, paddingBottom: Spacing.md,
-  },
-  closeText: { ...Typography.bodyMd, color: Colors.primary, width: 70 },
-  title: { ...Typography.titleLg, color: Colors.onSurface },
-
-  content: { paddingHorizontal: Spacing.containerMargin, paddingBottom: 48 },
-  label: { ...Typography.labelSm, color: Colors.onSurfaceVariant, marginTop: Spacing.lg, marginBottom: Spacing.sm },
-
-  amountInput: {
-    ...Typography.numericLg, color: Colors.onSurface,
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.md,
-  },
-
-  segmentRow: { flexDirection: 'row', gap: Spacing.sm },
-  segment: {
-    flex: 1, alignItems: 'center', paddingVertical: 12,
-    borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.outlineVariant,
-    backgroundColor: Colors.surfaceContainerLowest,
-  },
-  segmentActive: { backgroundColor: Colors.primaryContainer, borderColor: Colors.primary },
-  segmentText: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
-  segmentTextActive: { color: Colors.onPrimaryContainer, fontFamily: 'Inter_500Medium' },
-
-  textInput: {
-    ...Typography.bodyMd, color: Colors.onSurface,
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-    paddingHorizontal: Spacing.md, paddingVertical: 12,
-  },
-
-  dateRow: {
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-    paddingHorizontal: Spacing.md, paddingVertical: 12,
-  },
-  dateRowText: { ...Typography.bodyMd, color: Colors.onSurface },
-
-  categoryRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-    paddingHorizontal: Spacing.md, paddingVertical: 12,
-  },
-  categoryRowText: { ...Typography.bodyMd, color: Colors.onSurface },
-  chevron: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-
-  notesInput: {
-    ...Typography.bodyMd, color: Colors.onSurface,
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-    paddingHorizontal: Spacing.md, paddingVertical: 12,
-    minHeight: 72, textAlignVertical: 'top',
-  },
-
-  tagsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  tagChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: Colors.surfaceVariant, borderRadius: Radius.full,
-    paddingHorizontal: Spacing.sm, paddingVertical: 6,
-  },
-  tagChipText: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0 },
-  tagChipRemove: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0 },
-  tagInputRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
-  tagInput: {
-    flex: 1, ...Typography.bodyMd, color: Colors.onSurface,
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.lg,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-    paddingHorizontal: Spacing.md, paddingVertical: 8,
-  },
-  tagAddButton: {
-    paddingHorizontal: Spacing.md, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: Colors.primary, borderRadius: Radius.lg,
-  },
-  tagAddButtonText: { ...Typography.bodySm, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
-
-  saveButton: {
-    marginTop: Spacing.xl, paddingVertical: Spacing.md, alignItems: 'center',
-    backgroundColor: Colors.primary, borderRadius: Radius.xl,
-  },
-  saveButtonDisabled: { opacity: 0.4 },
-  saveButtonText: { ...Typography.bodyMd, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
-});

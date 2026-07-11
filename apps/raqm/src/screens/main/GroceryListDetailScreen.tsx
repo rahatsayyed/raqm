@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Alert, Share, ScrollView } from 'react-native';
+import { View, Text, FlatList, TextInput, TouchableOpacity, Alert, Share, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors } from '../../theme';
 import { MainStackScreenProps } from '../../navigation/types';
 import {
   GroceryList,
@@ -115,29 +115,29 @@ export function GroceryListDetailScreen({ route, navigation }: MainStackScreenPr
   const showSuggestions = nameFocused && name.trim().length === 0 && frequentItems.length > 0;
 
   return (
-    <View style={styles.root}>
-      <View style={styles.header}>
+    <View className="flex-1 bg-background">
+      <View className="flex-row justify-between items-center px-container-margin pt-sm">
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text className="font-inter text-body-md text-primary">← Back</Text>
         </TouchableOpacity>
-        <View style={styles.headerActions}>
-          <TouchableOpacity onPress={handleShare} style={styles.headerBtn}>
-            <Text style={styles.headerBtnText}>Share</Text>
+        <View className="flex-row gap-md">
+          <TouchableOpacity onPress={handleShare} className="py-[4px]">
+            <Text className="font-inter text-body-md text-on-surface-variant">Share</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleComplete} style={styles.headerBtn}>
-            <Text style={styles.completeText}>Complete</Text>
+          <TouchableOpacity onPress={handleComplete} className="py-[4px]">
+            <Text className="font-inter-medium text-body-md text-primary">Complete</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.titleRow}>
-        <Text style={styles.title}>{listName}</Text>
-        <Text style={styles.total}>{formatAmount(runningTotal)}</Text>
+      <View className="flex-row justify-between items-baseline px-container-margin pt-md pb-sm">
+        <Text className="font-inter-bold text-headline-sm text-on-surface flex-1">{listName}</Text>
+        <Text className="font-mono-medium text-[18px] leading-[28px] text-on-surface">{formatAmount(runningTotal)}</Text>
       </View>
 
       {list?.budgetCap != null && (
-        <View style={[styles.capBanner, overBudget && styles.capBannerOver]}>
-          <Text style={[styles.capBannerText, overBudget && styles.capBannerTextOver]}>
+        <View className={`mx-container-margin mb-sm rounded-md py-[8px] px-md ${overBudget ? 'bg-[#C1666B30]' : 'bg-surface-container'}`}>
+          <Text className={`font-mono text-label-sm tracking-[0px] ${overBudget ? 'text-error-muted' : 'text-on-surface-variant'}`}>
             {overBudget
               ? `Over budget by ${formatAmount(runningTotal - list.budgetCap)}`
               : `Budget cap ${formatAmount(list.budgetCap)}`}
@@ -148,28 +148,28 @@ export function GroceryListDetailScreen({ route, navigation }: MainStackScreenPr
       <FlatList
         data={items}
         keyExtractor={(it) => String(it.id)}
-        contentContainerStyle={styles.list}
+        contentContainerClassName="px-container-margin pb-[16px]"
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={styles.itemRow}
+            className="flex-row items-center gap-md py-[12px] border-b border-outline-variant"
             onPress={() => toggleChecked(item)}
             onLongPress={() => handleDelete(item)}
             activeOpacity={0.7}
           >
-            <View style={[styles.checkbox, item.checkedAt !== null && styles.checkboxChecked]}>
-              {item.checkedAt !== null && <Text style={styles.checkMark}>✓</Text>}
+            <View className={`w-[22px] h-[22px] rounded-sm border-2 items-center justify-center ${item.checkedAt !== null ? 'bg-primary border-primary' : 'border-outline'}`}>
+              {item.checkedAt !== null && <Text className="text-on-primary text-[13px] font-inter-bold">✓</Text>}
             </View>
-            <Text style={[styles.itemName, item.checkedAt !== null && styles.itemNameChecked]} numberOfLines={1}>
+            <Text className={`font-inter text-body-md flex-1 ${item.checkedAt !== null ? 'text-on-surface-variant line-through' : 'text-on-surface'}`} numberOfLines={1}>
               {item.name}
             </Text>
             {item.price !== null && (
-              <Text style={[styles.itemPrice, item.checkedAt !== null && styles.itemNameChecked]}>
+              <Text className={`font-mono text-numeric-sm ${item.checkedAt !== null ? 'text-on-surface-variant line-through' : 'text-on-surface-variant'}`}>
                 {formatAmount(item.price)}
               </Text>
             )}
           </TouchableOpacity>
         )}
-        ListEmptyComponent={<Text style={styles.emptyText}>No items yet. Add one below.</Text>}
+        ListEmptyComponent={<Text className="font-inter text-body-md text-on-surface-variant text-center pt-[40px]">No items yet. Add one below.</Text>}
       />
 
       {showSuggestions && (
@@ -179,20 +179,20 @@ export function GroceryListDetailScreen({ route, navigation }: MainStackScreenPr
           // Without this, tapping a chip while the name input has focus is swallowed
           // as a keyboard-dismiss gesture and the blur hides the row before onPress fires.
           keyboardShouldPersistTaps="handled"
-          style={styles.chipsRow}
-          contentContainerStyle={styles.chipsContent}
+          className="max-h-[44px] border-t border-outline-variant bg-surface-container-lowest"
+          contentContainerClassName="px-container-margin py-sm gap-sm"
         >
           {frequentItems.map((f) => (
-            <TouchableOpacity key={f.name} style={styles.chip} onPress={() => handlePickFrequent(f.name)} activeOpacity={0.7}>
-              <Text style={styles.chipText}>{f.name}</Text>
+            <TouchableOpacity key={f.name} className="bg-surface-container rounded-full border border-outline-variant px-md py-[6px]" onPress={() => handlePickFrequent(f.name)} activeOpacity={0.7}>
+              <Text className="font-mono text-label-sm text-on-surface tracking-[0px]">{f.name}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       )}
 
-      <View style={styles.quickAdd}>
+      <View className="flex-row gap-sm items-center px-container-margin py-md border-t border-outline-variant bg-surface-container-lowest">
         <TextInput
-          style={[styles.input, styles.inputName]}
+          className="bg-surface-container rounded-md border border-outline-variant px-md py-[10px] font-inter text-body-md text-on-surface flex-[2]"
           placeholder="Item name"
           placeholderTextColor={Colors.outline}
           value={name}
@@ -201,87 +201,17 @@ export function GroceryListDetailScreen({ route, navigation }: MainStackScreenPr
           onBlur={() => setNameFocused(false)}
         />
         <TextInput
-          style={[styles.input, styles.inputPrice]}
+          className="bg-surface-container rounded-md border border-outline-variant px-md py-[10px] font-inter text-body-md text-on-surface flex-1"
           placeholder={ghostPrice !== null ? formatAmount(ghostPrice) : '₹'}
           placeholderTextColor={Colors.outline}
           value={price}
           onChangeText={setPrice}
           keyboardType="decimal-pad"
         />
-        <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
-          <Text style={styles.addBtnText}>Add</Text>
+        <TouchableOpacity className="bg-primary rounded-md px-md py-[10px]" onPress={handleAdd} activeOpacity={0.8}>
+          <Text className="font-inter-medium text-body-sm text-on-primary">Add</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm,
-  },
-  headerActions: { flexDirection: 'row', gap: Spacing.md },
-  headerBtn: { paddingVertical: 4 },
-  headerBtnText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-  backText: { ...Typography.bodyMd, color: Colors.primary },
-  completeText: { ...Typography.bodyMd, color: Colors.primary, fontFamily: 'Inter_500Medium' },
-  titleRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
-    paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.md, paddingBottom: Spacing.sm,
-  },
-  title: { ...Typography.headlineSm, color: Colors.onSurface, flex: 1 },
-  total: { ...Typography.numericMd, color: Colors.onSurface, fontSize: 18 },
-
-  capBanner: {
-    marginHorizontal: Spacing.containerMargin, marginBottom: Spacing.sm,
-    borderRadius: Radius.md, paddingVertical: 8, paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.surfaceContainer,
-  },
-  capBannerOver: { backgroundColor: `${Colors.errorMuted}30` },
-  capBannerText: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0 },
-  capBannerTextOver: { color: Colors.errorMuted },
-
-  list: { paddingHorizontal: Spacing.containerMargin, paddingBottom: 16 },
-  itemRow: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant,
-  },
-  checkbox: {
-    width: 22, height: 22, borderRadius: Radius.sm, borderWidth: 2, borderColor: Colors.outline,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  checkboxChecked: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  checkMark: { color: Colors.onPrimary, fontSize: 13, fontWeight: '700' },
-  itemName: { ...Typography.bodyMd, color: Colors.onSurface, flex: 1 },
-  itemNameChecked: { color: Colors.onSurfaceVariant, textDecorationLine: 'line-through' },
-  itemPrice: { ...Typography.numericSm, color: Colors.onSurfaceVariant },
-  emptyText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center', paddingTop: 40 },
-
-  chipsRow: { maxHeight: 44, borderTopWidth: 1, borderTopColor: Colors.outlineVariant, backgroundColor: Colors.surfaceContainerLowest },
-  chipsContent: { paddingHorizontal: Spacing.containerMargin, paddingVertical: Spacing.sm, gap: Spacing.sm },
-  chip: {
-    backgroundColor: Colors.surfaceContainer, borderRadius: Radius.full,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-    paddingHorizontal: Spacing.md, paddingVertical: 6,
-  },
-  chipText: { ...Typography.labelSm, color: Colors.onSurface, letterSpacing: 0 },
-
-  quickAdd: {
-    flexDirection: 'row', gap: Spacing.sm, alignItems: 'center',
-    paddingHorizontal: Spacing.containerMargin, paddingVertical: Spacing.md,
-    borderTopWidth: 1, borderTopColor: Colors.outlineVariant,
-    backgroundColor: Colors.surfaceContainerLowest,
-  },
-  input: {
-    backgroundColor: Colors.surfaceContainer, borderRadius: Radius.md,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-    paddingHorizontal: Spacing.md, paddingVertical: 10,
-    ...Typography.bodyMd, color: Colors.onSurface,
-  },
-  inputName: { flex: 2 },
-  inputPrice: { flex: 1 },
-  addBtn: { backgroundColor: Colors.primary, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: 10 },
-  addBtnText: { ...Typography.bodySm, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
-});

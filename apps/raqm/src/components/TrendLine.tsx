@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import Svg, { Polyline, Line, Circle } from 'react-native-svg';
-import { Colors, Typography, Spacing } from '../theme';
+import { Colors } from '../theme';
 
 export interface TrendDatum {
   label: string;
@@ -47,9 +47,13 @@ export function TrendLine({ data, height = 120 }: Props) {
           </>
         )}
       </Svg>
-      <View style={styles.labelRow}>
+      <View className="flex-row justify-between mt-xs">
         {data.map((d, i) => (
-          <Text key={`${i}-${d.label}`} style={styles.label} numberOfLines={1}>
+          <Text
+            key={`${i}-${d.label}`}
+            className="font-mono text-on-surface-variant tracking-[0px] text-[10px] leading-[16px] flex-1 text-center"
+            numberOfLines={1}
+          >
             {d.label}
           </Text>
         ))}
@@ -57,8 +61,3 @@ export function TrendLine({ data, height = 120 }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.xs },
-  label: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, fontSize: 10, flex: 1, textAlign: 'center' },
-});

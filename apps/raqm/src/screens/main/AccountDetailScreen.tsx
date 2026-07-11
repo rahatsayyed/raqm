@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { Colors } from '../../theme';
 import { MainStackScreenProps } from '../../navigation/types';
 import { useTxStore } from '../../store/txStore';
 import { getAccounts, updateAccount, softDeleteAccountTxs, restoreAccountTxs, loadDeletedTxRecords, Account } from '../../db/database';
@@ -152,42 +152,42 @@ export function AccountDetailScreen({ route, navigation }: MainStackScreenProps<
   };
 
   return (
-    <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-          <Text style={styles.backText}>← Back</Text>
+    <View className="flex-1 bg-background">
+      <ScrollView contentContainerClassName="p-container-margin pt-sm pb-[40px]" showsVerticalScrollIndicator={false}>
+        <TouchableOpacity onPress={() => navigation.goBack()} className="mb-md">
+          <Text className="font-inter text-body-md text-primary">← Back</Text>
         </TouchableOpacity>
 
-        <View style={styles.headerCard}>
-          <Text style={styles.headerIcon}>{isCard ? '💳' : '🏦'}</Text>
-          <Text style={styles.headerBank}>{account?.nickname || bankName}</Text>
-          <Text style={styles.headerSub}>{last4 ? `•••• ${last4}` : 'Account'}</Text>
-          <Text style={styles.balanceLabel}>Last known balance</Text>
-          <Text style={styles.balanceValue}>
+        <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-lg items-center gap-[4px] mb-lg">
+          <Text className="text-[32px] mb-[4px]">{isCard ? '💳' : '🏦'}</Text>
+          <Text className="font-inter-bold text-headline-sm text-on-surface">{account?.nickname || bankName}</Text>
+          <Text className="font-inter text-body-md text-on-surface-variant">{last4 ? `•••• ${last4}` : 'Account'}</Text>
+          <Text className="font-mono text-label-sm text-on-surface-variant mt-md">Last known balance</Text>
+          <Text className="font-mono-medium text-numeric-xl text-on-surface">
             {lastBalanceTx?.balance != null ? formatAmount(lastBalanceTx.balance, currency) : '—'}
           </Text>
           {lastBalanceTx && (
-            <Text style={styles.balanceMeta}>as of {formatDate(lastBalanceTx.timestamp)}</Text>
+            <Text className="font-mono text-label-sm text-outline">as of {formatDate(lastBalanceTx.timestamp)}</Text>
           )}
         </View>
 
         {isCard && (
-          <View style={styles.cardPanel}>
-            <Text style={styles.sectionTitle}>Card details</Text>
-            <View style={styles.cardRow}>
-              <Text style={styles.cardLabel}>Nickname</Text>
+          <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md mb-lg gap-sm">
+            <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface mb-sm">Card details</Text>
+            <View className="gap-[4px]">
+              <Text className="font-mono text-label-sm text-on-surface-variant">Nickname</Text>
               <TextInput
-                style={styles.cardInput}
+                className="font-inter text-body-md text-on-surface bg-surface-variant rounded-md px-sm py-[8px]"
                 value={nickname}
                 onChangeText={setNickname}
                 placeholder="e.g. Everyday card"
                 placeholderTextColor={Colors.outline}
               />
             </View>
-            <View style={styles.cardRow}>
-              <Text style={styles.cardLabel}>Credit limit</Text>
+            <View className="gap-[4px]">
+              <Text className="font-mono text-label-sm text-on-surface-variant">Credit limit</Text>
               <TextInput
-                style={styles.cardInput}
+                className="font-inter text-body-md text-on-surface bg-surface-variant rounded-md px-sm py-[8px]"
                 value={creditLimit}
                 onChangeText={setCreditLimit}
                 keyboardType="numeric"
@@ -195,10 +195,10 @@ export function AccountDetailScreen({ route, navigation }: MainStackScreenProps<
                 placeholderTextColor={Colors.outline}
               />
             </View>
-            <View style={styles.cardRow}>
-              <Text style={styles.cardLabel}>Due date</Text>
+            <View className="gap-[4px]">
+              <Text className="font-mono text-label-sm text-on-surface-variant">Due date</Text>
               <TextInput
-                style={styles.cardInput}
+                className="font-inter text-body-md text-on-surface bg-surface-variant rounded-md px-sm py-[8px]"
                 value={dueDate}
                 onChangeText={setDueDate}
                 placeholder="e.g. 5th of month"
@@ -206,51 +206,55 @@ export function AccountDetailScreen({ route, navigation }: MainStackScreenProps<
               />
             </View>
             {outstanding != null && (
-              <View style={styles.outstandingRow}>
-                <Text style={styles.cardLabel}>Outstanding</Text>
-                <Text style={styles.outstandingValue}>{formatAmount(outstanding, currency)}</Text>
+              <View className="flex-row justify-between mt-sm">
+                <Text className="font-mono text-label-sm text-on-surface-variant">Outstanding</Text>
+                <Text className="font-mono-medium text-[16px] leading-[28px] text-error">{formatAmount(outstanding, currency)}</Text>
               </View>
             )}
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving || !account}>
-              <Text style={styles.saveBtnText}>{saving ? 'Saving…' : 'Save card details'}</Text>
+            <TouchableOpacity
+              className="bg-primary rounded-lg py-[10px] items-center mt-sm"
+              onPress={handleSave}
+              disabled={saving || !account}
+            >
+              <Text className="font-inter-medium text-body-md text-on-primary">{saving ? 'Saving…' : 'Save card details'}</Text>
             </TouchableOpacity>
             {!account && (
-              <Text style={styles.hint}>Account row not found yet — it appears after the next scan or app restart.</Text>
+              <Text className="font-mono text-label-sm text-outline mt-[4px]">Account row not found yet — it appears after the next scan or app restart.</Text>
             )}
           </View>
         )}
 
         {/* Account actions: remove-all soft-deletes (recoverable); re-add restores + fills missing */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Manage</Text>
-          <View style={styles.actionsCard}>
+        <View>
+          <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface mb-sm">Manage</Text>
+          <View className="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
             {accountTxs.length > 0 && (
-              <TouchableOpacity style={styles.actionRow} onPress={accountBusy ? undefined : handleRemoveAll}>
-                <Text style={styles.actionDanger}>
+              <TouchableOpacity className="px-md py-[14px]" onPress={accountBusy ? undefined : handleRemoveAll}>
+                <Text className="font-inter text-body-md text-error-muted">
                   {accountBusy ? 'Working…' : 'Remove all transactions'}
                 </Text>
               </TouchableOpacity>
             )}
-            {accountTxs.length > 0 && removedCount > 0 && <View style={styles.actionSep} />}
+            {accountTxs.length > 0 && removedCount > 0 && <View className="h-[1px] bg-outline-variant" />}
             {removedCount > 0 && (
-              <TouchableOpacity style={styles.actionRow} onPress={accountBusy ? undefined : handleReAdd}>
-                <Text style={styles.actionPrimary}>
+              <TouchableOpacity className="px-md py-[14px]" onPress={accountBusy ? undefined : handleReAdd}>
+                <Text className="font-inter text-body-md text-primary">
                   {accountBusy ? 'Working…' : `Re-add ${removedCount} removed transaction${removedCount === 1 ? '' : 's'}`}
                 </Text>
               </TouchableOpacity>
             )}
             {accountTxs.length === 0 && removedCount === 0 && (
-              <Text style={styles.actionsEmpty}>No transactions to manage.</Text>
+              <Text className="font-inter text-body-sm text-on-surface-variant p-md">No transactions to manage.</Text>
             )}
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Transactions ({accountTxs.length})</Text>
-          <View style={styles.txList}>
+        <View>
+          <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface mb-sm">Transactions ({accountTxs.length})</Text>
+          <View className="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
             {accountTxs.length === 0 ? (
-              <View style={styles.empty}>
-                <Text style={styles.emptyText}>No transactions for this account</Text>
+              <View className="p-xl items-center">
+                <Text className="font-inter text-body-md text-on-surface-variant">No transactions for this account</Text>
               </View>
             ) : (
               accountTxs.map((tx, i) => (
@@ -276,82 +280,19 @@ function AccountTxRow({
   const debit = isDebit(tx.type);
   const color = txColor(tx.type);
   return (
-    <TouchableOpacity style={[styles.txRow, !isLast && styles.txRowBorder]} onPress={onPress} activeOpacity={0.7}>
-      <View style={[styles.txDot, { backgroundColor: `${color}20` }]}>
-        <Text style={[styles.txDotText, { color }]}>{debit ? '↓' : '↑'}</Text>
+    <TouchableOpacity
+      className={`flex-row items-center gap-md px-md py-[14px] ${!isLast ? 'border-b border-outline-variant' : ''}`}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View className="w-[40px] h-[40px] rounded-lg items-center justify-center" style={{ backgroundColor: `${color}20` }}>
+        <Text className="text-[16px] font-inter-bold" style={{ color }}>{debit ? '↓' : '↑'}</Text>
       </View>
-      <View style={styles.txInfo}>
-        <Text style={styles.txMerchant} numberOfLines={1}>{tx.merchant || tx.bankName}</Text>
-        <Text style={styles.txMeta}>{formatDate(tx.timestamp)}</Text>
+      <View className="flex-1">
+        <Text className="font-inter-medium text-body-sm text-on-surface" numberOfLines={1}>{tx.merchant || tx.bankName}</Text>
+        <Text className="font-mono text-label-sm tracking-[0px] text-on-surface-variant mt-[2px]">{formatDate(tx.timestamp)}</Text>
       </View>
-      <Text style={[styles.txAmount, { color }]}>{debit ? '-' : '+'}{formatAmount(tx.amount, currency)}</Text>
+      <Text className="font-mono text-[15px] leading-[20px]" style={{ color }}>{debit ? '-' : '+'}{formatAmount(tx.amount, currency)}</Text>
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.containerMargin, paddingTop: Spacing.sm, paddingBottom: 40 },
-  back: { marginBottom: Spacing.md },
-  backText: { ...Typography.bodyMd, color: Colors.primary },
-
-  actionsCard: {
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl,
-    borderWidth: 1, borderColor: Colors.outlineVariant, overflow: 'hidden',
-  },
-  actionRow: { paddingHorizontal: Spacing.md, paddingVertical: 14 },
-  actionDanger: { ...Typography.bodyMd, color: Colors.errorMuted },
-  actionPrimary: { ...Typography.bodyMd, color: Colors.primary },
-  actionSep: { height: 1, backgroundColor: Colors.outlineVariant },
-  actionsEmpty: { ...Typography.bodySm, color: Colors.onSurfaceVariant, padding: Spacing.md },
-
-  headerCard: {
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-    padding: Spacing.lg, alignItems: 'center', gap: 4, marginBottom: Spacing.lg,
-  },
-  headerIcon: { fontSize: 32, marginBottom: 4 },
-  headerBank: { ...Typography.headlineSm, color: Colors.onSurface },
-  headerSub: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-  balanceLabel: { ...Typography.labelSm, color: Colors.onSurfaceVariant, marginTop: Spacing.md },
-  balanceValue: { ...Typography.numericXl, color: Colors.onSurface },
-  balanceMeta: { ...Typography.labelSm, color: Colors.outline },
-
-  cardPanel: {
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-    padding: Spacing.md, marginBottom: Spacing.lg, gap: Spacing.sm,
-  },
-  sectionTitle: { ...Typography.titleLg, color: Colors.onSurface, fontSize: 16, marginBottom: Spacing.sm },
-  cardRow: { gap: 4 },
-  cardLabel: { ...Typography.labelSm, color: Colors.onSurfaceVariant },
-  cardInput: {
-    ...Typography.bodyMd, color: Colors.onSurface,
-    backgroundColor: Colors.surfaceVariant, borderRadius: Radius.md,
-    paddingHorizontal: Spacing.sm, paddingVertical: 8,
-  },
-  outstandingRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.sm },
-  outstandingValue: { ...Typography.numericMd, color: Colors.error, fontSize: 16 },
-  saveBtn: {
-    backgroundColor: Colors.primary, borderRadius: Radius.lg,
-    paddingVertical: 10, alignItems: 'center', marginTop: Spacing.sm,
-  },
-  saveBtnText: { ...Typography.bodyMd, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
-  hint: { ...Typography.labelSm, color: Colors.outline, marginTop: 4 },
-
-  section: {},
-  txList: {
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl,
-    borderWidth: 1, borderColor: Colors.outlineVariant, overflow: 'hidden',
-  },
-  txRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.md, paddingVertical: 14 },
-  txRowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant },
-  txDot: { width: 40, height: 40, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
-  txDotText: { fontSize: 16, fontWeight: '700' },
-  txInfo: { flex: 1 },
-  txMerchant: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'Inter_500Medium' },
-  txMeta: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, marginTop: 2 },
-  txAmount: { ...Typography.numericSm, fontSize: 15 },
-  empty: { padding: Spacing.xl, alignItems: 'center' },
-  emptyText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-});

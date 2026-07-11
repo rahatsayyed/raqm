@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { OnboardingScreenProps } from '../../navigation/types';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { useOnboardingStore, type DateRange as Range } from '../../store/onboardingStore';
 import { SmsReader } from '../../native/SmsReader';
@@ -49,22 +48,22 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
   const canStart = selected !== 'custom' || (fromDate < toDate);
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.headline}>How far back{'\n'}should we look?</Text>
-        <Text style={styles.subtitle}>
+    <View className="flex-1 bg-background">
+      <ScrollView contentContainerClassName="px-container-margin pt-[56px] pb-xl" showsVerticalScrollIndicator={false}>
+        <Text className="font-inter-bold text-display-lg text-on-surface mb-md">How far back{'\n'}should we look?</Text>
+        <Text className="font-inter text-body-md text-on-surface-variant mb-lg">
           We'll analyze your SMS messages to categorize your spending history.
         </Text>
 
         {earliestTs !== null && (
-          <View style={styles.earliestBadge}>
-            <Text style={styles.earliestText}>
-              📩 Earliest SMS on device: <Text style={styles.earliestDate}>{fmt(earliestTs)}</Text>
+          <View className="bg-secondary-container rounded-lg px-md py-sm mb-lg">
+            <Text className="font-inter text-body-sm text-on-secondary-container">
+              📩 Earliest SMS on device: <Text className="font-inter-medium">{fmt(earliestTs)}</Text>
             </Text>
           </View>
         )}
 
-        <View style={styles.rangeList}>
+        <View className="gap-sm mb-xl">
           {PRESETS.map((range) => {
             const isSelected = selected === range.id;
             const subtitle = range.id === 'all' && earliestTs
@@ -73,25 +72,26 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
             return (
               <TouchableOpacity
                 key={range.id}
-                style={[styles.rangeCard, isSelected && styles.rangeCardSelected]}
+                className={`flex-row items-center justify-between bg-surface-container-lowest border rounded-xl p-md ${isSelected ? 'border-primary bg-primary-container' : 'border-outline-variant'}`}
+                style={isSelected ? { shadowColor: '#75daa8', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 } : undefined}
                 onPress={() => handleSelect(range.id)}
                 activeOpacity={0.8}
               >
-                <View style={styles.rangeLeft}>
-                  <View style={[styles.rangeIconBox, isSelected && styles.rangeIconBoxSelected]}>
-                    <Text style={styles.rangeIcon}>{range.icon}</Text>
+                <View className="flex-row items-center gap-md">
+                  <View className={`w-[48px] h-[48px] rounded-lg items-center justify-center ${isSelected ? 'bg-primary/[0.08]' : 'bg-surface-variant'}`}>
+                    <Text className="text-[22px]">{range.icon}</Text>
                   </View>
                   <View>
-                    <Text style={[styles.rangeLabel, isSelected && styles.rangeLabelSelected]}>
+                    <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface">
                       {range.label}
                     </Text>
-                    <Text style={[styles.rangeSubtitle, range.recommended && styles.rangeSubtitleRecommended]}>
+                    <Text className={`font-inter text-body-sm text-on-surface-variant ${range.recommended ? 'text-primary font-inter-medium' : ''}`}>
                       {subtitle}
                     </Text>
                   </View>
                 </View>
-                <View style={[styles.radioOuter, isSelected && styles.radioOuterSelected]}>
-                  {isSelected && <View style={styles.radioInner} />}
+                <View className={`w-[22px] h-[22px] rounded-full border-2 items-center justify-center ${isSelected ? 'border-primary' : 'border-outline'}`}>
+                  {isSelected && <View className="w-[10px] h-[10px] rounded-full bg-primary" />}
                 </View>
               </TouchableOpacity>
             );
@@ -99,39 +99,40 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
 
           {/* Custom range card */}
           <TouchableOpacity
-            style={[styles.rangeCard, selected === 'custom' && styles.rangeCardSelected]}
+            className={`flex-row items-center justify-between bg-surface-container-lowest border rounded-xl p-md ${selected === 'custom' ? 'border-primary bg-primary-container' : 'border-outline-variant'}`}
+            style={selected === 'custom' ? { shadowColor: '#75daa8', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 } : undefined}
             onPress={() => handleSelect('custom')}
             activeOpacity={0.8}
           >
-            <View style={styles.rangeLeft}>
-              <View style={[styles.rangeIconBox, selected === 'custom' && styles.rangeIconBoxSelected]}>
-                <Text style={styles.rangeIcon}>🎯</Text>
+            <View className="flex-row items-center gap-md">
+              <View className={`w-[48px] h-[48px] rounded-lg items-center justify-center ${selected === 'custom' ? 'bg-primary/[0.08]' : 'bg-surface-variant'}`}>
+                <Text className="text-[22px]">🎯</Text>
               </View>
               <View>
-                <Text style={[styles.rangeLabel, selected === 'custom' && styles.rangeLabelSelected]}>
+                <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface">
                   Custom range
                 </Text>
-                <Text style={styles.rangeSubtitle}>Pick your own start and end date</Text>
+                <Text className="font-inter text-body-sm text-on-surface-variant">Pick your own start and end date</Text>
               </View>
             </View>
-            <View style={[styles.radioOuter, selected === 'custom' && styles.radioOuterSelected]}>
-              {selected === 'custom' && <View style={styles.radioInner} />}
+            <View className={`w-[22px] h-[22px] rounded-full border-2 items-center justify-center ${selected === 'custom' ? 'border-primary' : 'border-outline'}`}>
+              {selected === 'custom' && <View className="w-[10px] h-[10px] rounded-full bg-primary" />}
             </View>
           </TouchableOpacity>
 
           {selected === 'custom' && (
-            <View style={styles.customPicker}>
-              <TouchableOpacity style={styles.dateRow} onPress={() => setPickingField('from')}>
-                <Text style={styles.dateRowLabel}>From</Text>
-                <Text style={styles.dateRowValue}>{fmt(fromDate.getTime())}</Text>
+            <View className="mt-xs bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+              <TouchableOpacity className="flex-row items-center justify-between px-md py-md" onPress={() => setPickingField('from')}>
+                <Text className="font-inter text-body-md text-on-surface-variant">From</Text>
+                <Text className="text-body-md text-primary font-inter-medium">{fmt(fromDate.getTime())}</Text>
               </TouchableOpacity>
-              <View style={styles.dateDivider} />
-              <TouchableOpacity style={styles.dateRow} onPress={() => setPickingField('to')}>
-                <Text style={styles.dateRowLabel}>To</Text>
-                <Text style={styles.dateRowValue}>{fmt(toDate.getTime())}</Text>
+              <View className="h-[1px] bg-outline-variant mx-md" />
+              <TouchableOpacity className="flex-row items-center justify-between px-md py-md" onPress={() => setPickingField('to')}>
+                <Text className="font-inter text-body-md text-on-surface-variant">To</Text>
+                <Text className="text-body-md text-primary font-inter-medium">{fmt(toDate.getTime())}</Text>
               </TouchableOpacity>
               {fromDate >= toDate && (
-                <Text style={styles.dateError}>Start date must be before end date</Text>
+                <Text className="font-inter text-body-sm text-[#c0392b] px-md pb-sm">Start date must be before end date</Text>
               )}
             </View>
           )}
@@ -154,93 +155,16 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
         />
       )}
 
-      <View style={styles.footer}>
+      <View className="px-container-margin pb-[32px] pt-md gap-sm">
         <PrimaryButton
           label="Start Scan →"
           onPress={handleStart}
-          style={styles.ctaButton}
           disabled={!canStart}
         />
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.cancelButton}>
-          <Text style={styles.cancelLabel}>Cancel setup</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} className="h-[48px] items-center justify-center">
+          <Text className="font-inter text-body-md text-on-surface-variant">Cancel setup</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  scroll: {
-    paddingHorizontal: Spacing.containerMargin,
-    paddingTop: 56,
-    paddingBottom: Spacing.xl,
-  },
-  headline: { ...Typography.displayLg, color: Colors.onSurface, marginBottom: Spacing.md },
-  subtitle: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, marginBottom: Spacing.lg, lineHeight: 24 },
-  earliestBadge: {
-    backgroundColor: Colors.secondaryContainer,
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    marginBottom: Spacing.lg,
-  },
-  earliestText: { ...Typography.bodySm, color: Colors.onSecondaryContainer },
-  earliestDate: { fontFamily: 'Inter_500Medium' },
-  rangeList: { gap: Spacing.sm, marginBottom: Spacing.xl },
-  rangeCard: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: Colors.surfaceContainerLowest,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-    borderRadius: Radius.xl, padding: Spacing.md,
-  },
-  rangeCardSelected: {
-    borderColor: Colors.primary, backgroundColor: Colors.primaryContainer,
-    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
-  },
-  rangeLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  rangeIconBox: {
-    width: 48, height: 48, borderRadius: Radius.lg,
-    backgroundColor: Colors.surfaceVariant,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  rangeIconBoxSelected: { backgroundColor: `${Colors.primary}15` },
-  rangeIcon: { fontSize: 22 },
-  rangeLabel: { ...Typography.titleLg, color: Colors.onSurface, fontSize: 16 },
-  rangeLabelSelected: { color: Colors.onSurface },
-  rangeSubtitle: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
-  rangeSubtitleRecommended: { color: Colors.primary, fontFamily: 'Inter_500Medium' },
-  radioOuter: {
-    width: 22, height: 22, borderRadius: 11,
-    borderWidth: 2, borderColor: Colors.outline,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  radioOuterSelected: { borderColor: Colors.primary },
-  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.primary },
-  customPicker: {
-    marginTop: Spacing.xs,
-    backgroundColor: Colors.surfaceContainerLowest,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-    borderRadius: Radius.xl, overflow: 'hidden',
-  },
-  dateRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.md,
-  },
-  dateDivider: { height: 1, backgroundColor: Colors.outlineVariant, marginHorizontal: Spacing.md },
-  dateRowLabel: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-  dateRowValue: { ...Typography.bodyMd, color: Colors.primary, fontFamily: 'Inter_500Medium' },
-  dateError: {
-    ...Typography.bodySm, color: '#c0392b',
-    paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm,
-  },
-  footer: {
-    paddingHorizontal: Spacing.containerMargin,
-    paddingBottom: 32, paddingTop: Spacing.md, gap: Spacing.sm,
-  },
-  ctaButton: { borderRadius: Radius.lg, height: 56 },
-  ctaDisabled: { opacity: 0.4 },
-  cancelButton: { height: 48, alignItems: 'center', justifyContent: 'center' },
-  cancelLabel: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-});

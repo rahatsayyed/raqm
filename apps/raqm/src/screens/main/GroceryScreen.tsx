@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors } from '../../theme';
 import type { MainStackScreenProps } from '../../navigation/types';
 import {
   GroceryList,
@@ -147,60 +147,60 @@ export function GroceryScreen({ navigation }: MainStackScreenProps<'Grocery'>) {
   }
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-        <Text style={styles.backText}>← Back</Text>
+    <ScrollView className="flex-1 bg-background" contentContainerClassName="pb-xl" showsVerticalScrollIndicator={false}>
+      <TouchableOpacity onPress={() => navigation.goBack()} className="mb-sm">
+        <Text className="font-inter text-body-md text-primary">← Back</Text>
       </TouchableOpacity>
-      <View style={styles.header}>
-        <Text style={styles.pageTitle}>Grocery</Text>
-        <TouchableOpacity onPress={() => setShowNewForm((v) => !v)} style={styles.newBtn} activeOpacity={0.8}>
-          <Text style={styles.newBtnText}>{showNewForm ? 'Cancel' : '+ New list'}</Text>
+      <View className="flex-row justify-between items-center px-container-margin pt-sm pb-md">
+        <Text className="font-inter-bold text-headline-sm text-on-surface">Grocery</Text>
+        <TouchableOpacity onPress={() => setShowNewForm((v) => !v)} className="bg-primary rounded-full px-md py-sm" activeOpacity={0.8}>
+          <Text className="font-mono-medium text-label-lg text-on-primary tracking-[0px]">{showNewForm ? 'Cancel' : '+ New list'}</Text>
         </TouchableOpacity>
       </View>
 
       {showNewForm && (
-        <View style={styles.newForm}>
+        <View className="mx-container-margin mb-lg bg-surface-container-lowest rounded-xl border border-outline-variant p-md gap-sm">
           <TextInput
-            style={styles.input}
+            className="bg-surface-container rounded-md border border-outline-variant px-md py-[10px] font-inter text-body-md text-on-surface"
             placeholder="List name"
             placeholderTextColor={Colors.outline}
             value={newName}
             onChangeText={setNewName}
           />
           <TextInput
-            style={styles.input}
+            className="bg-surface-container rounded-md border border-outline-variant px-md py-[10px] font-inter text-body-md text-on-surface"
             placeholder="Budget cap (optional)"
             placeholderTextColor={Colors.outline}
             value={newBudget}
             onChangeText={setNewBudget}
             keyboardType="decimal-pad"
           />
-          <TouchableOpacity style={styles.addBtn} onPress={handleCreate} activeOpacity={0.8}>
-            <Text style={styles.addBtnText}>Add list</Text>
+          <TouchableOpacity className="bg-primary rounded-md py-[10px] items-center" onPress={handleCreate} activeOpacity={0.8}>
+            <Text className="font-inter-medium text-body-sm text-on-primary">Add list</Text>
           </TouchableOpacity>
         </View>
       )}
 
       {/* Active lists */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Active lists</Text>
+      <View className="px-container-margin mb-xl">
+        <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface mb-md">Active lists</Text>
         {!loading && activeLists.length === 0 && (
-          <Text style={styles.emptyText}>No active lists. Create one above.</Text>
+          <Text className="font-inter text-body-md text-on-surface-variant">No active lists. Create one above.</Text>
         )}
         {activeLists.length > 0 && (
-          <View style={styles.listCard}>
+          <View className="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
             {activeLists.map((s, i) => (
               <TouchableOpacity
                 key={s.list.id}
-                style={[styles.listRow, i !== activeLists.length - 1 && styles.listRowBorder]}
+                className={`flex-row items-center justify-between px-md py-[14px] ${i !== activeLists.length - 1 ? 'border-b border-outline-variant' : ''}`}
                 onPress={() => onListPress(s.list.id, s.list.name)}
                 activeOpacity={0.7}
               >
-                <View style={styles.listRowInfo}>
-                  <Text style={styles.listName}>{s.list.name}</Text>
-                  <Text style={styles.listMeta}>{s.uncheckedCount} item{s.uncheckedCount !== 1 ? 's' : ''} left</Text>
+                <View className="flex-1">
+                  <Text className="font-inter-medium text-body-sm text-on-surface">{s.list.name}</Text>
+                  <Text className="font-mono text-label-sm text-on-surface-variant tracking-[0px] mt-[2px]">{s.uncheckedCount} item{s.uncheckedCount !== 1 ? 's' : ''} left</Text>
                 </View>
-                <Text style={styles.listTotal}>{formatAmount(s.estimatedTotal)}</Text>
+                <Text className="font-mono text-[15px] leading-[20px] text-on-surface">{formatAmount(s.estimatedTotal)}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -208,39 +208,42 @@ export function GroceryScreen({ navigation }: MainStackScreenProps<'Grocery'>) {
       </View>
 
       {/* History */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>History</Text>
+      <View className="px-container-margin mb-xl">
+        <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface mb-md">History</Text>
         {historyLists.length === 0 ? (
-          <Text style={styles.emptyText}>No completed lists yet.</Text>
+          <Text className="font-inter text-body-md text-on-surface-variant">No completed lists yet.</Text>
         ) : (
-          <View style={styles.listCard}>
+          <View className="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
             {historyLists.map((s, i) => {
               const linkedAmount = linkedAmounts[s.list.id];
               const showPlannedActual = s.list.linkedTxId !== null && s.list.budgetCap !== null && linkedAmount !== undefined;
               return (
-                <View key={s.list.id} style={[styles.historyRow, i !== historyLists.length - 1 && styles.listRowBorder]}>
-                  <View style={styles.historyTop}>
-                    <View style={styles.listRowInfo}>
-                      <Text style={styles.listName}>{s.list.name}</Text>
-                      <Text style={styles.listMeta}>Completed {formatDate(s.list.completedAt!)}</Text>
+                <View
+                  key={s.list.id}
+                  className={`px-md py-[14px] gap-sm ${i !== historyLists.length - 1 ? 'border-b border-outline-variant' : ''}`}
+                >
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-1">
+                      <Text className="font-inter-medium text-body-sm text-on-surface">{s.list.name}</Text>
+                      <Text className="font-mono text-label-sm text-on-surface-variant tracking-[0px] mt-[2px]">Completed {formatDate(s.list.completedAt!)}</Text>
                     </View>
-                    <Text style={styles.listTotal}>{formatAmount(s.estimatedTotal)}</Text>
+                    <Text className="font-mono text-[15px] leading-[20px] text-on-surface">{formatAmount(s.estimatedTotal)}</Text>
                   </View>
                   {showPlannedActual && (
-                    <View style={styles.plannedActual}>
-                      <View style={styles.paRow}>
-                        <Text style={styles.paLabel}>Planned</Text>
-                        <View style={styles.paTrack}>
-                          <View style={[styles.paFillPlanned, { flex: 1 }]} />
+                    <View className="gap-[6px]">
+                      <View className="flex-row items-center gap-sm">
+                        <Text className="font-mono text-label-sm text-on-surface-variant tracking-[0px] w-[52px]">Planned</Text>
+                        <View className="flex-1 h-[6px] rounded-[3px] bg-surface-variant overflow-hidden flex-row">
+                          <View className="bg-moss-structure rounded-[3px]" style={{ flex: 1 }} />
                         </View>
-                        <Text style={styles.paValue}>{formatAmount(s.list.budgetCap!)}</Text>
+                        <Text className="font-mono text-label-sm text-on-surface-variant tracking-[0px] w-[64px] text-right">{formatAmount(s.list.budgetCap!)}</Text>
                       </View>
-                      <View style={styles.paRow}>
-                        <Text style={styles.paLabel}>Actual</Text>
-                        <View style={styles.paTrack}>
-                          <View style={[styles.paFillActual, { flex: Math.min(linkedAmount / s.list.budgetCap!, 1.5) }]} />
+                      <View className="flex-row items-center gap-sm">
+                        <Text className="font-mono text-label-sm text-on-surface-variant tracking-[0px] w-[52px]">Actual</Text>
+                        <View className="flex-1 h-[6px] rounded-[3px] bg-surface-variant overflow-hidden flex-row">
+                          <View className="bg-primary rounded-[3px]" style={{ flex: Math.min(linkedAmount / s.list.budgetCap!, 1.5) }} />
                         </View>
-                        <Text style={styles.paValue}>{formatAmount(linkedAmount)}</Text>
+                        <Text className="font-mono text-label-sm text-on-surface-variant tracking-[0px] w-[64px] text-right">{formatAmount(linkedAmount)}</Text>
                       </View>
                     </View>
                   )}
@@ -252,119 +255,43 @@ export function GroceryScreen({ navigation }: MainStackScreenProps<'Grocery'>) {
       </View>
 
       {/* Analytics */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Grocery spend trend</Text>
-        <View style={styles.chartCard}>
-          <View style={styles.bars}>
+      <View className="px-container-margin mb-xl">
+        <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface mb-md">Grocery spend trend</Text>
+        <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md pt-lg">
+          <View className="flex-row items-end gap-[6px] h-[160px]">
             {buckets.map((b, i) => {
               const pct = b.total / maxBucket;
               return (
-                <View key={i} style={styles.barCol}>
-                  <Text style={styles.barAmount}>{formatAmount(b.total)}</Text>
-                  <View style={styles.barTrack}>
-                    <View style={[styles.barFill, { flex: pct }]} />
+                <View key={i} className="flex-1 items-center gap-[6px]">
+                  <Text className="font-mono text-[9px] leading-[16px] text-on-surface-variant tracking-[0px] text-center">{formatAmount(b.total)}</Text>
+                  <View className="flex-1 w-full flex-col-reverse">
+                    <View className="bg-primary rounded-sm min-h-[4px]" style={{ flex: pct }} />
                     <View style={{ flex: 1 - pct }} />
                   </View>
-                  <Text style={styles.barLabel}>{b.label}</Text>
+                  <Text className="font-mono text-[10px] leading-[16px] text-on-surface-variant tracking-[0px] text-center">{b.label}</Text>
                 </View>
               );
             })}
           </View>
-          <Text style={styles.avgText}>Average monthly spend: {formatAmount(avgMonthly)}</Text>
+          <Text className="font-mono text-label-sm text-on-surface-variant tracking-[0px] text-center mt-md">Average monthly spend: {formatAmount(avgMonthly)}</Text>
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Frequently bought</Text>
-        <View style={styles.listCard}>
+      <View className="px-container-margin mb-xl">
+        <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface mb-md">Frequently bought</Text>
+        <View className="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
           {topItems.map((it, i) => (
-            <View key={it.name} style={[styles.freqRow, i !== topItems.length - 1 && styles.listRowBorder]}>
-              <Text style={styles.listName}>{it.name}</Text>
-              <Text style={styles.listMeta}>{it.count}x</Text>
+            <View
+              key={it.name}
+              className={`flex-row items-center justify-between px-md py-[12px] ${i !== topItems.length - 1 ? 'border-b border-outline-variant' : ''}`}
+            >
+              <Text className="font-inter-medium text-body-sm text-on-surface">{it.name}</Text>
+              <Text className="font-mono text-label-sm text-on-surface-variant tracking-[0px] mt-[2px]">{it.count}x</Text>
             </View>
           ))}
-          {topItems.length === 0 && <Text style={styles.emptyText}>No items tracked yet.</Text>}
+          {topItems.length === 0 && <Text className="font-inter text-body-md text-on-surface-variant">No items tracked yet.</Text>}
         </View>
       </View>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
-  content: { paddingBottom: 32 },
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, paddingBottom: Spacing.md,
-  },
-  back: { marginBottom: Spacing.sm },
-  backText: { ...Typography.bodyMd, color: Colors.primary },
-  pageTitle: { ...Typography.headlineSm, color: Colors.onSurface },
-  newBtn: {
-    backgroundColor: Colors.primary, borderRadius: Radius.full,
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
-  },
-  newBtnText: { ...Typography.labelLg, color: Colors.onPrimary, letterSpacing: 0 },
-
-  newForm: {
-    marginHorizontal: Spacing.containerMargin, marginBottom: Spacing.lg,
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl,
-    borderWidth: 1, borderColor: Colors.outlineVariant, padding: Spacing.md, gap: Spacing.sm,
-  },
-  input: {
-    backgroundColor: Colors.surfaceContainer, borderRadius: Radius.md,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-    paddingHorizontal: Spacing.md, paddingVertical: 10,
-    ...Typography.bodyMd, color: Colors.onSurface,
-  },
-  addBtn: {
-    backgroundColor: Colors.primary, borderRadius: Radius.md,
-    paddingVertical: 10, alignItems: 'center',
-  },
-  addBtnText: { ...Typography.bodySm, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
-
-  section: { paddingHorizontal: Spacing.containerMargin, marginBottom: Spacing.xl },
-  sectionTitle: { ...Typography.titleLg, color: Colors.onSurface, marginBottom: Spacing.md, fontSize: 16 },
-  emptyText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-
-  listCard: {
-    backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl,
-    borderWidth: 1, borderColor: Colors.outlineVariant, overflow: 'hidden',
-  },
-  listRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md, paddingVertical: 14,
-  },
-  historyRow: { paddingHorizontal: Spacing.md, paddingVertical: 14, gap: Spacing.sm },
-  historyTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  freqRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md, paddingVertical: 12,
-  },
-  listRowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant },
-  listRowInfo: { flex: 1 },
-  listName: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'Inter_500Medium' },
-  listMeta: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, marginTop: 2 },
-  listTotal: { ...Typography.numericSm, color: Colors.onSurface, fontSize: 15 },
-
-  plannedActual: { gap: 6 },
-  paRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  paLabel: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, width: 52 },
-  paTrack: { flex: 1, height: 6, borderRadius: 3, backgroundColor: Colors.surfaceVariant, overflow: 'hidden', flexDirection: 'row' },
-  paFillPlanned: { backgroundColor: Colors.mossStructure, borderRadius: 3 },
-  paFillActual: { backgroundColor: Colors.primary, borderRadius: 3 },
-  paValue: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, width: 64, textAlign: 'right' },
-
-  chartCard: {
-    backgroundColor: Colors.surfaceContainerLowest,
-    borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.outlineVariant,
-    padding: Spacing.md, paddingTop: Spacing.lg,
-  },
-  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 160 },
-  barCol: { flex: 1, alignItems: 'center', gap: 6 },
-  barAmount: { ...Typography.labelSm, color: Colors.onSurfaceVariant, fontSize: 9, letterSpacing: 0, textAlign: 'center' },
-  barTrack: { flex: 1, width: '100%', flexDirection: 'column-reverse' },
-  barFill: { backgroundColor: Colors.primary, borderRadius: 4, minHeight: 4 },
-  barLabel: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, fontSize: 10, textAlign: 'center' },
-  avgText: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, textAlign: 'center', marginTop: Spacing.md },
-});

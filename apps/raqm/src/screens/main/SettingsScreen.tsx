@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput, Modal, FlatList } from 'react-native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { View, Text, ScrollView, TouchableOpacity, Switch, TextInput, Modal, FlatList } from 'react-native';
+import { Colors } from '../../theme';
 import { MainStackScreenProps } from '../../navigation/types';
 import { getSetting, setSetting, getCategories, getBudgets, upsertBudget, deleteBudget, type Category, type Budget } from '../../db/database';
 import { scheduleSummaries } from '../../notifications/notifications';
@@ -97,45 +97,45 @@ export function SettingsScreen({ navigation }: MainStackScreenProps<'Settings'>)
   }
 
   return (
-    <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-          <Text style={styles.backText}>← Back</Text>
+    <View className="flex-1 bg-background">
+      <ScrollView contentContainerClassName="p-container-margin pt-sm pb-[40px]" showsVerticalScrollIndicator={false}>
+        <TouchableOpacity onPress={() => navigation.goBack()} className="mb-md">
+          <Text className="font-inter text-body-md text-primary">← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Settings</Text>
+        <Text className="font-inter-bold text-headline-sm text-on-surface mb-lg">Settings</Text>
 
         {/* PERIOD */}
-        <Text style={styles.sectionHeader}>PERIOD</Text>
-        <View style={styles.card}>
-          <TouchableOpacity style={styles.row} onPress={() => setShowDayPicker(true)}>
-            <Text style={styles.rowLabel}>Month start day</Text>
-            <Text style={styles.rowValue}>{monthStartDay}</Text>
+        <Text className="font-inter-semibold text-section-header text-on-surface-variant mt-lg mb-sm">PERIOD</Text>
+        <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md">
+          <TouchableOpacity className="flex-row justify-between items-center py-[10px]" onPress={() => setShowDayPicker(true)}>
+            <Text className="font-inter text-body-standard text-on-surface">Month start day</Text>
+            <Text className="font-mono text-numeric-sm text-primary">{monthStartDay}</Text>
           </TouchableOpacity>
         </View>
 
         {/* NOTIFICATIONS */}
-        <Text style={styles.sectionHeader}>NOTIFICATIONS</Text>
-        <View style={styles.card}>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Daily summary</Text>
+        <Text className="font-inter-semibold text-section-header text-on-surface-variant mt-lg mb-sm">NOTIFICATIONS</Text>
+        <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md">
+          <View className="flex-row justify-between items-center py-[10px]">
+            <Text className="font-inter text-body-standard text-on-surface">Daily summary</Text>
             <Switch
               value={notifDaily}
               onValueChange={(v) => onToggleNotif('notif_daily', v, setNotifDaily)}
               trackColor={{ true: Colors.primary, false: Colors.surfaceVariant }}
             />
           </View>
-          <View style={styles.rowDivider} />
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Weekly summary</Text>
+          <View className="h-[1px] bg-outline-variant" />
+          <View className="flex-row justify-between items-center py-[10px]">
+            <Text className="font-inter text-body-standard text-on-surface">Weekly summary</Text>
             <Switch
               value={notifWeekly}
               onValueChange={(v) => onToggleNotif('notif_weekly', v, setNotifWeekly)}
               trackColor={{ true: Colors.primary, false: Colors.surfaceVariant }}
             />
           </View>
-          <View style={styles.rowDivider} />
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Monthly summary</Text>
+          <View className="h-[1px] bg-outline-variant" />
+          <View className="flex-row justify-between items-center py-[10px]">
+            <Text className="font-inter text-body-standard text-on-surface">Monthly summary</Text>
             <Switch
               value={notifMonthly}
               onValueChange={(v) => onToggleNotif('notif_monthly', v, setNotifMonthly)}
@@ -145,25 +145,25 @@ export function SettingsScreen({ navigation }: MainStackScreenProps<'Settings'>)
         </View>
 
         {/* BUDGETS */}
-        <Text style={styles.sectionHeader}>BUDGETS</Text>
-        <View style={styles.card}>
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>Budget alerts</Text>
+        <Text className="font-inter-semibold text-section-header text-on-surface-variant mt-lg mb-sm">BUDGETS</Text>
+        <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md">
+          <View className="flex-row justify-between items-center py-[10px]">
+            <Text className="font-inter text-body-standard text-on-surface">Budget alerts</Text>
             <Switch
               value={budgetAlerts}
               onValueChange={onToggleBudgetAlerts}
               trackColor={{ true: Colors.primary, false: Colors.surfaceVariant }}
             />
           </View>
-          <View style={styles.rowDivider} />
+          <View className="h-[1px] bg-outline-variant" />
           {categories.map((cat) => {
             const draft = drafts[cat.id] ?? { amount: '', periodType: 'monthly' as const, rollover: false };
             return (
-              <View key={cat.id} style={styles.budgetRow}>
-                <Text style={styles.budgetCatName}>{cat.emoji} {cat.name}</Text>
-                <View style={styles.budgetInputRow}>
+              <View key={cat.id} className="py-sm border-b border-outline-variant gap-xs">
+                <Text className="font-inter text-body-standard text-on-surface">{cat.emoji} {cat.name}</Text>
+                <View className="flex-row gap-sm items-center">
                   <TextInput
-                    style={styles.budgetInput}
+                    className="flex-1 border border-outline-variant rounded-md px-sm py-[8px] text-on-surface font-inter text-body-sm"
                     placeholder="Amount"
                     placeholderTextColor={Colors.onSurfaceVariant}
                     keyboardType="numeric"
@@ -171,17 +171,17 @@ export function SettingsScreen({ navigation }: MainStackScreenProps<'Settings'>)
                     onChangeText={(t) => updateDraft(cat.id, { amount: t })}
                     onBlur={() => saveBudget(cat.id)}
                   />
-                  <View style={styles.segmented}>
+                  <View className="flex-row rounded-md overflow-hidden border border-outline-variant">
                     {(['monthly', 'weekly'] as const).map((p) => (
                       <TouchableOpacity
                         key={p}
-                        style={[styles.segmentBtn, draft.periodType === p && styles.segmentBtnActive]}
+                        className={`py-[8px] px-[12px] ${draft.periodType === p ? 'bg-primary' : 'bg-surface-container-lowest'}`}
                         onPress={() => {
                           updateDraft(cat.id, { periodType: p });
                           saveBudget(cat.id, { periodType: p });
                         }}
                       >
-                        <Text style={[styles.segmentText, draft.periodType === p && styles.segmentTextActive]}>
+                        <Text className={`font-mono text-label-sm tracking-[0px] ${draft.periodType === p ? 'text-on-primary font-inter-medium' : 'text-on-surface-variant'}`}>
                           {p === 'monthly' ? 'Mo' : 'Wk'}
                         </Text>
                       </TouchableOpacity>
@@ -189,8 +189,8 @@ export function SettingsScreen({ navigation }: MainStackScreenProps<'Settings'>)
                   </View>
                 </View>
                 {draft.periodType === 'weekly' && (
-                  <View style={styles.rolloverRow}>
-                    <Text style={styles.rolloverLabel}>Rollover unused amount</Text>
+                  <View className="flex-row justify-between items-center pt-[4px]">
+                    <Text className="font-inter text-supporting-text text-on-surface-variant">Rollover unused amount</Text>
                     <Switch
                       value={draft.rollover}
                       onValueChange={(v) => {
@@ -207,29 +207,29 @@ export function SettingsScreen({ navigation }: MainStackScreenProps<'Settings'>)
         </View>
 
         {/* APPEARANCE */}
-        <Text style={styles.sectionHeader}>APPEARANCE</Text>
-        <View style={styles.card}>
-          <View style={[styles.row, styles.rowDisabled]}>
-            <Text style={[styles.rowLabel, styles.rowLabelDisabled]}>Light theme — coming soon</Text>
+        <Text className="font-inter-semibold text-section-header text-on-surface-variant mt-lg mb-sm">APPEARANCE</Text>
+        <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md">
+          <View className="flex-row justify-between items-center py-[10px] opacity-50">
+            <Text className="font-inter text-body-standard text-on-surface-variant">Light theme — coming soon</Text>
             <Switch value={false} disabled trackColor={{ true: Colors.primary, false: Colors.surfaceVariant }} />
           </View>
         </View>
       </ScrollView>
 
       <Modal visible={showDayPicker} transparent animationType="fade" onRequestClose={() => setShowDayPicker(false)}>
-        <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setShowDayPicker(false)}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Month start day</Text>
+        <TouchableOpacity className="flex-1 bg-black/60 justify-center p-lg" activeOpacity={1} onPress={() => setShowDayPicker(false)}>
+          <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-lg">
+            <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface mb-md">Month start day</Text>
             <FlatList
               data={MONTH_START_DAYS}
               keyExtractor={(d) => String(d)}
               numColumns={7}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[styles.dayCell, item === monthStartDay && styles.dayCellActive]}
+                  className={`flex-1 aspect-square m-[2px] rounded-sm items-center justify-center ${item === monthStartDay ? 'bg-primary' : 'bg-surface-container'}`}
                   onPress={() => onSelectMonthStartDay(item)}
                 >
-                  <Text style={[styles.dayCellText, item === monthStartDay && styles.dayCellTextActive]}>{item}</Text>
+                  <Text className={`font-mono text-label-sm tracking-[0px] ${item === monthStartDay ? 'text-on-primary font-inter-medium' : 'text-on-surface-variant'}`}>{item}</Text>
                 </TouchableOpacity>
               )}
             />
@@ -239,41 +239,3 @@ export function SettingsScreen({ navigation }: MainStackScreenProps<'Settings'>)
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.containerMargin, paddingTop: Spacing.sm, paddingBottom: 40 },
-  back: { marginBottom: Spacing.md },
-  backText: { ...Typography.bodyMd, color: Colors.primary },
-  title: { ...Typography.headlineSm, color: Colors.onSurface, marginBottom: Spacing.lg },
-
-  sectionHeader: { ...Typography.sectionHeader, color: Colors.onSurfaceVariant, marginTop: Spacing.lg, marginBottom: Spacing.sm },
-  card: { backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.outlineVariant, padding: Spacing.md },
-
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 },
-  rowDisabled: { opacity: 0.5 },
-  rowLabel: { ...Typography.bodyStandard, color: Colors.onSurface },
-  rowLabelDisabled: { color: Colors.onSurfaceVariant },
-  rowValue: { ...Typography.numericSm, color: Colors.primary },
-  rowDivider: { height: 1, backgroundColor: Colors.outlineVariant },
-
-  budgetRow: { paddingVertical: Spacing.sm, borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant, gap: Spacing.xs },
-  budgetCatName: { ...Typography.bodyStandard, color: Colors.onSurface },
-  budgetInputRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' },
-  budgetInput: { flex: 1, borderWidth: 1, borderColor: Colors.outlineVariant, borderRadius: Radius.md, paddingHorizontal: Spacing.sm, paddingVertical: 8, color: Colors.onSurface, ...Typography.bodySm },
-  segmented: { flexDirection: 'row', borderRadius: Radius.md, overflow: 'hidden', borderWidth: 1, borderColor: Colors.outlineVariant },
-  segmentBtn: { paddingVertical: 8, paddingHorizontal: 12, backgroundColor: Colors.surfaceContainerLowest },
-  segmentBtnActive: { backgroundColor: Colors.primary },
-  segmentText: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0 },
-  segmentTextActive: { color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
-  rolloverRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4 },
-  rolloverLabel: { ...Typography.supportingText, color: Colors.onSurfaceVariant },
-
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: Spacing.lg },
-  modalCard: { backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.outlineVariant, padding: Spacing.lg },
-  modalTitle: { ...Typography.titleLg, color: Colors.onSurface, marginBottom: Spacing.md, fontSize: 16 },
-  dayCell: { flex: 1, aspectRatio: 1, margin: 2, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.surfaceContainer },
-  dayCellActive: { backgroundColor: Colors.primary },
-  dayCellText: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0 },
-  dayCellTextActive: { color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
-});
