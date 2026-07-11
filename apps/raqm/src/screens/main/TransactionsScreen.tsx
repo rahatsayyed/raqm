@@ -249,7 +249,7 @@ export function TransactionsScreen() {
   const renderItem = useCallback(({ item }: { item: ListItem }) => {
     if (item.kind === 'header') {
       return (
-        <View className="flex-row justify-between items-baseline mt-[32px] pb-[12px] border-b border-border-subtle">
+        <View className="flex-row justify-between items-baseline bg-background pt-[32px] pb-[12px] border-b border-border-subtle">
           <Text className="font-inter-semibold text-section-header text-ink-label">{item.label}</Text>
           <Text className="font-mono text-[13px] leading-[20px] text-ink-label">{formatAmount(item.total, currency)}</Text>
         </View>
@@ -261,14 +261,14 @@ export function TransactionsScreen() {
       return (
         <View>
           <TouchableOpacity className="flex-row items-start gap-[12px] py-[10px]" activeOpacity={0.7} onPress={() => toggleGroup(item.groupId)}>
-            <View className="w-[40px] h-[40px] rounded bg-surface-container-high items-center justify-center">
-              <LayersIcon color={Colors.primary} size={20} />
+            <View className="w-[40px] h-[40px] rounded border border-border-subtle items-center justify-center">
+              <LayersIcon color={Colors.inkBody} size={20} />
             </View>
             <View className="flex-1">
-              <Text className="font-inter-medium text-insight-reading text-ink-headline" numberOfLines={1}>Group · {item.members.length} transactions</Text>
-              <Text className="font-inter text-supporting-text text-ink-body mt-[2px]">Tap to {expanded ? 'collapse' : 'expand'}</Text>
+              <Text className="font-inter-medium text-body-sm text-ink-headline" numberOfLines={1}>Group · {item.members.length} transactions</Text>
+              <Text className="font-inter text-caption text-ink-body mt-[2px]">Tap to {expanded ? 'collapse' : 'expand'}</Text>
             </View>
-            <Text className={`font-mono-medium text-[18px] leading-[26px] ${sum < 0 ? 'text-primary-container' : 'text-ink-headline'}`}>
+            <Text className={`font-mono-medium text-numeric-sm ${sum < 0 ? 'text-primary-container' : 'text-ink-headline'}`}>
               {formatAmount(sum, currency)}
             </Text>
           </TouchableOpacity>
@@ -302,6 +302,19 @@ export function TransactionsScreen() {
   }, [expandedGroups, toggleGroup, currency, categoryNames, selectMode, selected, handleRowPress, handleRowLongPress]);
 
   const keyExtractor = useCallback((item: ListItem) => item.key, []);
+
+  // Sticky day headers: the current day's header pins to the top until the next
+  // day's header pushes it away. Indices are ScrollView-cell positions, so
+  // ListHeaderComponent (the narrative statement), when rendered, shifts them by 1.
+  const showStatement = !searchOpen && statement !== null;
+  const stickyIndices = useMemo(() => {
+    const offset = showStatement ? 1 : 0;
+    const out: number[] = [];
+    items.forEach((item, i) => {
+      if (item.kind === 'header') out.push(i + offset);
+    });
+    return out;
+  }, [items, showStatement]);
 
   return (
     <View className="flex-1 bg-background">
@@ -348,6 +361,7 @@ export function TransactionsScreen() {
         renderItem={renderItem}
         contentContainerClassName="px-[24px] pb-[100px]"
         showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={stickyIndices}
         ListHeaderComponent={
           !searchOpen && statement ? (
             <Text className="font-fraunces text-statement-mobile text-on-surface mt-[8px] mb-[24px]">{statement}</Text>
@@ -438,12 +452,12 @@ const TxRow = memo(function TxRow({
           {selected && <Text className="text-on-primary text-[12px] font-inter-bold">✓</Text>}
         </View>
       )}
-      <View className="w-[40px] h-[40px] rounded bg-surface-container-high items-center justify-center">
-        <Icon color={Colors.primary} size={20} />
+      <View className="w-[40px] h-[40px] rounded border border-border-subtle items-center justify-center">
+        <Icon color={Colors.inkBody} size={20} />
       </View>
       <View className="flex-1">
-        <Text className="font-inter-medium text-insight-reading text-ink-headline" numberOfLines={1}>{tx.merchant || tx.bankName}</Text>
-        <Text className="font-inter text-supporting-text mt-[2px]" numberOfLines={1}>
+        <Text className="font-inter-medium text-body-sm text-ink-headline" numberOfLines={1}>{tx.merchant || tx.bankName}</Text>
+        <Text className="font-inter text-caption mt-[2px]" numberOfLines={1}>
           {categoryName
             ? <Text className="text-ink-body">{categoryName}</Text>
             : tx.type === TransactionType.EXPENSE
@@ -452,7 +466,7 @@ const TxRow = memo(function TxRow({
         </Text>
       </View>
       <View className="items-end">
-        <Text className={`font-mono-medium text-[18px] leading-[26px] ${credit ? 'text-primary-container' : 'text-ink-headline'}`}>
+        <Text className={`font-mono-medium text-numeric-sm ${credit ? 'text-primary-container' : 'text-ink-headline'}`}>
           {formatAmount(tx.amount, currency)}
         </Text>
         <Text className="font-inter text-annotation text-ink-body">{timeLabel(tx.timestamp)}</Text>
