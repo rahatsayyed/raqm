@@ -1,5 +1,6 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
 
 export type OnboardingStackParamList = {
@@ -19,14 +20,16 @@ export type OnboardingStackParamList = {
 
 export type MainTabParamList = {
   Home: undefined;
-  Transactions: undefined;
+  // initialQuery: set by "View Merchant" (TransactionDetail) to pre-filter the
+  // ledger search; TransactionsScreen consumes it once then clears it via setParams.
+  Transactions: { initialQuery?: string } | undefined;
   Analytics: undefined;
   More: undefined;
 };
 
 // Push screens that sit on top of the tab navigator
 export type MainStackParamList = {
-  Tabs: undefined;
+  Tabs: NavigatorScreenParams<MainTabParamList> | undefined;
   TransactionDetail: { transactionId: number };
   AddTransaction: { pickedCategoryId?: number; pickedSubcategoryId?: number } | undefined;
   EditTransaction: { transactionId: number; pickedCategoryId?: number; pickedSubcategoryId?: number };

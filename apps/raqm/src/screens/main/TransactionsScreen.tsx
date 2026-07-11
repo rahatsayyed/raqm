@@ -1,11 +1,12 @@
-import React, { memo, useCallback, useMemo, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, FlatList, TextInput, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { Colors } from '../../theme';
 import { useTxStore } from '../../store/txStore';
 import { useAppStore } from '../../store/appStore';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { MainStackParamList } from '../../navigation/types';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { MainStackParamList, MainTabParamList } from '../../navigation/types';
 import { getCategories, mergeTxs, groupTxs, type Category, type TxRecord } from '../../db/database';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { formatAmount } from '../../utils/format';
@@ -89,6 +90,8 @@ export function TransactionsScreen() {
   const refresh = useTxStore((s) => s.refresh);
   const { userName } = useAppStore();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList, 'Transactions'>>();
+  const route = useRoute<RouteProp<MainTabParamList, 'Transactions'>>();
   const [query, setQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
@@ -112,6 +115,18 @@ export function TransactionsScreen() {
     for (const c of categories) map.set(c.id, c.name);
     return map;
   }, [categories]);
+
+  // "View Merchant" (Transaction Detail) pre-fills the search once via this
+  // param, then we clear it — otherwise a later manual tab visit would keep
+  // re-applying a stale filter the user already cleared.
+  useEffect(() => {
+    const initialQuery = route.params?.initialQuery;
+    if (initialQuery) {
+      setQuery(initialQuery);
+      setSearchOpen(true);
+      tabNavigation.setParams({ initialQuery: undefined });
+    }
+  }, [route.params?.initialQuery, tabNavigation]);
 
   const initial = (userName.trim()[0] ?? 'R').toUpperCase();
   const currency = txs[0]?.currency ?? '₹';

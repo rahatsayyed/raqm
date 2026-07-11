@@ -160,3 +160,45 @@ export function LayersIcon({ color, size = 24 }: Props) {
 export function HouseIcon({ color, size = 24 }: Props) {
   return <Iconify icon="lucide:house" size={size} color={color} />;
 }
+
+// ── Transaction Detail screen ───────────────────────────────────────────────
+
+export function BackIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:arrow-back-rounded" size={size} color={color} />;
+}
+
+export function MoreVertIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:more-vert" size={size} color={color} />;
+}
+
+export function SplitIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:call-split-rounded" size={size} color={color} />;
+}
+
+export function LinkIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:link-rounded" size={size} color={color} />;
+}
+
+export function MergeIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:call-merge-rounded" size={size} color={color} />;
+}
+
+export function ChevronLeftIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:chevron-left-rounded" size={size} color={color} />;
+}
+
+export function CloseIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:close-rounded" size={size} color={color} />;
+}
+
+export function StorefrontIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:storefront-outline-rounded" size={size} color={color} />;
+}
+
+export function GroupWorkIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:group-work-outline" size={size} color={color} />;
+}
+
+export function AddIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:add-rounded" size={size} color={color} />;
+}
