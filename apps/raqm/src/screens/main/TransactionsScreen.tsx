@@ -10,11 +10,12 @@ import { getCategories, mergeTxs, groupTxs, type Category, type TxRecord } from 
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { formatAmount } from '../../utils/format';
 import {
-  SearchIcon, GroceryIcon, HomeIcon,
-  UtensilsCrossedIcon, ShoppingBasketIcon, CarIcon, ReceiptIcon, HeartPulseIcon, FilmIcon,
-  PlaneIcon, GraduationCapIcon, TrendingUpIcon, GiftIcon, ScissorsIcon, WalletCardsIcon,
-  ArrowLeftRightIcon, CreditCardIcon, BadgePercentIcon, CircleHelpIcon, LayersIcon,
+  SearchIcon, TrendingUpIcon, WalletCardsIcon,
+  ArrowLeftRightIcon, BadgePercentIcon, LayersIcon,
 } from '../../components/TabIcon';
+import {
+  iconForCategoryName, FALLBACK_CATEGORY_ICON, type CategoryIconComponent,
+} from '../../constants/categories';
 
 const DAY_MS = 86_400_000;
 
@@ -63,37 +64,15 @@ type ListItem =
   | { kind: 'single'; key: string; tx: TxRecord }
   | { kind: 'group'; key: string; groupId: number; members: TxRecord[] };
 
-type IconComponent = React.ComponentType<{ color: string; size?: number }>;
-
-/** Category → row-tile icon (Lucide-style outline set). */
-function categoryIconFor(categoryName: string | null, tx: TxRecord): IconComponent {
-  if (categoryName) {
-    const n = categoryName.toLowerCase();
-    if (/food|dining|restaurant|coffee/.test(n)) return UtensilsCrossedIcon;
-    if (/grocer/.test(n)) return ShoppingBasketIcon;
-    if (/shop/.test(n)) return GroceryIcon as IconComponent; // shopping-bag
-    if (/transport|fuel|cab/.test(n)) return CarIcon;
-    if (/travel|flight/.test(n)) return PlaneIcon;
-    if (/bill|utilit/.test(n)) return ReceiptIcon;
-    if (/health|medic/.test(n)) return HeartPulseIcon;
-    if (/entertain|movie|stream/.test(n)) return FilmIcon;
-    if (/education|course/.test(n)) return GraduationCapIcon;
-    if (/personal/.test(n)) return ScissorsIcon;
-    if (/rent|hous|home/.test(n)) return HomeIcon;
-    if (/salary|income/.test(n)) return WalletCardsIcon;
-    if (/transfer/.test(n)) return ArrowLeftRightIcon;
-    if (/credit card/.test(n)) return CreditCardIcon;
-    if (/invest/.test(n)) return TrendingUpIcon;
-    if (/cashback|refund/.test(n)) return BadgePercentIcon;
-    if (/gift/.test(n)) return GiftIcon;
-  }
-  if (tx.linkType === 'refund' || tx.linkType === 'self_transfer') {
-    return tx.linkType === 'refund' ? BadgePercentIcon : ArrowLeftRightIcon;
-  }
-  if (tx.type === TransactionType.TRANSFER) return ArrowLeftRightIcon;
+/** Row-tile icon: category name first (shared constant), then tx-type fallbacks. */
+function categoryIconFor(categoryName: string | null, tx: TxRecord): CategoryIconComponent {
+  const byName = iconForCategoryName(categoryName);
+  if (byName) return byName;
+  if (tx.linkType === 'refund') return BadgePercentIcon;
+  if (tx.linkType === 'self_transfer' || tx.type === TransactionType.TRANSFER) return ArrowLeftRightIcon;
   if (tx.type === TransactionType.INVESTMENT) return TrendingUpIcon;
   if (isCredit(tx.type)) return WalletCardsIcon;
-  return CircleHelpIcon;
+  return FALLBACK_CATEGORY_ICON;
 }
 
 // FAB glow shadow — shadow* values aren't expressible as core NativeWind classes.
