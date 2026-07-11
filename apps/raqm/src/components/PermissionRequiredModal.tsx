@@ -1,6 +1,5 @@
 import React from 'react';
-import { Modal, View, Text, StyleSheet, TouchableOpacity, BackHandler, Linking } from 'react-native';
-import { Colors, Typography, Spacing, Radius } from '../theme';
+import { Modal, View, Text, TouchableOpacity, BackHandler, Linking } from 'react-native';
 
 interface Props {
   visible: boolean;
@@ -26,125 +25,45 @@ export function PermissionRequiredModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onDismiss}>
-      <View style={styles.overlay}>
-        <View style={styles.sheet}>
-          <View style={styles.iconRow}>
-            <View style={styles.iconBadge}>
-              <Text style={styles.iconEmoji}>⚠️</Text>
+      <View className="flex-1 bg-black/[0.55] justify-end">
+        <View className="bg-surface-container-lowest rounded-t-[28px] p-container-margin pb-xxl items-center gap-sm">
+          <View className="mb-sm">
+            <View className="w-16 h-16 rounded-full bg-error-container items-center justify-center">
+              <Text className="text-[30px]">⚠️</Text>
             </View>
           </View>
 
-          <Text style={styles.title}>Permission Required</Text>
-          <Text style={styles.permName}>{permissionName}</Text>
-          <Text style={styles.body}>{reason}</Text>
+          <Text className="font-inter-semibold text-on-surface text-[20px] leading-[26px]">Permission Required</Text>
+          <Text className="font-inter-medium text-error text-[14px] leading-[20px] tracking-[0.5px] uppercase">
+            {permissionName}
+          </Text>
+          <Text className="font-inter text-body-md text-on-surface-variant text-center leading-[22px] mt-xs">
+            {reason}
+          </Text>
 
           {isPermanentlyDenied && (
-            <View style={styles.settingsHint}>
-              <Text style={styles.settingsHintText}>
+            <View className="bg-error-container rounded-lg p-md mt-xs w-full">
+              <Text className="font-inter text-body-sm text-on-error-container text-center leading-[18px]">
                 You previously denied this permanently. Open Settings to grant it manually.
               </Text>
             </View>
           )}
 
           <TouchableOpacity
-            style={styles.primaryBtn}
+            className="w-full h-14 rounded-xl bg-primary items-center justify-center mt-md"
             onPress={isPermanentlyDenied ? () => Linking.openSettings() : onGrantPress}
             activeOpacity={0.85}
           >
-            <Text style={styles.primaryBtnLabel}>
+            <Text className="font-inter-semibold text-on-primary text-[16px] leading-[20px] tracking-[0px]">
               {isPermanentlyDenied ? 'Open Settings' : 'Grant Permission'}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.exitBtn} onPress={handleExit} activeOpacity={0.7}>
-            <Text style={styles.exitBtnLabel}>Exit App</Text>
+          <TouchableOpacity className="w-full h-12 items-center justify-center" onPress={handleExit} activeOpacity={0.7}>
+            <Text className="font-inter text-body-md text-on-surface-variant">Exit App</Text>
           </TouchableOpacity>
         </View>
       </View>
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: Colors.surfaceContainerLowest,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: Spacing.containerMargin,
-    paddingBottom: 40,
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  iconRow: { marginBottom: Spacing.sm },
-  iconBadge: {
-    width: 64, height: 64, borderRadius: 32,
-    backgroundColor: Colors.errorContainer,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  iconEmoji: { fontSize: 30 },
-  title: {
-    ...Typography.titleLg,
-    color: Colors.onSurface,
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 20,
-  },
-  permName: {
-    ...Typography.labelLg,
-    color: Colors.error,
-    fontFamily: 'Inter_500Medium',
-    fontSize: 14,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  body: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginTop: Spacing.xs,
-  },
-  settingsHint: {
-    backgroundColor: Colors.errorContainer,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    marginTop: Spacing.xs,
-    width: '100%',
-  },
-  settingsHintText: {
-    ...Typography.bodySm,
-    color: Colors.onErrorContainer,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  primaryBtn: {
-    width: '100%',
-    height: 56,
-    borderRadius: Radius.xl,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: Spacing.md,
-  },
-  primaryBtnLabel: {
-    ...Typography.labelLg,
-    color: Colors.onPrimary,
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 16,
-    letterSpacing: 0,
-  },
-  exitBtn: {
-    width: '100%',
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  exitBtnLabel: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
-  },
-});

@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors } from '../../theme';
 import { useTxStore } from '../../store/txStore';
 import { getCategories, getSetting, type Category, type TxRecord } from '../../db/database';
 import { countsTowardTotals } from '../../services/txIntelligence';
@@ -229,18 +229,24 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
   }
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <Text style={styles.pageTitle}>Analytics</Text>
+    <ScrollView className="flex-1 bg-background" contentContainerClassName="pb-[32px]" showsVerticalScrollIndicator={false}>
+      <Text className="font-inter-bold text-headline-sm text-on-surface px-container-margin pt-sm pb-md">Analytics</Text>
 
       {/* V1 — period picker */}
-      <View style={styles.chipsRow}>
+      <View className="flex-row gap-sm px-container-margin mb-md">
         {(['daily', 'weekly', 'monthly', 'custom'] as PeriodType[]).map((p) => (
           <TouchableOpacity
             key={p}
-            style={[styles.chip, periodType === p && styles.chipActive]}
+            className={`py-[8px] px-[14px] rounded-full border ${
+              periodType === p ? 'bg-primary border-primary' : 'bg-surface-container-lowest border-outline-variant'
+            }`}
             onPress={() => setPeriodType(p)}
           >
-            <Text style={[styles.chipText, periodType === p && styles.chipTextActive]}>
+            <Text
+              className={`text-[12px] leading-[16px] tracking-[0px] ${
+                periodType === p ? 'font-inter-medium text-on-primary' : 'font-mono text-on-surface-variant'
+              }`}
+            >
               {p === 'daily' ? 'Daily' : p === 'weekly' ? 'Weekly' : p === 'monthly' ? 'Monthly' : 'Custom'}
             </Text>
           </TouchableOpacity>
@@ -248,13 +254,13 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
       </View>
 
       {periodType === 'custom' && (
-        <View style={styles.customRow}>
-          <TouchableOpacity style={styles.dateBtn} onPress={() => setShowFromPicker(true)}>
-            <Text style={styles.dateBtnText}>{customFrom.toLocaleDateString('en-IN')}</Text>
+        <View className="flex-row items-center gap-sm px-container-margin mb-md">
+          <TouchableOpacity className="flex-1 py-[10px] px-[12px] rounded-md border border-outline-variant bg-surface-container-lowest" onPress={() => setShowFromPicker(true)}>
+            <Text className="font-inter text-body-sm text-on-surface">{customFrom.toLocaleDateString('en-IN')}</Text>
           </TouchableOpacity>
-          <Text style={styles.customSep}>to</Text>
-          <TouchableOpacity style={styles.dateBtn} onPress={() => setShowToPicker(true)}>
-            <Text style={styles.dateBtnText}>{customTo.toLocaleDateString('en-IN')}</Text>
+          <Text className="font-mono text-label-sm text-on-surface-variant">to</Text>
+          <TouchableOpacity className="flex-1 py-[10px] px-[12px] rounded-md border border-outline-variant bg-surface-container-lowest" onPress={() => setShowToPicker(true)}>
+            <Text className="font-inter text-body-sm text-on-surface">{customTo.toLocaleDateString('en-IN')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -282,19 +288,19 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
       )}
 
       {/* V7 — spending bar chart */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Spending</Text>
-        <View style={styles.chartCard}>
-          <View style={styles.bars}>
+      <View className="px-container-margin mb-xl">
+        <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface mb-md">Spending</Text>
+        <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md pt-lg">
+          <View className="flex-row items-end gap-[6px] h-[140px]">
             {barBuckets.map((b) => {
               const pct = b.expenses / maxExpense;
               return (
-                <View key={b.key} style={styles.barCol}>
-                  <View style={styles.barTrack}>
-                    <View style={[styles.barFill, { flex: pct }]} />
+                <View key={b.key} className="flex-1 items-center gap-[6px]">
+                  <View className="flex-1 w-full flex-col-reverse">
+                    <View className="bg-primary rounded-[4px] min-h-[4px]" style={{ flex: pct }} />
                     <View style={{ flex: 1 - pct }} />
                   </View>
-                  <Text style={styles.barLabel}>{b.label}</Text>
+                  <Text className="font-mono text-[9px] leading-[16px] tracking-[0px] text-center text-on-surface-variant">{b.label}</Text>
                 </View>
               );
             })}
@@ -303,50 +309,48 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
       </View>
 
       {/* V8 — donut chart */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Category split</Text>
-        <View style={[styles.chartCard, styles.donutCard]}>
+      <View className="px-container-margin mb-xl">
+        <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface mb-md">Category split</Text>
+        <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md pt-lg flex-row items-center gap-lg">
           <DonutChart data={donutData} />
-          <View style={styles.legend}>
+          <View className="flex-1 gap-[6px]">
             {donutData.slice(0, 6).map((d, i) => (
               // labels can collide (e.g. two 'Unknown' before categories load) — key by position
-              <View key={`${i}-${d.label}`} style={styles.legendRow}>
-                <View style={[styles.legendDot, { backgroundColor: d.color }]} />
-                <Text style={styles.legendLabel} numberOfLines={1}>{d.label}</Text>
+              <View key={`${i}-${d.label}`} className="flex-row items-center gap-[6px]">
+                <View className="w-[8px] h-[8px] rounded-[4px]" style={{ backgroundColor: d.color }} />
+                <Text className="font-mono text-label-sm tracking-[0px] text-on-surface-variant flex-shrink" numberOfLines={1}>{d.label}</Text>
               </View>
             ))}
-            {donutData.length === 0 && <Text style={styles.emptyText}>No expenses this period</Text>}
+            {donutData.length === 0 && <Text className="font-inter text-body-md text-on-surface-variant text-center p-md">No expenses this period</Text>}
           </View>
         </View>
       </View>
 
       {/* V4 + B3 — category breakdown */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>By category</Text>
-        <View style={styles.merchantList}>
+      <View className="px-container-margin mb-xl">
+        <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface mb-md">By category</Text>
+        <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md gap-md">
           {categoryBreakdown.map((row) => {
             const rowContent = (
               <>
-                <View style={styles.merchantTopRow}>
-                  <Text style={styles.merchantName}>{row.emoji} {row.name}</Text>
-                  <Text style={styles.merchantAmount}>{formatAmount(row.total, currency)}</Text>
+                <View className="flex-row justify-between items-baseline">
+                  <Text className="font-inter-medium text-body-sm text-on-surface flex-1">{row.emoji} {row.name}</Text>
+                  <Text className="font-mono text-[13px] leading-[20px] text-error-muted ml-[8px]">{formatAmount(row.total, currency)}</Text>
                 </View>
-                <View style={styles.merchantBar}>
-                  <View style={[styles.merchantBarFill, { width: `${Math.round(row.pct * 100)}%` }]} />
+                <View className="h-[4px] bg-surface-variant rounded-[2px] overflow-hidden">
+                  <View className="h-full rounded-[2px]" style={{ width: `${Math.round(row.pct * 100)}%`, backgroundColor: `${Colors.errorMuted}80` }} />
                 </View>
                 {row.budget && (
-                  <View style={styles.budgetBarTrack}>
+                  <View className="h-[4px] bg-surface-variant rounded-[2px] overflow-hidden relative">
                     <View
-                      style={[
-                        styles.budgetBarFill,
-                        {
-                          width: `${Math.min(100, Math.round(row.budget.pct))}%`,
-                          backgroundColor:
-                            row.budget.pct > 100 ? Colors.errorMuted : row.budget.pct >= 80 ? Colors.secondary : Colors.primary,
-                        },
-                      ]}
+                      className="h-full rounded-[2px]"
+                      style={{
+                        width: `${Math.min(100, Math.round(row.budget.pct))}%`,
+                        backgroundColor:
+                          row.budget.pct > 100 ? Colors.errorMuted : row.budget.pct >= 80 ? Colors.secondary : Colors.primary,
+                      }}
                     />
-                    <Text style={styles.budgetBarLabel}>
+                    <Text className="font-inter text-annotation text-on-surface-variant mt-[2px]">
                       {formatAmount(row.budget.spent)} / {formatAmount(row.budget.limit)} budget
                     </Text>
                   </View>
@@ -356,71 +360,71 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
             // The Uncategorized pseudo-row has no categoryId to navigate with — render it inert.
             if (row.categoryId == null) {
               return (
-                <View key="uncategorized" style={styles.categoryRow}>
+                <View key="uncategorized" className="gap-[6px]">
                   {rowContent}
                 </View>
               );
             }
             return (
-              <TouchableOpacity key={row.categoryId} onPress={() => onCategoryPress(row.categoryId as number, row.name)} style={styles.categoryRow}>
+              <TouchableOpacity key={row.categoryId} onPress={() => onCategoryPress(row.categoryId as number, row.name)} className="gap-[6px]">
                 {rowContent}
               </TouchableOpacity>
             );
           })}
-          {categoryBreakdown.length === 0 && <Text style={styles.emptyText}>No expense data yet</Text>}
+          {categoryBreakdown.length === 0 && <Text className="font-inter text-body-md text-on-surface-variant text-center p-md">No expense data yet</Text>}
         </View>
       </View>
 
       {/* V9 — trend line */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>6-month trend</Text>
-        <View style={styles.chartCard}>
+      <View className="px-container-margin mb-xl">
+        <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface mb-md">6-month trend</Text>
+        <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md pt-lg">
           <TrendLine data={trendData} />
         </View>
       </View>
 
       {/* V5 — top merchants */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Top merchants</Text>
-        <View style={styles.merchantList}>
+      <View className="px-container-margin mb-xl">
+        <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface mb-md">Top merchants</Text>
+        <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md gap-md">
           {topMerchants.map(([name, amount], i) => {
             const pct = amount / (topMerchants[0]?.[1] ?? 1);
             return (
-              <View key={name} style={styles.merchantRow}>
-                <View style={styles.merchantRank}>
-                  <Text style={styles.merchantRankText}>{i + 1}</Text>
+              <View key={name} className="flex-row items-center gap-sm">
+                <View className="w-[28px] h-[28px] rounded-[8px] bg-surface-variant items-center justify-center">
+                  <Text className="font-mono text-[11px] leading-[16px] tracking-[0px] text-on-surface-variant">{i + 1}</Text>
                 </View>
-                <View style={styles.merchantInfo}>
-                  <View style={styles.merchantTopRow}>
-                    <Text style={styles.merchantName} numberOfLines={1}>{name}</Text>
-                    <Text style={styles.merchantAmount}>{formatAmount(amount, currency)}</Text>
+                <View className="flex-1 gap-[6px]">
+                  <View className="flex-row justify-between items-baseline">
+                    <Text className="font-inter-medium text-body-sm text-on-surface flex-1" numberOfLines={1}>{name}</Text>
+                    <Text className="font-mono text-[13px] leading-[20px] text-error-muted ml-[8px]">{formatAmount(amount, currency)}</Text>
                   </View>
-                  <View style={styles.merchantBar}>
-                    <View style={[styles.merchantBarFill, { width: `${Math.round(pct * 100)}%` }]} />
+                  <View className="h-[4px] bg-surface-variant rounded-[2px] overflow-hidden">
+                    <View className="h-full rounded-[2px]" style={{ width: `${Math.round(pct * 100)}%`, backgroundColor: `${Colors.errorMuted}80` }} />
                   </View>
                 </View>
               </View>
             );
           })}
-          {topMerchants.length === 0 && <Text style={styles.emptyText}>No expense data yet</Text>}
+          {topMerchants.length === 0 && <Text className="font-inter text-body-md text-on-surface-variant text-center p-md">No expense data yet</Text>}
         </View>
       </View>
 
       {/* Subscriptions */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Subscriptions</Text>
-        <View style={styles.merchantList}>
+      <View className="px-container-margin mb-xl">
+        <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface mb-md">Subscriptions</Text>
+        <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md gap-md">
           {subscriptions.length === 0 ? (
-            <Text style={styles.emptyText}>No recurring subscriptions detected yet</Text>
+            <Text className="font-inter text-body-md text-on-surface-variant text-center p-md">No recurring subscriptions detected yet</Text>
           ) : (
             subscriptions.map((sub) => (
-              <View key={sub.merchant} style={styles.merchantRow}>
-                <View style={styles.merchantInfo}>
-                  <View style={styles.merchantTopRow}>
-                    <Text style={styles.merchantName} numberOfLines={1}>{sub.merchant}</Text>
-                    <Text style={styles.merchantAmount}>{formatAmount(sub.amount, currency)}</Text>
+              <View key={sub.merchant} className="flex-row items-center gap-sm">
+                <View className="flex-1 gap-[6px]">
+                  <View className="flex-row justify-between items-baseline">
+                    <Text className="font-inter-medium text-body-sm text-on-surface flex-1" numberOfLines={1}>{sub.merchant}</Text>
+                    <Text className="font-mono text-[13px] leading-[20px] text-error-muted ml-[8px]">{formatAmount(sub.amount, currency)}</Text>
                   </View>
-                  <Text style={styles.emptyText}>
+                  <Text className="font-inter text-body-md text-on-surface-variant text-center p-md">
                     Next expected {new Date(sub.nextExpected).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                   </Text>
                 </View>
@@ -432,54 +436,3 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
-  content: { paddingBottom: 32 },
-  pageTitle: { ...Typography.headlineSm, color: Colors.onSurface, paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, paddingBottom: Spacing.md },
-
-  chipsRow: { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.containerMargin, marginBottom: Spacing.md },
-  chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.outlineVariant, backgroundColor: Colors.surfaceContainerLowest },
-  chipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  chipText: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0 },
-  chipTextActive: { color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
-
-  customRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.containerMargin, marginBottom: Spacing.md },
-  dateBtn: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.outlineVariant, backgroundColor: Colors.surfaceContainerLowest },
-  dateBtnText: { ...Typography.bodySm, color: Colors.onSurface },
-  customSep: { ...Typography.labelSm, color: Colors.onSurfaceVariant },
-
-  section: { paddingHorizontal: Spacing.containerMargin, marginBottom: Spacing.xl },
-  sectionTitle: { ...Typography.titleLg, color: Colors.onSurface, marginBottom: Spacing.md, fontSize: 16 },
-
-  chartCard: { backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.outlineVariant, padding: Spacing.md, paddingTop: Spacing.lg },
-  donutCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.lg },
-  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 140 },
-  barCol: { flex: 1, alignItems: 'center', gap: 6 },
-  barTrack: { flex: 1, width: '100%', flexDirection: 'column-reverse' },
-  barFill: { backgroundColor: Colors.primary, borderRadius: 4, minHeight: 4 },
-  barLabel: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, fontSize: 9, textAlign: 'center' },
-
-  legend: { flex: 1, gap: 6 },
-  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendLabel: { ...Typography.labelSm, color: Colors.onSurfaceVariant, letterSpacing: 0, flexShrink: 1 },
-
-  merchantList: { backgroundColor: Colors.surfaceContainerLowest, borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.outlineVariant, padding: Spacing.md, gap: Spacing.md },
-  categoryRow: { gap: 6 },
-  merchantRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  merchantRank: { width: 28, height: 28, borderRadius: 8, backgroundColor: Colors.surfaceVariant, alignItems: 'center', justifyContent: 'center' },
-  merchantRankText: { ...Typography.labelSm, color: Colors.onSurfaceVariant, fontSize: 11, letterSpacing: 0 },
-  merchantInfo: { flex: 1, gap: 6 },
-  merchantTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  merchantName: { ...Typography.bodySm, color: Colors.onSurface, flex: 1, fontFamily: 'Inter_500Medium' },
-  merchantAmount: { ...Typography.numericSm, color: Colors.errorMuted, fontSize: 13, marginLeft: 8 },
-  merchantBar: { height: 4, backgroundColor: Colors.surfaceVariant, borderRadius: 2, overflow: 'hidden' },
-  merchantBarFill: { height: '100%', backgroundColor: `${Colors.errorMuted}80`, borderRadius: 2 },
-
-  budgetBarTrack: { height: 4, backgroundColor: Colors.surfaceVariant, borderRadius: 2, overflow: 'hidden', position: 'relative' },
-  budgetBarFill: { height: '100%', borderRadius: 2 },
-  budgetBarLabel: { ...Typography.annotation, color: Colors.onSurfaceVariant, marginTop: 2 },
-
-  emptyText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center', padding: Spacing.md },
-});

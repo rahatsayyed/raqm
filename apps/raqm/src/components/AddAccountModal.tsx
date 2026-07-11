@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, StyleSheet, TextInput, TouchableOpacity, Switch } from 'react-native';
-import { Colors, Typography, Spacing, Radius } from '../theme';
+import { Modal, View, Text, TextInput, TouchableOpacity, Switch } from 'react-native';
+import { Colors } from '../theme';
 import { addAccount } from '../db/database';
 
 interface Props {
@@ -40,44 +40,47 @@ export function AddAccountModal({ visible, onClose, onAdded }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
-          <Text style={styles.title}>Add account</Text>
+      <View className="flex-1 bg-black/50 justify-end">
+        <View className="bg-bg-surface-raised rounded-t-2xl p-lg gap-sm">
+          <Text className="font-inter-bold text-headline-sm text-on-surface mb-sm">Add account</Text>
 
-          <Text style={styles.label}>Bank name</Text>
+          <Text className="font-mono text-label-sm text-on-surface-variant mt-sm">Bank name</Text>
           <TextInput
-            style={styles.input} value={bankName} onChangeText={setBankName}
+            className="font-inter text-body-md text-on-surface bg-surface-variant rounded-md px-sm py-[10px]"
+            value={bankName} onChangeText={setBankName}
             placeholder="e.g. HDFC Bank" placeholderTextColor={Colors.outline}
           />
 
-          <Text style={styles.label}>Last 4 digits (optional)</Text>
+          <Text className="font-mono text-label-sm text-on-surface-variant mt-sm">Last 4 digits (optional)</Text>
           <TextInput
-            style={styles.input} value={last4} onChangeText={setLast4}
+            className="font-inter text-body-md text-on-surface bg-surface-variant rounded-md px-sm py-[10px]"
+            value={last4} onChangeText={setLast4}
             placeholder="e.g. 4821" keyboardType="numeric" maxLength={4}
             placeholderTextColor={Colors.outline}
           />
 
-          <Text style={styles.label}>Nickname (optional)</Text>
+          <Text className="font-mono text-label-sm text-on-surface-variant mt-sm">Nickname (optional)</Text>
           <TextInput
-            style={styles.input} value={nickname} onChangeText={setNickname}
+            className="font-inter text-body-md text-on-surface bg-surface-variant rounded-md px-sm py-[10px]"
+            value={nickname} onChangeText={setNickname}
             placeholder="e.g. Salary account" placeholderTextColor={Colors.outline}
           />
 
-          <View style={styles.switchRow}>
-            <Text style={styles.label}>This is a credit/debit card</Text>
+          <View className="flex-row items-center justify-between mt-md">
+            <Text className="font-mono text-label-sm text-on-surface-variant mt-sm">This is a credit/debit card</Text>
             <Switch value={isCard} onValueChange={setIsCard} trackColor={{ true: Colors.primary }} />
           </View>
 
-          <View style={styles.actions}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => { reset(); onClose(); }}>
-              <Text style={styles.cancelText}>Cancel</Text>
+          <View className="flex-row gap-sm mt-lg">
+            <TouchableOpacity className="flex-1 items-center py-3 rounded-lg bg-surface-variant" onPress={() => { reset(); onClose(); }}>
+              <Text className="font-inter text-body-md text-on-surface">Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.addBtn, !bankName.trim() && styles.addBtnDisabled]}
+              className={`flex-1 items-center py-3 rounded-lg bg-primary ${!bankName.trim() ? 'opacity-50' : ''}`}
               onPress={handleAdd}
               disabled={saving || !bankName.trim()}
             >
-              <Text style={styles.addText}>{saving ? 'Adding…' : 'Add account'}</Text>
+              <Text className="font-inter-medium text-body-md text-on-primary">{saving ? 'Adding…' : 'Add account'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -85,25 +88,3 @@ export function AddAccountModal({ visible, onClose, onAdded }: Props) {
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: Colors.bgSurfaceRaised, borderTopLeftRadius: Radius.xxl, borderTopRightRadius: Radius.xxl,
-    padding: Spacing.lg, gap: Spacing.sm,
-  },
-  title: { ...Typography.headlineSm, color: Colors.onSurface, marginBottom: Spacing.sm },
-  label: { ...Typography.labelSm, color: Colors.onSurfaceVariant, marginTop: Spacing.sm },
-  input: {
-    ...Typography.bodyMd, color: Colors.onSurface,
-    backgroundColor: Colors.surfaceVariant, borderRadius: Radius.md,
-    paddingHorizontal: Spacing.sm, paddingVertical: 10,
-  },
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.md },
-  actions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.lg },
-  cancelBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: Radius.lg, backgroundColor: Colors.surfaceVariant },
-  cancelText: { ...Typography.bodyMd, color: Colors.onSurface },
-  addBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: Radius.lg, backgroundColor: Colors.primary },
-  addBtnDisabled: { opacity: 0.5 },
-  addText: { ...Typography.bodyMd, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
-});

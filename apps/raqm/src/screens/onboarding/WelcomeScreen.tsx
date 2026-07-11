@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import { View, Text, Pressable, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -9,9 +9,36 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { OnboardingScreenProps } from '../../navigation/types';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Spacing } from '../../theme';
 
 const { width } = Dimensions.get('window');
+
+// Colored/soft shadows aren't expressible as NativeWind classes — kept as style objects.
+const logoShadow = {
+  shadowColor: Colors.primary,
+  shadowOffset: { width: 0, height: 8 },
+  shadowOpacity: 0.15,
+  shadowRadius: 24,
+  elevation: 12,
+};
+const badgeShadow = {
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.1,
+  shadowRadius: 12,
+  elevation: 6,
+};
+const ctaShadow = {
+  shadowColor: Colors.primary,
+  shadowOffset: { width: 0, height: 10 },
+  shadowOpacity: 0.3,
+  shadowRadius: 20,
+  elevation: 10,
+};
+// Positions computed from runtime screen width — not expressible as static classes.
+const badgeLeftPos = { left: width * 0.08, top: '30%' as const };
+const badgeRightPos = { right: width * 0.08, bottom: '25%' as const };
+const ctaButtonWidth = { width: width - Spacing.containerMargin * 2 };
 
 function useRevealUp(delayMs: number) {
   const opacity = useSharedValue(0);
@@ -72,41 +99,54 @@ export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) 
   }));
 
   return (
-    <View style={styles.container}>
-      <View style={styles.orbTopRight} />
-      <View style={styles.orbBottomLeft} />
+    <View className="flex-1 bg-surface overflow-hidden">
+      <View className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-primary opacity-[0.08]" />
+      <View className="absolute -bottom-20 -left-20 w-[280px] h-[280px] rounded-full bg-primary-fixed opacity-[0.15]" />
 
-      <View style={styles.illustrationArea}>
-        <View style={styles.outerRing} />
-        <View style={styles.innerRing} />
-        <Animated.View style={[styles.logoCard, floatStyle]}>
-          <Text style={styles.logoText}>رقم</Text>
+      <View className="flex-1 items-center justify-center pt-15">
+        <View className="absolute w-[260px] h-[260px] rounded-full border border-primary opacity-[0.15]" />
+        <View className="absolute w-[200px] h-[200px] rounded-full border border-primary opacity-[0.12]" />
+        <Animated.View
+          className="w-28 h-28 rounded-3xl bg-surface-container-lowest items-center justify-center border border-[rgba(0,108,72,0.05)]"
+          style={[logoShadow, floatStyle]}
+        >
+          <Text className="text-[40px] font-inter-bold text-primary">رقم</Text>
         </Animated.View>
-        <Animated.View style={[styles.floatingBadge, styles.badgeLeft, badgeFloatStyle]}>
-          <Text style={styles.badgeIcon}>💬</Text>
+        <Animated.View
+          className="absolute bg-bg-surface-raised rounded-lg p-3 border border-border-subtle"
+          style={[badgeShadow, badgeLeftPos, badgeFloatStyle]}
+        >
+          <Text className="text-2xl">💬</Text>
         </Animated.View>
-        <Animated.View style={[styles.floatingBadge, styles.badgeRight, floatStyle]}>
-          <Text style={styles.badgeIcon}>📊</Text>
+        <Animated.View
+          className="absolute bg-bg-surface-raised rounded-lg p-3 border border-border-subtle"
+          style={[badgeShadow, badgeRightPos, floatStyle]}
+        >
+          <Text className="text-2xl">📊</Text>
         </Animated.View>
-        <View style={[styles.floatingBadge, styles.badgeTopRight, styles.badgeSmall]}>
-          <Text style={styles.badgeIconSm}>👛</Text>
+        <View
+          className="absolute bg-bg-surface-raised rounded-lg p-2 border border-border-subtle right-[12%] top-[15%] opacity-60"
+          style={badgeShadow}
+        >
+          <Text className="text-lg">👛</Text>
         </View>
       </View>
 
-      <View style={styles.content}>
-        <Animated.Text style={[styles.headline, s0]}>
+      <View className="px-container-margin pb-12 items-center">
+        <Animated.Text className="font-inter-bold text-display-lg text-on-secondary-container text-center mb-md" style={s0}>
           Your finances,{'\n'}
-          <Text style={styles.headlineAccent}>decoded</Text> from your SMS.
+          <Text className="text-primary">decoded</Text> from your SMS.
         </Animated.Text>
-        <Animated.Text style={[styles.subtitle, s1]}>
+        <Animated.Text className="font-inter text-body-md text-on-surface-variant text-center opacity-80 mb-xxl max-w-[300px]" style={s1}>
           Automatically transform your transaction notifications into a beautifully organized
           spending dashboard. No bank logins, no manual entry.
         </Animated.Text>
 
-        <Animated.View style={[{ width: '100%', alignItems: 'center' }, s2]}>
+        <Animated.View className="w-full items-center" style={s2}>
           <Animated.View style={btnStyle}>
             <Pressable
-              style={styles.ctaButton}
+              className="max-w-[360px] h-16 rounded-xl bg-primary-container items-center justify-center mb-xl"
+              style={[ctaButtonWidth, ctaShadow]}
               onPressIn={() => {
                 btnScale.value = withTiming(0.95, { duration: 100 });
               }}
@@ -115,124 +155,24 @@ export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) 
               }}
               onPress={() => navigation.navigate('PermissionSMSRead')}
             >
-              <Text style={styles.ctaLabel}>Get Started →</Text>
+              <Text className="font-inter-bold text-title-lg text-on-primary-container">Get Started →</Text>
             </Pressable>
           </Animated.View>
         </Animated.View>
 
-        <Animated.View style={[styles.trustRow, s3]}>
-          <View style={styles.trustItem}>
-            <Text style={styles.trustIcon}>🔒</Text>
-            <Text style={styles.trustText}>PRIVACY FIRST</Text>
+        <Animated.View className="flex-row gap-xl opacity-60" style={s3}>
+          <View className="flex-row items-center gap-1.5">
+            <Text className="text-xs">🔒</Text>
+            <Text className="font-mono text-[10px] leading-4 tracking-[0.6px] text-on-surface-variant">PRIVACY FIRST</Text>
           </View>
-          <View style={styles.trustItem}>
-            <Text style={styles.trustIcon}>⚡</Text>
-            <Text style={styles.trustText}>INSTANT SETUP</Text>
+          <View className="flex-row items-center gap-1.5">
+            <Text className="text-xs">⚡</Text>
+            <Text className="font-mono text-[10px] leading-4 tracking-[0.6px] text-on-surface-variant">INSTANT SETUP</Text>
           </View>
         </Animated.View>
       </View>
 
-      <View style={styles.bottomOverlay} />
+      <View className="absolute bottom-0 left-0 right-0 h-20 opacity-[0.04] bg-primary" />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    overflow: 'hidden',
-  },
-  orbTopRight: {
-    position: 'absolute', top: -80, right: -80,
-    width: 320, height: 320, borderRadius: 160,
-    backgroundColor: Colors.primary, opacity: 0.08,
-  },
-  orbBottomLeft: {
-    position: 'absolute', bottom: -80, left: -80,
-    width: 280, height: 280, borderRadius: 140,
-    backgroundColor: Colors.primaryFixed, opacity: 0.15,
-  },
-  illustrationArea: {
-    flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60,
-  },
-  outerRing: {
-    position: 'absolute', width: 260, height: 260, borderRadius: 130,
-    borderWidth: 1, borderColor: Colors.primary, opacity: 0.15,
-  },
-  innerRing: {
-    position: 'absolute', width: 200, height: 200, borderRadius: 100,
-    borderWidth: 1, borderColor: Colors.primary, opacity: 0.12,
-  },
-  logoCard: {
-    width: 112, height: 112, borderRadius: 32,
-    backgroundColor: Colors.surfaceContainerLowest,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15, shadowRadius: 24, elevation: 12,
-    borderWidth: 1, borderColor: 'rgba(0,108,72,0.05)',
-  },
-  logoText: { fontSize: 40, fontFamily: 'Inter_700Bold', color: Colors.primary },
-  floatingBadge: {
-    position: 'absolute',
-    backgroundColor: Colors.bgSurfaceRaised,
-    borderRadius: Radius.lg, padding: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1, shadowRadius: 12, elevation: 6,
-    borderWidth: 1, borderColor: Colors.borderSubtle,
-  },
-  badgeLeft: { left: width * 0.08, top: '30%' },
-  badgeRight: { right: width * 0.08, bottom: '25%' },
-  badgeTopRight: { right: width * 0.12, top: '15%', opacity: 0.6 },
-  badgeSmall: { padding: 8 },
-  badgeIcon: { fontSize: 24 },
-  badgeIconSm: { fontSize: 18 },
-  content: {
-    paddingHorizontal: Spacing.containerMargin,
-    paddingBottom: 48,
-    alignItems: 'center',
-  },
-  headline: {
-    ...Typography.displayLg,
-    color: Colors.onSecondaryContainer,
-    textAlign: 'center',
-    marginBottom: Spacing.md,
-  },
-  headlineAccent: { color: Colors.primary },
-  subtitle: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
-    textAlign: 'center',
-    opacity: 0.8,
-    marginBottom: Spacing.xxl,
-    maxWidth: 300,
-  },
-  ctaButton: {
-    width: width - Spacing.containerMargin * 2,
-    maxWidth: 360,
-    height: 64,
-    backgroundColor: Colors.primaryContainer,
-    borderRadius: Radius.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3, shadowRadius: 20, elevation: 10,
-    marginBottom: Spacing.xl,
-  },
-  ctaLabel: {
-    ...Typography.titleLg,
-    color: Colors.onPrimaryContainer,
-    fontSize: 18,
-  },
-  trustRow: { flexDirection: 'row', gap: Spacing.xl, opacity: 0.6 },
-  trustItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  trustIcon: { fontSize: 12 },
-  trustText: {
-    ...Typography.labelSm, color: Colors.onSurfaceVariant, fontSize: 10,
-  },
-  bottomOverlay: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    height: 80, opacity: 0.04, backgroundColor: Colors.primary,
-  },
-});

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { Colors } from '../../theme';
 import { MainStackScreenProps } from '../../navigation/types';
 import { getCategories, getSubcategories, addCategory, addSubcategory } from '../../db/database';
 import type { Category, Subcategory } from '../../db/database';
@@ -84,45 +84,45 @@ export function CategoryPickerScreen({ route, navigation }: MainStackScreenProps
   };
 
   return (
-    <View style={styles.root}>
-      <View style={styles.headerRow}>
+    <View className="flex-1 bg-background">
+      <View className="flex-row items-center justify-between px-container-margin pt-sm pb-md">
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.closeText}>✕ Close</Text>
+          <Text className="font-inter text-body-md text-primary w-[70px]">✕ Close</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Pick a category</Text>
-        <View style={{ width: 60 }} />
+        <Text className="font-inter-bold text-title-lg text-on-surface">Pick a category</Text>
+        <View className="w-[60px]" />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerClassName="px-container-margin pb-[48px] gap-sm" showsVerticalScrollIndicator={false}>
         {categories.map((cat) => {
           const expanded = expandedId === cat.id;
           const subs = subcategoriesByCategory[cat.id] ?? [];
           return (
-            <View key={cat.id} style={styles.categoryCard}>
-              <TouchableOpacity style={styles.categoryRow} onPress={() => handleSelectCategory(cat.id)}>
-                <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
-                <Text style={styles.categoryName}>{cat.name}</Text>
+            <View key={cat.id} className="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
+              <TouchableOpacity className="flex-row items-center gap-md px-md py-[14px]" onPress={() => handleSelectCategory(cat.id)}>
+                <Text className="text-[22px]">{cat.emoji}</Text>
+                <Text className="font-inter-medium text-body-md text-on-surface flex-1">{cat.name}</Text>
                 <TouchableOpacity onPress={() => toggleExpand(cat.id)} hitSlop={8}>
-                  <Text style={styles.chevron}>{expanded ? '︿' : '﹀'}</Text>
+                  <Text className="font-inter text-body-md text-on-surface-variant px-xs">{expanded ? '︿' : '﹀'}</Text>
                 </TouchableOpacity>
               </TouchableOpacity>
 
               {expanded && (
-                <View style={styles.subList}>
+                <View className="border-t border-outline-variant">
                   {subs.map((sub) => (
                     <TouchableOpacity
                       key={sub.id}
-                      style={styles.subRow}
+                      className="px-md py-[12px] pl-[48px]"
                       onPress={() => handleSelectSubcategory(cat.id, sub.id)}
                     >
-                      <Text style={styles.subName}>{sub.name}</Text>
+                      <Text className="font-inter text-body-sm text-on-surface-variant">{sub.name}</Text>
                     </TouchableOpacity>
                   ))}
 
                   {addingSubFor === cat.id ? (
-                    <View style={styles.addSubRow}>
+                    <View className="flex-row gap-sm items-center px-md py-[10px] pl-[48px]">
                       <TextInput
-                        style={styles.addSubInput}
+                        className="flex-1 font-inter text-body-sm text-on-surface bg-surface-variant rounded-md px-sm py-[6px]"
                         placeholder="Sub-category name…"
                         placeholderTextColor={Colors.outline}
                         value={newSubcategoryName}
@@ -130,16 +130,16 @@ export function CategoryPickerScreen({ route, navigation }: MainStackScreenProps
                         autoFocus
                         onSubmitEditing={() => handleAddSubcategory(cat.id)}
                       />
-                      <TouchableOpacity onPress={() => handleAddSubcategory(cat.id)} style={styles.addSubButton}>
-                        <Text style={styles.addSubButtonText}>Add</Text>
+                      <TouchableOpacity onPress={() => handleAddSubcategory(cat.id)} className="px-sm py-[6px] bg-primary rounded-md">
+                        <Text className="font-mono text-label-sm text-on-primary tracking-[0]">Add</Text>
                       </TouchableOpacity>
                     </View>
                   ) : (
                     <TouchableOpacity
-                      style={styles.subRow}
+                      className="px-md py-[12px] pl-[48px]"
                       onPress={() => { setAddingSubFor(cat.id); setNewSubcategoryName(''); }}
                     >
-                      <Text style={styles.addSubLabel}>+ New sub-category</Text>
+                      <Text className="font-inter text-body-sm text-primary">+ New sub-category</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -149,10 +149,10 @@ export function CategoryPickerScreen({ route, navigation }: MainStackScreenProps
         })}
 
         {showAddCategory ? (
-          <View style={styles.addCategoryCard}>
-            <View style={styles.addCategoryRow}>
+          <View className="mt-sm p-md bg-surface-container-lowest rounded-xl border border-outline-variant gap-md">
+            <View className="flex-row gap-sm">
               <TextInput
-                style={styles.addCategoryEmojiInput}
+                className="w-[56px] text-center font-inter text-body-md text-on-surface bg-surface-variant rounded-md py-[8px]"
                 placeholder="📦"
                 placeholderTextColor={Colors.outline}
                 value={newCategoryEmoji}
@@ -160,7 +160,7 @@ export function CategoryPickerScreen({ route, navigation }: MainStackScreenProps
                 maxLength={4}
               />
               <TextInput
-                style={styles.addCategoryNameInput}
+                className="flex-1 font-inter text-body-md text-on-surface bg-surface-variant rounded-md px-md py-[8px]"
                 placeholder="Category name…"
                 placeholderTextColor={Colors.outline}
                 value={newCategoryName}
@@ -169,93 +169,24 @@ export function CategoryPickerScreen({ route, navigation }: MainStackScreenProps
                 onSubmitEditing={handleAddCategory}
               />
             </View>
-            <View style={styles.addCategoryActions}>
-              <TouchableOpacity onPress={() => setShowAddCategory(false)} style={styles.addCategoryCancel}>
-                <Text style={styles.addCategoryCancelText}>Cancel</Text>
+            <View className="flex-row justify-end gap-md">
+              <TouchableOpacity onPress={() => setShowAddCategory(false)} className="py-[8px] px-md">
+                <Text className="font-inter text-body-sm text-on-surface-variant">Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleAddCategory} style={styles.addCategoryConfirm}>
-                <Text style={styles.addCategoryConfirmText}>Add</Text>
+              <TouchableOpacity onPress={handleAddCategory} className="py-[8px] px-md bg-primary rounded-md">
+                <Text className="font-inter-medium text-body-sm text-on-primary">Add</Text>
               </TouchableOpacity>
             </View>
           </View>
         ) : (
-          <TouchableOpacity style={styles.newCategoryButton} onPress={() => setShowAddCategory(true)}>
-            <Text style={styles.newCategoryButtonText}>+ New category</Text>
+          <TouchableOpacity
+            className="mt-sm py-md items-center rounded-xl border border-outline-variant border-dashed"
+            onPress={() => setShowAddCategory(true)}
+          >
+            <Text className="font-inter-medium text-body-md text-primary">+ New category</Text>
           </TouchableOpacity>
         )}
       </ScrollView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
-  headerRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, paddingBottom: Spacing.md,
-  },
-  closeText: { ...Typography.bodyMd, color: Colors.primary, width: 70 },
-  title: { ...Typography.titleLg, color: Colors.onSurface },
-
-  content: { paddingHorizontal: Spacing.containerMargin, paddingBottom: 48, gap: Spacing.sm },
-
-  categoryCard: {
-    backgroundColor: Colors.surfaceContainerLowest,
-    borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.outlineVariant,
-    overflow: 'hidden',
-  },
-  categoryRow: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    paddingHorizontal: Spacing.md, paddingVertical: 14,
-  },
-  categoryEmoji: { fontSize: 22 },
-  categoryName: { ...Typography.bodyMd, color: Colors.onSurface, flex: 1, fontFamily: 'Inter_500Medium' },
-  chevron: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, paddingHorizontal: Spacing.xs },
-
-  subList: { borderTopWidth: 1, borderTopColor: Colors.outlineVariant },
-  subRow: { paddingHorizontal: Spacing.md, paddingVertical: 12, paddingLeft: Spacing.xl + Spacing.md },
-  subName: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
-  addSubLabel: { ...Typography.bodySm, color: Colors.primary },
-  addSubRow: {
-    flexDirection: 'row', gap: Spacing.sm, alignItems: 'center',
-    paddingHorizontal: Spacing.md, paddingVertical: 10, paddingLeft: Spacing.xl + Spacing.md,
-  },
-  addSubInput: {
-    flex: 1, ...Typography.bodySm, color: Colors.onSurface,
-    backgroundColor: Colors.surfaceVariant, borderRadius: Radius.md,
-    paddingHorizontal: Spacing.sm, paddingVertical: 6,
-  },
-  addSubButton: {
-    paddingHorizontal: Spacing.sm, paddingVertical: 6,
-    backgroundColor: Colors.primary, borderRadius: Radius.md,
-  },
-  addSubButtonText: { ...Typography.labelSm, color: Colors.onPrimary, letterSpacing: 0 },
-
-  newCategoryButton: {
-    marginTop: Spacing.sm, paddingVertical: Spacing.md, alignItems: 'center',
-    borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.outlineVariant, borderStyle: 'dashed',
-  },
-  newCategoryButtonText: { ...Typography.bodyMd, color: Colors.primary, fontFamily: 'Inter_500Medium' },
-
-  addCategoryCard: {
-    marginTop: Spacing.sm, padding: Spacing.md,
-    backgroundColor: Colors.surfaceContainerLowest,
-    borderRadius: Radius.xl, borderWidth: 1, borderColor: Colors.outlineVariant,
-    gap: Spacing.md,
-  },
-  addCategoryRow: { flexDirection: 'row', gap: Spacing.sm },
-  addCategoryEmojiInput: {
-    width: 56, textAlign: 'center', ...Typography.bodyMd, color: Colors.onSurface,
-    backgroundColor: Colors.surfaceVariant, borderRadius: Radius.md, paddingVertical: 8,
-  },
-  addCategoryNameInput: {
-    flex: 1, ...Typography.bodyMd, color: Colors.onSurface,
-    backgroundColor: Colors.surfaceVariant, borderRadius: Radius.md,
-    paddingHorizontal: Spacing.md, paddingVertical: 8,
-  },
-  addCategoryActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.md },
-  addCategoryCancel: { paddingVertical: 8, paddingHorizontal: Spacing.md },
-  addCategoryCancelText: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
-  addCategoryConfirm: { paddingVertical: 8, paddingHorizontal: Spacing.md, backgroundColor: Colors.primary, borderRadius: Radius.md },
-  addCategoryConfirmText: { ...Typography.bodySm, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
-});

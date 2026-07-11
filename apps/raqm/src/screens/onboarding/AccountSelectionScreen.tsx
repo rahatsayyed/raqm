@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { OnboardingScreenProps } from '../../navigation/types';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { softDeleteAccountTxs } from '../../db/database';
@@ -45,70 +44,70 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
 
   if (accounts.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>🔍</Text>
-        <Text style={styles.emptyHeadline}>No accounts detected</Text>
-        <Text style={styles.emptyBody}>
+      <View className="flex-1 bg-background items-center justify-center px-container-margin gap-md">
+        <Text className="text-[56px]">🔍</Text>
+        <Text className="font-inter-semibold text-headline-md text-on-surface text-center">No accounts detected</Text>
+        <Text className="font-inter text-body-md text-on-surface-variant text-center">
           We couldn't find any bank transactions in your SMS. Make sure Read SMS permission was granted and try scanning again.
         </Text>
         <PrimaryButton
           label="Go back"
           onPress={() => navigation.goBack()}
-          style={styles.emptyBtn}
+          style={{ marginTop: 24, width: '100%' }}
         />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.progressBar}>
-          <View style={styles.progressFill} />
+    <View className="flex-1 bg-background">
+      <ScrollView contentContainerClassName="px-container-margin pt-[48px] pb-xl" showsVerticalScrollIndicator={false}>
+        <View className="h-[4px] bg-surface-variant rounded-full mb-xxl">
+          <View className="w-[80%] h-full bg-primary rounded-full" />
         </View>
 
-        <Text style={styles.headline}>Your accounts</Text>
-        <Text style={styles.subtitle}>
+        <Text className="font-inter-bold text-display-lg text-on-surface mb-sm">Your accounts</Text>
+        <Text className="font-inter text-body-md text-on-surface-variant mb-xl">
           We detected {accounts.length} account{accounts.length !== 1 ? 's' : ''} from your messages. Select the ones to include.
         </Text>
 
-        <View style={styles.accountList}>
+        <View className="gap-sm mb-xl">
           {accounts.map(account => {
             const isSelected = selected.has(account.id);
             return (
               <TouchableOpacity
                 key={account.id}
-                style={[styles.accountCard, isSelected && styles.accountCardSelected]}
+                className={`flex-row items-center gap-md bg-surface-container-lowest border rounded-xl p-md ${isSelected ? 'border-primary bg-primary-container' : 'border-outline-variant'}`}
                 onPress={() => toggle(account.id)}
                 activeOpacity={0.8}
               >
-                <View style={[styles.accountIconBox, isSelected && styles.accountIconBoxSelected]}>
-                  <Text style={styles.accountIcon}>{account.icon}</Text>
+                <View className={`w-[48px] h-[48px] rounded-lg items-center justify-center ${isSelected ? 'bg-primary/[0.08]' : 'bg-surface-variant'}`}>
+                  <Text className="text-[22px]">{account.icon}</Text>
                 </View>
-                <View style={styles.accountInfo}>
-                  <Text style={styles.accountName}>{account.bank}</Text>
-                  <Text style={styles.accountMeta}>
+                <View className="flex-1">
+                  <Text className="font-inter-bold text-title-lg text-on-surface">{account.bank}</Text>
+                  <Text className="font-inter text-body-sm text-on-surface-variant mt-[2px]">
                     {account.type}
                     {account.last4 ? ` •••• ${account.last4}` : ''} · {account.txCount} txns
                   </Text>
                 </View>
-                <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                  {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                <View className={`w-[24px] h-[24px] rounded-[6px] border-2 items-center justify-center ${isSelected ? 'bg-primary border-primary' : 'border-outline'}`}>
+                  {isSelected && <Text className="text-on-primary text-[13px] font-bold">✓</Text>}
                 </View>
               </TouchableOpacity>
             );
           })}
         </View>
 
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryText}>
-            <Text style={styles.summaryAccent}>{totalTx}</Text> transactions across{' '}
-            <Text style={styles.summaryAccent}>{selected.size}</Text> account{selected.size !== 1 ? 's' : ''} selected
+        <View className="bg-primary-container rounded-xl p-md items-center">
+          <Text className="font-inter text-body-md text-on-primary-container text-center">
+            <Text className="font-inter-bold text-primary">{totalTx}</Text> transactions across{' '}
+            <Text className="font-inter-bold text-primary">{selected.size}</Text> account{selected.size !== 1 ? 's' : ''} selected
           </Text>
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View className="px-container-margin pb-[32px] pt-md">
         <PrimaryButton
           label={`Continue with ${selected.size} account${selected.size !== 1 ? 's' : ''}`}
           onPress={async () => {
@@ -132,57 +131,3 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  scroll: { paddingHorizontal: Spacing.containerMargin, paddingTop: 48, paddingBottom: Spacing.xl },
-  progressBar: {
-    height: 4, backgroundColor: Colors.surfaceVariant,
-    borderRadius: Radius.full, marginBottom: Spacing.xxl,
-  },
-  progressFill: { width: '80%', height: '100%', backgroundColor: Colors.primary, borderRadius: Radius.full },
-  headline: { ...Typography.displayLg, color: Colors.onSurface, marginBottom: Spacing.sm },
-  subtitle: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, marginBottom: Spacing.xl, lineHeight: 24 },
-  accountList: { gap: Spacing.sm, marginBottom: Spacing.xl },
-  accountCard: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    backgroundColor: Colors.surfaceContainerLowest,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-    borderRadius: Radius.xl, padding: Spacing.md,
-  },
-  accountCardSelected: { borderColor: Colors.primary, backgroundColor: Colors.primaryContainer },
-  accountIconBox: {
-    width: 48, height: 48, borderRadius: Radius.lg,
-    backgroundColor: Colors.surfaceVariant,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  accountIconBoxSelected: { backgroundColor: `${Colors.primary}15` },
-  accountIcon: { fontSize: 22 },
-  accountInfo: { flex: 1 },
-  accountName: { ...Typography.titleLg, color: Colors.onSurface, fontSize: 16 },
-  accountMeta: { ...Typography.bodySm, color: Colors.onSurfaceVariant, marginTop: 2 },
-  checkbox: {
-    width: 24, height: 24, borderRadius: 6,
-    borderWidth: 2, borderColor: Colors.outline,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  checkboxSelected: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  checkmark: { color: Colors.onPrimary, fontSize: 13, fontWeight: '700' },
-  summaryCard: {
-    backgroundColor: Colors.primaryContainer,
-    borderRadius: Radius.xl, padding: Spacing.md,
-    alignItems: 'center',
-  },
-  summaryText: { ...Typography.bodyMd, color: Colors.onPrimaryContainer, textAlign: 'center' },
-  summaryAccent: { fontFamily: 'Inter_700Bold', color: Colors.primary },
-  footer: { paddingHorizontal: Spacing.containerMargin, paddingBottom: 32, paddingTop: Spacing.md },
-  emptyContainer: {
-    flex: 1, backgroundColor: Colors.background,
-    alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: Spacing.containerMargin, gap: Spacing.md,
-  },
-  emptyIcon: { fontSize: 56 },
-  emptyHeadline: { ...Typography.headlineMd, color: Colors.onSurface, textAlign: 'center' },
-  emptyBody: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center', lineHeight: 24 },
-  emptyBtn: { marginTop: Spacing.lg, width: '100%' },
-});

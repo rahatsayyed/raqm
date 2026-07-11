@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { OnboardingScreenProps } from '../../navigation/types';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { useAppStore } from '../../store/appStore';
 
@@ -16,22 +16,22 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
   const finish = () => setOnboardingComplete(name.trim());
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={styles.inner}>
-        <View style={styles.top}>
-          <Text style={styles.wave}>👋</Text>
-          <Text style={styles.headline}>
+    <KeyboardAvoidingView className="flex-1 bg-surface" behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View className="flex-1 px-container-margin justify-between pt-20 pb-10">
+        <View className="gap-md">
+          <Text className="text-5xl">👋</Text>
+          <Text className="font-inter-bold text-display-lg text-on-surface">
             {firstName ? `Hey, ${firstName}!` : "What's your name?"}
           </Text>
-          <Text style={styles.subtitle}>
+          <Text className="font-inter text-body-md text-on-surface-variant leading-6 max-w-[280px]">
             We'll use your name to personalize your experience.
           </Text>
         </View>
 
-        <View style={styles.inputArea}>
+        <View className="gap-1">
           <TextInput
             ref={inputRef}
-            style={styles.input}
+            className="text-[28px] font-inter-bold text-on-surface pb-2 min-h-[48px]"
             placeholder="Your full name"
             placeholderTextColor={Colors.outline}
             value={name}
@@ -42,10 +42,10 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
             returnKeyType="done"
             onSubmitEditing={() => isValid && finish()}
           />
-          <View style={[styles.underline, name.length > 0 && styles.underlineActive]} />
+          <View className={`h-0.5 rounded-sm ${name.length > 0 ? 'bg-primary' : 'bg-outline-variant'}`} />
         </View>
 
-        <View style={styles.footer}>
+        <View>
           <PrimaryButton
             label={isValid ? `Continue as ${firstName}` : 'Continue'}
             onPress={finish}
@@ -56,21 +56,3 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.surface },
-  inner: { flex: 1, paddingHorizontal: Spacing.containerMargin, justifyContent: 'space-between', paddingTop: 80, paddingBottom: 40 },
-  top: { gap: Spacing.md },
-  wave: { fontSize: 48 },
-  headline: { ...Typography.displayLg, color: Colors.onSurface },
-  subtitle: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, lineHeight: 24, maxWidth: 280 },
-  inputArea: { gap: 4 },
-  input: {
-    fontSize: 28, fontFamily: 'Inter_700Bold',
-    color: Colors.onSurface, paddingBottom: 8,
-    minHeight: 48,
-  },
-  underline: { height: 2, backgroundColor: Colors.outlineVariant, borderRadius: 1 },
-  underlineActive: { backgroundColor: Colors.primary },
-  footer: {},
-});

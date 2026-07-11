@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { OnboardingScreenProps } from '../../navigation/types';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Radius, Spacing } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { GhostButton } from '../../components/GhostButton';
+
+// PrimaryButton only accepts a `style` (ViewStyle) prop, not `className`.
+const ctaButtonStyle = { height: 56, borderRadius: Radius.lg, marginTop: Spacing.sm };
 
 export function SignUpScreen({ navigation }: OnboardingScreenProps<'SignUp'>) {
   const [email, setEmail] = useState('');
@@ -18,21 +21,29 @@ export function SignUpScreen({ navigation }: OnboardingScreenProps<'SignUp'>) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View style={styles.logoBadge}>
-            <Text style={styles.logoText}>رقم</Text>
+    <KeyboardAvoidingView className="flex-1 bg-background" behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView
+        contentContainerClassName="px-container-margin pt-14 pb-10"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View className="items-center mb-xxl gap-md">
+          <View className="w-16 h-16 rounded-xl bg-primary items-center justify-center" style={logoShadow}>
+            <Text className="text-2xl text-on-primary font-inter-bold">رقم</Text>
           </View>
-          <Text style={styles.headline}>Create your account</Text>
-          <Text style={styles.subtitle}>Sync your data across devices and never lose your history.</Text>
+          <Text className="font-inter-semibold text-headline-md text-on-surface text-center">Create your account</Text>
+          <Text className="font-inter text-body-md text-on-surface-variant text-center max-w-[280px] leading-[22px]">
+            Sync your data across devices and never lose your history.
+          </Text>
         </View>
 
-        <View style={styles.form}>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Email</Text>
+        <View className="gap-md">
+          <View className="gap-2">
+            <Text className="font-mono-medium text-[13px] leading-5 text-on-surface-variant">Email</Text>
             <TextInput
-              style={[styles.input, focusedField === 'email' && styles.inputFocused]}
+              className={`h-[52px] rounded-lg border-[1.5px] bg-surface-container-lowest px-md font-inter text-body-md text-on-surface ${
+                focusedField === 'email' ? 'border-primary' : 'border-outline-variant'
+              }`}
               placeholder="you@example.com"
               placeholderTextColor={Colors.outline}
               keyboardType="email-address"
@@ -45,11 +56,15 @@ export function SignUpScreen({ navigation }: OnboardingScreenProps<'SignUp'>) {
             />
           </View>
 
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Password</Text>
-            <View style={[styles.inputRow, focusedField === 'password' && styles.inputFocused]}>
+          <View className="gap-2">
+            <Text className="font-mono-medium text-[13px] leading-5 text-on-surface-variant">Password</Text>
+            <View
+              className={`h-[52px] rounded-lg border-[1.5px] bg-surface-container-lowest flex-row items-center px-md ${
+                focusedField === 'password' ? 'border-primary' : 'border-outline-variant'
+              }`}
+            >
               <TextInput
-                style={styles.inputInner}
+                className="flex-1 font-inter text-body-md text-on-surface"
                 placeholder="Min. 8 characters"
                 placeholderTextColor={Colors.outline}
                 secureTextEntry={!showPassword}
@@ -58,8 +73,8 @@ export function SignUpScreen({ navigation }: OnboardingScreenProps<'SignUp'>) {
                 onFocus={() => setFocusedField('password')}
                 onBlur={() => setFocusedField(null)}
               />
-              <TouchableOpacity onPress={() => setShowPassword(p => !p)} style={styles.eyeBtn}>
-                <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+              <TouchableOpacity onPress={() => setShowPassword(p => !p)} className="p-1">
+                <Text className="text-base">{showPassword ? '🙈' : '👁️'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -68,66 +83,33 @@ export function SignUpScreen({ navigation }: OnboardingScreenProps<'SignUp'>) {
             label="Continue"
             onPress={handleContinue}
             disabled={!isValid}
-            style={styles.ctaButton}
+            style={ctaButtonStyle}
           />
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
+          <View className="flex-row items-center gap-md">
+            <View className="flex-1 h-px bg-outline-variant" />
+            <Text className="font-inter text-body-sm text-on-surface-variant">or</Text>
+            <View className="flex-1 h-px bg-outline-variant" />
           </View>
 
           <GhostButton label="Skip — keep data local only" onPress={() => navigation.replace('NameEntry')} />
         </View>
 
-        <Text style={styles.terms}>
+        <Text className="font-inter text-body-sm text-on-surface-variant text-center mt-xxl leading-5">
           By continuing you agree to our{' '}
-          <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
-          <Text style={styles.termsLink}>Privacy Policy</Text>.
+          <Text className="text-primary font-inter-medium">Terms of Service</Text> and{' '}
+          <Text className="text-primary font-inter-medium">Privacy Policy</Text>.
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  scroll: { paddingHorizontal: Spacing.containerMargin, paddingTop: 56, paddingBottom: 40 },
-  header: { alignItems: 'center', marginBottom: Spacing.xxl, gap: Spacing.md },
-  logoBadge: {
-    width: 64, height: 64, borderRadius: Radius.xl,
-    backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center',
-    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
-  },
-  logoText: { fontSize: 24, color: Colors.onPrimary, fontFamily: 'Inter_700Bold' },
-  headline: { ...Typography.headlineMd, color: Colors.onSurface, textAlign: 'center' },
-  subtitle: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center', maxWidth: 280, lineHeight: 22 },
-  form: { gap: Spacing.md },
-  fieldGroup: { gap: 8 },
-  fieldLabel: { ...Typography.labelLg, color: Colors.onSurfaceVariant, fontSize: 13, letterSpacing: 0 },
-  input: {
-    height: 52, borderRadius: Radius.lg,
-    borderWidth: 1.5, borderColor: Colors.outlineVariant,
-    backgroundColor: Colors.surfaceContainerLowest,
-    paddingHorizontal: Spacing.md,
-    ...Typography.bodyMd, color: Colors.onSurface,
-  },
-  inputRow: {
-    height: 52, borderRadius: Radius.lg,
-    borderWidth: 1.5, borderColor: Colors.outlineVariant,
-    backgroundColor: Colors.surfaceContainerLowest,
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-  },
-  inputInner: { flex: 1, ...Typography.bodyMd, color: Colors.onSurface },
-  inputFocused: { borderColor: Colors.primary },
-  eyeBtn: { padding: 4 },
-  eyeIcon: { fontSize: 16 },
-  ctaButton: { height: 56, borderRadius: Radius.lg, marginTop: Spacing.sm },
-  divider: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  dividerLine: { flex: 1, height: 1, backgroundColor: Colors.outlineVariant },
-  dividerText: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
-  terms: { ...Typography.bodySm, color: Colors.onSurfaceVariant, textAlign: 'center', marginTop: Spacing.xxl, lineHeight: 20 },
-  termsLink: { color: Colors.primary, fontFamily: 'Inter_500Medium' },
-});
+// Colored shadow isn't expressible as a NativeWind class.
+const logoShadow = {
+  shadowColor: Colors.primary,
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.3,
+  shadowRadius: 12,
+  elevation: 6,
+};

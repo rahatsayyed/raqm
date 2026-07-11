@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { Colors, Typography } from '../theme';
+import { Colors } from '../theme';
 
 export interface DonutDatum {
   label: string;
@@ -70,8 +70,8 @@ export function DonutChart({ data, size = 160, strokeWidth = 24 }: Props) {
         )}
       </Svg>
       <View style={StyleSheet.absoluteFill as object} pointerEvents="none">
-        <View style={styles.centerLabelWrap}>
-          <Text style={styles.centerLabel} numberOfLines={1}>
+        <View className="flex-1 items-center justify-center">
+          <Text className="font-mono-medium text-on-surface text-[14px] leading-[28px]" numberOfLines={1}>
             ₹{Math.round(total).toLocaleString('en-IN')}
           </Text>
         </View>
@@ -79,8 +79,3 @@ export function DonutChart({ data, size = 160, strokeWidth = 24 }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  centerLabelWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  centerLabel: { ...Typography.numericMd, color: Colors.onSurface, fontSize: 14 },
-});
