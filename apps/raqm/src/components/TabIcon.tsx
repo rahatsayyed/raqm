@@ -1,10 +1,10 @@
 import React from 'react';
 import { Iconify } from 'react-native-iconify';
 
-// All app icons come from Material Symbols (via react-native-iconify) to match
-// the design system (DESIGN.md §8). Icon names are literal strings and must
-// also be listed in babel.config.js's react-native-iconify plugin `icons`
-// array — the plugin bundles exactly that list at build time (offline at runtime).
+// All app icons render via react-native-iconify: Material Symbols for
+// navigation/action icons (DESIGN.md §8), Lucide for the Timeline category
+// tiles. Every icon name used here must also be listed in babel.config.js —
+// the babel plugin bundles exactly that list at build time (offline at runtime).
 
 interface Props {
   color: string;
@@ -85,74 +85,78 @@ export function ChevronRightIcon({ color, size = 24 }: Props) {
 
 // ── Category tiles (Timeline) ───────────────────────────────────────────────
 
-export function UtensilsCrossedIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:restaurant-rounded" size={size} color={color} />;
+export function UtensilsIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="mdi:silverware-variant" size={size} color={color} />;
 }
 
 export function ShoppingBasketIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:shopping-basket-outline" size={size} color={color} />;
+  return <Iconify icon="lucide:shopping-basket" size={size} color={color} />;
 }
 
 export function GroceryIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:shopping-bag-outline" size={size} color={color} />;
+  return <Iconify icon="lucide:shopping-bag" size={size} color={color} />;
 }
 
 export function CarIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:directions-car-outline-rounded" size={size} color={color} />;
+  return <Iconify icon="lucide:car" size={size} color={color} />;
 }
 
 export function PlaneIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:flight-rounded" size={size} color={color} />;
+  return <Iconify icon="lucide:plane" size={size} color={color} />;
 }
 
 export function ReceiptIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:receipt-long-outline-rounded" size={size} color={color} />;
+  return <Iconify icon="lucide:receipt" size={size} color={color} />;
 }
 
 export function HeartPulseIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:ecg-heart-outline" size={size} color={color} />;
+  return <Iconify icon="lucide:heart-pulse" size={size} color={color} />;
 }
 
 export function FilmIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:movie-outline-rounded" size={size} color={color} />;
+  return <Iconify icon="lucide:film" size={size} color={color} />;
 }
 
 export function GraduationCapIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:school-outline-rounded" size={size} color={color} />;
+  return <Iconify icon="lucide:graduation-cap" size={size} color={color} />;
 }
 
 export function ScissorsIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:content-cut-rounded" size={size} color={color} />;
+  return <Iconify icon="lucide:scissors" size={size} color={color} />;
 }
 
 export function WalletCardsIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:wallet" size={size} color={color} />;
+  return <Iconify icon="lucide:wallet-cards" size={size} color={color} />;
 }
 
 export function ArrowLeftRightIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:swap-horiz-rounded" size={size} color={color} />;
+  return <Iconify icon="lucide:arrow-left-right" size={size} color={color} />;
 }
 
 export function CreditCardIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:credit-card-outline" size={size} color={color} />;
+  return <Iconify icon="lucide:credit-card" size={size} color={color} />;
 }
 
 export function TrendingUpIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:trending-up-rounded" size={size} color={color} />;
+  return <Iconify icon="lucide:trending-up" size={size} color={color} />;
 }
 
 export function GiftIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:redeem-rounded" size={size} color={color} />;
+  return <Iconify icon="lucide:gift" size={size} color={color} />;
 }
 
 export function BadgePercentIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:percent-rounded" size={size} color={color} />;
+  return <Iconify icon="lucide:badge-percent" size={size} color={color} />;
 }
 
 export function CircleHelpIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:help-outline-rounded" size={size} color={color} />;
+  return <Iconify icon="lucide:circle-question-mark" size={size} color={color} />;
 }
 
 export function LayersIcon({ color, size = 24 }: Props) {
-  return <Iconify icon="material-symbols:layers-outline-rounded" size={size} color={color} />;
+  return <Iconify icon="lucide:layers" size={size} color={color} />;
+}
+
+export function HouseIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="lucide:house" size={size} color={color} />;
 }
