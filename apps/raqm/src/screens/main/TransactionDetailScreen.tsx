@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   Modal,
@@ -10,9 +9,13 @@ import {
   FlatList,
   Linking,
   Switch,
+  Keyboard,
+  useWindowDimensions,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { Colors } from "../../theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { KeyboardAwareScrollView } from "../../components/KeyboardAwareScrollView";
+import { Colors, Spacing } from "../../theme";
 import { MainStackScreenProps } from "../../navigation/types";
 import { useTxStore } from "../../store/txStore";
 import {
@@ -108,6 +111,28 @@ export function TransactionDetailScreen({
   const [newTag, setNewTag] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [partner, setPartner] = useState<TxRecord | null>(null);
+  const newTagInputRef = useRef<TextInput>(null);
+  const mainScrollRef = useRef<React.ElementRef<typeof KeyboardAwareScrollView>>(null);
+
+  // TextInput's native `autoFocus` fires before KeyboardAwareScrollView has
+  // measured the freshly-mounted field, so its scroll-into-view lands short —
+  // focusing a beat after mount lets the measurement land on the real layout.
+  // The library's own keyboard-show auto-scroll still under-shoots for a field
+  // this close to the end of a long screen, so force a second, larger-margin
+  // scroll explicitly once the keyboard has had time to open.
+  useEffect(() => {
+    if (!addingTag) return;
+    const focusTimer = setTimeout(() => newTagInputRef.current?.focus(), 80);
+    const scrollTimer = setTimeout(() => {
+      if (newTagInputRef.current) {
+        mainScrollRef.current?.scrollToFocusedInput(newTagInputRef.current, 200);
+      }
+    }, 350);
+    return () => {
+      clearTimeout(focusTimer);
+      clearTimeout(scrollTimer);
+    };
+  }, [addingTag]);
 
   // Sheets / modals
   const [actionsVisible, setActionsVisible] = useState(false);
@@ -423,9 +448,13 @@ export function TransactionDetailScreen({
         </TouchableOpacity>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
+        ref={mainScrollRef}
         contentContainerClassName="px-container-margin pt-md pb-[48px]"
         showsVerticalScrollIndicator={false}
+        enableOnAndroid
+        extraScrollHeight={Spacing.lg}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Hero */}
         <Text className="font-inter-semibold text-label-caps text-primary mb-lg">
@@ -633,6 +662,7 @@ export function TransactionDetailScreen({
           {addingTag && (
             <View className="mt-md pl-sm">
               <TextInput
+                ref={newTagInputRef}
                 className="font-inter text-body-standard text-on-surface bg-surface-container-highest rounded-xs px-3 py-xs"
                 placeholder="Tag name…"
                 placeholderTextColor={Colors.inkLabel}
@@ -641,7 +671,6 @@ export function TransactionDetailScreen({
                 onSubmitEditing={commitTag}
                 onBlur={commitTag}
                 autoCapitalize="none"
-                autoFocus
               />
             </View>
           )}
@@ -733,7 +762,7 @@ export function TransactionDetailScreen({
             </View>
           </>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {showDatePicker && (
         <DateTimePicker
@@ -853,6 +882,37 @@ function BottomSheet({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    if (visible) Keyboard.dismiss();
+  }, [visible]);
+
+  // RN's Modal renders in its own Dialog window, which is edge-to-edge on
+  // Expo SDK 56 — Android's adjustResize does NOT shrink it when the keyboard
+  // opens, so scroll-into-view math alone can't clear the keyboard. Instead,
+  // track the keyboard height ourselves and lift the whole sheet card above
+  // it (and shrink its max height so it still fits on screen).
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", (e) =>
+      setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hide = Keyboard.addListener("keyboardDidHide", () =>
+      setKeyboardHeight(0),
+    );
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  const maxSheetHeight =
+    keyboardHeight > 0
+      ? windowHeight - keyboardHeight - insets.top - Spacing.lg
+      : windowHeight * 0.8;
+
   return (
     <Modal
       visible={visible}
@@ -865,13 +925,28 @@ function BottomSheet({
         onPress={onClose}
       >
         <Pressable
-          className="bg-surface-container-low rounded-t-2xl border-t border-border-subtle pb-xl max-h-[80%]"
+          className="bg-surface-container-low rounded-t-2xl border-t border-border-subtle"
+          style={{ maxHeight: maxSheetHeight, marginBottom: keyboardHeight }}
           onPress={(e) => e.stopPropagation()}
         >
           <View className="items-center py-3">
             <View className="w-12 h-1.5 rounded-full bg-surface-variant" />
           </View>
-          {children}
+          <KeyboardAwareScrollView
+            enableOnAndroid
+            extraScrollHeight={Spacing.lg}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+              // The keyboard covers the system nav bar while open, so the
+              // safe-area pad is only needed when it's closed — keeping it
+              // would leave a doubled gap above the keyboard.
+              paddingBottom:
+                (keyboardHeight > 0 ? 0 : insets.bottom) + Spacing.sm,
+            }}
+          >
+            {children}
+          </KeyboardAwareScrollView>
         </Pressable>
       </Pressable>
     </Modal>
@@ -1065,14 +1140,7 @@ function CategorySheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <ScrollView
-        className="px-lg"
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text className="font-inter-bold text-headline-sm text-on-surface mb-lg">
-          Change Category
-        </Text>
+      <View className="px-lg pt-sm">
         {rows.map((row, rowIndex) => (
           <View key={rowIndex}>
             <View className="flex-row gap-sm mb-sm">
@@ -1085,7 +1153,7 @@ function CategorySheet({
                 return (
                   <TouchableOpacity
                     key={cat.id}
-                    className={`flex-1 items-center gap-xs py-sm rounded-sm border ${
+                    className={`flex-1 items-center gap-xs py-sm px-sm rounded-sm border ${
                       selected
                         ? "border-primary bg-primary/10"
                         : "border-transparent"
@@ -1099,7 +1167,7 @@ function CategorySheet({
                       />
                     </View>
                     <Text
-                      className={`font-inter-semibold text-label-caps text-center uppercase tracking-wider ${
+                      className={`font-inter-semibold text-label-caps text-center tracking-wider ${
                         selected ? "text-on-surface" : "text-on-surface-variant"
                       }`}
                     >
@@ -1195,7 +1263,7 @@ function CategorySheet({
             </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
+      </View>
     </BottomSheet>
   );
 }
@@ -1218,6 +1286,7 @@ function AmountSheet({
   const [foreignAmount, setForeignAmount] = useState("");
   const [rate, setRate] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const amountInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (visible) {
@@ -1226,6 +1295,8 @@ function AmountSheet({
       setForeignAmount("");
       setRate("");
       setError(null);
+      const t = setTimeout(() => amountInputRef.current?.focus(), 80);
+      return () => clearTimeout(t);
     }
   }, [visible, tx.amount]);
 
@@ -1261,11 +1332,11 @@ function AmountSheet({
             {tx.currency}
           </Text>
           <TextInput
+            ref={amountInputRef}
             className="flex-1 font-mono-medium text-numeric-lg text-on-surface py-[12px]"
             keyboardType="decimal-pad"
             value={amountText}
             onChangeText={setAmountText}
-            autoFocus
           />
         </View>
         {error && (
@@ -1344,9 +1415,14 @@ function MerchantSheet({
   onConfirm: (value: string) => void;
 }) {
   const [name, setName] = useState("");
+  const nameInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
-    if (visible) setName(initialValue);
+    if (visible) {
+      setName(initialValue);
+      const t = setTimeout(() => nameInputRef.current?.focus(), 80);
+      return () => clearTimeout(t);
+    }
   }, [visible, initialValue]);
 
   return (
@@ -1356,12 +1432,12 @@ function MerchantSheet({
           Edit merchant name
         </Text>
         <TextInput
+          ref={nameInputRef}
           className="font-inter text-body-standard text-on-surface bg-bg-surface rounded-lg border border-border-subtle px-md py-3 mb-md"
           placeholder="Merchant name"
           placeholderTextColor={Colors.inkLabel}
           value={name}
           onChangeText={setName}
-          autoFocus
         />
         <TouchableOpacity
           className="bg-primary rounded-lg py-[10px] items-center mt-md"
