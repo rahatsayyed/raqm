@@ -937,6 +937,26 @@ export async function addSubcategory(categoryId: number, name: string): Promise<
   return result.lastInsertRowId;
 }
 
+export async function deleteSubcategory(subcategoryId: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync('BEGIN');
+  try {
+    await database.runAsync(
+      `UPDATE transactions SET subcategory_id = NULL WHERE subcategory_id = ?`,
+      subcategoryId,
+    );
+    await database.runAsync(
+      `UPDATE category_rules SET subcategory_id = NULL WHERE subcategory_id = ?`,
+      subcategoryId,
+    );
+    await database.runAsync(`DELETE FROM subcategories WHERE id = ?`, subcategoryId);
+    await database.runAsync('COMMIT');
+  } catch (err) {
+    await database.runAsync('ROLLBACK');
+    throw err;
+  }
+}
+
 export async function getCategoryRuleForMerchant(
   merchant: string,
 ): Promise<{ categoryId: number; subcategoryId: number | null } | null> {

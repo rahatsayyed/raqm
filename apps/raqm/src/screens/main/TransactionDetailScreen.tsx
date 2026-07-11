@@ -10,8 +10,6 @@ import {
   FlatList,
   Linking,
   Switch,
-  Animated,
-  Easing,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Colors } from "../../theme";
@@ -26,6 +24,9 @@ import {
   unlinkTxs,
   setLinkSettled,
   groupTxs,
+  addCategory,
+  addSubcategory,
+  deleteSubcategory,
 } from "../../db/database";
 import type { Category, Subcategory, TxRecord } from "../../db/database";
 import { TransactionType } from "@rahatsayyed/bank-sms-parser";
@@ -43,10 +44,11 @@ import {
   LinkIcon,
   GroupWorkIcon,
   TrashIcon,
-  ChevronLeftIcon,
   ChevronRightIcon,
   StorefrontIcon,
   AddIcon,
+  SearchIcon,
+  CloseIcon,
 } from "../../components/TabIcon";
 
 const DAY_MS = 86_400_000;
@@ -779,9 +781,14 @@ export function TransactionDetailScreen({
         onClose={() => setCategorySheetVisible(false)}
         categories={categories}
         currentCategoryId={tx.categoryId}
+        currentSubcategoryId={tx.subcategoryId}
         onSelect={(categoryId, subcategoryId) => {
           updateTx(tx.id, { categoryId, subcategoryId: subcategoryId ?? null });
           setCategorySheetVisible(false);
+        }}
+        onCategoryCreated={(cat) => setCategories((prev) => [...prev, cat])}
+        onSubcategoryDeleted={(subcategoryId) => {
+          if (tx.subcategoryId === subcategoryId) refreshStore();
         }}
       />
 
@@ -964,134 +971,231 @@ function CategorySheet({
   onClose,
   categories,
   currentCategoryId,
+  currentSubcategoryId,
   onSelect,
+  onCategoryCreated,
+  onSubcategoryDeleted,
 }: {
   visible: boolean;
   onClose: () => void;
   categories: Category[];
   currentCategoryId: number | null;
+  currentSubcategoryId?: number | null;
   onSelect: (categoryId: number, subcategoryId?: number) => void;
+  onCategoryCreated: (category: Category) => void;
+  onSubcategoryDeleted: (subcategoryId: number) => void;
 }) {
-  const [step, setStep] = useState<"category" | "subcategory">("category");
   const [activeCategory, setActiveCategory] = useState<Category | null>(null);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const shift = useRef(new Animated.Value(0)).current;
+  const [newSubName, setNewSubName] = useState("");
+  const [addingSub, setAddingSub] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [deletingSubId, setDeletingSubId] = useState<number | null>(null);
 
   useEffect(() => {
     if (visible) {
-      setStep("category");
       setActiveCategory(null);
-      shift.setValue(0);
+      setSubcategories([]);
+      setNewSubName("");
+      setNewCategoryName("");
     }
-  }, [visible, shift]);
-
-  const animateTo = (next: "category" | "subcategory") => {
-    Animated.timing(shift, {
-      toValue: 1,
-      duration: 120,
-      easing: Easing.out(Easing.ease),
-      useNativeDriver: true,
-    }).start(() => {
-      setStep(next);
-      shift.setValue(-1);
-      Animated.timing(shift, {
-        toValue: 0,
-        duration: 120,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }).start();
-    });
-  };
+  }, [visible]);
 
   const handleCategoryTap = async (cat: Category) => {
-    const subs = await getSubcategories(cat.id);
-    if (subs.length === 0) {
-      onSelect(cat.id, undefined);
+    if (activeCategory?.id === cat.id) {
+      setActiveCategory(null);
+      setSubcategories([]);
       return;
     }
     setActiveCategory(cat);
+    setNewSubName("");
+    const subs = await getSubcategories(cat.id);
     setSubcategories(subs);
-    animateTo("subcategory");
   };
 
-  const translateX = shift.interpolate({
-    inputRange: [-1, 0, 1],
-    outputRange: [-16, 0, 16],
-  });
-  const opacity = shift.interpolate({
-    inputRange: [-1, 0, 1],
-    outputRange: [0, 1, 0],
-  });
+  const handleAddSubcategory = async () => {
+    const name = newSubName.trim();
+    if (!name || !activeCategory || addingSub) return;
+    setAddingSub(true);
+    try {
+      const id = await addSubcategory(activeCategory.id, name);
+      setSubcategories((prev) => [
+        ...prev,
+        { id, categoryId: activeCategory.id, name, isCustom: true },
+      ]);
+      setNewSubName("");
+    } finally {
+      setAddingSub(false);
+    }
+  };
+
+  const handleDeleteSubcategory = async (sub: Subcategory) => {
+    if (deletingSubId != null) return;
+    setDeletingSubId(sub.id);
+    try {
+      await deleteSubcategory(sub.id);
+      setSubcategories((prev) => prev.filter((s) => s.id !== sub.id));
+      onSubcategoryDeleted(sub.id);
+    } finally {
+      setDeletingSubId(null);
+    }
+  };
+
+  const handleAddCategory = async () => {
+    const name = newCategoryName.trim();
+    if (!name || addingCategory) return;
+    setAddingCategory(true);
+    try {
+      const id = await addCategory(name, "🏷");
+      const category: Category = { id, name, emoji: "🏷", isCustom: true };
+      onCategoryCreated(category);
+      setNewCategoryName("");
+      setActiveCategory(category);
+      setSubcategories([]);
+    } finally {
+      setAddingCategory(false);
+    }
+  };
+
+  const rows: Category[][] = [];
+  for (let i = 0; i < categories.length; i += 3) {
+    rows.push(categories.slice(i, i + 3));
+  }
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <Animated.View style={{ transform: [{ translateX }], opacity }}>
-        {step === "category" ? (
-          <View className="px-lg">
-            <Text className="font-inter-medium text-insight-reading text-ink-headline mb-md">
-              Category
-            </Text>
-            {categories.map((cat) => {
-              const Icon =
-                iconForCategoryName(cat.name) ?? FALLBACK_CATEGORY_ICON;
-              const selected = cat.id === currentCategoryId;
-              return (
-                <TouchableOpacity
-                  key={cat.id}
-                  className="flex-row items-center gap-md py-[14px] border-b border-[#24312880]"
-                  onPress={() => handleCategoryTap(cat)}
-                >
-                  <Icon
-                    color={selected ? Colors.primary : Colors.inkBody}
-                    size={20}
-                  />
-                  <Text
-                    className={`font-inter text-body-standard flex-1 ${selected ? "text-primary" : "text-on-surface"}`}
+      <ScrollView
+        className="px-lg"
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text className="font-inter-bold text-headline-sm text-on-surface mb-lg">
+          Change Category
+        </Text>
+        {rows.map((row, rowIndex) => (
+          <View key={rowIndex}>
+            <View className="flex-row gap-sm mb-sm">
+              {row.map((cat) => {
+                const Icon =
+                  iconForCategoryName(cat.name) ?? FALLBACK_CATEGORY_ICON;
+                const selected = activeCategory
+                  ? activeCategory.id === cat.id
+                  : cat.id === currentCategoryId;
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    className={`flex-1 items-center gap-xs py-sm rounded-sm border ${
+                      selected
+                        ? "border-primary bg-primary/10"
+                        : "border-transparent"
+                    }`}
+                    onPress={() => handleCategoryTap(cat)}
                   >
-                    {cat.name}
-                  </Text>
-                  <ChevronRightIcon color={Colors.inkLabel} size={18} />
-                </TouchableOpacity>
-              );
-            })}
+                    <View className="w-12 h-12 rounded-sm items-center justify-center bg-surface-container-high">
+                      <Icon
+                        color={selected ? Colors.primary : Colors.onSurfaceVariant}
+                        size={22}
+                      />
+                    </View>
+                    <Text
+                      className={`font-inter-semibold text-label-caps text-center uppercase tracking-wider ${
+                        selected ? "text-on-surface" : "text-on-surface-variant"
+                      }`}
+                    >
+                      {cat.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              {row.length < 3 &&
+                Array.from({ length: 3 - row.length }).map((_, i) => (
+                  <View key={`pad-${i}`} className="flex-1" />
+                ))}
+            </View>
+            {activeCategory && row.some((c) => c.id === activeCategory.id) && (
+              <View className="bg-surface-container-low rounded-lg p-md mb-md gap-md">
+                <View className="flex-row flex-wrap gap-sm">
+                  <TouchableOpacity
+                    className={`px-md py-xs rounded-xs ${
+                      currentSubcategoryId == null &&
+                      currentCategoryId === activeCategory.id
+                        ? "bg-primary/20"
+                        : "bg-on-tertiary-container/10"
+                    }`}
+                    onPress={() => onSelect(activeCategory.id, undefined)}
+                  >
+                    <Text className="font-inter text-supporting-text text-on-surface-variant">
+                      No sub-category
+                    </Text>
+                  </TouchableOpacity>
+                  {subcategories.map((sub) => (
+                    <View
+                      key={sub.id}
+                      className={`flex-row items-center rounded-xs ${
+                        currentSubcategoryId === sub.id
+                          ? "bg-primary/20"
+                          : "bg-on-tertiary-container/10"
+                      }`}
+                    >
+                      <TouchableOpacity
+                        className="pl-md pr-xs py-xs"
+                        onPress={() => onSelect(activeCategory.id, sub.id)}
+                      >
+                        <Text className="font-inter text-supporting-text text-on-surface-variant">
+                          {sub.name}
+                        </Text>
+                      </TouchableOpacity>
+                      {sub.isCustom && (
+                        <TouchableOpacity
+                          className="pl-xs pr-sm py-xs"
+                          disabled={deletingSubId === sub.id}
+                          onPress={() => handleDeleteSubcategory(sub)}
+                        >
+                          <CloseIcon
+                            color={`${Colors.onSurfaceVariant}99`}
+                            size={12}
+                          />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+                  <View className="flex-row items-center gap-xs bg-surface-container-high rounded-xs px-sm py-xs min-w-[100px]">
+                    <TextInput
+                      className="flex-1 font-inter text-supporting-text text-on-surface p-0"
+                      placeholder="Add…"
+                      placeholderTextColor={`${Colors.onSurfaceVariant}66`}
+                      value={newSubName}
+                      onChangeText={setNewSubName}
+                      onSubmitEditing={handleAddSubcategory}
+                      returnKeyType="done"
+                    />
+                    <AddIcon color={Colors.onSurfaceVariant} size={13} />
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
-        ) : (
-          <View className="px-lg">
-            <TouchableOpacity
-              className="flex-row items-center gap-1"
-              onPress={() => animateTo("category")}
-            >
-              <ChevronLeftIcon color={Colors.inkBody} size={20} />
-              <Text className="font-inter-medium text-insight-reading text-ink-headline mb-md">
-                {activeCategory?.name}
-              </Text>
+        ))}
+
+        <View className="border-t border-border-subtle pt-lg mt-sm">
+          <View className="flex-row items-center gap-sm bg-surface-container-high rounded-sm px-sm">
+            <SearchIcon color={`${Colors.onSurfaceVariant}99`} size={18} />
+            <TextInput
+              className="flex-1 font-inter text-body-standard text-on-surface py-sm"
+              placeholder="Add new category"
+              placeholderTextColor={`${Colors.onSurfaceVariant}66`}
+              value={newCategoryName}
+              onChangeText={setNewCategoryName}
+              onSubmitEditing={handleAddCategory}
+              returnKeyType="done"
+            />
+            <TouchableOpacity onPress={handleAddCategory}>
+              <AddIcon color={Colors.primary} size={22} />
             </TouchableOpacity>
-            <TouchableOpacity
-              className="flex-row items-center gap-md py-[14px] border-b border-[#24312880]"
-              onPress={() =>
-                activeCategory && onSelect(activeCategory.id, undefined)
-              }
-            >
-              <Text className="font-inter text-body-standard text-on-surface flex-1">
-                No sub-category
-              </Text>
-            </TouchableOpacity>
-            {subcategories.map((sub) => (
-              <TouchableOpacity
-                key={sub.id}
-                className="flex-row items-center gap-md py-[14px] border-b border-[#24312880]"
-                onPress={() =>
-                  activeCategory && onSelect(activeCategory.id, sub.id)
-                }
-              >
-                <Text className="font-inter text-body-standard text-on-surface flex-1">
-                  {sub.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
           </View>
-        )}
-      </Animated.View>
+        </View>
+      </ScrollView>
     </BottomSheet>
   );
 }
