@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Modal, Pressable } from 'react-native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { View, Text, FlatList, TextInput, TouchableOpacity, Modal, Pressable } from 'react-native';
+import { Colors } from '../../theme';
 import { useTxStore } from '../../store/txStore';
 import { useAppStore } from '../../store/appStore';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -57,6 +57,15 @@ type ListItem =
   | { kind: 'header'; key: string; label: string; total: number }
   | { kind: 'single'; key: string; tx: TxRecord }
   | { kind: 'group'; key: string; groupId: number; members: TxRecord[] };
+
+// FAB glow shadow — shadow* values aren't expressible as core NativeWind classes.
+const fabShadow = {
+  shadowColor: Colors.primary,
+  shadowOffset: { width: 0, height: 6 },
+  shadowOpacity: 0.35,
+  shadowRadius: 14,
+  elevation: 8,
+};
 
 export function TransactionsScreen() {
   const txs = useTxStore((s) => s.txs);
@@ -223,9 +232,9 @@ export function TransactionsScreen() {
   const renderItem = useCallback(({ item }: { item: ListItem }) => {
     if (item.kind === 'header') {
       return (
-        <View style={styles.dayHeader}>
-          <Text style={styles.dayLabel}>{item.label}</Text>
-          <Text style={styles.dayTotal}>{formatAmount(item.total, currency)}</Text>
+        <View className="flex-row justify-between items-baseline mt-[32px] pb-[12px] border-b border-border-subtle">
+          <Text className="font-inter-semibold text-section-header text-ink-label">{item.label}</Text>
+          <Text className="font-mono text-[13px] leading-[20px] text-ink-label">{formatAmount(item.total, currency)}</Text>
         </View>
       );
     }
@@ -234,12 +243,12 @@ export function TransactionsScreen() {
       const expanded = expandedGroups.has(item.groupId);
       return (
         <View>
-          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => toggleGroup(item.groupId)}>
-            <View style={styles.rowInfo}>
-              <Text style={styles.rowMerchant} numberOfLines={1}>Group · {item.members.length} transactions</Text>
-              <Text style={styles.rowMeta}>Tap to {expanded ? 'collapse' : 'expand'}</Text>
+          <TouchableOpacity className="flex-row items-start gap-[16px] py-[8px]" activeOpacity={0.7} onPress={() => toggleGroup(item.groupId)}>
+            <View className="flex-1">
+              <Text className="font-inter-medium text-insight-reading text-ink-headline" numberOfLines={1}>Group · {item.members.length} transactions</Text>
+              <Text className="font-inter text-supporting-text text-ink-body mt-[2px]">Tap to {expanded ? 'collapse' : 'expand'}</Text>
             </View>
-            <Text style={[styles.rowAmount, { color: sum < 0 ? Colors.primaryContainer : Colors.inkHeadline }]}>
+            <Text className={`font-mono-medium text-[18px] leading-[26px] ${sum < 0 ? 'text-primary-container' : 'text-ink-headline'}`}>
               {formatAmount(sum, currency)}
             </Text>
           </TouchableOpacity>
@@ -275,18 +284,18 @@ export function TransactionsScreen() {
   const keyExtractor = useCallback((item: ListItem) => item.key, []);
 
   return (
-    <View style={styles.root}>
+    <View className="flex-1 bg-background">
       {/* Top bar: avatar + Fraunces title, search / cancel on the right */}
-      <View style={styles.topBar}>
-        <View style={styles.topBarLeft}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initial}</Text>
+      <View className="flex-row justify-between items-center px-[24px] pt-[8px] pb-[16px]">
+        <View className="flex-row items-center gap-[12px]">
+          <View className="w-[32px] h-[32px] rounded-[16px] bg-surface-variant border border-border-subtle items-center justify-center">
+            <Text className="font-inter text-supporting-text text-ink-headline">{initial}</Text>
           </View>
-          <Text style={styles.topBarTitle}>Timeline</Text>
+          <Text className="font-fraunces text-[22px] leading-[28px] text-on-surface">Timeline</Text>
         </View>
         {selectMode ? (
           <TouchableOpacity onPress={exitSelectMode} hitSlop={8}>
-            <Text style={styles.cancelText}>Cancel</Text>
+            <Text className="font-inter text-body-standard text-primary">Cancel</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -299,9 +308,9 @@ export function TransactionsScreen() {
       </View>
 
       {searchOpen && !selectMode && (
-        <View style={styles.searchWrap}>
+        <View className="px-[24px] pb-[16px]">
           <TextInput
-            style={styles.search}
+            className="bg-bg-surface rounded-[12px] border border-border-subtle px-[16px] py-[10px] font-inter text-body-standard text-on-surface"
             placeholder="Search merchant or bank…"
             placeholderTextColor={Colors.inkLabel}
             value={query}
@@ -317,14 +326,16 @@ export function TransactionsScreen() {
         data={items}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
-        contentContainerStyle={styles.list}
+        contentContainerClassName="px-[24px] pb-[100px]"
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          !searchOpen && statement ? <Text style={styles.statement}>{statement}</Text> : null
+          !searchOpen && statement ? (
+            <Text className="font-fraunces text-statement-mobile text-on-surface mt-[8px] mb-[24px]">{statement}</Text>
+          ) : null
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>
+          <View className="pt-[80px] items-center px-[24px]">
+            <Text className="font-inter text-supporting-text text-ink-body text-center">
               {query.trim()
                 ? 'Nothing matches your search.'
                 : "We're still learning your financial patterns. Transactions will appear as your timeline grows."}
@@ -334,44 +345,45 @@ export function TransactionsScreen() {
       />
 
       {selectMode && selected.size >= 2 && (
-        <View style={styles.actionBar}>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => { setModalError(null); setModal('merge'); }}>
-            <Text style={styles.actionBtnText}>Merge ({selected.size})</Text>
+        <View className="absolute left-0 right-0 bottom-0 flex-row gap-[8px] bg-bg-surface-raised border-t border-border-subtle p-[16px]">
+          <TouchableOpacity className="flex-1 bg-primary rounded-[12px] py-[8px] items-center" onPress={() => { setModalError(null); setModal('merge'); }}>
+            <Text className="font-inter-medium text-body-standard text-on-primary">Merge ({selected.size})</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => { setModalError(null); setModal('group'); }}>
-            <Text style={styles.actionBtnText}>Group ({selected.size})</Text>
+          <TouchableOpacity className="flex-1 bg-primary rounded-[12px] py-[8px] items-center" onPress={() => { setModalError(null); setModal('group'); }}>
+            <Text className="font-inter-medium text-body-standard text-on-primary">Group ({selected.size})</Text>
           </TouchableOpacity>
         </View>
       )}
 
       {!selectMode && (
         <TouchableOpacity
-          style={styles.fab}
+          className="absolute right-[24px] bottom-[32px] w-[56px] h-[56px] rounded-full bg-primary items-center justify-center"
+          style={fabShadow}
           activeOpacity={0.85}
           onPress={() => navigation.navigate('AddTransaction')}
         >
-          <Text style={styles.fabIcon}>＋</Text>
+          <Text className="text-[26px] leading-[28px] text-on-primary">＋</Text>
         </TouchableOpacity>
       )}
 
       <Modal visible={modal !== null} transparent animationType="fade" onRequestClose={() => { setModal(null); setModalError(null); }}>
-        <Pressable style={styles.modalBackdrop} onPress={() => { setModal(null); setModalError(null); }}>
-          <Pressable style={styles.modalCard} onPress={e => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>{modal === 'merge' ? 'Merge into' : 'Group name'}</Text>
+        <Pressable className="flex-1 bg-black/50 items-center justify-center" onPress={() => { setModal(null); setModalError(null); }}>
+          <Pressable className="w-[85%] bg-bg-surface-raised rounded-[16px] border border-border-subtle p-[24px] gap-[16px]" onPress={e => e.stopPropagation()}>
+            <Text className="font-inter-medium text-insight-reading text-ink-headline">{modal === 'merge' ? 'Merge into' : 'Group name'}</Text>
             <TextInput
-              style={styles.modalInput}
+              className="bg-bg-surface rounded-[12px] border border-border-subtle px-[16px] py-[10px] font-inter text-body-standard text-on-surface"
               placeholder={modal === 'merge' ? 'Merchant name…' : 'e.g. Goa Trip'}
               placeholderTextColor={Colors.inkLabel}
               value={modalName}
               onChangeText={setModalName}
               autoFocus
             />
-            {modalError && <Text style={styles.modalErrorText}>{modalError}</Text>}
+            {modalError && <Text className="font-inter text-supporting-text text-error-muted">{modalError}</Text>}
             <TouchableOpacity
-              style={styles.modalConfirm}
+              className="bg-primary rounded-[12px] py-[8px] items-center"
               onPress={modal === 'merge' ? confirmMerge : confirmGroup}
             >
-              <Text style={styles.modalConfirmText}>Confirm</Text>
+              <Text className="font-inter-medium text-body-standard text-on-primary">Confirm</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -395,127 +407,29 @@ const TxRow = memo(function TxRow({
   const credit = isCredit(tx.type);
   return (
     <TouchableOpacity
-      style={[styles.row, indent && styles.rowIndent]}
+      className={`flex-row items-start gap-[16px] py-[8px] ${indent ? 'pl-[24px]' : ''}`}
       onPress={() => onPressId(tx.id)}
       onLongPress={() => onLongPressId(tx.id)}
       activeOpacity={0.7}
     >
       {selectMode && (
-        <View style={[styles.checkbox, selected && styles.checkboxOn]}>
-          {selected && <Text style={styles.checkboxMark}>✓</Text>}
+        <View className={`w-[22px] h-[22px] rounded-full border-2 items-center justify-center self-center ${selected ? 'bg-primary border-primary' : 'border-ink-label'}`}>
+          {selected && <Text className="text-on-primary text-[12px] font-inter-bold">✓</Text>}
         </View>
       )}
-      <View style={styles.rowInfo}>
-        <Text style={styles.rowMerchant} numberOfLines={1}>{tx.merchant || tx.bankName}</Text>
-        <Text style={styles.rowMeta} numberOfLines={1}>
+      <View className="flex-1">
+        <Text className="font-inter-medium text-insight-reading text-ink-headline" numberOfLines={1}>{tx.merchant || tx.bankName}</Text>
+        <Text className="font-inter text-supporting-text text-ink-body mt-[2px]" numberOfLines={1}>
           {tx.bankName}  •  {timeLabel(tx.timestamp)}  •  {categoryName
             ? categoryName
             : tx.type === TransactionType.EXPENSE
-              ? <Text style={styles.rowMetaNotice}>Uncategorized</Text>
+              ? <Text className="text-secondary">Uncategorized</Text>
               : txTypeLabel(tx.type)}
         </Text>
       </View>
-      <Text style={[styles.rowAmount, { color: credit ? Colors.primaryContainer : Colors.inkHeadline }]}>
+      <Text className={`font-mono-medium text-[18px] leading-[26px] ${credit ? 'text-primary-container' : 'text-ink-headline'}`}>
         {formatAmount(tx.amount, currency)}
       </Text>
     </TouchableOpacity>
   );
-});
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
-
-  topBar: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, paddingBottom: Spacing.md,
-  },
-  topBarLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm + 4 },
-  avatar: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: Colors.surfaceVariant, borderWidth: 1, borderColor: Colors.borderSubtle,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  avatarText: { ...Typography.supportingText, color: Colors.inkHeadline },
-  topBarTitle: { ...Typography.statementMobile, fontSize: 22, lineHeight: 28, color: Colors.onSurface },
-  cancelText: { ...Typography.bodyStandard, color: Colors.primary },
-
-  searchWrap: { paddingHorizontal: Spacing.containerMargin, paddingBottom: Spacing.md },
-  search: {
-    backgroundColor: Colors.bgSurface,
-    borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.borderSubtle,
-    paddingHorizontal: Spacing.md, paddingVertical: 10,
-    ...Typography.bodyStandard, color: Colors.onSurface,
-  },
-
-  list: { paddingHorizontal: Spacing.containerMargin, paddingBottom: 100 },
-  statement: {
-    ...Typography.statementMobile, color: Colors.onSurface,
-    marginTop: Spacing.sm, marginBottom: Spacing.lg,
-  },
-
-  dayHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
-    marginTop: Spacing.xl, paddingBottom: Spacing.sm + 4,
-    borderBottomWidth: 1, borderBottomColor: Colors.borderSubtle,
-  },
-  dayLabel: { ...Typography.sectionHeader, color: Colors.inkLabel },
-  dayTotal: { ...Typography.numericSm, fontSize: 13, color: Colors.inkLabel },
-
-  row: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md,
-    paddingVertical: Spacing.md,
-  },
-  rowIndent: { paddingLeft: Spacing.lg },
-  rowInfo: { flex: 1 },
-  rowMerchant: { ...Typography.insightReading, color: Colors.inkHeadline },
-  rowMeta: { ...Typography.supportingText, color: Colors.inkBody, marginTop: 2 },
-  rowMetaNotice: { color: Colors.secondary },
-  rowAmount: { ...Typography.numericMd, fontSize: 18, lineHeight: 26 },
-
-  checkbox: {
-    width: 22, height: 22, borderRadius: Radius.full, borderWidth: 2, borderColor: Colors.inkLabel,
-    alignItems: 'center', justifyContent: 'center', alignSelf: 'center',
-  },
-  checkboxOn: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  checkboxMark: { color: Colors.onPrimary, fontSize: 12, fontWeight: '700' },
-
-  empty: { paddingTop: 80, alignItems: 'center', paddingHorizontal: Spacing.lg },
-  emptyText: { ...Typography.supportingText, color: Colors.inkBody, textAlign: 'center' },
-
-  fab: {
-    position: 'absolute', right: Spacing.containerMargin, bottom: Spacing.xl,
-    width: 56, height: 56, borderRadius: Radius.full,
-    backgroundColor: Colors.primary,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35, shadowRadius: 14, elevation: 8,
-  },
-  fabIcon: { fontSize: 26, color: Colors.onPrimary, lineHeight: 28 },
-
-  actionBar: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    flexDirection: 'row', gap: Spacing.sm,
-    backgroundColor: Colors.bgSurfaceRaised, borderTopWidth: 1, borderTopColor: Colors.borderSubtle,
-    padding: Spacing.md,
-  },
-  actionBtn: {
-    flex: 1, backgroundColor: Colors.primary, borderRadius: Radius.lg,
-    paddingVertical: Spacing.sm, alignItems: 'center',
-  },
-  actionBtnText: { ...Typography.bodyStandard, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
-
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
-  modalCard: {
-    width: '85%', backgroundColor: Colors.bgSurfaceRaised, borderRadius: Radius.xl,
-    borderWidth: 1, borderColor: Colors.borderSubtle, padding: Spacing.lg, gap: Spacing.md,
-  },
-  modalTitle: { ...Typography.insightReading, color: Colors.inkHeadline },
-  modalErrorText: { ...Typography.supportingText, color: Colors.errorMuted },
-  modalInput: {
-    backgroundColor: Colors.bgSurface, borderRadius: Radius.lg,
-    borderWidth: 1, borderColor: Colors.borderSubtle, paddingHorizontal: Spacing.md, paddingVertical: 10,
-    ...Typography.bodyStandard, color: Colors.onSurface,
-  },
-  modalConfirm: { backgroundColor: Colors.primary, borderRadius: Radius.lg, paddingVertical: Spacing.sm, alignItems: 'center' },
-  modalConfirmText: { ...Typography.bodyStandard, color: Colors.onPrimary, fontFamily: 'Inter_500Medium' },
 });

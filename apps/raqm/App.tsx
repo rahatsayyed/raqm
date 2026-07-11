@@ -1,3 +1,4 @@
+import './global.css';
 import { useCallback, useEffect } from 'react';
 import { View } from 'react-native';
 import { NavigationBar } from 'expo-navigation-bar';
