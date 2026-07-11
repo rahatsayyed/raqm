@@ -189,6 +189,44 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 4) {
+    await database.runAsync(`BEGIN`);
+    try {
+      try {
+        // Remembers the pre-toggle type when a transaction is marked "doesn't
+        // count toward totals" (type flipped to BALANCE_UPDATE), so re-enabling
+        // restores the original type instead of guessing EXPENSE for everything.
+        await database.runAsync(`ALTER TABLE transactions ADD COLUMN original_type TEXT`);
+      } catch {
+        // column already exists — safe to ignore
+      }
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (4)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
+
+  if (current < 5) {
+    await database.runAsync(`BEGIN`);
+    try {
+      try {
+        // The parser already extracts a bank reference/UTR number
+        // (ParsedTransaction.reference) — this column persists it so the
+        // Transaction Detail screen can show it instead of fabricating one.
+        await database.runAsync(`ALTER TABLE transactions ADD COLUMN reference TEXT`);
+      } catch {
+        // column already exists — safe to ignore
+      }
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (5)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -245,6 +283,7 @@ export interface TxRecord {
   notes: string | null;
   tags: string[];
   rawSms: string | null;
+  reference: string | null;
   lat: number | null;
   lng: number | null;
   deletedAt: number | null;
@@ -256,6 +295,8 @@ export interface TxRecord {
   isSplitChild: boolean;
   splitParentId: number | null;
   groupId: number | null;
+  /** Type to restore when re-enabling "counts toward totals" (see TxPatch.type). */
+  originalType: TransactionType | null;
 }
 
 export interface NewTxInput {
@@ -273,6 +314,7 @@ export interface NewTxInput {
   notes?: string | null;
   tags?: string[];
   rawSms?: string | null;
+  reference?: string | null;
   lat?: number | null;
   lng?: number | null;
   isManual?: boolean;
@@ -297,6 +339,7 @@ export interface TxPatch {
   deletedAt?: number | null;
   lat?: number | null;
   lng?: number | null;
+  originalType?: TransactionType | null;
 }
 
 export interface Category {
@@ -340,6 +383,7 @@ function rowToTxRecord(row: Record<string, unknown>): TxRecord {
     notes: (row.notes as string | null) ?? null,
     tags: parseTags(row.tags),
     rawSms: (row.raw_sms as string | null) ?? null,
+    reference: (row.reference as string | null) ?? null,
     lat: (row.lat as number | null) ?? null,
     lng: (row.lng as number | null) ?? null,
     deletedAt: (row.deleted_at as number | null) ?? null,
@@ -351,6 +395,7 @@ function rowToTxRecord(row: Record<string, unknown>): TxRecord {
     isSplitChild: (row.is_split_child as number) === 1,
     splitParentId: (row.split_parent_id as number | null) ?? null,
     groupId: (row.group_id as number | null) ?? null,
+    originalType: (row.original_type as TransactionType | null) ?? null,
   };
 }
 
@@ -368,8 +413,8 @@ export async function insertTransaction(tx: ParsedTransaction): Promise<void> {
   const database = await getDb();
   await database.runAsync(
     `INSERT INTO transactions
-       (amount, type, merchant, bankName, accountLast4, timestamp, balance, currency, isFromCard, raw_sms)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (amount, type, merchant, bankName, accountLast4, timestamp, balance, currency, isFromCard, raw_sms, reference)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     tx.amount,
     tx.type,
     tx.merchant ?? null,
@@ -380,6 +425,7 @@ export async function insertTransaction(tx: ParsedTransaction): Promise<void> {
     tx.currency ?? '₹',
     tx.isFromCard ? 1 : 0,
     tx.smsBody ?? null,
+    tx.reference ?? null,
   );
 }
 
@@ -539,8 +585,8 @@ export async function insertTx(input: NewTxInput): Promise<number> {
   const result = await database.runAsync(
     `INSERT INTO transactions
        (amount, type, merchant, bankName, accountLast4, timestamp, balance, currency, isFromCard,
-        category_id, subcategory_id, notes, tags, raw_sms, lat, lng, is_manual)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        category_id, subcategory_id, notes, tags, raw_sms, reference, lat, lng, is_manual)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     input.amount,
     input.type,
     input.merchant ?? null,
@@ -555,6 +601,7 @@ export async function insertTx(input: NewTxInput): Promise<number> {
     input.notes ?? null,
     input.tags ? JSON.stringify(input.tags) : null,
     input.rawSms ?? null,
+    input.reference ?? null,
     input.lat ?? null,
     input.lng ?? null,
     input.isManual ? 1 : 0,
@@ -671,6 +718,7 @@ export async function insertParsedTx(tx: ParsedTransaction): Promise<number> {
     categoryId,
     subcategoryId,
     rawSms: tx.smsBody,
+    reference: tx.reference ?? null,
     isManual: false,
   });
 }
@@ -697,8 +745,8 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
       await database.runAsync(
         `INSERT INTO transactions
            (amount, type, merchant, bankName, accountLast4, timestamp, balance, currency, isFromCard,
-            category_id, subcategory_id, raw_sms, is_manual)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+            category_id, subcategory_id, raw_sms, reference, is_manual)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
         tx.amount,
         tx.type,
         tx.merchant ?? null,
@@ -711,6 +759,7 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
         categoryId,
         subcategoryId,
         tx.smsBody ?? null,
+        tx.reference ?? null,
       );
     }
     await database.runAsync('COMMIT');
@@ -745,6 +794,7 @@ export async function updateTx(id: number, patch: TxPatch): Promise<void> {
     ['deletedAt', 'deleted_at', (v) => v],
     ['lat', 'lat', (v) => v],
     ['lng', 'lng', (v) => v],
+    ['originalType', 'original_type', (v) => v],
   ];
 
   for (const [key, column, transform] of columnMap) {
