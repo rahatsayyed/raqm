@@ -6,6 +6,12 @@ module.exports = function (api) {
       ['babel-preset-expo', { jsxImportSource: 'nativewind' }],
       'nativewind/babel',
     ],
-    plugins: ['react-native-reanimated/plugin'], // must be last
+    plugins: [
+      [
+        'react-native-iconify/babel',
+        { icons: require('./icon-manifest.js') },
+      ],
+      'react-native-reanimated/plugin', // must be last
+    ],
   };
 };

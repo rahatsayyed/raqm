@@ -1,3 +1,4 @@
+// @@iconify-code-gen
 import './global.css';
 import { useCallback, useEffect } from 'react';
 import { View } from 'react-native';
