@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Animated, Modal, Pressable, Touchab
 import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Spacing, Radius } from '../../theme';
 import { useAppStore } from '../../store/appStore';
 import { useTxStore } from '../../store/txStore';
 import { SmsReader } from '../../native/SmsReader';
@@ -72,6 +72,16 @@ function spentIn(txs: TxRecord[], from: number, to: number): number {
   }
   return spent;
 }
+
+// Animated.View isn't wrapped by NativeWind's interop — the toast keeps a
+// style object so the animated opacity/translate compose with its layout.
+const toastStyle = {
+  position: 'absolute' as const,
+  top: 0, left: 0, right: 0, zIndex: 100,
+  margin: Spacing.md, borderRadius: Radius.xl,
+  backgroundColor: Colors.primary,
+  paddingHorizontal: Spacing.md, paddingVertical: 12,
+};
 
 export function DashboardScreen() {
   const { userName } = useAppStore();
@@ -290,19 +300,19 @@ export function DashboardScreen() {
   }, [txs.length, metrics, currency]);
 
   return (
-    <View style={{ flex: 1 }}>
+    <View className="flex-1">
     {newTxLabel && (
-      <Animated.View style={[styles.toast, { opacity: toastAnim, transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-16, 0] }) }] }]}>
-        <Text style={styles.toastText}>⚡ {newTxLabel}</Text>
+      <Animated.View style={[toastStyle, { opacity: toastAnim, transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-16, 0] }) }] }]}>
+        <Text className="font-inter-medium text-[16px] leading-[24px] text-on-primary-container">⚡ {newTxLabel}</Text>
         {linkPromptTxId !== null && (
           <TouchableOpacity
             onPress={() => {
               setPickerTxId(linkPromptTxId);
               setShowListPicker(true);
             }}
-            style={styles.toastLinkBtn}
+            className="mt-[8px] self-start"
           >
-            <Text style={styles.toastLinkText}>Link to list?</Text>
+            <Text className="font-mono text-[12px] leading-[16px] tracking-[0.6px] text-on-primary underline">Link to list?</Text>
           </TouchableOpacity>
         )}
       </Animated.View>
@@ -318,18 +328,18 @@ export function DashboardScreen() {
       }}
     >
       <Pressable
-        style={styles.modalBackdrop}
+        className="flex-1 bg-black/60 justify-center p-[24px]"
         onPress={() => {
           setShowListPicker(false);
           setPickerTxId(null);
         }}
       >
-        <View style={styles.modalCard}>
-          <Text style={styles.modalTitle}>Link to which list?</Text>
+        <View className="bg-bg-surface-raised rounded-[16px] border border-border-subtle p-[24px]">
+          <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface mb-[16px]">Link to which list?</Text>
           {activeGroceryLists.map((l) => (
             <TouchableOpacity
               key={l.id}
-              style={styles.modalRow}
+              className="py-[12px] border-b border-border-subtle"
               onPress={async () => {
                 if (pickerTxId !== null) await linkTxToList(l.id, pickerTxId);
                 setShowListPicker(false);
@@ -337,30 +347,32 @@ export function DashboardScreen() {
                 setLinkPromptTxId(null);
               }}
             >
-              <Text style={styles.modalRowText}>{l.name}</Text>
+              <Text className="font-inter text-body-standard text-on-surface">{l.name}</Text>
             </TouchableOpacity>
           ))}
-          {activeGroceryLists.length === 0 && <Text style={styles.modalEmpty}>No active lists</Text>}
+          {activeGroceryLists.length === 0 && (
+            <Text className="font-inter text-[14px] leading-[20px] text-on-surface-variant py-[8px]">No active lists</Text>
+          )}
         </View>
       </Pressable>
     </Modal>
 
-    <ScrollView style={styles.root} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView className="flex-1 bg-background" contentContainerClassName="pb-[40px]" showsVerticalScrollIndicator={false}>
       {/* Top bar: avatar + wordmark, settings on the right */}
-      <View style={styles.topBar}>
-        <View style={styles.topBarLeft}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{(userName.trim()[0] ?? 'R').toUpperCase()}</Text>
+      <View className="flex-row justify-between items-center px-[24px] pt-[8px] pb-[8px]">
+        <View className="flex-row items-center gap-[8px]">
+          <View className="w-[36px] h-[36px] rounded-[18px] bg-bg-surface-raised border border-border-subtle items-center justify-center">
+            <Text className="font-inter text-body-standard text-ink-headline">{(userName.trim()[0] ?? 'R').toUpperCase()}</Text>
           </View>
-          <Text style={styles.wordmark}>Raqm</Text>
+          <Text className="font-fraunces text-[22px] leading-[28px] text-on-surface">Raqm</Text>
         </View>
         <TouchableOpacity onPress={() => navigation.navigate('Settings')} hitSlop={8}>
-          <Text style={styles.topBarAction}>⚙</Text>
+          <Text className="text-[20px] text-ink-label">⚙</Text>
         </TouchableOpacity>
       </View>
 
       {/* Hero: net this month, over a soft radial glow */}
-      <View style={styles.hero}>
+      <View className="items-center py-[40px] mb-[24px]">
         <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
           <Defs>
             <RadialGradient id="heroGlow" cx="50%" cy="50%" r="60%">
@@ -370,56 +382,56 @@ export function DashboardScreen() {
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#heroGlow)" />
         </Svg>
-        <Text style={styles.heroLabel}>NET THIS MONTH</Text>
-        <Text style={[styles.heroMetric, netIsNegative && { color: Colors.errorMuted }]}>
+        <Text className="font-inter-semibold text-label-caps text-ink-label mb-[8px]">NET THIS MONTH</Text>
+        <Text className={`font-mono-medium text-metric-hero ${netIsNegative ? 'text-error-muted' : 'text-ink-headline'}`}>
           {netIsNegative ? '−' : ''}{formatAmount(metrics.net, currency)}
         </Text>
-        <Text style={styles.heroDate}>{todayLine()}</Text>
+        <Text className="font-inter text-body-standard text-ink-body mt-[8px]">{todayLine()}</Text>
       </View>
 
       {/* Personal advisor */}
-      <View style={styles.advisorCard}>
-        <Text style={styles.advisorHeader}>PERSONAL ADVISOR</Text>
-        <Text style={styles.advisorText}>{advisorLine}</Text>
+      <View className="mx-[24px] mb-[16px] bg-bg-surface border border-border-subtle rounded-[12px] p-[24px]">
+        <Text className="font-inter-semibold text-section-header text-primary mb-[16px]">PERSONAL ADVISOR</Text>
+        <Text className="font-inter-medium text-insight-reading text-on-surface">{advisorLine}</Text>
         {txs.length > 0 && (
-          <Text style={styles.advisorMeta}>Based on {txs.length} transactions</Text>
+          <Text className="font-inter text-annotation text-ink-label mt-[16px] opacity-80">Based on {txs.length} transactions</Text>
         )}
       </View>
 
       {/* Stat squares */}
-      <View style={styles.statRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statLabel}>SPENT TODAY</Text>
+      <View className="flex-row gap-[16px] mx-[24px] mb-[32px]">
+        <View className="flex-1 aspect-[1.15] bg-bg-surface border border-border-subtle rounded-[12px] p-[16px] justify-between">
+          <Text className="font-inter-semibold text-label-caps text-ink-label">SPENT TODAY</Text>
           <View>
-            <Text style={styles.statValue}>{formatAmount(metrics.spentToday, currency)}</Text>
+            <Text className="font-mono-medium text-numeric-lg text-on-surface">{formatAmount(metrics.spentToday, currency)}</Text>
             {metrics.vsAvgPct != null && (
-              <Text style={[styles.statMeta, { color: metrics.vsAvgPct > 0 ? Colors.errorMuted : Colors.primary }]}>
+              <Text className={`font-inter text-annotation mt-[4px] ${metrics.vsAvgPct > 0 ? 'text-error-muted' : 'text-primary'}`}>
                 {metrics.vsAvgPct > 0 ? '↑' : '↓'} {Math.abs(metrics.vsAvgPct)}% vs avg
               </Text>
             )}
           </View>
         </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statLabel}>FORECAST</Text>
+        <View className="flex-1 aspect-[1.15] bg-bg-surface border border-border-subtle rounded-[12px] p-[16px] justify-between">
+          <Text className="font-inter-semibold text-label-caps text-ink-label">FORECAST</Text>
           <View>
-            <Text style={styles.statValue}>
+            <Text className="font-mono-medium text-numeric-lg text-on-surface">
               {metrics.forecast != null ? formatAmount(metrics.forecast, currency) : '—'}
             </Text>
-            <Text style={[styles.statMeta, { color: Colors.primary }]}>End of month</Text>
+            <Text className="font-inter text-annotation mt-[4px] text-primary">End of month</Text>
           </View>
         </View>
       </View>
 
       {/* Recent activity */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionHeader}>RECENT ACTIVITY</Text>
+      <View className="mx-[24px] mb-[32px]">
+        <View className="flex-row justify-between items-center">
+          <Text className="font-inter-semibold text-section-header text-on-surface mb-[16px]">RECENT ACTIVITY</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Transactions' as never)} hitSlop={8}>
-            <Text style={styles.viewAll}>VIEW ALL</Text>
+            <Text className="font-inter-semibold text-label-caps text-primary">VIEW ALL</Text>
           </TouchableOpacity>
         </View>
         {recent.length === 0 ? (
-          <Text style={styles.emptyText}>We're still learning your financial patterns.</Text>
+          <Text className="font-inter text-supporting-text text-ink-body">We're still learning your financial patterns.</Text>
         ) : (
           recent.map((tx) => {
             const debit = isDebit(tx.type);
@@ -427,20 +439,20 @@ export function DashboardScreen() {
             return (
               <TouchableOpacity
                 key={tx.id}
-                style={styles.activityRow}
+                className="flex-row items-center gap-[16px] py-[16px] border-b border-border-subtle"
                 activeOpacity={0.7}
                 onPress={() => navigation.navigate('TransactionDetail', { transactionId: tx.id })}
               >
-                <View style={styles.activityIcon}>
-                  <Text style={styles.activityIconGlyph}>{debit ? '↓' : '↑'}</Text>
+                <View className="w-[40px] h-[40px] rounded-[12px] bg-bg-surface-raised border border-border-subtle items-center justify-center">
+                  <Text className="text-[15px] text-ink-label">{debit ? '↓' : '↑'}</Text>
                 </View>
-                <View style={styles.activityInfo}>
-                  <Text style={styles.activityName} numberOfLines={1}>{tx.merchant || tx.bankName}</Text>
-                  <Text style={styles.activityMeta}>
+                <View className="flex-1">
+                  <Text className="font-inter text-body-standard text-on-surface" numberOfLines={1}>{tx.merchant || tx.bankName}</Text>
+                  <Text className="font-inter text-annotation text-ink-label mt-[2px]">
                     {cat ? `${cat} • ` : ''}{shortDate(tx.timestamp)}
                   </Text>
                 </View>
-                <Text style={[styles.activityAmount, !debit && { color: Colors.primary }]}>
+                <Text className={`font-mono text-numeric-sm ${debit ? 'text-on-surface' : 'text-primary'}`}>
                   {debit ? '−' : '+'}{formatAmount(tx.amount, tx.currency)}
                 </Text>
               </TouchableOpacity>
@@ -451,16 +463,16 @@ export function DashboardScreen() {
 
       {/* Upcoming obligations — omitted entirely when there's nothing to say */}
       {upcoming.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionHeader}>UPCOMING OBLIGATIONS</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.upcomingRow}>
+        <View className="mx-[24px] mb-[32px]">
+          <Text className="font-inter-semibold text-section-header text-on-surface mb-[16px]">UPCOMING OBLIGATIONS</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-[16px] pr-[24px]">
             {upcoming.map((u, i) => {
               const soon = u.dueTs - Date.now() <= 3 * DAY_MS;
               return (
-                <View key={`${i}-${u.name}`} style={styles.upcomingCard}>
-                  <Text style={[styles.upcomingWhen, soon && { color: Colors.secondary }]}>{upcomingLabel(u.dueTs)}</Text>
-                  <Text style={styles.upcomingName} numberOfLines={1}>{u.name}</Text>
-                  <Text style={styles.upcomingAmount}>{formatAmount(u.amount, u.currency)}</Text>
+                <View key={`${i}-${u.name}`} className="min-w-[180px] bg-bg-surface-raised border border-border-subtle rounded-[12px] p-[16px]">
+                  <Text className={`font-inter-semibold text-label-caps mb-[16px] ${soon ? 'text-secondary' : 'text-ink-label'}`}>{upcomingLabel(u.dueTs)}</Text>
+                  <Text className="font-inter text-body-standard text-on-surface mb-[4px]" numberOfLines={1}>{u.name}</Text>
+                  <Text className="font-mono-medium text-numeric-md text-on-surface">{formatAmount(u.amount, u.currency)}</Text>
                 </View>
               );
             })}
@@ -470,136 +482,26 @@ export function DashboardScreen() {
 
       {/* Accounts — quiet strip, entry point to AccountDetail */}
       {accounts.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionHeader}>ACCOUNTS</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accountsRow}>
+        <View className="mx-[24px] mb-[32px]">
+          <Text className="font-inter-semibold text-section-header text-on-surface mb-[16px]">ACCOUNTS</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-[8px] pr-[24px]">
             {accounts.map((acc, i) => (
               <TouchableOpacity
                 key={i}
-                style={styles.accountChip}
+                className="bg-bg-surface border border-border-subtle rounded-[12px] py-[8px] px-[16px] min-w-[130px]"
                 activeOpacity={0.7}
                 onPress={() => navigation.navigate('AccountDetail', { bankName: acc.bank, last4: acc.last4 ?? undefined })}
               >
-                <Text style={styles.accountBank} numberOfLines={1}>{acc.bank}</Text>
-                <Text style={styles.accountMeta}>{acc.last4 ? `•••• ${acc.last4}` : 'Account'}</Text>
+                <Text className="font-inter text-supporting-text text-on-surface" numberOfLines={1}>{acc.bank}</Text>
+                <Text className="font-inter text-annotation text-ink-label mt-[2px]">{acc.last4 ? `•••• ${acc.last4}` : 'Account'}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
       )}
 
-      <Text style={styles.footerQuote}>"Wealth is the ability to fully experience life."</Text>
+      <Text className="font-inter text-supporting-text text-ink-label italic text-center mt-[24px] px-[32px]">"Wealth is the ability to fully experience life."</Text>
     </ScrollView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
-  content: { paddingBottom: 40 },
-
-  topBar: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: Spacing.containerMargin, paddingTop: Spacing.sm, paddingBottom: Spacing.sm,
-  },
-  topBarLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  avatar: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: Colors.bgSurfaceRaised, borderWidth: 1, borderColor: Colors.borderSubtle,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  avatarText: { ...Typography.bodyStandard, color: Colors.inkHeadline },
-  wordmark: { ...Typography.statementMobile, fontSize: 22, lineHeight: 28, color: Colors.onSurface },
-  topBarAction: { fontSize: 20, color: Colors.inkLabel },
-
-  hero: { alignItems: 'center', paddingVertical: Spacing.xxl, marginBottom: Spacing.lg },
-  heroLabel: { ...Typography.labelCaps, color: Colors.inkLabel, marginBottom: Spacing.sm },
-  heroMetric: { ...Typography.metricHero, color: Colors.inkHeadline },
-  heroDate: { ...Typography.bodyStandard, color: Colors.inkBody, marginTop: Spacing.sm },
-
-  advisorCard: {
-    marginHorizontal: Spacing.containerMargin, marginBottom: Spacing.md,
-    backgroundColor: Colors.bgSurface, borderWidth: 1, borderColor: Colors.borderSubtle,
-    borderRadius: Radius.lg, padding: Spacing.lg,
-  },
-  advisorHeader: { ...Typography.sectionHeader, color: Colors.primary, marginBottom: Spacing.md },
-  advisorText: { ...Typography.insightReading, color: Colors.onSurface },
-  advisorMeta: { ...Typography.annotation, color: Colors.inkLabel, marginTop: Spacing.md, opacity: 0.8 },
-
-  statRow: {
-    flexDirection: 'row', gap: Spacing.gutter,
-    marginHorizontal: Spacing.containerMargin, marginBottom: Spacing.xl,
-  },
-  statCard: {
-    flex: 1, aspectRatio: 1.15,
-    backgroundColor: Colors.bgSurface, borderWidth: 1, borderColor: Colors.borderSubtle,
-    borderRadius: Radius.lg, padding: Spacing.gutter, justifyContent: 'space-between',
-  },
-  statLabel: { ...Typography.labelCaps, color: Colors.inkLabel },
-  statValue: { ...Typography.numericLg, color: Colors.onSurface },
-  statMeta: { ...Typography.annotation, marginTop: 4 },
-
-  section: { marginHorizontal: Spacing.containerMargin, marginBottom: Spacing.xl },
-  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionHeader: { ...Typography.sectionHeader, color: Colors.onSurface, marginBottom: Spacing.md },
-  viewAll: { ...Typography.labelCaps, color: Colors.primary },
-
-  activityRow: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.borderSubtle,
-  },
-  activityIcon: {
-    width: 40, height: 40, borderRadius: Radius.lg,
-    backgroundColor: Colors.bgSurfaceRaised, borderWidth: 1, borderColor: Colors.borderSubtle,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  activityIconGlyph: { fontSize: 15, color: Colors.inkLabel },
-  activityInfo: { flex: 1 },
-  activityName: { ...Typography.bodyStandard, color: Colors.onSurface },
-  activityMeta: { ...Typography.annotation, color: Colors.inkLabel, marginTop: 2 },
-  activityAmount: { ...Typography.numericSm, color: Colors.onSurface },
-
-  upcomingRow: { gap: Spacing.gutter, paddingRight: Spacing.containerMargin },
-  upcomingCard: {
-    minWidth: 180,
-    backgroundColor: Colors.bgSurfaceRaised, borderWidth: 1, borderColor: Colors.borderSubtle,
-    borderRadius: Radius.lg, padding: Spacing.gutter,
-  },
-  upcomingWhen: { ...Typography.labelCaps, color: Colors.inkLabel, marginBottom: Spacing.md },
-  upcomingName: { ...Typography.bodyStandard, color: Colors.onSurface, marginBottom: 4 },
-  upcomingAmount: { ...Typography.numericMd, color: Colors.onSurface },
-
-  accountsRow: { gap: Spacing.sm, paddingRight: Spacing.containerMargin },
-  accountChip: {
-    backgroundColor: Colors.bgSurface, borderWidth: 1, borderColor: Colors.borderSubtle,
-    borderRadius: Radius.lg, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, minWidth: 130,
-  },
-  accountBank: { ...Typography.supportingText, color: Colors.onSurface },
-  accountMeta: { ...Typography.annotation, color: Colors.inkLabel, marginTop: 2 },
-
-  emptyText: { ...Typography.supportingText, color: Colors.inkBody },
-  footerQuote: {
-    ...Typography.supportingText, color: Colors.inkLabel, fontStyle: 'italic',
-    textAlign: 'center', marginTop: Spacing.lg, paddingHorizontal: Spacing.xl,
-  },
-
-  toast: {
-    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100,
-    margin: Spacing.md, borderRadius: Radius.xl,
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.md, paddingVertical: 12,
-  },
-  toastText: { ...Typography.bodyMd, color: Colors.onPrimaryContainer, fontFamily: 'Inter_500Medium' },
-  toastLinkBtn: { marginTop: 8, alignSelf: 'flex-start' },
-  toastLinkText: { ...Typography.labelSm, color: Colors.onPrimary, textDecorationLine: 'underline' },
-
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: Spacing.lg },
-  modalCard: {
-    backgroundColor: Colors.bgSurfaceRaised, borderRadius: Radius.xl,
-    borderWidth: 1, borderColor: Colors.borderSubtle, padding: Spacing.lg,
-  },
-  modalTitle: { ...Typography.titleLg, color: Colors.onSurface, marginBottom: Spacing.md, fontSize: 16 },
-  modalRow: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.borderSubtle },
-  modalRowText: { ...Typography.bodyStandard, color: Colors.onSurface },
-  modalEmpty: { ...Typography.bodySm, color: Colors.onSurfaceVariant, paddingVertical: Spacing.sm },
-});
