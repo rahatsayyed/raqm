@@ -9,7 +9,12 @@ import type { MainStackParamList } from '../../navigation/types';
 import { getCategories, mergeTxs, groupTxs, type Category, type TxRecord } from '../../db/database';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { formatAmount } from '../../utils/format';
-import { SearchIcon } from '../../components/TabIcon';
+import {
+  SearchIcon, GroceryIcon, HomeIcon,
+  UtensilsCrossedIcon, ShoppingBasketIcon, CarIcon, ReceiptIcon, HeartPulseIcon, FilmIcon,
+  PlaneIcon, GraduationCapIcon, TrendingUpIcon, GiftIcon, ScissorsIcon, WalletCardsIcon,
+  ArrowLeftRightIcon, CreditCardIcon, BadgePercentIcon, CircleHelpIcon, LayersIcon,
+} from '../../components/TabIcon';
 
 const DAY_MS = 86_400_000;
 
@@ -57,6 +62,39 @@ type ListItem =
   | { kind: 'header'; key: string; label: string; total: number }
   | { kind: 'single'; key: string; tx: TxRecord }
   | { kind: 'group'; key: string; groupId: number; members: TxRecord[] };
+
+type IconComponent = React.ComponentType<{ color: string; size?: number }>;
+
+/** Category → row-tile icon (Lucide-style outline set). */
+function categoryIconFor(categoryName: string | null, tx: TxRecord): IconComponent {
+  if (categoryName) {
+    const n = categoryName.toLowerCase();
+    if (/food|dining|restaurant|coffee/.test(n)) return UtensilsCrossedIcon;
+    if (/grocer/.test(n)) return ShoppingBasketIcon;
+    if (/shop/.test(n)) return GroceryIcon as IconComponent; // shopping-bag
+    if (/transport|fuel|cab/.test(n)) return CarIcon;
+    if (/travel|flight/.test(n)) return PlaneIcon;
+    if (/bill|utilit/.test(n)) return ReceiptIcon;
+    if (/health|medic/.test(n)) return HeartPulseIcon;
+    if (/entertain|movie|stream/.test(n)) return FilmIcon;
+    if (/education|course/.test(n)) return GraduationCapIcon;
+    if (/personal/.test(n)) return ScissorsIcon;
+    if (/rent|hous|home/.test(n)) return HomeIcon;
+    if (/salary|income/.test(n)) return WalletCardsIcon;
+    if (/transfer/.test(n)) return ArrowLeftRightIcon;
+    if (/credit card/.test(n)) return CreditCardIcon;
+    if (/invest/.test(n)) return TrendingUpIcon;
+    if (/cashback|refund/.test(n)) return BadgePercentIcon;
+    if (/gift/.test(n)) return GiftIcon;
+  }
+  if (tx.linkType === 'refund' || tx.linkType === 'self_transfer') {
+    return tx.linkType === 'refund' ? BadgePercentIcon : ArrowLeftRightIcon;
+  }
+  if (tx.type === TransactionType.TRANSFER) return ArrowLeftRightIcon;
+  if (tx.type === TransactionType.INVESTMENT) return TrendingUpIcon;
+  if (isCredit(tx.type)) return WalletCardsIcon;
+  return CircleHelpIcon;
+}
 
 // FAB glow shadow — shadow* values aren't expressible as core NativeWind classes.
 const fabShadow = {
@@ -243,7 +281,10 @@ export function TransactionsScreen() {
       const expanded = expandedGroups.has(item.groupId);
       return (
         <View>
-          <TouchableOpacity className="flex-row items-start gap-[16px] py-[8px]" activeOpacity={0.7} onPress={() => toggleGroup(item.groupId)}>
+          <TouchableOpacity className="flex-row items-start gap-[12px] py-[10px]" activeOpacity={0.7} onPress={() => toggleGroup(item.groupId)}>
+            <View className="w-[40px] h-[40px] rounded bg-surface-container-high items-center justify-center">
+              <LayersIcon color={Colors.primary} size={20} />
+            </View>
             <View className="flex-1">
               <Text className="font-inter-medium text-insight-reading text-ink-headline" numberOfLines={1}>Group · {item.members.length} transactions</Text>
               <Text className="font-inter text-supporting-text text-ink-body mt-[2px]">Tap to {expanded ? 'collapse' : 'expand'}</Text>
@@ -405,9 +446,10 @@ const TxRow = memo(function TxRow({
   onLongPressId: (id: number) => void;
 }) {
   const credit = isCredit(tx.type);
+  const Icon = categoryIconFor(categoryName, tx);
   return (
     <TouchableOpacity
-      className={`flex-row items-start gap-[16px] py-[8px] ${indent ? 'pl-[24px]' : ''}`}
+      className={`flex-row items-start gap-[12px] py-[10px] ${indent ? 'pl-[24px]' : ''}`}
       onPress={() => onPressId(tx.id)}
       onLongPress={() => onLongPressId(tx.id)}
       activeOpacity={0.7}
@@ -417,19 +459,25 @@ const TxRow = memo(function TxRow({
           {selected && <Text className="text-on-primary text-[12px] font-inter-bold">✓</Text>}
         </View>
       )}
+      <View className="w-[40px] h-[40px] rounded bg-surface-container-high items-center justify-center">
+        <Icon color={Colors.primary} size={20} />
+      </View>
       <View className="flex-1">
         <Text className="font-inter-medium text-insight-reading text-ink-headline" numberOfLines={1}>{tx.merchant || tx.bankName}</Text>
-        <Text className="font-inter text-supporting-text text-ink-body mt-[2px]" numberOfLines={1}>
-          {tx.bankName}  •  {timeLabel(tx.timestamp)}  •  {categoryName
-            ? categoryName
+        <Text className="font-inter text-supporting-text mt-[2px]" numberOfLines={1}>
+          {categoryName
+            ? <Text className="text-ink-body">{categoryName}</Text>
             : tx.type === TransactionType.EXPENSE
               ? <Text className="text-secondary">Uncategorized</Text>
-              : txTypeLabel(tx.type)}
+              : <Text className="text-ink-body">{txTypeLabel(tx.type)}</Text>}
         </Text>
       </View>
-      <Text className={`font-mono-medium text-[18px] leading-[26px] ${credit ? 'text-primary-container' : 'text-ink-headline'}`}>
-        {formatAmount(tx.amount, currency)}
-      </Text>
+      <View className="items-end">
+        <Text className={`font-mono-medium text-[18px] leading-[26px] ${credit ? 'text-primary-container' : 'text-ink-headline'}`}>
+          {formatAmount(tx.amount, currency)}
+        </Text>
+        <Text className="font-inter text-annotation text-ink-body">{timeLabel(tx.timestamp)}</Text>
+      </View>
     </TouchableOpacity>
   );
 });
