@@ -48,6 +48,7 @@ function upcomingLabel(ts: number): string {
 
 interface HomeMetrics {
   net: number;
+  income: number;
   monthSpent: number;
   spentToday: number;
   vsAvgPct: number | null; // today vs daily average, +ve = above average
@@ -57,7 +58,7 @@ interface HomeMetrics {
 }
 
 const EMPTY_METRICS: HomeMetrics = {
-  net: 0, monthSpent: 0, spentToday: 0, vsAvgPct: null, forecast: null, vsLastMonthPct: null, topCategoryName: null,
+  net: 0, income: 0, monthSpent: 0, spentToday: 0, vsAvgPct: null, forecast: null, vsLastMonthPct: null, topCategoryName: null,
 };
 
 /** Refund-netted expense sum over a window (same math as the rest of the app). */
@@ -214,7 +215,7 @@ export function DashboardScreen() {
       }
 
       if (!cancelled) {
-        setMetrics({ net, monthSpent, spentToday, vsAvgPct, forecast, vsLastMonthPct, topCategoryName });
+        setMetrics({ net, income, monthSpent, spentToday, vsAvgPct, forecast, vsLastMonthPct, topCategoryName });
       }
     })();
     return () => {
@@ -285,6 +286,16 @@ export function DashboardScreen() {
 
   const currency = txs[0]?.currency ?? '₹';
   const netIsNegative = metrics.net < 0;
+
+  // MOCK placeholder shown until recurring-obligation detection has real data to display.
+  const MOCK_UPCOMING = useMemo(
+    () => [
+      { name: 'House Rent', amount: 24000, dueTs: Date.now() + 2 * DAY_MS, currency },
+      { name: 'Utility Bill', amount: 3210, dueTs: Date.now() + 9 * DAY_MS, currency },
+      { name: 'SIP Investment', amount: 15000, dueTs: Date.now() + 11 * DAY_MS, currency },
+    ],
+    [currency],
+  );
 
   // Advisor line: calm, factual, never shaming (DESIGN.md §11/§12).
   const advisorLine = useMemo(() => {
@@ -387,39 +398,34 @@ export function DashboardScreen() {
           {netIsNegative ? '−' : ''}{formatAmount(metrics.net, currency)}
         </Text>
         <Text className="font-inter text-body-standard text-ink-body mt-[8px]">{todayLine()}</Text>
+
+        {/* Integrated spend/income row */}
+        <View className="flex-row items-center gap-[24px] mt-[16px]">
+          <View className="items-center">
+            <Text className="font-inter-semibold text-annotation text-ink-label mb-[4px]">SPENT</Text>
+            <View className="flex-row items-center gap-[4px]">
+              <Text className="text-error-muted text-body-standard">↗</Text>
+              <Text className="font-mono-medium text-body-standard text-on-surface">{formatAmount(metrics.monthSpent, currency)}</Text>
+            </View>
+          </View>
+          <View className="w-[1px] h-[32px] bg-border-subtle" />
+          <View className="items-center">
+            <Text className="font-inter-semibold text-annotation text-ink-label mb-[4px]">CASH FLOW</Text>
+            <View className="flex-row items-center gap-[4px]">
+              <Text className="text-primary text-body-standard">↘</Text>
+              <Text className="font-mono-medium text-body-standard text-on-surface">{formatAmount(metrics.income, currency)}</Text>
+            </View>
+          </View>
+        </View>
       </View>
 
       {/* Personal advisor */}
-      <View className="mx-[24px] mb-[16px] bg-bg-surface border border-border-subtle rounded-[12px] p-[24px]">
+      <View className="mx-[24px] mb-[32px] bg-bg-surface border border-border-subtle rounded-[12px] p-[24px]">
         <Text className="font-inter-semibold text-section-header text-primary mb-[16px]">PERSONAL ADVISOR</Text>
         <Text className="font-inter-medium text-insight-reading text-on-surface">{advisorLine}</Text>
         {txs.length > 0 && (
           <Text className="font-inter text-annotation text-ink-label mt-[16px] opacity-80">Based on {txs.length} transactions</Text>
         )}
-      </View>
-
-      {/* Stat squares */}
-      <View className="flex-row gap-[16px] mx-[24px] mb-[32px]">
-        <View className="flex-1 aspect-[1.15] bg-bg-surface border border-border-subtle rounded-[12px] p-[16px] justify-between">
-          <Text className="font-inter-semibold text-label-caps text-ink-label">SPENT TODAY</Text>
-          <View>
-            <Text className="font-mono-medium text-numeric-lg text-on-surface">{formatAmount(metrics.spentToday, currency)}</Text>
-            {metrics.vsAvgPct != null && (
-              <Text className={`font-inter text-annotation mt-[4px] ${metrics.vsAvgPct > 0 ? 'text-error-muted' : 'text-primary'}`}>
-                {metrics.vsAvgPct > 0 ? '↑' : '↓'} {Math.abs(metrics.vsAvgPct)}% vs avg
-              </Text>
-            )}
-          </View>
-        </View>
-        <View className="flex-1 aspect-[1.15] bg-bg-surface border border-border-subtle rounded-[12px] p-[16px] justify-between">
-          <Text className="font-inter-semibold text-label-caps text-ink-label">FORECAST</Text>
-          <View>
-            <Text className="font-mono-medium text-numeric-lg text-on-surface">
-              {metrics.forecast != null ? formatAmount(metrics.forecast, currency) : '—'}
-            </Text>
-            <Text className="font-inter text-annotation mt-[4px] text-primary">End of month</Text>
-          </View>
-        </View>
       </View>
 
       {/* Recent activity */}
@@ -461,24 +467,39 @@ export function DashboardScreen() {
         )}
       </View>
 
-      {/* Upcoming obligations — omitted entirely when there's nothing to say */}
-      {upcoming.length > 0 && (
-        <View className="mx-[24px] mb-[32px]">
-          <Text className="font-inter-semibold text-section-header text-on-surface mb-[16px]">UPCOMING OBLIGATIONS</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-[16px] pr-[24px]">
-            {upcoming.map((u, i) => {
-              const soon = u.dueTs - Date.now() <= 3 * DAY_MS;
-              return (
-                <View key={`${i}-${u.name}`} className="min-w-[180px] bg-bg-surface-raised border border-border-subtle rounded-[12px] p-[16px]">
-                  <Text className={`font-inter-semibold text-label-caps mb-[16px] ${soon ? 'text-secondary' : 'text-ink-label'}`}>{upcomingLabel(u.dueTs)}</Text>
-                  <Text className="font-inter text-body-standard text-on-surface mb-[4px]" numberOfLines={1}>{u.name}</Text>
-                  <Text className="font-mono-medium text-numeric-md text-on-surface">{formatAmount(u.amount, u.currency)}</Text>
-                </View>
-              );
-            })}
-          </ScrollView>
+      {/* Needs attention — MOCK placeholder card; real uncategorized/anomaly detection to follow */}
+      <View className="mx-[24px] mb-[32px] bg-bg-surface border border-secondary rounded-[12px] p-[24px]">
+        <View className="flex-row items-center justify-between mb-[16px]">
+          <View className="flex-row items-center gap-[8px]">
+            <Text className="text-secondary text-body-standard">⚠</Text>
+            <Text className="font-inter-semibold text-section-header text-secondary">NEEDS YOUR ATTENTION</Text>
+          </View>
+          <Text className="font-inter text-annotation text-ink-label">2 more</Text>
         </View>
-      )}
+        <Text className="font-inter-medium text-insight-reading text-on-surface mb-[24px]">
+          I noticed a large transaction at &apos;STP-MUM&apos; that I can&apos;t categorize yet. Would you like to review it?
+        </Text>
+        <TouchableOpacity className="bg-secondary rounded-[8px] py-[12px] items-center" activeOpacity={0.8}>
+          <Text className="font-inter-semibold text-annotation text-on-secondary tracking-[1px]">REVIEW TRANSACTION</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Upcoming obligations — MOCK fallback shown until recurring detection has real data */}
+      <View className="mx-[24px] mb-[32px]">
+        <Text className="font-inter-semibold text-section-header text-on-surface mb-[16px]">UPCOMING OBLIGATIONS</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-[16px] pr-[24px]">
+          {(upcoming.length > 0 ? upcoming : MOCK_UPCOMING).map((u, i) => {
+            const soon = u.dueTs - Date.now() <= 3 * DAY_MS;
+            return (
+              <View key={`${i}-${u.name}`} className="min-w-[180px] bg-bg-surface-raised border border-border-subtle rounded-[12px] p-[16px]">
+                <Text className={`font-inter-semibold text-label-caps mb-[16px] ${soon ? 'text-secondary' : 'text-ink-label'}`}>{upcomingLabel(u.dueTs)}</Text>
+                <Text className="font-inter text-body-standard text-on-surface mb-[4px]" numberOfLines={1}>{u.name}</Text>
+                <Text className="font-mono-medium text-numeric-md text-on-surface">{formatAmount(u.amount, u.currency)}</Text>
+              </View>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {/* Accounts — quiet strip, entry point to AccountDetail */}
       {accounts.length > 0 && (
