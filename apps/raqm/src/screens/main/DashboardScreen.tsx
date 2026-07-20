@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Animated, Modal, Pressable, TouchableOpacity } from 'react-native';
-import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
+import { View, Text, ScrollView, Animated, Modal, Pressable, TouchableOpacity } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors, Spacing, Radius } from '../../theme';
@@ -16,6 +15,15 @@ import { postTxNotification } from '../../notifications/notifications';
 import { getMonthBounds, getDayBounds } from '../../utils/period';
 import type { MainStackParamList } from '../../navigation/types';
 import { formatAmount } from '../../utils/format';
+import {
+  HeroMetric,
+  AdvisorCard,
+  SectionHeader,
+  TransactionRow,
+  NeedsAttentionCard,
+  ObligationCard,
+  AccountChip,
+} from '../../components/dashboard';
 
 const GROCERY_KEYWORDS = /grocer|bigbasket|blinkit|zepto|dmart|instamart/i;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -383,139 +391,81 @@ export function DashboardScreen() {
       </View>
 
       {/* Hero: net this month, over a soft radial glow */}
-      <View className="items-center py-[40px] mb-[24px]">
-        <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
-          <Defs>
-            <RadialGradient id="heroGlow" cx="50%" cy="50%" r="60%">
-              <Stop offset="0%" stopColor={Colors.primary} stopOpacity={0.08} />
-              <Stop offset="100%" stopColor={Colors.primary} stopOpacity={0} />
-            </RadialGradient>
-          </Defs>
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#heroGlow)" />
-        </Svg>
-        <Text className="font-inter-semibold text-label-caps text-ink-label mb-[8px]">NET THIS MONTH</Text>
-        <Text className={`font-mono-medium text-metric-hero ${netIsNegative ? 'text-error-muted' : 'text-ink-headline'}`}>
-          {netIsNegative ? '−' : ''}{formatAmount(metrics.net, currency)}
-        </Text>
-        <Text className="font-inter text-body-standard text-ink-body mt-[8px]">{todayLine()}</Text>
-
-        {/* Integrated spend/income row */}
-        <View className="flex-row items-center gap-[24px] mt-[16px]">
-          <View className="items-center">
-            <Text className="font-inter-semibold text-annotation text-ink-label mb-[4px]">SPENT</Text>
-            <View className="flex-row items-center gap-[4px]">
-              <Text className="text-error-muted text-body-standard">↗</Text>
-              <Text className="font-mono-medium text-body-standard text-on-surface">{formatAmount(metrics.monthSpent, currency)}</Text>
-            </View>
-          </View>
-          <View className="w-[1px] h-[32px] bg-border-subtle" />
-          <View className="items-center">
-            <Text className="font-inter-semibold text-annotation text-ink-label mb-[4px]">CASH FLOW</Text>
-            <View className="flex-row items-center gap-[4px]">
-              <Text className="text-primary text-body-standard">↘</Text>
-              <Text className="font-mono-medium text-body-standard text-on-surface">{formatAmount(metrics.income, currency)}</Text>
-            </View>
-          </View>
-        </View>
-      </View>
+      <HeroMetric
+        label="NET THIS MONTH"
+        value={`${netIsNegative ? '−' : ''}${formatAmount(metrics.net, currency)}`}
+        valueColorClassName={netIsNegative ? 'text-error-muted' : 'text-ink-headline'}
+        sublabel={todayLine()}
+        stats={[
+          { label: 'SPENT', value: formatAmount(metrics.monthSpent, currency), direction: 'up' },
+          { label: 'CASH FLOW', value: formatAmount(metrics.income, currency), direction: 'down' },
+        ]}
+      />
 
       {/* Personal advisor */}
-      <View className="mx-[24px] mb-[32px] bg-bg-surface border border-border-subtle rounded-[12px] p-[24px]">
-        <Text className="font-inter-semibold text-section-header text-primary mb-[16px]">PERSONAL ADVISOR</Text>
-        <Text className="font-inter-medium text-insight-reading text-on-surface">{advisorLine}</Text>
-        {txs.length > 0 && (
-          <Text className="font-inter text-annotation text-ink-label mt-[16px] opacity-80">Based on {txs.length} transactions</Text>
-        )}
-      </View>
+      <AdvisorCard
+        insight={advisorLine}
+        footnote={txs.length > 0 ? `Based on ${txs.length} transactions` : undefined}
+      />
 
       {/* Recent activity */}
       <View className="mx-[24px] mb-[32px]">
-        <View className="flex-row justify-between items-center">
-          <Text className="font-inter-semibold text-section-header text-on-surface mb-[16px]">RECENT ACTIVITY</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Transactions' as never)} hitSlop={8}>
-            <Text className="font-inter-semibold text-label-caps text-primary">VIEW ALL</Text>
-          </TouchableOpacity>
-        </View>
+        <SectionHeader
+          title="RECENT ACTIVITY"
+          actionLabel="VIEW ALL"
+          onAction={() => navigation.navigate('Transactions' as never)}
+        />
         {recent.length === 0 ? (
           <Text className="font-inter text-supporting-text text-ink-body">We're still learning your financial patterns.</Text>
         ) : (
-          recent.map((tx) => {
-            const debit = isDebit(tx.type);
-            const cat = categoryName(tx.categoryId);
-            return (
-              <TouchableOpacity
-                key={tx.id}
-                className="flex-row items-center gap-[16px] py-[16px] border-b border-border-subtle"
-                activeOpacity={0.7}
-                onPress={() => navigation.navigate('TransactionDetail', { transactionId: tx.id })}
-              >
-                <View className="w-[40px] h-[40px] rounded-[12px] bg-bg-surface-raised border border-border-subtle items-center justify-center">
-                  <Text className="text-[15px] text-ink-label">{debit ? '↓' : '↑'}</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="font-inter text-body-standard text-on-surface" numberOfLines={1}>{tx.merchant || tx.bankName}</Text>
-                  <Text className="font-inter text-annotation text-ink-label mt-[2px]">
-                    {cat ? `${cat} • ` : ''}{shortDate(tx.timestamp)}
-                  </Text>
-                </View>
-                <Text className={`font-mono text-numeric-sm ${debit ? 'text-on-surface' : 'text-primary'}`}>
-                  {debit ? '−' : '+'}{formatAmount(tx.amount, tx.currency)}
-                </Text>
-              </TouchableOpacity>
-            );
-          })
+          recent.map((tx) => (
+            <TransactionRow
+              key={tx.id}
+              merchant={tx.merchant || tx.bankName}
+              categoryName={categoryName(tx.categoryId)}
+              dateLabel={shortDate(tx.timestamp)}
+              amountLabel={formatAmount(tx.amount, tx.currency)}
+              isDebit={isDebit(tx.type)}
+              onPress={() => navigation.navigate('TransactionDetail', { transactionId: tx.id })}
+            />
+          ))
         )}
       </View>
 
       {/* Needs attention — MOCK placeholder card; real uncategorized/anomaly detection to follow */}
-      <View className="mx-[24px] mb-[32px] bg-bg-surface border border-secondary rounded-[12px] p-[24px]">
-        <View className="flex-row items-center justify-between mb-[16px]">
-          <View className="flex-row items-center gap-[8px]">
-            <Text className="text-secondary text-body-standard">⚠</Text>
-            <Text className="font-inter-semibold text-section-header text-secondary">NEEDS YOUR ATTENTION</Text>
-          </View>
-          <Text className="font-inter text-annotation text-ink-label">2 more</Text>
-        </View>
-        <Text className="font-inter-medium text-insight-reading text-on-surface mb-[24px]">
-          I noticed a large transaction at &apos;STP-MUM&apos; that I can&apos;t categorize yet. Would you like to review it?
-        </Text>
-        <TouchableOpacity className="bg-secondary rounded-[8px] py-[12px] items-center" activeOpacity={0.8}>
-          <Text className="font-inter-semibold text-annotation text-on-secondary tracking-[1px]">REVIEW TRANSACTION</Text>
-        </TouchableOpacity>
-      </View>
+      <NeedsAttentionCard
+        message="I noticed a large transaction at 'STP-MUM' that I can't categorize yet. Would you like to review it?"
+        moreCount={2}
+      />
 
       {/* Upcoming obligations — MOCK fallback shown until recurring detection has real data */}
       <View className="mx-[24px] mb-[32px]">
-        <Text className="font-inter-semibold text-section-header text-on-surface mb-[16px]">UPCOMING OBLIGATIONS</Text>
+        <SectionHeader title="UPCOMING OBLIGATIONS" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-[16px] pr-[24px]">
-          {(upcoming.length > 0 ? upcoming : MOCK_UPCOMING).map((u, i) => {
-            const soon = u.dueTs - Date.now() <= 3 * DAY_MS;
-            return (
-              <View key={`${i}-${u.name}`} className="min-w-[180px] bg-bg-surface-raised border border-border-subtle rounded-[12px] p-[16px]">
-                <Text className={`font-inter-semibold text-label-caps mb-[16px] ${soon ? 'text-secondary' : 'text-ink-label'}`}>{upcomingLabel(u.dueTs)}</Text>
-                <Text className="font-inter text-body-standard text-on-surface mb-[4px]" numberOfLines={1}>{u.name}</Text>
-                <Text className="font-mono-medium text-numeric-md text-on-surface">{formatAmount(u.amount, u.currency)}</Text>
-              </View>
-            );
-          })}
+          {(upcoming.length > 0 ? upcoming : MOCK_UPCOMING).map((u, i) => (
+            <ObligationCard
+              key={`${i}-${u.name}`}
+              dueLabel={upcomingLabel(u.dueTs)}
+              soon={u.dueTs - Date.now() <= 3 * DAY_MS}
+              name={u.name}
+              amountLabel={formatAmount(u.amount, u.currency)}
+            />
+          ))}
         </ScrollView>
       </View>
 
       {/* Accounts — quiet strip, entry point to AccountDetail */}
       {accounts.length > 0 && (
         <View className="mx-[24px] mb-[32px]">
-          <Text className="font-inter-semibold text-section-header text-on-surface mb-[16px]">ACCOUNTS</Text>
+          <SectionHeader title="ACCOUNTS" />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-[8px] pr-[24px]">
             {accounts.map((acc, i) => (
-              <TouchableOpacity
+              <AccountChip
                 key={i}
-                className="bg-bg-surface border border-border-subtle rounded-[12px] py-[8px] px-[16px] min-w-[130px]"
-                activeOpacity={0.7}
+                bankName={acc.bank}
+                last4={acc.last4}
                 onPress={() => navigation.navigate('AccountDetail', { bankName: acc.bank, last4: acc.last4 ?? undefined })}
-              >
-                <Text className="font-inter text-supporting-text text-on-surface" numberOfLines={1}>{acc.bank}</Text>
-                <Text className="font-inter text-annotation text-ink-label mt-[2px]">{acc.last4 ? `•••• ${acc.last4}` : 'Account'}</Text>
-              </TouchableOpacity>
+              />
             ))}
           </ScrollView>
         </View>
