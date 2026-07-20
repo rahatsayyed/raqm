@@ -11,6 +11,60 @@ function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function isDebit(type: TransactionType): boolean {
+  return type === TransactionType.EXPENSE || type === TransactionType.TRANSFER || type === TransactionType.INVESTMENT;
+}
+
+interface DeletedTxRowProps {
+  id: number;
+  merchant: string;
+  dateLabel: string;
+  deletedDateLabel: string;
+  amountLabel: string;
+  debit: boolean;
+  onRestore: (id: number) => void;
+}
+
+// Memoized with primitive/stable props per CLAUDE.md's list-performance invariant —
+// this list can grow as large as the active timeline (~5k+ rows on real devices).
+const DeletedTxRow = React.memo(function DeletedTxRow({
+  id,
+  merchant,
+  dateLabel,
+  deletedDateLabel,
+  amountLabel,
+  debit,
+  onRestore,
+}: DeletedTxRowProps) {
+  return (
+    <View className="flex-row items-center gap-sm py-sm">
+      <View className="flex-1">
+        <Text className="font-inter-medium text-body-sm text-on-surface" numberOfLines={1}>
+          {merchant}
+        </Text>
+        <Text className="font-mono text-label-sm text-on-surface-variant tracking-[0] mt-[2px]">
+          {dateLabel} · deleted {deletedDateLabel}
+        </Text>
+      </View>
+      <Text className={`font-mono text-numeric-sm ${debit ? 'text-error-muted' : 'text-primary'}`}>
+        {debit ? '-' : '+'}
+        {amountLabel}
+      </Text>
+      <TouchableOpacity className="border border-primary rounded-md px-sm py-[6px]" onPress={() => onRestore(id)}>
+        <Text className="font-mono text-label-sm text-primary tracking-[0]">Restore</Text>
+      </TouchableOpacity>
+    </View>
+  );
+});
+
+function keyExtractor(tx: TxRecord): string {
+  return String(tx.id);
+}
+
+function renderSeparator() {
+  return <View className="h-[1px] bg-outline-variant" />;
+}
+
 export function DeletedTransactionsScreen({ navigation }: MainStackScreenProps<'DeletedTransactions'>) {
   const [deleted, setDeleted] = useState<TxRecord[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -27,10 +81,28 @@ export function DeletedTransactionsScreen({ navigation }: MainStackScreenProps<'
     }, [load]),
   );
 
-  const handleRestore = async (tx: TxRecord) => {
-    await restore(tx.id); // clears deleted_at + refreshes the main store
-    await load();
-  };
+  const handleRestore = useCallback(
+    async (id: number) => {
+      await restore(id); // clears deleted_at + refreshes the main store
+      await load();
+    },
+    [restore, load],
+  );
+
+  const renderItem = useCallback(
+    ({ item: tx }: { item: TxRecord }) => (
+      <DeletedTxRow
+        id={tx.id}
+        merchant={tx.merchant || tx.bankName}
+        dateLabel={formatDate(tx.timestamp)}
+        deletedDateLabel={tx.deletedAt ? formatDate(tx.deletedAt) : '—'}
+        amountLabel={formatAmount(tx.amount, tx.currency)}
+        debit={isDebit(tx.type)}
+        onRestore={handleRestore}
+      />
+    ),
+    [handleRestore],
+  );
 
   return (
     <View className="flex-1 bg-background p-container-margin">
@@ -45,10 +117,10 @@ export function DeletedTransactionsScreen({ navigation }: MainStackScreenProps<'
 
       <FlatList
         data={deleted}
-        keyExtractor={(tx) => String(tx.id)}
+        keyExtractor={keyExtractor}
         contentContainerClassName="pb-[32px]"
         showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View className="h-[1px] bg-outline-variant" />}
+        ItemSeparatorComponent={renderSeparator}
         ListEmptyComponent={
           loaded ? (
             <View className="pt-[60px] items-center">
@@ -56,31 +128,7 @@ export function DeletedTransactionsScreen({ navigation }: MainStackScreenProps<'
             </View>
           ) : null
         }
-        renderItem={({ item: tx }) => {
-          const debit =
-            tx.type === TransactionType.EXPENSE ||
-            tx.type === TransactionType.TRANSFER ||
-            tx.type === TransactionType.INVESTMENT;
-          return (
-            <View className="flex-row items-center gap-sm py-sm">
-              <View className="flex-1">
-                <Text className="font-inter-medium text-body-sm text-on-surface" numberOfLines={1}>
-                  {tx.merchant || tx.bankName}
-                </Text>
-                <Text className="font-mono text-label-sm text-on-surface-variant tracking-[0] mt-[2px]">
-                  {formatDate(tx.timestamp)} · deleted {tx.deletedAt ? formatDate(tx.deletedAt) : '—'}
-                </Text>
-              </View>
-              <Text className={`font-mono text-numeric-sm ${debit ? 'text-error-muted' : 'text-primary'}`}>
-                {debit ? '-' : '+'}
-                {formatAmount(tx.amount, tx.currency)}
-              </Text>
-              <TouchableOpacity className="border border-primary rounded-md px-sm py-[6px]" onPress={() => handleRestore(tx)}>
-                <Text className="font-mono text-label-sm text-primary tracking-[0]">Restore</Text>
-              </TouchableOpacity>
-            </View>
-          );
-        }}
+        renderItem={renderItem}
       />
     </View>
   );
