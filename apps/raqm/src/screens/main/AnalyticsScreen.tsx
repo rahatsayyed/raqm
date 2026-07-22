@@ -11,6 +11,7 @@ import { getBudgetStatuses, type BudgetStatus } from '../../services/budgets';
 import { getDayBounds, getWeekBounds, getMonthBounds, type PeriodType, type PeriodBounds } from '../../utils/period';
 import { DonutChart } from '../../components/DonutChart';
 import { TrendLine } from '../../components/TrendLine';
+import { BriefingHero } from '../../components/analytics';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { MainTabScreenProps, MainStackParamList } from '../../navigation/types';
 import { formatAmount } from '../../utils/format';
@@ -193,6 +194,35 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
     return out;
   }, [txs]);
 
+  // Hero — current calendar month-to-date spend + a daily sparkline, independent of the period picker.
+  const heroBounds = useMemo(() => getMonthBounds(new Date(), clampedMonthStartDay), [clampedMonthStartDay]);
+
+  const heroTotal = useMemo(
+    () =>
+      txs
+        .filter((tx) => tx.timestamp >= heroBounds.from && tx.timestamp <= heroBounds.to && isCounted(tx) && tx.type === TransactionType.EXPENSE)
+        .reduce((s, tx) => s + tx.amount, 0),
+    [txs, heroBounds],
+  );
+
+  const heroSparkline = useMemo(() => {
+    const out: { label: string; value: number }[] = [];
+    const start = new Date(heroBounds.from);
+    const end = new Date(Math.min(Date.now(), heroBounds.to));
+    const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    while (cursor.getTime() <= end.getTime()) {
+      const b = getDayBounds(cursor);
+      const value = txs
+        .filter((tx) => tx.timestamp >= b.from && tx.timestamp <= b.to && isCounted(tx) && tx.type === TransactionType.EXPENSE)
+        .reduce((s, tx) => s + tx.amount, 0);
+      out.push({ label: cursor.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }), value });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return out;
+  }, [txs, heroBounds]);
+
+  const heroLabel = `${new Date().toLocaleDateString('en-IN', { month: 'long' }).toUpperCase()} SPENDING`;
+
   // Subscriptions (recurring merchants), carried over from prior version — not period-filtered.
   const subscriptions = useMemo(() => {
     const groups = new Map<string, TxRecord[]>();
@@ -231,6 +261,8 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
   return (
     <ScrollView className="flex-1 bg-background" contentContainerClassName="pb-[32px]" showsVerticalScrollIndicator={false}>
       <Text className="font-inter-bold text-headline-sm text-on-surface px-container-margin pt-sm pb-md">Analytics</Text>
+
+      <BriefingHero label={heroLabel} value={formatAmount(heroTotal, currency)} data={heroSparkline} currency={currency} />
 
       {/* V1 — period picker */}
       <View className="flex-row gap-sm px-container-margin mb-md">
