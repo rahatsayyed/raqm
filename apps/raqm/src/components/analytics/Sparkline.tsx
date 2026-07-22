@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
-import Svg, { Polyline, Circle, Line } from 'react-native-svg';
+import { Canvas, Path, Skia, Group, Circle as SkiaCircle, Line as SkiaLine } from '@shopify/react-native-skia';
 import { Colors } from '../../theme';
 import { formatAmount } from '../../utils/format';
 
@@ -20,6 +20,38 @@ interface Props {
 
 const TOOLTIP_WIDTH = 80;
 const HIT_SLOP = 20;
+
+interface SparkPoint {
+  x: number;
+  y: number;
+  label: string;
+  value: number;
+}
+
+/** Builds a smoothed cubic-bezier path through the points via Catmull-Rom-to-bezier interpolation. */
+function buildSmoothPath(points: SparkPoint[]) {
+  const path = Skia.Path.Make();
+  if (points.length === 0) return path;
+
+  path.moveTo(points[0].x, points[0].y);
+  if (points.length === 1) return path;
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] ?? points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] ?? p2;
+
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+
+    path.cubicTo(c1x, c1y, c2x, c2y, p2.x, p2.y);
+  }
+
+  return path;
+}
 
 /** Sparkline whose tooltip tracks the nearest data point as a finger drags across it. */
 export function Sparkline({ data, currency = '₹', height = 56, lineOpacity = 1 }: Props) {
@@ -42,7 +74,7 @@ export function Sparkline({ data, currency = '₹', height = 56, lineOpacity = 1
     [data, stepX, max, height],
   );
 
-  const polylinePoints = points.map((p) => `${p.x},${p.y}`).join(' ');
+  const linePath = useMemo(() => buildSmoothPath(points), [points]);
 
   const updateActiveAtX = (x: number) => {
     if (stepX === 0 || points.length === 0) return;
@@ -80,19 +112,19 @@ export function Sparkline({ data, currency = '₹', height = 56, lineOpacity = 1
             </Text>
           </View>
         )}
-        <Svg width="100%" height={height}>
-          {width > 0 && (
-            <>
-              <Polyline points={polylinePoints} fill="none" stroke={Colors.primary} strokeWidth={1.5} strokeOpacity={lineOpacity} />
-              {active && (
-                <>
-                  <Line x1={active.x} y1={0} x2={active.x} y2={height} stroke={Colors.outlineVariant} strokeWidth={1} />
-                  <Circle cx={active.x} cy={active.y} r={3} fill={Colors.primary} />
-                </>
-              )}
-            </>
-          )}
-        </Svg>
+        {width > 0 && (
+          <Canvas style={{ width, height }}>
+            <Group opacity={lineOpacity}>
+              <Path path={linePath} style="stroke" strokeWidth={1.5} color={Colors.primary} />
+            </Group>
+            {active && (
+              <>
+                <SkiaLine p1={{ x: active.x, y: 0 }} p2={{ x: active.x, y: height }} color={Colors.outlineVariant} strokeWidth={1} />
+                <SkiaCircle cx={active.x} cy={active.y} r={3} color={Colors.primary} />
+              </>
+            )}
+          </Canvas>
+        )}
       </View>
     </GestureDetector>
   );

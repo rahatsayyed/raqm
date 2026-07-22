@@ -141,6 +141,10 @@ export function TrendingUpIcon({ color, size = 24 }: Props) {
   return <Iconify icon="lucide:trending-up" size={size} color={color} />;
 }
 
+export function TrendingDownIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="lucide:trending-down" size={size} color={color} />;
+}
+
 export function GiftIcon({ color, size = 24 }: Props) {
   return <Iconify icon="lucide:gift" size={size} color={color} />;
 }
