@@ -11,7 +11,9 @@ import { getBudgetStatuses, type BudgetStatus } from '../../services/budgets';
 import { getDayBounds, getWeekBounds, getMonthBounds, type PeriodType, type PeriodBounds } from '../../utils/period';
 import { DonutChart } from '../../components/DonutChart';
 import { TrendLine } from '../../components/TrendLine';
-import { BriefingHero } from '../../components/analytics';
+import { BriefingHero, NarrativeAdvisor } from '../../components/analytics';
+import { SectionHeader, TransactionRow } from '../../components/dashboard';
+import { TrendingUpIcon, TrendingDownIcon } from '../../components/TabIcon';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { MainTabScreenProps, MainStackParamList } from '../../navigation/types';
 import { formatAmount } from '../../utils/format';
@@ -25,6 +27,14 @@ function monthLabel(d: Date): string {
 /** Whether a transaction should be included in analytics at all (soft-deleted rows are always excluded). */
 function isCounted(tx: TxRecord): boolean {
   return !tx.deletedAt && countsTowardTotals(tx);
+}
+
+function isDebit(type: TransactionType): boolean {
+  return type === TransactionType.EXPENSE || type === TransactionType.TRANSFER || type === TransactionType.INVESTMENT;
+}
+
+function shortDate(ts: number): string {
+  return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
 export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>) {
@@ -132,6 +142,58 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
     return Array.from(map.entries()).sort(([, a], [, b]) => b - a).slice(0, 8);
   }, [periodTxs]);
 
+  // Merchant snapshot — top merchant by spend + most frequent merchant by order count, both
+  // period-filtered, each compared against the immediately preceding period of equal length.
+  const merchantSnapshot = useMemo(() => {
+    const spendByMerchant = (list: TxRecord[]) => {
+      const map = new Map<string, number>();
+      for (const tx of list) {
+        const isCredit = tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
+        const name = tx.merchant || tx.bankName;
+        if (isCredit && tx.linkType === 'refund') {
+          map.set(name, (map.get(name) ?? 0) - tx.amount);
+        } else if (tx.type === TransactionType.EXPENSE) {
+          map.set(name, (map.get(name) ?? 0) + tx.amount);
+        }
+      }
+      return map;
+    };
+    const countByMerchant = (list: TxRecord[]) => {
+      const map = new Map<string, number>();
+      for (const tx of list) {
+        if (tx.type !== TransactionType.EXPENSE) continue;
+        const name = tx.merchant || tx.bankName;
+        map.set(name, (map.get(name) ?? 0) + 1);
+      }
+      return map;
+    };
+
+    const currSpend = spendByMerchant(periodTxs);
+    const currCount = countByMerchant(periodTxs);
+
+    const prevDurationMs = bounds.to - bounds.from;
+    const prevBounds = { from: bounds.from - prevDurationMs, to: bounds.from };
+    const prevTxs = txs.filter((tx) => tx.timestamp >= prevBounds.from && tx.timestamp < prevBounds.to && isCounted(tx));
+    const prevSpend = spendByMerchant(prevTxs);
+    const prevCount = countByMerchant(prevTxs);
+
+    const topMerchantEntry = Array.from(currSpend.entries()).sort(([, a], [, b]) => b - a)[0];
+    const mostFrequentEntry = Array.from(currCount.entries()).sort(([, a], [, b]) => b - a)[0];
+
+    return {
+      topMerchant: topMerchantEntry
+        ? { name: topMerchantEntry[0], spendDelta: topMerchantEntry[1] - (prevSpend.get(topMerchantEntry[0]) ?? 0) }
+        : null,
+      mostFrequent: mostFrequentEntry
+        ? {
+            name: mostFrequentEntry[0],
+            count: mostFrequentEntry[1],
+            countDelta: mostFrequentEntry[1] - (prevCount.get(mostFrequentEntry[0]) ?? 0),
+          }
+        : null,
+    };
+  }, [periodTxs, txs, bounds]);
+
   // V4 — category breakdown, sorted desc, with B3 budget bars
   const categoryBreakdown = useMemo(() => {
     // Refund credits usually carry no categoryId of their own — resolve the refunded
@@ -223,6 +285,70 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
 
   const heroLabel = `${new Date().toLocaleDateString('en-IN', { month: 'long' }).toUpperCase()} SPENDING`;
 
+  // Recent Activity — same pattern as DashboardScreen: most recent transactions, unfiltered by period.
+  const recent = useMemo(() => [...txs].sort((a, b) => b.timestamp - a.timestamp).slice(0, 4), [txs]);
+
+  const categoryName = useCallback(
+    (id: number | null) => (id == null ? null : categories.find((c) => c.id === id)?.name ?? null),
+    [categories],
+  );
+
+  // Narrative Advisor — month-to-date spend vs. the same date range one calendar month
+  // earlier (not a fixed 30 days), plus whichever category swung the most in that direction.
+  const narrativeComparison = useMemo(() => {
+    const elapsedMs = Math.min(Date.now(), heroBounds.to) - heroBounds.from;
+    const prevReference = new Date(heroBounds.from);
+    prevReference.setMonth(prevReference.getMonth() - 1);
+    const prevBounds = getMonthBounds(prevReference, clampedMonthStartDay);
+    const prevTo = Math.min(prevBounds.to, prevBounds.from + elapsedMs);
+
+    const prevTxs = txs.filter(
+      (tx) => tx.timestamp >= prevBounds.from && tx.timestamp <= prevTo && isCounted(tx) && tx.type === TransactionType.EXPENSE,
+    );
+    const prevTotal = prevTxs.reduce((s, tx) => s + tx.amount, 0);
+    if (prevTotal === 0) return null;
+
+    const pctChange = ((heroTotal - prevTotal) / prevTotal) * 100;
+    const direction: 'lower' | 'higher' = heroTotal < prevTotal ? 'lower' : 'higher';
+
+    const currTxs = txs.filter(
+      (tx) => tx.timestamp >= heroBounds.from && tx.timestamp <= heroBounds.to && isCounted(tx) && tx.type === TransactionType.EXPENSE,
+    );
+
+    const sumByCategory = (list: TxRecord[]) => {
+      const map = new Map<number, number>();
+      for (const tx of list) {
+        if (tx.categoryId == null) continue;
+        map.set(tx.categoryId, (map.get(tx.categoryId) ?? 0) + tx.amount);
+      }
+      return map;
+    };
+    const currByCat = sumByCategory(currTxs);
+    const prevByCat = sumByCategory(prevTxs);
+    const categoryIds = new Set([...currByCat.keys(), ...prevByCat.keys()]);
+
+    let bestCategoryId: number | null = null;
+    let bestSwing = 0;
+    for (const id of categoryIds) {
+      const diff = (currByCat.get(id) ?? 0) - (prevByCat.get(id) ?? 0);
+      const swingMatchesDirection = direction === 'lower' ? diff < 0 : diff > 0;
+      if (swingMatchesDirection && Math.abs(diff) > Math.abs(bestSwing)) {
+        bestSwing = diff;
+        bestCategoryId = id;
+      }
+    }
+
+    let driverLabel: string | null = null;
+    if (bestCategoryId != null) {
+      const cat = categories.find((c) => c.id === bestCategoryId);
+      if (cat) {
+        driverLabel = `${direction === 'lower' ? 'reduced' : 'increased'} ${cat.name.toLowerCase()}`;
+      }
+    }
+
+    return { pctChange, direction, driverLabel };
+  }, [txs, heroBounds, heroTotal, clampedMonthStartDay, categories]);
+
   // Subscriptions (recurring merchants), carried over from prior version — not period-filtered.
   const subscriptions = useMemo(() => {
     const groups = new Map<string, TxRecord[]>();
@@ -263,6 +389,84 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
       <Text className="font-inter-bold text-headline-sm text-on-surface px-container-margin pt-sm pb-md">Analytics</Text>
 
       <BriefingHero label={heroLabel} value={formatAmount(heroTotal, currency)} data={heroSparkline} currency={currency} />
+
+      {narrativeComparison && (
+        <NarrativeAdvisor
+          pctChange={narrativeComparison.pctChange}
+          direction={narrativeComparison.direction}
+          driverLabel={narrativeComparison.driverLabel}
+        />
+      )}
+
+      {/* Recent activity — same component/data pattern as DashboardScreen's Home tab. */}
+      <View className="mx-[24px] mb-[32px]">
+        <SectionHeader
+          title="RECENT ACTIVITY"
+          actionLabel="VIEW ALL"
+          onAction={() => navigation.navigate('Transactions', undefined)}
+        />
+        {recent.length === 0 ? (
+          <Text className="font-inter text-supporting-text text-ink-body">We're still learning your financial patterns.</Text>
+        ) : (
+          recent.map((tx) => (
+            <TransactionRow
+              key={tx.id}
+              merchant={tx.merchant || tx.bankName}
+              categoryName={categoryName(tx.categoryId)}
+              dateLabel={shortDate(tx.timestamp)}
+              amountLabel={formatAmount(tx.amount, tx.currency)}
+              isDebit={isDebit(tx.type)}
+              onPress={() =>
+                navigation.getParent<NavigationProp<MainStackParamList>>()?.navigate('TransactionDetail', { transactionId: tx.id })
+              }
+            />
+          ))
+        )}
+      </View>
+
+      {/* Merchant snapshot — top merchant by spend, most frequent by order count */}
+      <View className="px-container-margin mb-xl flex-row gap-md">
+        <View className="flex-1 bg-surface-container-lowest border border-outline-variant rounded-md p-lg">
+          <Text className="font-inter-semibold text-[9px] leading-[14px] tracking-[0.05em] text-on-surface-variant mb-[8px]">
+            TOP MERCHANT
+          </Text>
+          <Text className="font-inter-semibold text-body-sm text-on-surface mb-[12px]" numberOfLines={1}>
+            {merchantSnapshot.topMerchant?.name ?? '—'}
+          </Text>
+          {merchantSnapshot.topMerchant && (
+            <View className="flex-row items-center gap-[4px]">
+              {merchantSnapshot.topMerchant.spendDelta <= 0 ? (
+                <TrendingDownIcon color={Colors.primary} size={14} />
+              ) : (
+                <TrendingUpIcon color={Colors.secondary} size={14} />
+              )}
+              <Text className={`font-inter text-annotation ${merchantSnapshot.topMerchant.spendDelta <= 0 ? 'text-primary' : 'text-secondary'}`}>
+                {formatAmount(Math.abs(merchantSnapshot.topMerchant.spendDelta), currency)} {merchantSnapshot.topMerchant.spendDelta <= 0 ? 'less' : 'more'}
+              </Text>
+            </View>
+          )}
+        </View>
+        <View className="flex-1 bg-surface-container-lowest border border-outline-variant rounded-md p-lg">
+          <Text className="font-inter-semibold text-[9px] leading-[14px] tracking-[0.05em] text-on-surface-variant mb-[8px]">
+            MOST FREQUENT
+          </Text>
+          <Text className="font-inter-semibold text-body-sm text-on-surface mb-[12px]" numberOfLines={1}>
+            {merchantSnapshot.mostFrequent?.name ?? '—'}
+          </Text>
+          {merchantSnapshot.mostFrequent && (
+            <View className="flex-row items-center gap-[4px]">
+              {merchantSnapshot.mostFrequent.countDelta > 0 ? (
+                <TrendingUpIcon color={Colors.secondary} size={14} />
+              ) : (
+                <TrendingDownIcon color={Colors.primary} size={14} />
+              )}
+              <Text className={`font-inter text-annotation ${merchantSnapshot.mostFrequent.countDelta > 0 ? 'text-secondary' : 'text-primary'}`}>
+                {merchantSnapshot.mostFrequent.count} visit{merchantSnapshot.mostFrequent.count === 1 ? '' : 's'}
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
 
       {/* V1 — period picker */}
       <View className="flex-row gap-sm px-container-margin mb-md">
