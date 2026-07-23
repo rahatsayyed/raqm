@@ -206,7 +206,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
         map.set(key, { bankName: tx.bankName, last4: tx.accountLast4, balance: tx.balance, currency: tx.currency, timestamp: tx.timestamp });
       }
     }
-    const accounts = Array.from(map.values()).sort((a, b) => b.balance - a.balance);
+    const accounts = Array.from(map.values()).sort((a, b) => b.timestamp - a.timestamp);
     const total = accounts.reduce((sum, a) => sum + a.balance, 0);
     return { accounts, total };
   }, [txs]);
@@ -373,7 +373,12 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
       out.push({ label: cursor.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }), value });
       cursor.setDate(cursor.getDate() + 1);
     }
-    return out;
+    // Early in the month there are too few real days to read as a line (a single dot on day 1) —
+    // pad the front with zero-value points so the sparkline always has at least 5 to draw through.
+    const MIN_POINTS = 5;
+    const padCount = Math.max(0, MIN_POINTS - out.length);
+    const padding: { label: string; value: number }[] = Array.from({ length: padCount }, () => ({ label: '', value: 0 }));
+    return [...padding, ...out];
   }, [txs, heroBounds]);
 
   const heroLabel = `${new Date().toLocaleDateString('en-IN', { month: 'long' }).toUpperCase()} SPENDING`;

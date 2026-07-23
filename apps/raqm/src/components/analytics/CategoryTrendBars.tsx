@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Canvas, Rect } from '@shopify/react-native-skia';
 import { Colors } from '../../theme';
 import { formatAmount } from '../../utils/format';
@@ -20,7 +20,7 @@ interface Props {
   gap?: number;
 }
 
-const TOOLTIP_WIDTH = 88;
+const TOOLTIP_WIDTH = 112;
 const HIT_SLOP = 12;
 
 /** Small Skia bar chart (fixed thin bars, each carrying its own color) whose tooltip tracks the nearest bar on drag. */
@@ -57,28 +57,34 @@ export function CategoryTrendBars({ data, currency = '₹', height = 32, barWidt
 
   const active = activeIndex != null ? bars[activeIndex] : null;
 
+  // The bar chart itself (a handful of 3px bars) is much narrower than the tooltip and sits
+  // flush against the row's right edge, which is near the screen edge — so only capping the
+  // tooltip's *right* edge at the container's right edge (not also floor-clamping at 0) lets
+  // it slide left over the row's spacious label column instead of running off the right side
+  // of the screen.
+  const tooltipLeft = useSharedValue(0);
+  useEffect(() => {
+    if (!active) return;
+    tooltipLeft.value = withTiming(Math.min(active.x + active.w / 2 - TOOLTIP_WIDTH / 2, totalWidth - TOOLTIP_WIDTH), { duration: 120 });
+  }, [active?.x, active?.w, totalWidth, tooltipLeft]);
+
+  const tooltipStyle = useAnimatedStyle(() => ({ left: tooltipLeft.value }));
+
   return (
     <GestureDetector gesture={pan}>
       <View style={{ width: totalWidth, height }}>
         {active && (
-          <View
-            className="absolute -top-[38px] w-[88px] items-center bg-surface-container-lowest border border-outline-variant rounded-md px-[6px] py-[4px] z-10"
-            style={{
-              // The bar chart itself (a handful of 3px bars) is much narrower than the tooltip and
-              // sits flush against the row's right edge, which is near the screen edge — so only
-              // capping the tooltip's *right* edge at the container's right edge (not also floor-
-              // clamping at 0) lets it slide left over the row's spacious label column instead of
-              // running off the right side of the screen.
-              left: Math.min(active.x + active.w / 2 - TOOLTIP_WIDTH / 2, totalWidth - TOOLTIP_WIDTH),
-            }}
+          <Animated.View
+            className="absolute -top-[66px] w-[112px] items-center bg-surface-container-lowest border border-outline-variant rounded-lg px-[10px] py-[6px] z-10"
+            style={tooltipStyle}
           >
-            <Text className="font-mono-medium text-[10px] leading-[14px] text-on-surface" numberOfLines={1}>
+            <Text className="font-mono-medium text-[14px] leading-[18px] text-on-surface" numberOfLines={1}>
               {formatAmount(active.value, currency)}
             </Text>
-            <Text className="font-inter text-[8px] leading-[10px] text-on-surface-variant" numberOfLines={1}>
+            <Text className="font-inter text-[11px] leading-[14px] text-on-surface-variant" numberOfLines={1}>
               {active.label}
             </Text>
-          </View>
+          </Animated.View>
         )}
         <Canvas style={{ width: totalWidth, height }}>
           {bars.map((b, i) => (
