@@ -457,7 +457,7 @@ const TxRow = memo(function TxRow({
   const Icon = categoryIconFor(categoryName, tx);
   return (
     <TouchableOpacity
-      className={`flex-row items-start gap-[12px] py-[10px] ${indent ? 'pl-[24px]' : ''}`}
+      className={`flex-row items-center gap-[16px] py-[16px] ${indent ? 'pl-[24px]' : ''}`}
       onPress={() => onPressId(tx.id)}
       onLongPress={() => onLongPressId(tx.id)}
       activeOpacity={0.7}
@@ -467,24 +467,24 @@ const TxRow = memo(function TxRow({
           {selected && <Text className="text-on-primary text-[12px] font-inter-bold">✓</Text>}
         </View>
       )}
-      <View className="w-[40px] h-[40px] rounded border border-border-subtle items-center justify-center">
-        <Icon color={Colors.inkBody} size={20} />
+      <View className={`w-[40px] h-[40px] rounded-sm items-center justify-center ${credit ? 'bg-primary/10' : 'bg-surface-variant/50'}`}>
+        <Icon color={credit ? Colors.primary : Colors.onSurfaceVariant} size={20} />
       </View>
       <View className="flex-1">
-        <Text className="font-inter-medium text-body-sm text-ink-headline" numberOfLines={1}>{tx.merchant || tx.bankName}</Text>
-        <Text className="font-inter text-caption mt-[2px]" numberOfLines={1}>
+        <Text className="font-inter text-body-standard text-on-surface" numberOfLines={1}>{tx.merchant || tx.bankName}</Text>
+        <Text className="font-inter text-annotation mt-[2px]" numberOfLines={1}>
           {categoryName
-            ? <Text className="text-ink-body">{categoryName}</Text>
+            ? <Text className="text-ink-label">{categoryName}</Text>
             : tx.type === TransactionType.EXPENSE
               ? <Text className="text-secondary">Uncategorized</Text>
-              : <Text className="text-ink-body">{txTypeLabel(tx.type)}</Text>}
+              : <Text className="text-ink-label">{txTypeLabel(tx.type)}</Text>}
         </Text>
       </View>
       <View className="items-end">
-        <Text className={`font-mono-medium text-numeric-sm ${credit ? 'text-primary-container' : 'text-ink-headline'}`}>
+        <Text className={`font-mono text-numeric-sm ${credit ? 'text-primary' : 'text-on-surface'}`}>
           {formatAmount(tx.amount, currency)}
         </Text>
-        <Text className="font-inter text-annotation text-ink-body">{timeLabel(tx.timestamp)}</Text>
+        <Text className="font-inter text-annotation text-ink-label mt-[2px]">{timeLabel(tx.timestamp)}</Text>
       </View>
     </TouchableOpacity>
   );
