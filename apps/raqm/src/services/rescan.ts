@@ -25,14 +25,14 @@ function serialize(op: () => Promise<RescanResult>): Promise<RescanResult> {
 }
 
 /**
- * Missing-only scan core: reads the inbox over [from, now], parses bank SMS (S5 filter),
+ * Missing-only scan core: reads the inbox over [from, to], parses bank SMS (S5 filter),
  * and inserts ONLY transactions whose identity (`bankName|amount|smsTimestamp`) exists in
  * no row at all — live OR soft-deleted. Never clears, never touches existing rows, so user
  * categories, notes, tags, links, and deletions all survive every scan.
  */
-async function scanMissing(from: number): Promise<RescanResult> {
+async function scanMissing(from: number, to: number = Date.now()): Promise<RescanResult> {
   const [messages, seen] = await Promise.all([
-    SmsReader.readInbox(from, Date.now()),
+    SmsReader.readInbox(from, to),
     getScannedIdentitiesSince(from),
   ]);
 
@@ -66,6 +66,19 @@ export function rescanTransactions(
 ): Promise<RescanResult> {
   return serialize(async () => {
     const result = await scanMissing(Date.now() - BUTTON_WINDOW_MS);
+    onProgress?.(result.found);
+    return result;
+  });
+}
+
+/** More → Re-scan SMS with a user-picked [from, to] range. */
+export function rescanTransactionsRange(
+  from: number,
+  to: number,
+  onProgress?: (count: number) => void,
+): Promise<RescanResult> {
+  return serialize(async () => {
+    const result = await scanMissing(from, to);
     onProgress?.(result.found);
     return result;
   });
