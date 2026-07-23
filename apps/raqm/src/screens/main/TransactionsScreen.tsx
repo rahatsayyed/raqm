@@ -2,17 +2,16 @@ import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, FlatList, TextInput, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { Colors } from '../../theme';
 import { useTxStore } from '../../store/txStore';
-import { useAppStore } from '../../store/appStore';
-import { useNavigation, useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native';
+import { useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import type { MainStackParamList, MainTabParamList } from '../../navigation/types';
+import { useNavigation } from '@react-navigation/native';
+import type { MainStackParamList } from '../../navigation/types';
 import { getCategories, mergeTxs, groupTxs, type Category, type TxRecord } from '../../db/database';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { formatAmount } from '../../utils/format';
 import {
   SearchIcon, TrendingUpIcon, WalletCardsIcon,
-  ArrowLeftRightIcon, BadgePercentIcon, LayersIcon,
+  ArrowLeftRightIcon, BadgePercentIcon, LayersIcon, BackIcon,
 } from '../../components/TabIcon';
 import {
   iconForCategoryName, FALLBACK_CATEGORY_ICON, type CategoryIconComponent,
@@ -88,10 +87,8 @@ const fabShadow = {
 export function TransactionsScreen() {
   const txs = useTxStore((s) => s.txs);
   const refresh = useTxStore((s) => s.refresh);
-  const { userName } = useAppStore();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const tabNavigation = useNavigation<BottomTabNavigationProp<MainTabParamList, 'Transactions'>>();
-  const route = useRoute<RouteProp<MainTabParamList, 'Transactions'>>();
+  const route = useRoute<RouteProp<MainStackParamList, 'Transactions'>>();
   const [query, setQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
@@ -117,18 +114,21 @@ export function TransactionsScreen() {
   }, [categories]);
 
   // "View Merchant" (Transaction Detail) pre-fills the search once via this
-  // param, then we clear it — otherwise a later manual tab visit would keep
+  // param, then we clear it — otherwise a later push here would keep
   // re-applying a stale filter the user already cleared.
   useEffect(() => {
     const initialQuery = route.params?.initialQuery;
+    const focusSearch = route.params?.focusSearch;
     if (initialQuery) {
       setQuery(initialQuery);
       setSearchOpen(true);
-      tabNavigation.setParams({ initialQuery: undefined });
+      navigation.setParams({ initialQuery: undefined });
+    } else if (focusSearch) {
+      setSearchOpen(true);
+      navigation.setParams({ focusSearch: undefined });
     }
-  }, [route.params?.initialQuery, tabNavigation]);
+  }, [route.params?.initialQuery, route.params?.focusSearch, navigation]);
 
-  const initial = (userName.trim()[0] ?? 'R').toUpperCase();
   const currency = txs[0]?.currency ?? '₹';
 
   const sorted = useMemo(
@@ -333,12 +333,12 @@ export function TransactionsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      {/* Top bar: avatar + Fraunces title, search / cancel on the right */}
+      {/* Top bar: back + Fraunces title, search / cancel on the right */}
       <View className="flex-row justify-between items-center px-[24px] pt-[8px] pb-[16px]">
         <View className="flex-row items-center gap-[12px]">
-          <View className="w-[32px] h-[32px] rounded-[16px] bg-surface-variant border border-border-subtle items-center justify-center">
-            <Text className="font-inter text-supporting-text text-ink-headline">{initial}</Text>
-          </View>
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={8}>
+            <BackIcon color={Colors.onSurface} size={22} />
+          </TouchableOpacity>
           <Text className="font-fraunces text-[22px] leading-[28px] text-on-surface">Timeline</Text>
         </View>
         {selectMode ? (

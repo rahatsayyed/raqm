@@ -5,6 +5,8 @@ import { MainTabParamList, MainStackParamList } from './types';
 import { DashboardScreen } from '../screens/main/DashboardScreen';
 import { TransactionsScreen } from '../screens/main/TransactionsScreen';
 import { AnalyticsScreen } from '../screens/main/AnalyticsScreen';
+import { SplitScreen } from '../screens/main/SplitScreen';
+import { ChatScreen } from '../screens/main/ChatScreen';
 import { GroceryScreen } from '../screens/main/GroceryScreen';
 import { MoreScreen } from '../screens/main/MoreScreen';
 import { TransactionDetailScreen } from '../screens/main/TransactionDetailScreen';
@@ -22,15 +24,15 @@ import { MerchantRulesScreen } from '../screens/main/MerchantRulesScreen';
 import { ManageAccountsScreen } from '../screens/main/ManageAccountsScreen';
 import { SmsInboxScreen } from '../screens/main/SmsInboxScreen';
 import { SmsThreadScreen } from '../screens/main/SmsThreadScreen';
-import { HomeIcon, WalletIcon, LightbulbIcon, MoreIcon } from '../components/TabIcon';
+import { HomeIcon, AnalyticsIcon, SplitIcon, ChatIcon } from '../components/TabIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../theme';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
-// Spring Green Design System: 4-item nav — Home / Timeline / Briefing / More.
-// Grocery lives under More as a push screen.
+// 4-item nav — Home / Analytics / Split / Chat. Timeline (Transactions) and More
+// are reached as push screens (via "View all" and the TopHeader avatar), not tabs.
 function TabNavigator() {
   // A fixed tab-bar height overrides react-navigation's inset-aware sizing and
   // pushes the bar behind the system nav — add the bottom inset back explicitly.
@@ -66,19 +68,19 @@ function TabNavigator() {
         options={{ tabBarLabel: 'HOME', tabBarIcon: ({ color }) => <HomeIcon color={color} size={22} /> }}
       />
       <Tab.Screen
-        name="Transactions"
-        component={TransactionsScreen}
-        options={{ tabBarLabel: 'TIMELINE', tabBarIcon: ({ color }) => <WalletIcon color={color} size={22} /> }}
-      />
-      <Tab.Screen
         name="Analytics"
         component={AnalyticsScreen}
-        options={{ tabBarLabel: 'BRIEFING', tabBarIcon: ({ color }) => <LightbulbIcon color={color} size={22} /> }}
+        options={{ tabBarLabel: 'ANALYTICS', tabBarIcon: ({ color }) => <AnalyticsIcon color={color} size={22} /> }}
       />
       <Tab.Screen
-        name="More"
-        component={MoreScreen}
-        options={{ tabBarLabel: 'MORE', tabBarIcon: ({ color }) => <MoreIcon color={color} size={22} /> }}
+        name="Split"
+        component={SplitScreen}
+        options={{ tabBarLabel: 'SPLIT', tabBarIcon: ({ color }) => <SplitIcon color={color} size={22} /> }}
+      />
+      <Tab.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={{ tabBarLabel: 'CHAT', tabBarIcon: ({ color }) => <ChatIcon color={color} size={22} /> }}
       />
     </Tab.Navigator>
   );
@@ -88,6 +90,8 @@ export function MainNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Tabs" component={TabNavigator} />
+      <Stack.Screen name="Transactions" component={TransactionsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="More" component={MoreScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="TransactionDetail" component={TransactionDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="AddTransaction" component={AddTransactionScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="EditTransaction" component={EditTransactionScreen} options={{ animation: 'slide_from_right' }} />

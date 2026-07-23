@@ -32,7 +32,7 @@ Expo API surface changed significantly in SDK 56 — check https://docs.expo.dev
 - `src/db/database.ts` — the single ~1500-line data layer: versioned migration runner (`schema_migrations`, currently v3), all CRUD, categorization. Everything is expo-sqlite **async API with explicit `runAsync('BEGIN')`/`COMMIT`/`ROLLBACK`** — never `withTransactionAsync` (nested-transaction crash). All SQL parameterized.
 - `src/store/txStore.ts` — main-app source of truth (`TxRecord[]`, excludes soft-deleted). `src/store/onboardingStore.ts` only serves the onboarding scan flow.
 - `src/services/` — `txIntelligence(.Core)` (self-transfer/refund/subscription detection; Core is pure/Node-runnable), `budgets`, `rescan`, `export`, `location`.
-- `src/navigation/` — stack wrapping a 4-tab navigator (Home / Timeline=Transactions / Briefing=Analytics / More; Grocery is a push screen under More); `MainStackParamList` in `types.ts`; `navigationRef.ts` for notification deep links.
+- `src/navigation/` — stack wrapping a 4-tab navigator (Home / Analytics / Split / Chat — Split and Chat are placeholder "coming soon" screens). Timeline (Transactions) and More are push screens on the outer stack, not tabs: reached via "View all" and the shared `TopHeader`'s avatar tap respectively (Grocery is a push screen under More). `MainStackParamList` in `types.ts`; `navigationRef.ts` for notification deep links.
 - Onboarding lives in `src/screens/onboarding/`; permission screens auto-skip when already granted.
 
 **Invariants that exist because violating them caused real bugs:**
