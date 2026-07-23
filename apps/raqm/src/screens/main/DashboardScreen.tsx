@@ -254,7 +254,7 @@ export function DashboardScreen() {
         map.set(key, { bankName: tx.bankName, last4: tx.accountLast4, balance: tx.balance, currency: tx.currency, timestamp: tx.timestamp });
       }
     }
-    return Array.from(map.values()).sort((a, b) => b.balance - a.balance);
+    return Array.from(map.values()).sort((a, b) => b.timestamp - a.timestamp);
   }, [txs]);
 
   const recent = useMemo(

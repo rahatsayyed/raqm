@@ -18,7 +18,7 @@ interface Props {
   lineOpacity?: number;
 }
 
-const TOOLTIP_WIDTH = 80;
+const TOOLTIP_WIDTH = 108;
 const HIT_SLOP = 20;
 
 interface SparkPoint {
@@ -101,15 +101,17 @@ export function Sparkline({ data, currency = '₹', height = 56, lineOpacity = 1
       <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
         {active && (
           <View
-            className="absolute -top-[30px] w-[80px] items-center bg-surface-container-lowest border border-outline-variant rounded-md px-[6px] py-[4px] z-10"
+            className="absolute -top-[58px] w-[108px] items-center bg-surface-container-lowest border border-outline-variant rounded-lg px-[10px] py-[6px] z-10"
             style={{ left: Math.min(Math.max(active.x - TOOLTIP_WIDTH / 2, 0), Math.max(width - TOOLTIP_WIDTH, 0)) }}
           >
-            <Text className="font-mono-medium text-[11px] leading-[16px] text-on-surface" numberOfLines={1}>
+            <Text className="font-mono-medium text-[14px] leading-[18px] text-on-surface" numberOfLines={1}>
               {formatAmount(active.value, currency)}
             </Text>
-            <Text className="font-inter text-[9px] leading-[12px] text-on-surface-variant" numberOfLines={1}>
-              {active.label}
-            </Text>
+            {active.label !== '' && (
+              <Text className="font-inter text-[11px] leading-[14px] text-on-surface-variant" numberOfLines={1}>
+                {active.label}
+              </Text>
+            )}
           </View>
         )}
         {width > 0 && (
