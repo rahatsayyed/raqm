@@ -8,9 +8,10 @@ import { useTxStore } from '../../store/txStore';
 import { SmsReader } from '../../native/SmsReader';
 import { BankParserFactory } from '@rahatsayyed/bank-sms-parser';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
-import type { TxRecord, GroceryList, Category } from '../../db/database';
-import { getSetting, getCategories, getGroceryLists, linkTxToList } from '../../db/database';
+import type { TxRecord, GroceryList, Category, Reminder } from '../../db/database';
+import { getSetting, getCategories, getGroceryLists, linkTxToList, getReminders } from '../../db/database';
 import { countsTowardTotals } from '../../services/txIntelligence';
+import { detectRecurringDues, mergeDues } from '../../services/dues';
 import { postTxNotification } from '../../notifications/notifications';
 import { getMonthBounds, getDayBounds } from '../../utils/period';
 import type { MainStackParamList } from '../../navigation/types';
@@ -24,6 +25,7 @@ import {
   ObligationCard,
 } from '../../components/dashboard';
 import { AccountLiquidityCard } from '../../components/AccountLiquidityCard';
+import { rescanTransactions } from '../../services/rescan';
 
 const GROCERY_KEYWORDS = /grocer|bigbasket|blinkit|zepto|dmart|instamart/i;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -47,7 +49,9 @@ function shortDate(ts: number): string {
 
 /** "IN 3 DAYS" / "OCT 30" style labels for upcoming obligations. */
 function upcomingLabel(ts: number): string {
-  const days = Math.max(0, Math.round((ts - Date.now()) / DAY_MS));
+  const rawDays = Math.round((ts - Date.now()) / DAY_MS);
+  if (rawDays < 0) return rawDays === -1 ? 'OVERDUE 1 DAY' : `OVERDUE ${Math.abs(rawDays)} DAYS`;
+  const days = rawDays;
   if (days === 0) return 'TODAY';
   if (days === 1) return 'TOMORROW';
   if (days <= 7) return `IN ${days} DAYS`;
@@ -105,14 +109,28 @@ export function DashboardScreen() {
   const [pickerTxId, setPickerTxId] = useState<number | null>(null);
   const [activeGroceryLists, setActiveGroceryLists] = useState<GroceryList[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const groceriesCategoryId = useMemo(
     () => categories.find((c) => c.name === 'Groceries')?.id ?? null,
     [categories],
   );
 
+  const loadReminders = useCallback(() => {
+    getReminders().then(setReminders);
+  }, []);
+
   useEffect(() => {
     getCategories().then(setCategories);
-  }, []);
+    loadReminders();
+  }, [loadReminders]);
+
+  // This screen stays mounted beneath the pushed Dues & Reminders screen, so a
+  // reminder added/removed there needs a focus-triggered reload to show up here.
+  useFocusEffect(
+    useCallback(() => {
+      loadReminders();
+    }, [loadReminders]),
+  );
 
   useEffect(() => {
     const sub = SmsReader.addNewSmsListener(async ({ body, sender, timestamp }) => {
@@ -262,30 +280,12 @@ export function DashboardScreen() {
     [txs],
   );
 
-  // Upcoming obligations: recurring merchants' next expected charge (soonest first).
-  const upcoming = useMemo(() => {
-    const byMerchant = new Map<string, TxRecord[]>();
-    for (const tx of txs) {
-      if (!tx.recurring || !tx.merchant || tx.deletedAt) continue;
-      const key = tx.merchant.trim().toLowerCase();
-      if (!byMerchant.has(key)) byMerchant.set(key, []);
-      byMerchant.get(key)!.push(tx);
-    }
-    const items: { name: string; amount: number; dueTs: number; currency?: string | null }[] = [];
-    for (const group of byMerchant.values()) {
-      const sorted = [...group].sort((a, b) => a.timestamp - b.timestamp);
-      const latest = sorted[sorted.length - 1];
-      const gaps: number[] = [];
-      for (let i = 1; i < sorted.length; i++) gaps.push(sorted[i].timestamp - sorted[i - 1].timestamp);
-      gaps.sort((a, b) => a - b);
-      const medianGap = gaps.length > 0 ? gaps[Math.floor(gaps.length / 2)] : 30 * DAY_MS;
-      const dueTs = latest.timestamp + medianGap;
-      if (dueTs > Date.now() - DAY_MS && dueTs < Date.now() + 45 * DAY_MS) {
-        items.push({ name: latest.merchant!, amount: latest.amount, dueTs, currency: latest.currency });
-      }
-    }
-    return items.sort((a, b) => a.dueTs - b.dueTs).slice(0, 5);
-  }, [txs]);
+  // Dues & Reminders: recurring merchants' next expected charge, merged with manual
+  // reminders, soonest first. Detection logic is shared with DuesRemindersScreen.
+  const upcoming = useMemo(
+    () => mergeDues(detectRecurringDues(txs, 30 * DAY_MS), reminders).slice(0, 5),
+    [txs, reminders],
+  );
 
   const categoryName = useCallback(
     (id: number | null) => (id == null ? null : categories.find((c) => c.id === id)?.name ?? null),
@@ -294,16 +294,6 @@ export function DashboardScreen() {
 
   const currency = txs[0]?.currency ?? '₹';
   const netIsNegative = metrics.net < 0;
-
-  // MOCK placeholder shown until recurring-obligation detection has real data to display.
-  const MOCK_UPCOMING = useMemo(
-    () => [
-      { name: 'House Rent', amount: 24000, dueTs: Date.now() + 2 * DAY_MS, currency },
-      { name: 'Utility Bill', amount: 3210, dueTs: Date.now() + 9 * DAY_MS, currency },
-      { name: 'SIP Investment', amount: 15000, dueTs: Date.now() + 11 * DAY_MS, currency },
-    ],
-    [currency],
-  );
 
   // Advisor line: calm, factual, never shaming (DESIGN.md §11/§12).
   const advisorLine = useMemo(() => {
@@ -438,20 +428,33 @@ export function DashboardScreen() {
         moreCount={2}
       />
 
-      {/* Upcoming obligations — MOCK fallback shown until recurring detection has real data */}
+      {/* Dues & Reminders — detected recurring charges + manually-added reminders. Always shown
+          (not just when data exists) since the header is how a user opens the screen to add one. */}
       <View className="mx-[24px] mb-[32px]">
-        <SectionHeader title="UPCOMING OBLIGATIONS" />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-[16px] pr-[24px]">
-          {(upcoming.length > 0 ? upcoming : MOCK_UPCOMING).map((u, i) => (
-            <ObligationCard
-              key={`${i}-${u.name}`}
-              dueLabel={upcomingLabel(u.dueTs)}
-              soon={u.dueTs - Date.now() <= 3 * DAY_MS}
-              name={u.name}
-              amountLabel={formatAmount(u.amount, u.currency)}
-            />
-          ))}
-        </ScrollView>
+        <SectionHeader title="DUES & REMINDERS" onPress={() => navigation.navigate('DuesReminders')} />
+        {upcoming.length === 0 ? (
+          <TouchableOpacity
+            onPress={() => navigation.navigate('DuesReminders')}
+            activeOpacity={0.7}
+            className="border border-dashed border-outline-variant rounded-md py-xl px-lg items-center justify-center min-h-[150px]"
+          >
+            <Text className="font-inter text-body-sm text-ink-label text-center">
+              Your dues and reminders are clear.
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-[16px] pr-[24px]">
+            {upcoming.map((u) => (
+              <ObligationCard
+                key={u.key}
+                dueLabel={upcomingLabel(u.dueTs)}
+                soon={u.dueTs - Date.now() <= 3 * DAY_MS}
+                name={u.name}
+                amountLabel={formatAmount(u.amount, u.currency ?? currency)}
+              />
+            ))}
+          </ScrollView>
+        )}
       </View>
 
       {/* Accounts — entry point to AccountDetail, same balance card used on the Briefing tab */}
@@ -467,6 +470,7 @@ export function DashboardScreen() {
                 balance={acc.balance}
                 currency={acc.currency}
                 updatedAt={acc.timestamp}
+                onRefresh={() => rescanTransactions()}
                 onPress={() => navigation.navigate('AccountDetail', { bankName: acc.bankName, last4: acc.last4 ?? undefined })}
               />
             ))}

@@ -40,6 +40,7 @@ export type MainStackParamList = {
   CategoryDetail: { categoryId: number; categoryName: string; period?: string };
   DeletedTransactions: undefined;
   Grocery: undefined;
+  DuesReminders: undefined;
 };
 
 export type OnboardingScreenProps<T extends keyof OnboardingStackParamList> =
