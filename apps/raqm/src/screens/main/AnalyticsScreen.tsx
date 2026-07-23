@@ -11,7 +11,7 @@ import { getBudgetStatuses, type BudgetStatus } from '../../services/budgets';
 import { getDayBounds, getWeekBounds, getMonthBounds, type PeriodType, type PeriodBounds } from '../../utils/period';
 import { DonutChart } from '../../components/DonutChart';
 import { TrendLine } from '../../components/TrendLine';
-import { BriefingHero, NarrativeAdvisor } from '../../components/analytics';
+import { BriefingHero, NarrativeAdvisor, CategoryShift } from '../../components/analytics';
 import { SectionHeader, TransactionRow } from '../../components/dashboard';
 import { AccountLiquidityCard } from '../../components/AccountLiquidityCard';
 import { TrendingUpIcon, TrendingDownIcon } from '../../components/TabIcon';
@@ -257,6 +257,82 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
     [categoryBreakdown],
   );
 
+  // Shift by category — top 6 categories by this-month-to-date spend, vs. the same categories'
+  // full prior month, independent of the period picker above (like V9's trend line). The mini
+  // chart shows last month split into 4 weekly bars (gray) followed by this month's weeks so
+  // far (colored by the overall trend direction), each fixed-length except a trailing bucket
+  // that absorbs whatever days are left in a 29-31 day month.
+  const categoryShift = useMemo(() => {
+    const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+    const now = new Date();
+    const currMonth = getMonthBounds(now, clampedMonthStartDay);
+    const prevMonth = getMonthBounds(new Date(currMonth.from - 1), clampedMonthStartDay);
+
+    const prevWeekBounds = Array.from({ length: 4 }, (_, i) => ({
+      from: prevMonth.from + i * WEEK_MS,
+      to: i === 3 ? prevMonth.to : prevMonth.from + (i + 1) * WEEK_MS,
+    }));
+    const elapsedMs = Math.min(now.getTime(), currMonth.to) - currMonth.from;
+    const weekCount = Math.min(4, Math.max(1, Math.ceil(elapsedMs / WEEK_MS)));
+    const currWeekBounds = Array.from({ length: weekCount }, (_, i) => ({
+      from: currMonth.from + i * WEEK_MS,
+      to: i === weekCount - 1 ? Math.min(now.getTime(), currMonth.to) : currMonth.from + (i + 1) * WEEK_MS,
+    }));
+
+    const currMonthTotals = new Map<number, number>();
+    const prevMonthTotals = new Map<number, number>();
+    const bucketTotals = new Map<string, number>();
+
+    for (const tx of txs) {
+      if (!isCounted(tx) || tx.type !== TransactionType.EXPENSE) continue;
+      const key = tx.categoryId ?? -1;
+      if (tx.timestamp >= currMonth.from && tx.timestamp < currMonth.to) {
+        currMonthTotals.set(key, (currMonthTotals.get(key) ?? 0) + tx.amount);
+      }
+      if (tx.timestamp >= prevMonth.from && tx.timestamp < prevMonth.to) {
+        prevMonthTotals.set(key, (prevMonthTotals.get(key) ?? 0) + tx.amount);
+      }
+      const prevIdx = prevWeekBounds.findIndex((b) => tx.timestamp >= b.from && tx.timestamp < b.to);
+      if (prevIdx !== -1) {
+        const k = `${key}|prev|${prevIdx}`;
+        bucketTotals.set(k, (bucketTotals.get(k) ?? 0) + tx.amount);
+      }
+      const currIdx = currWeekBounds.findIndex((b) => tx.timestamp >= b.from && tx.timestamp <= b.to);
+      if (currIdx !== -1) {
+        const k = `${key}|curr|${currIdx}`;
+        bucketTotals.set(k, (bucketTotals.get(k) ?? 0) + tx.amount);
+      }
+    }
+
+    const categoryMeta = new Map(categories.map((c) => [c.id, c]));
+    const ranked = Array.from(currMonthTotals.entries())
+      .filter(([, total]) => total > 0)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 6);
+
+    return ranked.map(([catKey, total]) => {
+      const name = catKey === -1 ? 'Uncategorized' : (categoryMeta.get(catKey)?.name ?? 'Unknown');
+      const prevTotal = prevMonthTotals.get(catKey) ?? 0;
+      const pctChange = prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : total > 0 ? 100 : 0;
+      const trendColor = pctChange > 0 ? Colors.error : pctChange < 0 ? Colors.primary : Colors.surfaceContainerHigh;
+
+      const trend = [
+        ...prevWeekBounds.map((b, i) => ({
+          label: `Last Wk ${i + 1}`,
+          value: bucketTotals.get(`${catKey}|prev|${i}`) ?? 0,
+          color: Colors.surfaceContainerHigh,
+        })),
+        ...currWeekBounds.map((b, i) => ({
+          label: `This Wk ${i + 1}`,
+          value: bucketTotals.get(`${catKey}|curr|${i}`) ?? 0,
+          color: trendColor,
+        })),
+      ];
+
+      return { categoryId: catKey === -1 ? null : catKey, name, total, pctChange, trend };
+    });
+  }, [txs, categories, clampedMonthStartDay]);
+
   // V9 — trend line: last 6 calendar months of expenses, independent of active period
   const trendData = useMemo(() => {
     const now = new Date();
@@ -440,6 +516,9 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
           ))
         )}
       </View>
+
+      {/* Shift by category — top categories' spend vs. the prior equal period, with a 7-day trend */}
+      <CategoryShift data={categoryShift} currency={currency} />
 
       {/* Merchant snapshot — top merchant by spend, most frequent by order count */}
       <View className="px-container-margin mb-xl flex-row gap-md">
