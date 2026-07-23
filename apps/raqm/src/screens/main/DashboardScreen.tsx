@@ -22,8 +22,8 @@ import {
   TransactionRow,
   NeedsAttentionCard,
   ObligationCard,
-  AccountChip,
 } from '../../components/dashboard';
+import { AccountLiquidityCard } from '../../components/AccountLiquidityCard';
 
 const GROCERY_KEYWORDS = /grocer|bigbasket|blinkit|zepto|dmart|instamart/i;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -245,16 +245,16 @@ export function DashboardScreen() {
   );
 
   const accounts = useMemo(() => {
-    const map = new Map<string, { bank: string; last4: string | null; isCard: boolean; count: number }>();
+    const map = new Map<string, { bankName: string; last4: string | null; balance: number; currency: string; timestamp: number }>();
     for (const tx of txs) {
+      if (tx.isFromCard || tx.balance == null) continue;
       const key = `${tx.bankName}|${tx.accountLast4 ?? ''}`;
-      if (map.has(key)) {
-        map.get(key)!.count += 1;
-      } else {
-        map.set(key, { bank: tx.bankName, last4: tx.accountLast4, isCard: !!tx.isFromCard, count: 1 });
+      const existing = map.get(key);
+      if (!existing || tx.timestamp > existing.timestamp) {
+        map.set(key, { bankName: tx.bankName, last4: tx.accountLast4, balance: tx.balance, currency: tx.currency, timestamp: tx.timestamp });
       }
     }
-    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+    return Array.from(map.values()).sort((a, b) => b.balance - a.balance);
   }, [txs]);
 
   const recent = useMemo(
@@ -454,17 +454,20 @@ export function DashboardScreen() {
         </ScrollView>
       </View>
 
-      {/* Accounts — quiet strip, entry point to AccountDetail */}
+      {/* Accounts — entry point to AccountDetail, same balance card used on the Briefing tab */}
       {accounts.length > 0 && (
         <View className="mx-[24px] mb-[32px]">
           <SectionHeader title="ACCOUNTS" />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-[8px] pr-[24px]">
-            {accounts.map((acc, i) => (
-              <AccountChip
-                key={i}
-                bankName={acc.bank}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-[12px] pr-[24px]">
+            {accounts.map((acc) => (
+              <AccountLiquidityCard
+                key={`${acc.bankName}|${acc.last4 ?? ''}`}
+                bankName={acc.bankName}
                 last4={acc.last4}
-                onPress={() => navigation.navigate('AccountDetail', { bankName: acc.bank, last4: acc.last4 ?? undefined })}
+                balance={acc.balance}
+                currency={acc.currency}
+                updatedAt={acc.timestamp}
+                onPress={() => navigation.navigate('AccountDetail', { bankName: acc.bankName, last4: acc.last4 ?? undefined })}
               />
             ))}
           </ScrollView>
