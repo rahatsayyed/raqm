@@ -50,8 +50,7 @@ export const TransactionRow = React.memo(function TransactionRow({
           {merchant}
         </Text>
         <Text className="font-inter text-annotation text-ink-label mt-[2px]">
-          {categoryName ? `${categoryName} • ` : "uncategorized • "}
-          {dateLabel}
+          {categoryName ? `${categoryName}` : "uncategorized"}
         </Text>
       </View>
       <View className="items-end">
