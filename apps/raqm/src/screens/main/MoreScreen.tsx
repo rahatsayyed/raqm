@@ -227,7 +227,7 @@ export function MoreScreen() {
       title: 'MONEY',
       rows: [
         { key: 'grocery', label: 'Grocery lists', Icon: GroceryIcon as RowDef['Icon'], onPress: () => navigation.navigate('Grocery') },
-        { key: 'recurring', label: 'Recurring payments', Icon: RepeatIcon, onPress: () => navigation.navigate('Analytics' as never) },
+        { key: 'recurring', label: 'Recurring payments', Icon: RepeatIcon, onPress: () => navigation.navigate('Tabs', { screen: 'Analytics' }) },
         { key: 'budgets', label: 'Budgets', Icon: BanknoteIcon, onPress: () => navigation.navigate('Settings') },
       ],
     },
@@ -287,6 +287,10 @@ export function MoreScreen() {
 
   return (
     <View className="flex-1 bg-background">
+      <TouchableOpacity onPress={() => navigation.goBack()} className="px-container-margin pt-sm">
+        <Text className="font-inter text-body-md text-primary">← Back</Text>
+      </TouchableOpacity>
+
       {/* Header: avatar/name (→ Settings) + gear shortcut, editorial (unboxed) style */}
       <View className="flex-row justify-between items-center px-container-margin pt-sm pb-md border-b border-border-subtle">
         <TouchableOpacity className="flex-row items-center gap-sm flex-1" activeOpacity={0.7} onPress={() => navigation.navigate('Settings')}>

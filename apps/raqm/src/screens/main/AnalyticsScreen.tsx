@@ -11,6 +11,7 @@ import { getDayBounds, getMonthBounds, type PeriodBounds } from '../../utils/per
 import { BriefingHero, NarrativeAdvisor, CategoryShift } from '../../components/analytics';
 import { SectionHeader, TransactionRow, ObligationCard } from '../../components/dashboard';
 import { AccountLiquidityCard } from '../../components/AccountLiquidityCard';
+import { TopHeader } from '../../components/TopHeader';
 import { TrendingUpIcon, TrendingDownIcon } from '../../components/TabIcon';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { MainTabScreenProps, MainStackParamList } from '../../navigation/types';
@@ -349,7 +350,9 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
 
   return (
     <ScrollView className="flex-1 bg-background" contentContainerClassName="pb-[32px]" showsVerticalScrollIndicator={false}>
-      <Text className="font-inter-bold text-headline-sm text-on-surface px-container-margin pt-sm pb-md">Analytics</Text>
+      <TopHeader
+        onSearchPress={() => navigation.getParent<NavigationProp<MainStackParamList>>()?.navigate('Transactions', { focusSearch: true })}
+      />
 
       <BriefingHero label={heroLabel} value={formatAmount(heroTotal, currency)} data={heroSparkline} currency={currency} />
 
@@ -366,7 +369,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
         <SectionHeader
           title="RECENT ACTIVITY"
           actionLabel="VIEW ALL"
-          onAction={() => navigation.navigate('Transactions', undefined)}
+          onAction={() => navigation.getParent<NavigationProp<MainStackParamList>>()?.navigate('Transactions', undefined)}
         />
         {recent.length === 0 ? (
           <Text className="font-inter text-supporting-text text-ink-body">We're still learning your financial patterns.</Text>
@@ -393,7 +396,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
 
       {/* Merchant snapshot — top merchant by spend, most frequent by order count */}
       <View className="px-container-margin mb-xl flex-row gap-md">
-        <View className="flex-1 bg-surface-container-lowest border border-outline-variant rounded-md p-lg">
+        <View className="flex-1 bg-surface-container-low border border-outline-variant rounded-md p-lg">
           <Text className="font-inter-semibold text-[9px] leading-[14px] tracking-[0.05em] text-on-surface-variant mb-[8px]">
             TOP MERCHANT
           </Text>
@@ -413,7 +416,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
             </View>
           )}
         </View>
-        <View className="flex-1 bg-surface-container-lowest border border-outline-variant rounded-md p-lg">
+        <View className="flex-1 bg-surface-container-low border border-outline-variant rounded-md p-lg">
           <Text className="font-inter-semibold text-[9px] leading-[14px] tracking-[0.05em] text-on-surface-variant mb-[8px]">
             MOST FREQUENT
           </Text>

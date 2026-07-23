@@ -588,10 +588,7 @@ export function TransactionDetailScreen({
               <TouchableOpacity
                 className="flex-row items-center gap-[2px] self-start mt-md"
                 onPress={() =>
-                  navigation.navigate("Tabs", {
-                    screen: "Transactions",
-                    params: { initialQuery: tx.merchant! },
-                  })
+                  navigation.navigate("Transactions", { initialQuery: tx.merchant! })
                 }
                 hitSlop={4}
               >

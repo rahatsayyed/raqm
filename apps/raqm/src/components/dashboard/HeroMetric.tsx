@@ -21,11 +21,13 @@ export function HeroMetric({ label, value, valueColorClassName = 'text-ink-headl
   return (
     <View className="items-center py-[40px] mb-[24px]">
       <HeroGlow />
-      <Text className="font-inter-semibold text-label-caps text-ink-label mb-[8px]">{label}</Text>
-      <Text className={`font-mono-medium text-metric-hero ${valueColorClassName}`}>{value}</Text>
-      {sublabel && <Text className="font-inter text-body-standard text-ink-body mt-[8px]">{sublabel}</Text>}
+      <View className="items-center">
+        <Text className="font-inter-semibold text-label-caps text-ink-label mb-[4px]">{label}</Text>
+        <Text className={`font-mono-medium text-metric-hero ${valueColorClassName}`}>{value}</Text>
+        {sublabel && <Text className="font-inter text-body-standard text-ink-body mt-[2px]">{sublabel}</Text>}
+      </View>
       {stats && stats.length > 0 && (
-        <View className="flex-row items-center gap-[24px] mt-[16px]">
+        <View className="flex-row items-center gap-[32px] mt-[24px]">
           {stats.map((s, i) => (
             <React.Fragment key={s.label}>
               {i > 0 && <View className="w-[1px] h-[32px] bg-border-subtle" />}

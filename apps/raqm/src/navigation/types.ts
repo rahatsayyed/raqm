@@ -20,16 +20,19 @@ export type OnboardingStackParamList = {
 
 export type MainTabParamList = {
   Home: undefined;
-  // initialQuery: set by "View Merchant" (TransactionDetail) to pre-filter the
-  // ledger search; TransactionsScreen consumes it once then clears it via setParams.
-  Transactions: { initialQuery?: string } | undefined;
   Analytics: undefined;
-  More: undefined;
+  Split: undefined;
+  Chat: undefined;
 };
 
 // Push screens that sit on top of the tab navigator
 export type MainStackParamList = {
   Tabs: NavigatorScreenParams<MainTabParamList> | undefined;
+  // initialQuery/focusSearch: set by "View Merchant" (TransactionDetail) and the
+  // TopHeader search icon respectively, to pre-filter/open the ledger search.
+  // TransactionsScreen consumes them once then clears via setParams.
+  Transactions: { initialQuery?: string; focusSearch?: boolean } | undefined;
+  More: undefined;
   TransactionDetail: { transactionId: number };
   AddTransaction: { pickedCategoryId?: number; pickedSubcategoryId?: number } | undefined;
   EditTransaction: { transactionId: number; pickedCategoryId?: number; pickedSubcategoryId?: number };

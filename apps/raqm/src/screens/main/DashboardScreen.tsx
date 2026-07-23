@@ -17,7 +17,6 @@ import {
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Colors, Spacing, Radius } from "../../theme";
-import { useAppStore } from "../../store/appStore";
 import { useTxStore } from "../../store/txStore";
 import { SmsReader } from "../../native/SmsReader";
 import { BankParserFactory } from "@rahatsayyed/bank-sms-parser";
@@ -41,6 +40,7 @@ import { postTxNotification } from "../../notifications/notifications";
 import { getMonthBounds, getDayBounds } from "../../utils/period";
 import type { MainStackParamList } from "../../navigation/types";
 import { formatAmount } from "../../utils/format";
+import { TopHeader } from "../../components/TopHeader";
 import {
   HeroMetric,
   AdvisorCard,
@@ -156,7 +156,6 @@ const toastStyle = {
 };
 
 export function DashboardScreen() {
-  const { userName } = useAppStore();
   const navigation =
     useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const txs = useTxStore((s) => s.txs);
@@ -543,25 +542,9 @@ export function DashboardScreen() {
         contentContainerClassName="pb-[40px]"
         showsVerticalScrollIndicator={false}
       >
-        {/* Top bar: avatar + wordmark, settings on the right */}
-        <View className="flex-row justify-between items-center px-[24px] pt-[8px] pb-[8px]">
-          <View className="flex-row items-center gap-[8px]">
-            <View className="w-[36px] h-[36px] rounded-[18px] bg-bg-surface-raised border border-border-subtle items-center justify-center">
-              <Text className="font-inter text-body-standard text-ink-headline">
-                {(userName.trim()[0] ?? "R").toUpperCase()}
-              </Text>
-            </View>
-            <Text className="font-fraunces text-[22px] leading-[28px] text-on-surface">
-              Raqm
-            </Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("Settings")}
-            hitSlop={8}
-          >
-            <Text className="text-[20px] text-ink-label">⚙</Text>
-          </TouchableOpacity>
-        </View>
+        <TopHeader
+          onNotificationPress={() => navigation.navigate("DuesReminders")}
+        />
 
         {/* Hero: net this month, over a soft radial glow */}
         <HeroMetric
@@ -573,12 +556,12 @@ export function DashboardScreen() {
           sublabel={todayLine()}
           stats={[
             {
-              label: "SPENT",
+              label: "Debit",
               value: formatAmount(metrics.monthSpent, currency),
               direction: "up",
             },
             {
-              label: "CASH FLOW",
+              label: "Credit",
               value: formatAmount(metrics.income, currency),
               direction: "down",
             },
@@ -598,7 +581,7 @@ export function DashboardScreen() {
           <SectionHeader
             title="RECENT ACTIVITY"
             actionLabel="VIEW ALL"
-            onAction={() => navigation.navigate("Transactions" as never)}
+            onAction={() => navigation.navigate("Transactions", undefined)}
           />
           {recent.length === 0 ? (
             <Text className="font-inter text-supporting-text text-ink-body">

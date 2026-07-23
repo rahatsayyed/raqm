@@ -37,6 +37,18 @@ export function AnalyticsIcon({ color, size = 24 }: Props) {
   return <Iconify icon="material-symbols:bar-chart-rounded" size={size} color={color} />;
 }
 
+export function ChatIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:forum-outline-rounded" size={size} color={color} />;
+}
+
+export function PersonIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:person-outline-rounded" size={size} color={color} />;
+}
+
+export function NotificationIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:notifications-outline-rounded" size={size} color={color} />;
+}
+
 // ── Actions / rows ──────────────────────────────────────────────────────────
 
 export function SearchIcon({ color, size = 24 }: Props) {
