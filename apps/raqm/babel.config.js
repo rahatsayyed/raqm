@@ -46,6 +46,8 @@ module.exports = function (api) {
             'lucide:credit-card',
             'lucide:trending-up',
             'lucide:trending-down',
+            'lucide:arrow-up-right',
+            'lucide:landmark',
             'lucide:gift',
             'lucide:badge-percent',
             'lucide:circle-question-mark',

@@ -13,6 +13,7 @@ import { DonutChart } from '../../components/DonutChart';
 import { TrendLine } from '../../components/TrendLine';
 import { BriefingHero, NarrativeAdvisor } from '../../components/analytics';
 import { SectionHeader, TransactionRow } from '../../components/dashboard';
+import { AccountLiquidityCard } from '../../components/AccountLiquidityCard';
 import { TrendingUpIcon, TrendingDownIcon } from '../../components/TabIcon';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { MainTabScreenProps, MainStackParamList } from '../../navigation/types';
@@ -193,6 +194,22 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
         : null,
     };
   }, [periodTxs, txs, bounds]);
+
+  // Liquidity snapshot — latest known balance per non-card account, summed for the total.
+  const liquiditySnapshot = useMemo(() => {
+    const map = new Map<string, { bankName: string; last4: string | null; balance: number; currency: string; timestamp: number }>();
+    for (const tx of txs) {
+      if (tx.isFromCard || tx.balance == null) continue;
+      const key = `${tx.bankName}|${tx.accountLast4 ?? ''}`;
+      const existing = map.get(key);
+      if (!existing || tx.timestamp > existing.timestamp) {
+        map.set(key, { bankName: tx.bankName, last4: tx.accountLast4, balance: tx.balance, currency: tx.currency, timestamp: tx.timestamp });
+      }
+    }
+    const accounts = Array.from(map.values()).sort((a, b) => b.balance - a.balance);
+    const total = accounts.reduce((sum, a) => sum + a.balance, 0);
+    return { accounts, total };
+  }, [txs]);
 
   // V4 — category breakdown, sorted desc, with B3 budget bars
   const categoryBreakdown = useMemo(() => {
@@ -467,6 +484,37 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
           )}
         </View>
       </View>
+
+      {/* Account Analysis / Liquidity — total across non-card accounts, latest known balance each */}
+      {liquiditySnapshot.accounts.length > 0 && (
+        <View className="mb-xl">
+          <View className="mx-container-margin mb-lg pb-md border-b border-outline-variant">
+            <Text className="font-inter-semibold text-section-header text-on-surface-variant mb-[4px] uppercase tracking-wider">
+              TOTAL LIQUIDITY
+            </Text>
+            <Text className="font-mono-medium text-statement-lg text-on-surface">
+              {formatAmount(liquiditySnapshot.total, currency)}
+            </Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-md px-container-margin pb-[8px]">
+            {liquiditySnapshot.accounts.map((acc) => (
+              <AccountLiquidityCard
+                key={`${acc.bankName}|${acc.last4 ?? ''}`}
+                bankName={acc.bankName}
+                last4={acc.last4}
+                balance={acc.balance}
+                currency={acc.currency}
+                updatedAt={acc.timestamp}
+                onPress={() =>
+                  navigation
+                    .getParent<NavigationProp<MainStackParamList>>()
+                    ?.navigate('AccountDetail', { bankName: acc.bankName, last4: acc.last4 ?? undefined })
+                }
+              />
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* V1 — period picker */}
       <View className="flex-row gap-sm px-container-margin mb-md">
