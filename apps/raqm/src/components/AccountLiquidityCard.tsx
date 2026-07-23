@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Colors } from '../theme';
-import { ArrowUpRightIcon, LandmarkIcon } from './TabIcon';
+import { ArrowUpRightIcon, RefreshIcon } from './TabIcon';
 import { formatAmount } from '../utils/format';
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
   currency?: string;
   updatedAt: number;
   onPress?: () => void;
+  onRefresh?: () => Promise<unknown> | void;
 }
 
 function timeAgo(ts: number): string {
@@ -24,7 +25,19 @@ function timeAgo(ts: number): string {
 }
 
 /** Per-account balance card for the Briefing "Total Liquidity" strip — split bank-identity/balance panels. */
-export function AccountLiquidityCard({ bankName, last4, balance, currency = '₹', updatedAt, onPress }: Props) {
+export function AccountLiquidityCard({ bankName, last4, balance, currency = '₹', updatedAt, onPress, onRefresh }: Props) {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (refreshing || !onRefresh) return;
+    setRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <TouchableOpacity
       activeOpacity={0.7}
@@ -51,15 +64,19 @@ export function AccountLiquidityCard({ bankName, last4, balance, currency = '₹
             {formatAmount(balance, currency)}
           </Text>
         </View>
-        <Text className="font-inter text-[10px] text-on-surface-variant" numberOfLines={1}>
-          {timeAgo(updatedAt)}
-        </Text>
+        <View className="flex-row items-center justify-between">
+          <Text className="font-inter text-[10px] text-on-surface-variant" numberOfLines={1}>
+            {timeAgo(updatedAt)}
+          </Text>
+          {onRefresh && (
+            <TouchableOpacity hitSlop={8} disabled={refreshing} onPress={handleRefresh}>
+              <RefreshIcon color={refreshing ? Colors.outline : Colors.onSurfaceVariant} size={16} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
       <View className="absolute top-lg right-lg">
         <ArrowUpRightIcon color={Colors.onSurfaceVariant} size={18} />
-      </View>
-      <View className="absolute -right-[16px] -bottom-[16px] opacity-10">
-        <LandmarkIcon color={Colors.onSurface} size={100} />
       </View>
     </TouchableOpacity>
   );

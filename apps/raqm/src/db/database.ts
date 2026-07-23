@@ -227,6 +227,30 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 6) {
+    await database.runAsync(`BEGIN`);
+    try {
+      // Manually-added dues (rent, EMIs, anything not detected from SMS as a
+      // recurring merchant) — surfaced alongside detected recurring charges on
+      // the Dues & Reminders section.
+      await database.runAsync(`
+        CREATE TABLE IF NOT EXISTS reminders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          amount REAL NOT NULL,
+          due_date INTEGER NOT NULL,
+          currency TEXT,
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000)
+        )
+      `);
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (6)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -1582,4 +1606,49 @@ export async function syncDiscoveredAccounts(): Promise<void> {
     });
     seen.add(key);
   }
+}
+
+// ── Reminders ──────────────────────────────────────────────────────────────
+
+export interface Reminder {
+  id: number;
+  name: string;
+  amount: number;
+  dueDate: number;
+  currency: string | null;
+}
+
+function rowToReminder(row: Record<string, unknown>): Reminder {
+  return {
+    id: row.id as number,
+    name: row.name as string,
+    amount: row.amount as number,
+    dueDate: row.due_date as number,
+    currency: (row.currency as string | null) ?? null,
+  };
+}
+
+export async function getReminders(): Promise<Reminder[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<Record<string, unknown>>(
+    `SELECT * FROM reminders ORDER BY due_date ASC`,
+  );
+  return rows.map(rowToReminder);
+}
+
+export async function addReminder(input: { name: string; amount: number; dueDate: number; currency?: string | null }): Promise<number> {
+  const database = await getDb();
+  const result = await database.runAsync(
+    `INSERT INTO reminders (name, amount, due_date, currency) VALUES (?, ?, ?, ?)`,
+    input.name,
+    input.amount,
+    input.dueDate,
+    input.currency ?? null,
+  );
+  return result.lastInsertRowId;
+}
+
+export async function deleteReminder(id: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`DELETE FROM reminders WHERE id = ?`, id);
 }

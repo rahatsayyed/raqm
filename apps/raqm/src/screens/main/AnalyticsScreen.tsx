@@ -10,6 +10,7 @@ import { getDayBounds, getMonthBounds, type PeriodBounds } from '../../utils/per
 import { BriefingHero, NarrativeAdvisor, CategoryShift } from '../../components/analytics';
 import { SectionHeader, TransactionRow } from '../../components/dashboard';
 import { AccountLiquidityCard } from '../../components/AccountLiquidityCard';
+import { rescanTransactions } from '../../services/rescan';
 import { TrendingUpIcon, TrendingDownIcon } from '../../components/TabIcon';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { MainTabScreenProps, MainStackParamList } from '../../navigation/types';
@@ -409,6 +410,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
                 balance={acc.balance}
                 currency={acc.currency}
                 updatedAt={acc.timestamp}
+                onRefresh={() => rescanTransactions()}
                 onPress={() =>
                   navigation
                     .getParent<NavigationProp<MainStackParamList>>()
