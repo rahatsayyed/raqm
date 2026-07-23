@@ -82,6 +82,13 @@ function shortDate(ts: number): string {
   });
 }
 
+function shortTime(ts: number): string {
+  return new Date(ts).toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 /** "IN 3 DAYS" / "OCT 30" style labels for upcoming obligations. */
 function upcomingLabel(ts: number): string {
   const rawDays = Math.round((ts - Date.now()) / DAY_MS);
@@ -604,6 +611,7 @@ export function DashboardScreen() {
                 merchant={tx.merchant || tx.bankName}
                 categoryName={categoryName(tx.categoryId)}
                 dateLabel={shortDate(tx.timestamp)}
+                timeLabel={shortTime(tx.timestamp)}
                 amountLabel={formatAmount(tx.amount, tx.currency)}
                 isDebit={isDebit(tx.type)}
                 onPress={() =>
