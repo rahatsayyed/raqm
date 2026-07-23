@@ -44,6 +44,8 @@ export type MainStackParamList = {
   CategoryRules: undefined;
   MerchantRules: undefined;
   ManageAccounts: undefined;
+  SmsInbox: undefined;
+  SmsThread: { key: string };
 };
 
 export type OnboardingScreenProps<T extends keyof OnboardingStackParamList> =

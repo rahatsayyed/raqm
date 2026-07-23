@@ -20,6 +20,8 @@ import { DuesRemindersScreen } from '../screens/main/DuesRemindersScreen';
 import { CategoryRulesScreen } from '../screens/main/CategoryRulesScreen';
 import { MerchantRulesScreen } from '../screens/main/MerchantRulesScreen';
 import { ManageAccountsScreen } from '../screens/main/ManageAccountsScreen';
+import { SmsInboxScreen } from '../screens/main/SmsInboxScreen';
+import { SmsThreadScreen } from '../screens/main/SmsThreadScreen';
 import { HomeIcon, WalletIcon, LightbulbIcon, MoreIcon } from '../components/TabIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../theme';
@@ -100,6 +102,8 @@ export function MainNavigator() {
       <Stack.Screen name="CategoryRules" component={CategoryRulesScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="MerchantRules" component={MerchantRulesScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="ManageAccounts" component={ManageAccountsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="SmsInbox" component={SmsInboxScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="SmsThread" component={SmsThreadScreen} options={{ animation: 'slide_from_right' }} />
     </Stack.Navigator>
   );
 }

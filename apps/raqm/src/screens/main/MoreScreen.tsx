@@ -20,10 +20,10 @@ import {
   BankIcon, RepeatIcon, BanknoteIcon, RefreshIcon, ExportIcon, TrashIcon,
   GearIcon, InfoIcon, ChevronRightIcon, GroceryIcon,
   StorefrontIcon, RuleIcon, HelpIcon, LockIcon,
-  PaletteIcon, SupportAgentIcon, ImportIcon, CalendarMonthIcon,
+  PaletteIcon, SupportAgentIcon, ImportIcon, CalendarMonthIcon, FlagIcon,
 } from '../../components/TabIcon';
+import { FEEDBACK_EMAIL } from '../../constants/support';
 
-const FEEDBACK_EMAIL = 'rahxtsayyed@daxa.ai';
 const MONTH_START_DAYS = Array.from({ length: 28 }, (_, i) => i + 1);
 
 function ordinal(n: number): string {
@@ -247,6 +247,12 @@ export function MoreScreen() {
           Icon: RuleIcon,
           meta: ruleCount == null ? undefined : `${ruleCount} rules`,
           onPress: () => navigation.navigate('CategoryRules'),
+        },
+        {
+          key: 'report-undetected-sms',
+          label: 'Report undetected SMS',
+          Icon: FlagIcon,
+          onPress: () => navigation.navigate('SmsInbox'),
         },
       ],
     },
