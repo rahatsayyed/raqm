@@ -73,6 +73,7 @@ module.exports = function (api) {
             'material-symbols:palette-outline',
             'material-symbols:support-agent-rounded',
             'material-symbols:download-rounded',
+            'material-symbols:flag-outline-rounded',
           ],
         },
       ],

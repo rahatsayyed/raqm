@@ -256,3 +256,7 @@ export function SupportAgentIcon({ color, size = 24 }: Props) {
 export function ImportIcon({ color, size = 24 }: Props) {
   return <Iconify icon="material-symbols:download-rounded" size={size} color={color} />;
 }
+
+export function FlagIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:flag-outline-rounded" size={size} color={color} />;
+}
