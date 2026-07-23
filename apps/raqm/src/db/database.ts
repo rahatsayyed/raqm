@@ -1020,6 +1020,139 @@ export async function upsertCategoryRule(
   }
 }
 
+export interface CategoryRule {
+  id: number;
+  merchantPattern: string;
+  categoryId: number;
+  categoryName: string;
+  subcategoryId: number | null;
+  subcategoryName: string | null;
+}
+
+export async function getCategoryRules(): Promise<CategoryRule[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    id: number;
+    merchant_pattern: string;
+    category_id: number;
+    category_name: string;
+    subcategory_id: number | null;
+    subcategory_name: string | null;
+  }>(
+    `SELECT cr.id, cr.merchant_pattern, cr.category_id, c.name AS category_name,
+            cr.subcategory_id, s.name AS subcategory_name
+     FROM category_rules cr
+     JOIN categories c ON c.id = cr.category_id
+     LEFT JOIN subcategories s ON s.id = cr.subcategory_id
+     ORDER BY cr.id DESC`,
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    merchantPattern: row.merchant_pattern,
+    categoryId: row.category_id,
+    categoryName: row.category_name,
+    subcategoryId: row.subcategory_id,
+    subcategoryName: row.subcategory_name,
+  }));
+}
+
+export async function deleteCategoryRule(id: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`DELETE FROM category_rules WHERE id = ?`, id);
+}
+
+export interface CsvImportRow {
+  amount: number;
+  type: TransactionType;
+  merchant: string | null;
+  timestamp: number;
+  notes: string | null;
+  categoryName: string | null;
+  bankName: string;
+  currency: string | null;
+}
+
+export interface CsvImportResult {
+  inserted: number;
+  duplicates: number;
+}
+
+/**
+ * More → Import CSV. Dedupes against every existing row (live or soft-deleted, any source)
+ * on the same `bankName|amount|timestamp` identity used by SMS scans, so re-importing the
+ * same file twice is a no-op. categoryName resolves against existing categories by name;
+ * failing that, an existing category rule for the merchant is applied (same C7 lookup used
+ * by EditTransactionScreen) — otherwise the row is left uncategorized.
+ */
+export async function insertCsvRows(rows: CsvImportRow[]): Promise<CsvImportResult> {
+  if (rows.length === 0) return { inserted: 0, duplicates: 0 };
+
+  const database = await getDb();
+  const existing = await database.getAllAsync<{ bankName: string; amount: number; timestamp: number }>(
+    'SELECT bankName, amount, timestamp FROM transactions',
+  );
+  const seen = new Set(existing.map((r) => `${r.bankName}|${r.amount}|${r.timestamp}`));
+
+  const categories = await getCategories();
+  const categoryByName = new Map(categories.map((c) => [c.name.toLowerCase(), c.id]));
+
+  // Resolve categorization sequentially — see insertParsedTxs above for why Promise.all here
+  // would defeat the rule cache and risk crashing expo-sqlite on a large file.
+  const ruleCache = new Map<string, { categoryId: number; subcategoryId: number | null } | null>();
+  const decisions: Array<{ categoryId: number | null; subcategoryId: number | null }> = [];
+  for (const row of rows) {
+    if (row.categoryName) {
+      decisions.push({ categoryId: categoryByName.get(row.categoryName.toLowerCase()) ?? null, subcategoryId: null });
+      continue;
+    }
+    if (row.merchant) {
+      const key = row.merchant.toLowerCase();
+      let rule = ruleCache.has(key) ? ruleCache.get(key) : await getCategoryRuleForMerchant(row.merchant);
+      if (!ruleCache.has(key)) ruleCache.set(key, rule ?? null);
+      decisions.push({ categoryId: rule?.categoryId ?? null, subcategoryId: rule?.subcategoryId ?? null });
+      continue;
+    }
+    decisions.push({ categoryId: null, subcategoryId: null });
+  }
+
+  let inserted = 0;
+  let duplicates = 0;
+  await database.runAsync('BEGIN');
+  try {
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const identity = `${row.bankName}|${row.amount}|${row.timestamp}`;
+      if (seen.has(identity)) {
+        duplicates++;
+        continue;
+      }
+      seen.add(identity);
+      const { categoryId, subcategoryId } = decisions[i];
+      await database.runAsync(
+        `INSERT INTO transactions
+           (amount, type, merchant, bankName, timestamp, currency, category_id, subcategory_id, notes, is_manual)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+        row.amount,
+        row.type,
+        row.merchant,
+        row.bankName,
+        row.timestamp,
+        row.currency ?? '₹',
+        categoryId,
+        subcategoryId,
+        row.notes,
+      );
+      inserted++;
+    }
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+
+  return { inserted, duplicates };
+}
+
 // ── Multi-row transaction ops (Plan 3) ─────────────────────────────────────────
 
 export async function splitTx(
@@ -1192,6 +1325,49 @@ export async function groupTxs(ids: number[], name: string): Promise<number> {
 export async function ungroupTx(id: number): Promise<void> {
   const database = await getDb();
   await database.runAsync(`UPDATE transactions SET group_id = NULL WHERE id = ?`, id);
+}
+
+export interface TransactionGroupSummary {
+  id: number;
+  name: string | null;
+  txCount: number;
+  totalAmount: number;
+}
+
+export async function getTransactionGroups(): Promise<TransactionGroupSummary[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    id: number;
+    name: string | null;
+    tx_count: number;
+    total_amount: number | null;
+  }>(
+    `SELECT tg.id, tg.name, COUNT(t.id) AS tx_count, SUM(t.amount) AS total_amount
+     FROM transaction_groups tg
+     JOIN transactions t ON t.group_id = tg.id AND t.deleted_at IS NULL
+     GROUP BY tg.id
+     HAVING tx_count > 0
+     ORDER BY tg.created_at DESC`,
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    txCount: row.tx_count,
+    totalAmount: row.total_amount ?? 0,
+  }));
+}
+
+export async function deleteTransactionGroup(id: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync('BEGIN');
+  try {
+    await database.runAsync(`UPDATE transactions SET group_id = NULL WHERE group_id = ?`, id);
+    await database.runAsync(`DELETE FROM transaction_groups WHERE id = ?`, id);
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
 }
 
 export async function linkTxs(

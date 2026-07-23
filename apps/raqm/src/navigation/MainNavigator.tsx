@@ -17,6 +17,9 @@ import { SettingsScreen } from '../screens/main/SettingsScreen';
 import { CategoryDetailScreen } from '../screens/main/CategoryDetailScreen';
 import { DeletedTransactionsScreen } from '../screens/main/DeletedTransactionsScreen';
 import { DuesRemindersScreen } from '../screens/main/DuesRemindersScreen';
+import { CategoryRulesScreen } from '../screens/main/CategoryRulesScreen';
+import { MerchantRulesScreen } from '../screens/main/MerchantRulesScreen';
+import { ManageAccountsScreen } from '../screens/main/ManageAccountsScreen';
 import { HomeIcon, WalletIcon, LightbulbIcon, MoreIcon } from '../components/TabIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../theme';
@@ -94,6 +97,9 @@ export function MainNavigator() {
       <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="DeletedTransactions" component={DeletedTransactionsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="DuesReminders" component={DuesRemindersScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="CategoryRules" component={CategoryRulesScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="MerchantRules" component={MerchantRulesScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="ManageAccounts" component={ManageAccountsScreen} options={{ animation: 'slide_from_right' }} />
     </Stack.Navigator>
   );
 }

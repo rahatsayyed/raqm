@@ -226,3 +226,33 @@ export function GroupWorkIcon({ color, size = 24 }: Props) {
 export function AddIcon({ color, size = 24 }: Props) {
   return <Iconify icon="material-symbols:add-rounded" size={size} color={color} />;
 }
+
+// ── More screen (Automation / Preferences / Support) ────────────────────────
+
+export function RuleIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:rule-rounded" size={size} color={color} />;
+}
+
+export function CalendarMonthIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:calendar-month-outline-rounded" size={size} color={color} />;
+}
+
+export function HelpIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:help-outline-rounded" size={size} color={color} />;
+}
+
+export function LockIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:lock-outline" size={size} color={color} />;
+}
+
+export function PaletteIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:palette-outline" size={size} color={color} />;
+}
+
+export function SupportAgentIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:support-agent-rounded" size={size} color={color} />;
+}
+
+export function ImportIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:download-rounded" size={size} color={color} />;
+}

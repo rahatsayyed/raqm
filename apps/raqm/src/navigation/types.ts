@@ -41,6 +41,9 @@ export type MainStackParamList = {
   DeletedTransactions: undefined;
   Grocery: undefined;
   DuesReminders: undefined;
+  CategoryRules: undefined;
+  MerchantRules: undefined;
+  ManageAccounts: undefined;
 };
 
 export type OnboardingScreenProps<T extends keyof OnboardingStackParamList> =
