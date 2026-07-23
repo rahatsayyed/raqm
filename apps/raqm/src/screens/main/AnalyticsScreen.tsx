@@ -29,6 +29,10 @@ function shortDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
+function shortTime(ts: number): string {
+  return new Date(ts).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** "IN 3 DAYS" / "OCT 30" style labels for dues — same convention as DashboardScreen. */
@@ -373,6 +377,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
               merchant={tx.merchant || tx.bankName}
               categoryName={categoryName(tx.categoryId)}
               dateLabel={shortDate(tx.timestamp)}
+              timeLabel={shortTime(tx.timestamp)}
               amountLabel={formatAmount(tx.amount, tx.currency)}
               isDebit={isDebit(tx.type)}
               onPress={() =>
