@@ -1,16 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import { Colors } from '../../theme';
 import { useTxStore } from '../../store/txStore';
-import { getCategories, getSetting, type Category, type TxRecord } from '../../db/database';
+import { getCategories, getSetting, getReminders, type Category, type TxRecord, type Reminder } from '../../db/database';
 import { countsTowardTotals } from '../../services/txIntelligence';
+import { detectRecurringDues, mergeDues } from '../../services/dues';
 import { getDayBounds, getMonthBounds, type PeriodBounds } from '../../utils/period';
 import { BriefingHero, NarrativeAdvisor, CategoryShift } from '../../components/analytics';
-import { SectionHeader, TransactionRow } from '../../components/dashboard';
+import { SectionHeader, TransactionRow, ObligationCard } from '../../components/dashboard';
 import { AccountLiquidityCard } from '../../components/AccountLiquidityCard';
-import { rescanTransactions } from '../../services/rescan';
 import { TrendingUpIcon, TrendingDownIcon } from '../../components/TabIcon';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { MainTabScreenProps, MainStackParamList } from '../../navigation/types';
@@ -29,15 +29,29 @@ function shortDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** "IN 3 DAYS" / "OCT 30" style labels for dues — same convention as DashboardScreen. */
+function upcomingLabel(ts: number): string {
+  const rawDays = Math.round((ts - Date.now()) / DAY_MS);
+  if (rawDays < 0) return rawDays === -1 ? 'OVERDUE 1 DAY' : `OVERDUE ${Math.abs(rawDays)} DAYS`;
+  if (rawDays === 0) return 'TODAY';
+  if (rawDays === 1) return 'TOMORROW';
+  if (rawDays <= 7) return `IN ${rawDays} DAYS`;
+  return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }).toUpperCase();
+}
+
 export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>) {
   const { txs } = useTxStore();
   const currency = txs[0]?.currency ?? '₹';
   const [monthStartDay, setMonthStartDay] = useState(1);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
 
   const loadMeta = useCallback(() => {
     getCategories().then(setCategories);
     getSetting('month_start_day').then((v) => setMonthStartDay(v ? Number(v) : 1));
+    getReminders().then(setReminders);
   }, [txs]);
 
   useEffect(() => {
@@ -115,21 +129,47 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
     };
   }, [periodTxs, txs, bounds]);
 
+  // Dues & Reminders — detected recurring charges + manually-added reminders, soonest
+  // first. Detection logic is shared with DashboardScreen and DuesRemindersScreen.
+  const upcoming = useMemo(
+    () => mergeDues(detectRecurringDues(txs, 30 * DAY_MS), reminders).slice(0, 5),
+    [txs, reminders],
+  );
+
   // Liquidity snapshot — latest known balance per non-card account, summed for the total.
   const liquiditySnapshot = useMemo(() => {
-    const map = new Map<string, { bankName: string; last4: string | null; balance: number; currency: string; timestamp: number }>();
+    const map = new Map<
+      string,
+      { bankName: string; last4: string | null; balance: number; currency: string; timestamp: number; monthSpend: number }
+    >();
     for (const tx of txs) {
       if (tx.isFromCard || tx.balance == null) continue;
       const key = `${tx.bankName}|${tx.accountLast4 ?? ''}`;
       const existing = map.get(key);
       if (!existing || tx.timestamp > existing.timestamp) {
-        map.set(key, { bankName: tx.bankName, last4: tx.accountLast4, balance: tx.balance, currency: tx.currency, timestamp: tx.timestamp });
+        map.set(key, {
+          bankName: tx.bankName,
+          last4: tx.accountLast4,
+          balance: tx.balance,
+          currency: tx.currency,
+          timestamp: tx.timestamp,
+          monthSpend: existing?.monthSpend ?? 0,
+        });
       }
     }
-    const accounts = Array.from(map.values()).sort((a, b) => b.timestamp - a.timestamp);
+    // Same EXPENSE-only convention this screen uses everywhere else (unlike Dashboard's
+    // EXPENSE+TRANSFER+INVESTMENT).
+    for (const tx of txs) {
+      if (!isCounted(tx) || tx.type !== TransactionType.EXPENSE) continue;
+      if (tx.timestamp < bounds.from || tx.timestamp > bounds.to) continue;
+      const key = `${tx.bankName}|${tx.accountLast4 ?? ''}`;
+      const acc = map.get(key);
+      if (acc) acc.monthSpend += tx.amount;
+    }
+    const accounts = Array.from(map.values()).sort((a, b) => b.monthSpend - a.monthSpend);
     const total = accounts.reduce((sum, a) => sum + a.balance, 0);
     return { accounts, total };
-  }, [txs]);
+  }, [txs, bounds]);
 
   // Shift by category — top 6 categories by this-month-to-date spend, vs. the same categories'
   // full prior month, independent of the period picker above (like V9's trend line). The mini
@@ -390,6 +430,38 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
         </View>
       </View>
 
+      {/* Dues & Reminders — detected recurring charges + manually-added reminders. Always shown
+          (not just when data exists) since the header is how a user opens the screen to add one. */}
+      <View className="mx-[24px] mb-[32px]">
+        <SectionHeader
+          title="DUES & REMINDERS"
+          onPress={() => navigation.getParent<NavigationProp<MainStackParamList>>()?.navigate('DuesReminders')}
+        />
+        {upcoming.length === 0 ? (
+          <TouchableOpacity
+            onPress={() => navigation.getParent<NavigationProp<MainStackParamList>>()?.navigate('DuesReminders')}
+            activeOpacity={0.7}
+            className="border border-dashed border-outline-variant rounded-xl py-xl px-lg items-center justify-center min-h-[120px]"
+          >
+            <Text className="font-inter text-body-md text-ink-body text-center">
+              Your dues and reminders are clear for the next 30 days.
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-[16px] pr-[24px]">
+            {upcoming.map((u) => (
+              <ObligationCard
+                key={u.key}
+                dueLabel={upcomingLabel(u.dueTs)}
+                soon={u.dueTs - Date.now() <= 3 * DAY_MS}
+                name={u.name}
+                amountLabel={formatAmount(u.amount, u.currency ?? currency)}
+              />
+            ))}
+          </ScrollView>
+        )}
+      </View>
+
       {/* Account Analysis / Liquidity — total across non-card accounts, latest known balance each */}
       {liquiditySnapshot.accounts.length > 0 && (
         <View className="mb-xl">
@@ -410,7 +482,19 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
                 balance={acc.balance}
                 currency={acc.currency}
                 updatedAt={acc.timestamp}
-                onRefresh={() => rescanTransactions()}
+                monthSpend={acc.monthSpend}
+                onManualUpdate={(newBalance) =>
+                  useTxStore.getState().add({
+                    amount: 0,
+                    type: TransactionType.BALANCE_UPDATE,
+                    bankName: acc.bankName,
+                    accountLast4: acc.last4,
+                    timestamp: Date.now(),
+                    balance: newBalance,
+                    currency: acc.currency,
+                    isManual: true,
+                  })
+                }
                 onPress={() =>
                   navigation
                     .getParent<NavigationProp<MainStackParamList>>()

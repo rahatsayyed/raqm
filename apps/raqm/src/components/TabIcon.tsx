@@ -153,6 +153,18 @@ export function LandmarkIcon({ color, size = 24 }: Props) {
   return <Iconify icon="lucide:landmark" size={size} color={color} />;
 }
 
+export function PencilIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="lucide:pencil" size={size} color={color} />;
+}
+
+export function MessageSquareIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="lucide:message-square" size={size} color={color} />;
+}
+
+export function PhoneIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="lucide:phone" size={size} color={color} />;
+}
+
 export function GiftIcon({ color, size = 24 }: Props) {
   return <Iconify icon="lucide:gift" size={size} color={color} />;
 }
