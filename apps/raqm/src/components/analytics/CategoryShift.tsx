@@ -30,7 +30,7 @@ export function CategoryShift({ data, currency = '₹' }: Props) {
       </Text>
       <View className="gap-lg">
         {data.map((row) => {
-          const pctColor = row.pctChange > 0 ? Colors.error : row.pctChange < 0 ? Colors.primary : Colors.onSurfaceVariant;
+          const pctColor = row.pctChange > 0 ? Colors.secondary : row.pctChange < 0 ? Colors.primary : Colors.onSurfaceVariant;
           const pctLabel =
             row.pctChange > 0 ? `+${Math.round(row.pctChange)}%` : row.pctChange < 0 ? `${Math.round(row.pctChange)}%` : '±0%';
           const Icon = iconForCategoryName(row.name) ?? FALLBACK_CATEGORY_ICON;

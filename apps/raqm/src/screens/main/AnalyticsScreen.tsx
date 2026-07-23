@@ -314,7 +314,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
       const name = catKey === -1 ? 'Uncategorized' : (categoryMeta.get(catKey)?.name ?? 'Unknown');
       const prevTotal = prevMonthTotals.get(catKey) ?? 0;
       const pctChange = prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : total > 0 ? 100 : 0;
-      const trendColor = pctChange > 0 ? Colors.error : pctChange < 0 ? Colors.primary : Colors.surfaceContainerHigh;
+      const trendColor = pctChange > 0 ? Colors.secondary : pctChange < 0 ? Colors.primary : Colors.surfaceContainerHigh;
 
       const trend = [
         ...prevWeekBounds.map((b, i) => ({
