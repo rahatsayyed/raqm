@@ -2,12 +2,15 @@ import * as Notifications from 'expo-notifications';
 import type { NotificationResponse } from 'expo-notifications';
 import type { NavigationContainerRef } from '@react-navigation/native';
 import { getSetting, updateTx } from '../db/database';
+import { useTxStore } from '../store/txStore';
 import type { MainStackParamList } from '../navigation/types';
 import { useAppStore } from '../store/appStore';
 
 const TX_CHANNEL_ID = 'raqm-tx';
 const TX_CATEGORY_ID = 'tx';
+const CATEGORY_ACTION_ID = 'category-tx';
 const ADD_NOTE_ACTION_ID = 'add-note';
+const NOT_EXPENSE_ACTION_ID = 'not-expense';
 
 const DAILY_SUMMARY_ID = 'raqm-daily-summary';
 const WEEKLY_SUMMARY_ID = 'raqm-weekly-summary';
@@ -43,12 +46,23 @@ export async function initNotifications(): Promise<void> {
 
   await Notifications.setNotificationCategoryAsync(TX_CATEGORY_ID, [
     {
+      identifier: CATEGORY_ACTION_ID,
+      buttonTitle: 'Category',
+      options: { opensAppToForeground: true },
+    },
+    {
       identifier: ADD_NOTE_ACTION_ID,
       buttonTitle: 'Add note',
       textInput: {
         placeholder: 'Add a note…',
         submitButtonTitle: 'Save',
       },
+      options: { opensAppToForeground: false },
+    },
+    {
+      identifier: NOT_EXPENSE_ACTION_ID,
+      buttonTitle: 'Not An Expense',
+      options: { opensAppToForeground: false },
     },
   ]);
 }
@@ -92,8 +106,12 @@ export async function postBudgetAlert(title: string, body: string): Promise<void
  * - Tap with a txId in data (T17): navigate to TransactionDetail.
  * - Tap with no txId (summary notifications): navigate to the tab root (Dashboard is the
  *   first tab, so this lands the user there).
+ * - 'category-tx' action: navigate to EditTransaction with autoOpenCategoryPicker so the
+ *   user lands straight on the category grid instead of the full edit form.
  * - 'add-note' action with typed text (T18): save the note directly to the DB without
  *   navigating or opening the app to the foreground.
+ * - 'not-expense' action: flips linkSettled (same flag countsTowardTotals() already checks
+ *   everywhere else) without opening the app, then dismisses the notification.
  * Also handles the cold-start case: if the app was launched by tapping a notification,
  * addNotificationResponseReceivedListener never fires for that response, so we fetch it
  * explicitly via getLastNotificationResponseAsync() and run it through the same handler.
@@ -107,36 +125,58 @@ export function attachNotificationHandlers(
 ): () => void {
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
+  const navigateWhenReady = (navigate: () => void) => {
+    if (navRef.isReady()) {
+      navigate();
+    } else {
+      retryTimer = setTimeout(() => {
+        retryTimer = null;
+        if (navRef.isReady()) navigate();
+      }, 500);
+    }
+  };
+
   const handleResponse = (response: NotificationResponse) => {
     const data = response.notification.request.content.data as { txId?: number };
+    const notificationId = response.notification.request.identifier;
 
     if (response.actionIdentifier === ADD_NOTE_ACTION_ID) {
       const userText = response.userText;
       if (typeof data.txId === 'number' && userText && userText.trim().length > 0) {
         updateTx(data.txId, { notes: userText.trim() });
+        useTxStore.getState().refresh();
       }
+      Notifications.dismissNotificationAsync(notificationId);
+      return;
+    }
+
+    if (response.actionIdentifier === NOT_EXPENSE_ACTION_ID) {
+      if (typeof data.txId === 'number') {
+        updateTx(data.txId, { linkSettled: true });
+        useTxStore.getState().refresh();
+      }
+      Notifications.dismissNotificationAsync(notificationId);
+      return;
+    }
+
+    if (response.actionIdentifier === CATEGORY_ACTION_ID) {
+      if (!useAppStore.getState().isOnboardingComplete || typeof data.txId !== 'number') return;
+      navigateWhenReady(() => {
+        navRef.navigate('EditTransaction', { transactionId: data.txId as number, autoOpenCategoryPicker: true });
+      });
       return;
     }
 
     if (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
       if (!useAppStore.getState().isOnboardingComplete) return;
 
-      const navigate = () => {
+      navigateWhenReady(() => {
         if (typeof data.txId === 'number') {
           navRef.navigate('TransactionDetail', { transactionId: data.txId });
         } else {
           navRef.navigate('Tabs');
         }
-      };
-
-      if (navRef.isReady()) {
-        navigate();
-      } else {
-        retryTimer = setTimeout(() => {
-          retryTimer = null;
-          if (navRef.isReady()) navigate();
-        }, 500);
-      }
+      });
     }
   };
 
