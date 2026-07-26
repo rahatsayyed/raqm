@@ -251,6 +251,21 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 7) {
+    await database.runAsync(`BEGIN`);
+    try {
+      // Persisted running balance per account, kept in sync as transactions with a
+      // parsed balance arrive — see updateAccountBalanceFromTx.
+      await database.runAsync(`ALTER TABLE accounts ADD COLUMN balance REAL`);
+      await database.runAsync(`ALTER TABLE accounts ADD COLUMN balance_updated_at INTEGER`);
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (7)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -630,6 +645,15 @@ export async function insertTx(input: NewTxInput): Promise<number> {
     input.lng ?? null,
     input.isManual ? 1 : 0,
   );
+  if (input.balance != null) {
+    await updateAccountBalanceFromTx({
+      bankName: input.bankName,
+      last4: input.accountLast4 ?? null,
+      balance: input.balance,
+      timestamp: input.timestamp,
+      isFromCard: input.isFromCard ?? false,
+    });
+  }
   return result.lastInsertRowId;
 }
 
@@ -790,6 +814,19 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
   } catch (e) {
     await database.runAsync('ROLLBACK');
     throw e;
+  }
+
+  // Balance sync runs after commit, sequentially (same rationale as categorization
+  // above) — each call is timestamp-guarded so processing order doesn't matter.
+  for (const tx of txs) {
+    if (tx.balance == null) continue;
+    await updateAccountBalanceFromTx({
+      bankName: tx.bankName,
+      last4: tx.accountLast4 ?? null,
+      balance: tx.balance,
+      timestamp: tx.timestamp,
+      isFromCard: tx.isFromCard ?? false,
+    });
   }
 }
 
@@ -1680,6 +1717,8 @@ export interface Account {
   nickname: string | null;
   creditLimit: number | null;
   dueDate: string | null;
+  balance: number | null;
+  balanceUpdatedAt: number | null;
 }
 
 function rowToAccount(row: Record<string, unknown>): Account {
@@ -1692,7 +1731,52 @@ function rowToAccount(row: Record<string, unknown>): Account {
     nickname: (row.nickname as string | null) ?? null,
     creditLimit: (row.credit_limit as number | null) ?? null,
     dueDate: (row.due_date as string | null) ?? null,
+    balance: (row.balance as number | null) ?? null,
+    balanceUpdatedAt: (row.balance_updated_at as number | null) ?? null,
   };
+}
+
+/**
+ * Keeps `accounts.balance` in sync with the latest transaction balance seen for that
+ * account, called from every transaction-insert path that carries a parsed balance
+ * (insertTx — and therefore insertParsedTx — plus insertParsedTxs for bulk scans).
+ * Guarded by timestamp so an out-of-order historical scan can't clobber a newer balance
+ * with an older one; upserts the account row if it doesn't exist yet (mirrors
+ * syncDiscoveredAccounts' bankName+last4 identity key). Cards are skipped — a credit
+ * card's "balance" isn't a liquidity figure the way a bank account's is.
+ */
+export async function updateAccountBalanceFromTx(input: {
+  bankName: string;
+  last4: string | null;
+  balance: number;
+  timestamp: number;
+  isFromCard: boolean;
+}): Promise<void> {
+  if (input.isFromCard) return;
+  const database = await getDb();
+  const existing = await database.getFirstAsync<{ id: number; balance_updated_at: number | null }>(
+    `SELECT id, balance_updated_at FROM accounts WHERE bank_name = ? AND IFNULL(last4, '') = IFNULL(?, '')`,
+    input.bankName,
+    input.last4,
+  );
+  if (existing) {
+    if (existing.balance_updated_at != null && existing.balance_updated_at > input.timestamp) return;
+    await database.runAsync(
+      `UPDATE accounts SET balance = ?, balance_updated_at = ? WHERE id = ?`,
+      input.balance,
+      input.timestamp,
+      existing.id,
+    );
+  } else {
+    await database.runAsync(
+      `INSERT INTO accounts (bank_name, last4, is_card, is_manual, balance, balance_updated_at)
+       VALUES (?, ?, 0, 0, ?, ?)`,
+      input.bankName,
+      input.last4,
+      input.balance,
+      input.timestamp,
+    );
+  }
 }
 
 export async function getAccounts(): Promise<Account[]> {
