@@ -25,8 +25,13 @@
         "android.permission.READ_SMS",
         "android.permission.RECEIVE_SMS",
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ]
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.raqm.money"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -63,6 +68,15 @@
         }
       ],
       "expo-sharing"
-    ]
+    ],
+    "extra": {
+      "expo-navigation-bar": {
+        "style": "dark"
+      },
+      "eas": {
+        "projectId": "7a2733e8-57a3-4aa7-bb3d-27c8d1c003b4"
+      }
+    },
+    "owner": "rahatsayyed"
   }
 }
