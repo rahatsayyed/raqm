@@ -35,6 +35,7 @@ import {
   getReminders,
 } from "../../db/database";
 import { countsTowardTotals } from "../../services/txIntelligence";
+import { detectBalanceMismatches } from "../../services/balanceIntegrity";
 import { detectRecurringDues, mergeDues } from "../../services/dues";
 import { postTxNotification } from "../../notifications/notifications";
 import { getMonthBounds, getDayBounds } from "../../utils/period";
@@ -421,6 +422,10 @@ export function DashboardScreen() {
     [txs],
   );
 
+  // Needs attention: a gap between the bank-reported balance and what our transaction
+  // history would predict — usually means we missed/failed to parse an SMS.
+  const balanceMismatches = useMemo(() => detectBalanceMismatches(txs), [txs]);
+
   // Dues & Reminders: recurring merchants' next expected charge, merged with manual
   // reminders, soonest first. Detection logic is shared with DuesRemindersScreen.
   const upcoming = useMemo(
@@ -607,11 +612,16 @@ export function DashboardScreen() {
           )}
         </View>
 
-        {/* Needs attention — MOCK placeholder card; real uncategorized/anomaly detection to follow */}
-        <NeedsAttentionCard
-          message="I noticed a large transaction at 'STP-MUM' that I can't categorize yet. Would you like to review it?"
-          moreCount={2}
-        />
+        {/* Needs attention — balance mismatch: a gap between the bank-reported balance
+          and what our transaction history predicts, usually a missed/unparsed SMS. */}
+        {balanceMismatches.length > 0 && (
+          <NeedsAttentionCard
+            message={`${balanceMismatches[0].bankName}${balanceMismatches[0].last4 ? ` ••${balanceMismatches[0].last4}` : ""}'s balance doesn't match what we've tracked — we may have missed a transaction.`}
+            moreCount={balanceMismatches.length - 1}
+            ctaLabel="REPORT MISSING SMS"
+            onPressCta={() => navigation.navigate("SmsInbox")}
+          />
+        )}
 
         {/* Dues & Reminders — detected recurring charges + manually-added reminders. Always shown
           (not just when data exists) since the header is how a user opens the screen to add one. */}
