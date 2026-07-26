@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Handler
+import android.os.Looper
 import android.provider.Telephony
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -62,6 +64,22 @@ class SmsReaderModule : Module() {
         ContextCompat.RECEIVER_NOT_EXPORTED,
       )
       Log.d(TAG, "SmsReaderModule.OnCreate: internal receiver registered for $NEW_SMS_ACTION")
+
+      // TEMPORARY diagnostic: fires a fake onNewSms event 3s after this module is created,
+      // completely bypassing SMS/broadcasts. If "[RaqmSms] JS received onNewSms
+      // sender=SELF_TEST" never shows up in Metro/adb logcat ReactNativeJS after a full
+      // app relaunch, the bug is in the sendEvent/JS-bridge wiring itself, not anything
+      // SMS-specific — narrows the search a lot. Remove once live detection is confirmed working.
+      Handler(Looper.getMainLooper()).postDelayed({
+        Log.d(TAG, "SmsReaderModule: firing SELF_TEST sendEvent(onNewSms)")
+        sendEvent(
+          "onNewSms", mapOf(
+            "body" to "SELF_TEST diagnostic event — safe to ignore",
+            "sender" to "SELF_TEST",
+            "timestamp" to System.currentTimeMillis(),
+          )
+        )
+      }, 3000)
     }
 
     OnDestroy {
