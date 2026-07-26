@@ -68,6 +68,7 @@ export const useTxStore = create<TxStore>((set, get) => ({
     }
 
     const id = await insertParsedTx(tx);
+    if (id === null) return null; // reference-based duplicate — see insertParsedTx
 
     const coords = await getCurrentCoords();
     if (coords) {

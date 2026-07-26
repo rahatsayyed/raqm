@@ -19,11 +19,13 @@ class SmsBroadcastReceiver : BroadcastReceiver() {
       val sender = sms.originatingAddress ?: ""
       val timestamp = sms.timestampMillis
 
-      if (!looksLikeBankSms(body)) continue
-
-      showNotification(context, body, timestamp)
-
-      // Forward to the module's dynamic receiver so JS gets an event when app is running
+      // Forward every SMS to JS — BankParserFactory.isKnownBankSender()/parse() there is
+      // the same authoritative sender-based check Re-scan and onboarding scan use. A
+      // body-keyword heuristic here used to gate this forward and silently dropped real
+      // bank messages worded differently than the keyword list expected (e.g. some
+      // transfer SMS formats) — live detection would miss them, though a Re-scan (which
+      // reads the inbox directly) still caught them. The heuristic now only decides
+      // whether to show Raqm's own heads-up notification, a much lower-stakes miss.
       context.sendBroadcast(
         Intent(NEW_SMS_ACTION).apply {
           `package` = context.packageName
@@ -32,6 +34,10 @@ class SmsBroadcastReceiver : BroadcastReceiver() {
           putExtra("timestamp", timestamp)
         }
       )
+
+      if (looksLikeBankSms(body)) {
+        showNotification(context, body, timestamp)
+      }
     }
   }
 

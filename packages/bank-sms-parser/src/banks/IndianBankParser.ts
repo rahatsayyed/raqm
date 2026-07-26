@@ -79,8 +79,12 @@ export class IndianBankParser extends BaseIndianBankParser {
   }
 
   extractMerchant(message: string, sender: string): string | null {
-    // Pattern 1: "to Merchant Name"
-    const toPattern = /to\s+([^.\n]+?)(?:\.\s*UPI:|UPI:|$)/i;
+    // Pattern 1: "to Merchant Name" — terminate on a bare period/question mark too, not
+    // just "UPI:" or end-of-string. Without this, a message with no "UPI:" anywhere (e.g.
+    // "to NAME.RRN 123.Avl Bal...SMS BLOCK to 9876543210") fails to match at the correct
+    // "to NAME" (the char class can't cross the period either way) and backtracks to a
+    // LATER "to" in the footer boilerplate, extracting the wrong text as the merchant.
+    const toPattern = /to\s+([^.\n?]+?)(?:[.?]|\s*UPI:|$)/i;
     const toMatch = message.match(toPattern);
     if (toMatch) {
       const merchant = this.cleanMerchantName(toMatch[1].trim());
@@ -89,11 +93,21 @@ export class IndianBankParser extends BaseIndianBankParser {
       }
     }
 
-    // Pattern 2: "from Sender Name"
-    const fromPattern = /from\s+([^.\n]+?)(?:\.\s*UPI:|UPI:|$)/i;
+    // Pattern 2: "from Sender Name" — same fix as above.
+    const fromPattern = /from\s+([^.\n?]+?)(?:[.?]|\s*UPI:|$)/i;
     const fromMatch = message.match(fromPattern);
     if (fromMatch) {
       const merchant = this.cleanMerchantName(fromMatch[1].trim());
+      if (this.isValidMerchantName(merchant)) {
+        return merchant;
+      }
+    }
+
+    // Pattern 2b: "credited ... by Sender Name" (no "to"/"from" keyword present).
+    const byPattern = /\bby\s+([^.\n?]+?)(?:[.?]|\s*UPI:|$)/i;
+    const byMatch = message.match(byPattern);
+    if (byMatch) {
+      const merchant = this.cleanMerchantName(byMatch[1].trim());
       if (this.isValidMerchantName(merchant)) {
         return merchant;
       }
@@ -193,8 +207,8 @@ export class IndianBankParser extends BaseIndianBankParser {
       if (!isNaN(amount)) return amount;
     }
 
-    // Pattern 2: Available Balance: Rs. 25000
-    const balPattern2 = /Available\s+Balance:?\s+Rs\.?\s*(\d+(?:,\d{3})*(?:\.\d{2})?)/i;
+    // Pattern 2: Available Balance: Rs. 25000 (or "Available balance is Rs. 25000")
+    const balPattern2 = /Available\s+Balance:?\s+(?:is\s+)?Rs\.?\s*(\d+(?:,\d{3})*(?:\.\d{2})?)/i;
     const balMatch2 = message.match(balPattern2);
     if (balMatch2) {
       const amount = parseFloat(balMatch2[1].replace(/,/g, ''));
