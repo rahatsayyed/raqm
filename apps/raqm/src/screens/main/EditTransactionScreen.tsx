@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors } from '../../theme';
@@ -30,6 +30,7 @@ export function EditTransactionScreen({ route, navigation }: MainStackScreenProp
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
   const [saving, setSaving] = useState(false);
+  const autoOpenedCategoryPicker = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -65,6 +66,17 @@ export function EditTransactionScreen({ route, navigation }: MainStackScreenProp
       direction: isCreditType(type) ? 'income' : 'expense',
     });
   };
+
+  // The "Category" notification action deep-links here with autoOpenCategoryPicker so the
+  // user lands straight on the category grid instead of the full edit form. Guard with a
+  // ref (not just clearing the param) since navigation.setParams doesn't take effect in
+  // time to stop this same render pass from firing openCategoryPicker twice.
+  useEffect(() => {
+    if (loading || !route.params?.autoOpenCategoryPicker || autoOpenedCategoryPicker.current) return;
+    autoOpenedCategoryPicker.current = true;
+    navigation.setParams({ autoOpenCategoryPicker: undefined });
+    openCategoryPicker();
+  }, [loading, route.params?.autoOpenCategoryPicker]);
 
   useEffect(() => {
     const pickedCategoryId = route.params?.pickedCategoryId;
