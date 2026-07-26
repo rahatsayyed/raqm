@@ -776,7 +776,35 @@ async function getCategoryIdByName(name: string): Promise<number | null> {
   return id;
 }
 
-export async function insertParsedTx(tx: ParsedTransaction): Promise<number> {
+const REFERENCE_DUP_WINDOW_MS = 48 * 60 * 60 * 1000;
+
+/**
+ * Cross-sender duplicate guard: the same real transfer sometimes triggers two SMS from
+ * different identities (e.g. the receiving bank's own alert plus a second alert under a
+ * different bank/PSP name) — same reference number (RRN/UTR), same amount, same day.
+ * `isDuplicateSms`'s same-sender-within-60s check can't catch this since the sender
+ * differs; reference numbers are unique per real transaction, so matching on them is safe
+ * across a wider (48h) window without risking false positives.
+ */
+async function isReferenceDuplicate(reference: string, amount: number, timestamp: number): Promise<boolean> {
+  const database = await getDb();
+  const row = await database.getFirstAsync<{ id: number }>(
+    `SELECT id FROM transactions
+     WHERE reference = ? AND amount = ? AND deleted_at IS NULL AND ABS(timestamp - ?) <= ?
+     LIMIT 1`,
+    reference,
+    amount,
+    timestamp,
+    REFERENCE_DUP_WINDOW_MS,
+  );
+  return row != null;
+}
+
+export async function insertParsedTx(tx: ParsedTransaction): Promise<number | null> {
+  if (tx.reference && (await isReferenceDuplicate(tx.reference, tx.amount, tx.timestamp))) {
+    return null;
+  }
+
   const { categoryId, subcategoryId } = await categorizeParsedTx(tx);
 
   return insertTx({
@@ -815,6 +843,12 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
   try {
     for (let i = 0; i < txs.length; i++) {
       const tx = txs[i];
+      // See isReferenceDuplicate above insertParsedTx — catches the same real transfer
+      // reported by two different bank/sender identities, which a bulk scan can just as
+      // easily pull in together as the live-SMS path can.
+      if (tx.reference && (await isReferenceDuplicate(tx.reference, tx.amount, tx.timestamp))) {
+        continue;
+      }
       const { categoryId, subcategoryId } = decisions[i];
       await database.runAsync(
         `INSERT INTO transactions

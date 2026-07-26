@@ -131,7 +131,7 @@ export abstract class BankParser {
     // Must contain transaction keywords
     const transactionKeywords = [
       'debited', 'credited', 'withdrawn', 'deposited',
-      'spent', 'received', 'transferred', 'paid',
+      'spent', 'received', 'transferred', 'paid', 'sent',
     ];
 
     return transactionKeywords.some((kw) => lowerMessage.includes(kw));
@@ -184,6 +184,7 @@ export abstract class BankParser {
     if (lowerMessage.includes('paid')) return TransactionType.EXPENSE;
     if (lowerMessage.includes('purchase')) return TransactionType.EXPENSE;
     if (lowerMessage.includes('deducted')) return TransactionType.EXPENSE;
+    if (lowerMessage.includes('sent')) return TransactionType.EXPENSE;
 
     if (lowerMessage.includes('credited')) return TransactionType.INCOME;
     if (lowerMessage.includes('deposited')) return TransactionType.INCOME;
