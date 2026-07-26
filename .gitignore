@@ -13,3 +13,7 @@ web-build/
 .yarn/cache
 # Added by code-review-graph
 .code-review-graph/
+
+# TypeScript build info
+*.tsbuildinfo
+
