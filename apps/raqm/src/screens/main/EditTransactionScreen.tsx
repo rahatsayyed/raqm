@@ -7,6 +7,7 @@ import { useTxStore } from '../../store/txStore';
 import { getTxById, getCategories, upsertCategoryRule } from '../../db/database';
 import type { Category } from '../../db/database';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
+import { isCreditType } from '../../services/txIntelligence';
 
 function fmtDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -58,7 +59,11 @@ export function EditTransactionScreen({ route, navigation }: MainStackScreenProp
   const canSave = !Number.isNaN(parsedAmount) && parsedAmount > 0;
 
   const openCategoryPicker = () => {
-    navigation.navigate('CategoryPicker', { returnTo: 'EditTransaction', transactionId });
+    navigation.navigate('CategoryPicker', {
+      returnTo: 'EditTransaction',
+      transactionId,
+      direction: isCreditType(type) ? 'income' : 'expense',
+    });
   };
 
   useEffect(() => {
@@ -163,15 +168,18 @@ export function EditTransactionScreen({ route, navigation }: MainStackScreenProp
           </TouchableOpacity>
           <TouchableOpacity
             className={`flex-1 items-center py-[12px] rounded-lg border ${
-              type === TransactionType.INCOME
+              isCreditType(type)
                 ? 'bg-primary-container border-primary'
                 : 'bg-surface-container-lowest border-outline-variant'
             }`}
-            onPress={() => setType(TransactionType.INCOME)}
+            // A CREDIT-type transaction (e.g. a card refund) already reads as "money in" —
+            // tapping Income when it's already credit-direction shouldn't silently coerce
+            // it to the literal INCOME type and lose that distinction.
+            onPress={() => setType(isCreditType(type) ? type : TransactionType.INCOME)}
           >
             <Text
               className={`text-body-sm ${
-                type === TransactionType.INCOME
+                isCreditType(type)
                   ? 'font-inter-medium text-on-primary-container'
                   : 'font-inter text-on-surface-variant'
               }`}

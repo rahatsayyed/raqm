@@ -14,6 +14,9 @@ interface TransactionRowProps {
   amountLabel: string;
   isDebit: boolean;
   onPress: () => void;
+  /** True when countsTowardTotals(tx) is false (settled link or self-transfer) — dimmed
+   * to show it doesn't count toward spend/income totals. */
+  excluded?: boolean;
 }
 
 /** Single recent-activity row: category icon tile, merchant/category/date, colored amount. */
@@ -25,12 +28,13 @@ export const TransactionRow = React.memo(function TransactionRow({
   amountLabel,
   isDebit,
   onPress,
+  excluded,
 }: TransactionRowProps) {
   const Icon = iconForCategoryName(categoryName) ?? FALLBACK_CATEGORY_ICON;
 
   return (
     <TouchableOpacity
-      className="flex-row items-center gap-[16px] py-[16px] border-b border-border-subtle"
+      className={`flex-row items-center gap-[16px] py-[16px] border-b border-border-subtle ${excluded ? "opacity-40" : ""}`}
       activeOpacity={0.7}
       onPress={onPress}
     >

@@ -7,6 +7,7 @@ export {
   computeRecurringIds,
   isDuplicateSms,
   countsTowardTotals,
+  isCreditType,
 } from './txIntelligenceCore';
 
 /** T11 */

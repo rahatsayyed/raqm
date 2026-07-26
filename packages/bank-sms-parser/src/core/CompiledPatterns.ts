@@ -13,7 +13,7 @@ export const CompiledPatterns = {
   },
 
   Reference: {
-    GENERIC_REF: /(?:Ref|Reference|RRN|Txn|Transaction)(?:\s+No)?[:\s]+([A-Z0-9]+)/i,
+    GENERIC_REF: /(?:Ref|Reference|Txn|Transaction)(?:\s+No)?[:\s]+([A-Z0-9]+)/i,
     UPI_REF: /UPI[:\s]+([0-9]+)/i,
     REF_NUMBER: /Reference\s+Number[:\s]+([A-Z0-9]+)/i,
     get ALL_PATTERNS(): RegExp[] {

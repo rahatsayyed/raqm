@@ -25,7 +25,7 @@ export function SettingsScreen({ navigation }: MainStackScreenProps<'Settings'>)
       getSetting('notif_weekly'),
       getSetting('notif_monthly'),
       getSetting('budget_alerts'),
-      getCategories(),
+      getCategories('expense'), // budgets are an expense-control concept — Salary/Interest/etc. don't apply
       getBudgets(),
     ]);
     setMonthStartDay(day ? Number(day) : 1);

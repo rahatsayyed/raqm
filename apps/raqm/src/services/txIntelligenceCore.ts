@@ -7,7 +7,9 @@ function isDebitType(t: TransactionType): boolean {
   return t === TransactionType.EXPENSE || t === TransactionType.TRANSFER || t === TransactionType.INVESTMENT;
 }
 
-function isCreditType(t: TransactionType): boolean {
+/** "Money coming in" direction — used for pairing logic and for collapsing INCOME/CREDIT
+ * into one user-facing "Income" bucket in Add/EditTransactionScreen's type toggle. */
+export function isCreditType(t: TransactionType): boolean {
   return t === TransactionType.INCOME || t === TransactionType.CREDIT;
 }
 
