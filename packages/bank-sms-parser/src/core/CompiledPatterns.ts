@@ -120,6 +120,7 @@ export const CompiledPatterns = {
     UPI_SUFFIX: /\s+UPI.*/i,
     TIME_SUFFIX: /\s+at\s+\d{2}:\d{2}.*/,
     TRAILING_DASH: /\s*-\s*$/,
+    TRAILING_PUNCTUATION: /[;:,]+\s*$/,
     PVT_LTD: /(\s+PVT\.?\s*LTD\.?|\s+PRIVATE\s+LIMITED)$/i,
     LTD: /(\s+LTD\.?|\s+LIMITED)$/i,
   },
