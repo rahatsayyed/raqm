@@ -2,8 +2,11 @@ import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import type { TxRecord } from '../db/database';
 
 export interface BalanceMismatch {
+  /** Stable identity for this specific mismatch (bank+last4+txId) — used for dismiss persistence. */
+  key: string;
   bankName: string;
   last4: string | null;
+  currency: string;
   txId: number;
   timestamp: number;
   expected: number;
@@ -46,8 +49,10 @@ export function detectBalanceMismatches(txs: TxRecord[]): BalanceMismatch[] {
       if (tx.balance != null) {
         if (candidate != null && Math.abs(tx.balance - candidate) > EPSILON) {
           mismatches.push({
+            key: `${tx.bankName}|${tx.accountLast4 ?? ''}|${tx.id}`,
             bankName: tx.bankName,
             last4: tx.accountLast4,
+            currency: tx.currency,
             txId: tx.id,
             timestamp: tx.timestamp,
             expected: candidate,

@@ -33,9 +33,11 @@ import {
   getGroceryLists,
   linkTxToList,
   getReminders,
+  getDismissedMismatchKeys,
+  dismissMismatchKey,
 } from "../../db/database";
 import { countsTowardTotals } from "../../services/txIntelligence";
-import { detectBalanceMismatches } from "../../services/balanceIntegrity";
+import { detectBalanceMismatches, type BalanceMismatch } from "../../services/balanceIntegrity";
 import { detectRecurringDues, mergeDues } from "../../services/dues";
 import { postTxNotification } from "../../notifications/notifications";
 import { getMonthBounds, getDayBounds } from "../../utils/period";
@@ -47,10 +49,11 @@ import {
   AdvisorCard,
   SectionHeader,
   TransactionRow,
-  NeedsAttentionCard,
+  BalanceMismatchStack,
   ObligationCard,
 } from "../../components/dashboard";
 import { AccountLiquidityCard } from "../../components/AccountLiquidityCard";
+import { RefreshAccountSheet } from "../../components/RefreshAccountSheet";
 
 const GROCERY_KEYWORDS = /grocer|bigbasket|blinkit|zepto|dmart|instamart/i;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -172,6 +175,8 @@ export function DashboardScreen() {
   );
   const [categories, setCategories] = useState<Category[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [dismissedMismatchKeys, setDismissedMismatchKeys] = useState<Set<string>>(new Set());
+  const [manualUpdateTarget, setManualUpdateTarget] = useState<BalanceMismatch | null>(null);
   const groceriesCategoryId = useMemo(
     () => categories.find((c) => c.name === "Groceries")?.id ?? null,
     [categories],
@@ -184,15 +189,44 @@ export function DashboardScreen() {
   useEffect(() => {
     getCategories().then(setCategories);
     loadReminders();
+    getDismissedMismatchKeys().then(setDismissedMismatchKeys);
   }, [loadReminders]);
 
-  // This screen stays mounted beneath the pushed Dues & Reminders screen, so a
-  // reminder added/removed there needs a focus-triggered reload to show up here.
+  // This screen stays mounted beneath the pushed Dues & Reminders / SMS Inbox screens, so
+  // a reminder added there, or a dismiss recorded from a previous mount, needs a
+  // focus-triggered reload to show up here.
   useFocusEffect(
     useCallback(() => {
       loadReminders();
+      getDismissedMismatchKeys().then(setDismissedMismatchKeys);
     }, [loadReminders]),
   );
+
+  const handleDismissMismatch = useCallback((mismatch: BalanceMismatch) => {
+    setDismissedMismatchKeys((prev) => {
+      const next = new Set(prev);
+      next.add(mismatch.key);
+      return next;
+    });
+    dismissMismatchKey(mismatch.key);
+  }, []);
+
+  const handleUpdateMismatchBalance = useCallback(async (newBalance: number) => {
+    if (!manualUpdateTarget) return;
+    await useTxStore.getState().add({
+      amount: 0,
+      type: TransactionType.BALANCE_UPDATE,
+      bankName: manualUpdateTarget.bankName,
+      accountLast4: manualUpdateTarget.last4,
+      timestamp: Date.now(),
+      balance: newBalance,
+      currency: manualUpdateTarget.currency,
+      isManual: true,
+    });
+    // A manual correction is a resolution, not just an acknowledgement — the historical
+    // mismatch record won't disappear on its own (it's dated in the past), so dismiss it.
+    handleDismissMismatch(manualUpdateTarget);
+  }, [manualUpdateTarget, handleDismissMismatch]);
 
   useEffect(() => {
     const sub = SmsReader.addNewSmsListener(
@@ -423,8 +457,13 @@ export function DashboardScreen() {
   );
 
   // Needs attention: a gap between the bank-reported balance and what our transaction
-  // history would predict — usually means we missed/failed to parse an SMS.
-  const balanceMismatches = useMemo(() => detectBalanceMismatches(txs), [txs]);
+  // history would predict — usually means we missed/failed to parse an SMS. Dismissed
+  // mismatches are keyed per-transaction, so a *new* gap still surfaces even after an
+  // older one on the same account was dismissed.
+  const balanceMismatches = useMemo(
+    () => detectBalanceMismatches(txs).filter((m) => !dismissedMismatchKeys.has(m.key)),
+    [txs, dismissedMismatchKeys],
+  );
 
   // Dues & Reminders: recurring merchants' next expected charge, merged with manual
   // reminders, soonest first. Detection logic is shared with DuesRemindersScreen.
@@ -613,15 +652,15 @@ export function DashboardScreen() {
         </View>
 
         {/* Needs attention — balance mismatch: a gap between the bank-reported balance
-          and what our transaction history predicts, usually a missed/unparsed SMS. */}
-        {balanceMismatches.length > 0 && (
-          <NeedsAttentionCard
-            message={`${balanceMismatches[0].bankName}${balanceMismatches[0].last4 ? ` ••${balanceMismatches[0].last4}` : ""}'s balance doesn't match what we've tracked — we may have missed a transaction.`}
-            moreCount={balanceMismatches.length - 1}
-            ctaLabel="REPORT MISSING SMS"
-            onPressCta={() => navigation.navigate("SmsInbox")}
-          />
-        )}
+          and what our transaction history predicts, usually a missed/unparsed SMS.
+          Swipeable stack (up to 3 shown); dismissing one persists so it won't resurface
+          unless the same account produces a *new* mismatch. */}
+        <BalanceMismatchStack
+          mismatches={balanceMismatches}
+          onDismiss={handleDismissMismatch}
+          onReportSms={() => navigation.navigate("SmsInbox")}
+          onUpdateBalance={(mismatch) => setManualUpdateTarget(mismatch)}
+        />
 
         {/* Dues & Reminders — detected recurring charges + manually-added reminders. Always shown
           (not just when data exists) since the header is how a user opens the screen to add one. */}
@@ -707,6 +746,17 @@ export function DashboardScreen() {
           "Wealth is the ability to fully experience life."
         </Text>
       </ScrollView>
+
+      {manualUpdateTarget && (
+        <RefreshAccountSheet
+          visible
+          initialMode="manual"
+          onClose={() => setManualUpdateTarget(null)}
+          bankName={manualUpdateTarget.bankName}
+          last4={manualUpdateTarget.last4}
+          onManualUpdate={handleUpdateMismatchBalance}
+        />
+      )}
     </View>
   );
 }

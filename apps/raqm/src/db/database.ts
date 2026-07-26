@@ -600,6 +600,32 @@ export async function setSetting(key: string, value: string): Promise<void> {
   );
 }
 
+const DISMISSED_MISMATCHES_KEY = 'dismissed_balance_mismatches';
+const DISMISSED_MISMATCHES_MAX = 200;
+
+/**
+ * Balance-mismatch cards dismissed from Dashboard's Needs Attention stack — keyed per
+ * specific mismatch (bank+last4+txId), not per account, so a *new* mismatch on the same
+ * account still surfaces even after an older one was dismissed.
+ */
+export async function getDismissedMismatchKeys(): Promise<Set<string>> {
+  const raw = await getSetting(DISMISSED_MISMATCHES_KEY);
+  if (!raw) return new Set();
+  try {
+    const parsed = JSON.parse(raw) as string[];
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return new Set();
+  }
+}
+
+export async function dismissMismatchKey(key: string): Promise<void> {
+  const existing = await getDismissedMismatchKeys();
+  existing.add(key);
+  const trimmed = Array.from(existing).slice(-DISMISSED_MISMATCHES_MAX);
+  await setSetting(DISMISSED_MISMATCHES_KEY, JSON.stringify(trimmed));
+}
+
 // ── Plan 2: TxRecord CRUD ─────────────────────────────────────────────────────
 
 export async function loadTxRecords(): Promise<TxRecord[]> {

@@ -3,4 +3,5 @@ export { HeroMetric } from './HeroMetric';
 export { AdvisorCard } from './AdvisorCard';
 export { TransactionRow } from './TransactionRow';
 export { NeedsAttentionCard } from './NeedsAttentionCard';
+export { BalanceMismatchStack } from './BalanceMismatchStack';
 export { ObligationCard } from './ObligationCard';
