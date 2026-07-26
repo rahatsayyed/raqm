@@ -785,15 +785,27 @@ const REFERENCE_DUP_WINDOW_MS = 48 * 60 * 60 * 1000;
  * `isDuplicateSms`'s same-sender-within-60s check can't catch this since the sender
  * differs; reference numbers are unique per real transaction, so matching on them is safe
  * across a wider (48h) window without risking false positives.
+ *
+ * Must also match `type` — a self-transfer between two of the user's own accounts is a
+ * DEBIT leg and a CREDIT leg that legitimately share the same UPI/RRN reference (money
+ * leaving one account and arriving in another). Matching on reference+amount alone would
+ * wrongly drop the second leg as a "duplicate" of the first, when it's a distinct real
+ * transaction `pairSelfTransfers` is meant to link, not delete.
  */
-async function isReferenceDuplicate(reference: string, amount: number, timestamp: number): Promise<boolean> {
+async function isReferenceDuplicate(
+  reference: string,
+  amount: number,
+  type: TransactionType,
+  timestamp: number,
+): Promise<boolean> {
   const database = await getDb();
   const row = await database.getFirstAsync<{ id: number }>(
     `SELECT id FROM transactions
-     WHERE reference = ? AND amount = ? AND deleted_at IS NULL AND ABS(timestamp - ?) <= ?
+     WHERE reference = ? AND amount = ? AND type = ? AND deleted_at IS NULL AND ABS(timestamp - ?) <= ?
      LIMIT 1`,
     reference,
     amount,
+    type,
     timestamp,
     REFERENCE_DUP_WINDOW_MS,
   );
@@ -801,7 +813,7 @@ async function isReferenceDuplicate(reference: string, amount: number, timestamp
 }
 
 export async function insertParsedTx(tx: ParsedTransaction): Promise<number | null> {
-  if (tx.reference && (await isReferenceDuplicate(tx.reference, tx.amount, tx.timestamp))) {
+  if (tx.reference && (await isReferenceDuplicate(tx.reference, tx.amount, tx.type, tx.timestamp))) {
     return null;
   }
 
@@ -846,7 +858,7 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
       // See isReferenceDuplicate above insertParsedTx — catches the same real transfer
       // reported by two different bank/sender identities, which a bulk scan can just as
       // easily pull in together as the live-SMS path can.
-      if (tx.reference && (await isReferenceDuplicate(tx.reference, tx.amount, tx.timestamp))) {
+      if (tx.reference && (await isReferenceDuplicate(tx.reference, tx.amount, tx.type, tx.timestamp))) {
         continue;
       }
       const { categoryId, subcategoryId } = decisions[i];

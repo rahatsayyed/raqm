@@ -130,12 +130,22 @@ export function computeRecurringIds(txs: TxRecord[]): number[] {
   return Array.from(result);
 }
 
-/** T13: same amount + same SMS sender within 60 seconds → duplicate. */
+/**
+ * T13: same amount + same SMS sender within 60 seconds → duplicate.
+ * When both sides carry a reference (RRN/UTR/UPI ref), that's authoritative: a mismatch
+ * means these are two *different* real transactions (e.g. two same-amount transfers to
+ * the same bank within a minute of each other while testing) even though the amount/sender/
+ * time heuristic alone would say "duplicate" — so a differing reference short-circuits to
+ * false. A matching reference short-circuits to true regardless of the 60s window.
+ */
 export function isDuplicateSms(
-  prev: { amount: number; sender: string; timestamp: number } | null,
-  next: { amount: number; sender: string; timestamp: number },
+  prev: { amount: number; sender: string; timestamp: number; reference?: string | null } | null,
+  next: { amount: number; sender: string; timestamp: number; reference?: string | null },
 ): boolean {
   if (!prev) return false;
+  if (prev.reference && next.reference) {
+    return prev.reference === next.reference;
+  }
   if (prev.amount !== next.amount) return false;
   if (prev.sender !== next.sender) return false;
   return Math.abs(next.timestamp - prev.timestamp) <= 60_000;

@@ -467,6 +467,7 @@ export abstract class BankParser {
       .replace(CompiledPatterns.Cleaning.TRAILING_DASH, '')
       .replace(CompiledPatterns.Cleaning.PVT_LTD, '')
       .replace(CompiledPatterns.Cleaning.LTD, '')
+      .replace(CompiledPatterns.Cleaning.TRAILING_PUNCTUATION, '')
       .trim();
   }
 

@@ -111,11 +111,14 @@ export class CanaraBankParser extends BaseIndianBankParser {
       return false;
     }
 
-    // Check for Canara-specific transaction keywords
+    // Check for Canara-specific transaction keywords, including the "Dr."/"Cr." shorthand
+    // Canara's own account-statement-style alerts use (e.g. "Acct XXXX9099 Dr. INR 800.00").
     if (
       lowerMessage.includes('paid thru') ||
       lowerMessage.includes('has been debited') ||
-      lowerMessage.includes('has been credited')
+      lowerMessage.includes('has been credited') ||
+      /\bdr\.?\s/i.test(message) ||
+      /\bcr\.?\s/i.test(message)
     ) {
       return true;
     }
@@ -131,6 +134,11 @@ export class CanaraBankParser extends BaseIndianBankParser {
     if (lowerMessage.includes('redemption') && lowerMessage.includes('credited')) {
       return TransactionType.INCOME;
     }
+
+    // "Dr."/"Cr." shorthand (checked before the base class's full-word keyword list,
+    // which doesn't recognize these abbreviations at all).
+    if (/\bdr\.?\s/i.test(message)) return TransactionType.EXPENSE;
+    if (/\bcr\.?\s/i.test(message)) return TransactionType.INCOME;
 
     // Fall back to base class
     return super.extractTransactionType(message);

@@ -60,10 +60,10 @@ export const useTxStore = create<TxStore>((set, get) => ({
   addParsedWithLocation: async (tx) => {
     const state = get();
     const last = state.txs[0]
-      ? { amount: state.txs[0].amount, sender: state.txs[0].bankName, timestamp: state.txs[0].timestamp }
+      ? { amount: state.txs[0].amount, sender: state.txs[0].bankName, timestamp: state.txs[0].timestamp, reference: state.txs[0].reference }
       : null;
 
-    if (isDuplicateSms(last, { amount: tx.amount, sender: tx.bankName, timestamp: tx.timestamp })) {
+    if (isDuplicateSms(last, { amount: tx.amount, sender: tx.bankName, timestamp: tx.timestamp, reference: tx.reference })) {
       return null;
     }
 
