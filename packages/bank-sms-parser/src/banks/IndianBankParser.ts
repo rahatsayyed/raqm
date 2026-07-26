@@ -86,13 +86,23 @@ export class IndianBankParser extends BaseIndianBankParser {
     return super.extractAmount(message);
   }
 
+  // Recipient/sender is sometimes a bare UPI VPA ("sayyedrahat721-5@okaxis") rather than a
+  // real name — isValidMerchantName rejects anything containing "@" outright, which (since
+  // these patterns' char classes can't cross the "@" either) previously fell through and
+  // let the regex backtrack to the WRONG "to"/"from" later in the message (e.g. the SMS
+  // footer's "SMS BLOCK to <number>"). Match upstream's fix (JanaSmallFinanceBankParser):
+  // keep just the handle before "@" so it can still pass validation.
+  private stripVpaDomain(name: string): string {
+    return name.includes('@') ? name.split('@')[0] : name;
+  }
+
   extractMerchant(message: string, sender: string): string | null {
     // Pattern 0: newer UPI-debit format "to NARMADA FOODS.RRN 213416112187"
     // Stop at the period before RRN so the RRN/trailing text is not captured.
     const sentToPattern = /to\s+([^.\n]+?)\.RRN\b/i;
     const sentToMatch = message.match(sentToPattern);
     if (sentToMatch) {
-      const merchant = this.cleanMerchantName(sentToMatch[1].trim());
+      const merchant = this.cleanMerchantName(this.stripVpaDomain(sentToMatch[1].trim()));
       if (this.isValidMerchantName(merchant)) {
         return merchant;
       }
@@ -102,7 +112,7 @@ export class IndianBankParser extends BaseIndianBankParser {
     const toPattern = /to\s+([^.\n]+?)(?:\.\s*UPI:|UPI:|$)/i;
     const toMatch = message.match(toPattern);
     if (toMatch) {
-      const merchant = this.cleanMerchantName(toMatch[1].trim());
+      const merchant = this.cleanMerchantName(this.stripVpaDomain(toMatch[1].trim()));
       if (this.isValidMerchantName(merchant)) {
         return merchant;
       }
@@ -112,7 +122,7 @@ export class IndianBankParser extends BaseIndianBankParser {
     const fromPattern = /from\s+([^.\n]+?)(?:\.\s*UPI:|UPI:|$)/i;
     const fromMatch = message.match(fromPattern);
     if (fromMatch) {
-      const merchant = this.cleanMerchantName(fromMatch[1].trim());
+      const merchant = this.cleanMerchantName(this.stripVpaDomain(fromMatch[1].trim()));
       if (this.isValidMerchantName(merchant)) {
         return merchant;
       }
@@ -124,7 +134,7 @@ export class IndianBankParser extends BaseIndianBankParser {
     const byPattern = /\bby\s+([^.\n?]+?)(?:[.?]|\s*UPI:|$)/i;
     const byMatch = message.match(byPattern);
     if (byMatch) {
-      const merchant = this.cleanMerchantName(byMatch[1].trim());
+      const merchant = this.cleanMerchantName(this.stripVpaDomain(byMatch[1].trim()));
       if (this.isValidMerchantName(merchant)) {
         return merchant;
       }
