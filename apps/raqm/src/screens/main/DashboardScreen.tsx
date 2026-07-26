@@ -182,6 +182,15 @@ export function DashboardScreen() {
     () => categories.find((c) => c.name === "Groceries")?.id ?? null,
     [categories],
   );
+  // Read inside the SMS listener instead of depending on it directly — categories load
+  // asynchronously shortly after mount, so groceriesCategoryId flips from null to a real
+  // id right around app startup. Depending on it directly tore down and recreated the
+  // whole SMS subscription during that exact window, which could silently drop a
+  // live-arriving SMS event landing in the gap between unsubscribe and resubscribe.
+  const groceriesCategoryIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    groceriesCategoryIdRef.current = groceriesCategoryId;
+  }, [groceriesCategoryId]);
 
   const loadReminders = useCallback(() => {
     getReminders().then(setReminders);
@@ -290,7 +299,7 @@ export function DashboardScreen() {
             useTxStore.getState().txs.find((t) => t.id === id) ?? null;
           const isGrocery =
             (newTx?.categoryId !== null &&
-              newTx?.categoryId === groceriesCategoryId) ||
+              newTx?.categoryId === groceriesCategoryIdRef.current) ||
             (tx.merchant ? GROCERY_KEYWORDS.test(tx.merchant) : false);
 
           if (isGrocery) {
@@ -329,7 +338,8 @@ export function DashboardScreen() {
       },
     );
     return () => sub.remove();
-  }, [groceriesCategoryId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [metrics, setMetrics] = useState<HomeMetrics>(EMPTY_METRICS);
   const [monthBounds, setMonthBounds] = useState<{
