@@ -28,13 +28,15 @@ export function PermissionSMSReadScreen({ navigation }: OnboardingScreenProps<'P
       return;
     }
 
-    // Requesting READ_SMS also grants RECEIVE_SMS — same Android permission group
-    const result = await PermissionsAndroid.request('android.permission.READ_SMS' as any, {
-      title: 'SMS Access',
-      message: 'Raqm reads your SMS to find bank transactions and detects new ones in real time.',
-      buttonPositive: 'Allow',
-      buttonNegative: 'Deny',
-    });
+    // Requesting only READ_SMS was relying on Android's same-permission-group auto-grant
+    // to also flip RECEIVE_SMS to granted — that behavior isn't reliable across OEMs/OS
+    // versions, and RECEIVE_SMS is exactly what the live-SMS BroadcastReceiver needs.
+    // Request both explicitly so live detection doesn't silently depend on an assumption.
+    const results: Record<string, string> = await PermissionsAndroid.requestMultiple([
+      'android.permission.READ_SMS' as any,
+      'android.permission.RECEIVE_SMS' as any,
+    ]);
+    const result = results['android.permission.READ_SMS'];
 
     if (result === PermissionsAndroid.RESULTS.GRANTED) {
       setStatus('granted');

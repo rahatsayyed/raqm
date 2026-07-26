@@ -1,6 +1,11 @@
 import { BaseIndianBankParser } from '../core/BaseIndianBankParser';
 import { ParsedTransaction, TransactionType } from '../core/types';
 
+// The compact account-statement-style debit form: "Acct XXXX9099 Dr. INR 800.00".
+// Carries no standard transaction keyword, so both amount extraction and the
+// isTransactionMessage/extractTransactionType gates need to recognize it explicitly.
+const COMPACT_DEBIT_PATTERN = /\bDr\.?\s*(?:INR|Rs\.?|₹)\s*([\d,]+(?:\.\d{2})?)\b/i;
+
 /**
  * Parser for Canara Bank SMS messages
  */
@@ -15,6 +20,12 @@ export class CanaraBankParser extends BaseIndianBankParser {
   }
 
   extractAmount(message: string): number | null {
+    const compactMatch = message.match(COMPACT_DEBIT_PATTERN);
+    if (compactMatch) {
+      const amount = parseFloat(compactMatch[1].replace(/,/g, ''));
+      if (!isNaN(amount)) return amount;
+    }
+
     // Pattern: Rs.23.00 paid thru
     const upiAmountPattern = /Rs\.?\s*([\d,]+(?:\.\d{2})?)\s+paid/i;
     const upiMatch = message.match(upiAmountPattern);
@@ -111,19 +122,38 @@ export class CanaraBankParser extends BaseIndianBankParser {
       return false;
     }
 
-    // Check for Canara-specific transaction keywords, including the "Dr."/"Cr." shorthand
-    // Canara's own account-statement-style alerts use (e.g. "Acct XXXX9099 Dr. INR 800.00").
+    // Check for Canara-specific transaction keywords
     if (
       lowerMessage.includes('paid thru') ||
       lowerMessage.includes('has been debited') ||
-      lowerMessage.includes('has been credited') ||
-      /\bdr\.?\s/i.test(message) ||
-      /\bcr\.?\s/i.test(message)
+      lowerMessage.includes('has been credited')
     ) {
       return true;
     }
 
-    return super.isTransactionMessage(message);
+    // Defer to the base class first. It accepts the standard keyword forms above AND —
+    // importantly — rejects OTP/promotional/payment-request/reminder messages.
+    if (super.isTransactionMessage(message)) {
+      return true;
+    }
+
+    // The compact debit form ("Dr. INR 500") carries no standard keyword, so the base
+    // class drops it. Accept it here — but not when it appears inside an OTP/promotional
+    // body that merely quotes a "Dr. INR" figure.
+    if (COMPACT_DEBIT_PATTERN.test(message)) {
+      const looksNonTransactional =
+        lowerMessage.includes('otp') ||
+        lowerMessage.includes('one time password') ||
+        lowerMessage.includes('verification code') ||
+        lowerMessage.includes('offer') ||
+        lowerMessage.includes('discount') ||
+        lowerMessage.includes('win ') ||
+        lowerMessage.includes('has requested') ||
+        lowerMessage.includes('payment request');
+      return !looksNonTransactional;
+    }
+
+    return false;
   }
 
   extractTransactionType(message: string): TransactionType | null {
@@ -135,10 +165,9 @@ export class CanaraBankParser extends BaseIndianBankParser {
       return TransactionType.INCOME;
     }
 
-    // "Dr."/"Cr." shorthand (checked before the base class's full-word keyword list,
-    // which doesn't recognize these abbreviations at all).
-    if (/\bdr\.?\s/i.test(message)) return TransactionType.EXPENSE;
-    if (/\bcr\.?\s/i.test(message)) return TransactionType.INCOME;
+    if (COMPACT_DEBIT_PATTERN.test(message)) {
+      return TransactionType.EXPENSE;
+    }
 
     // Fall back to base class
     return super.extractTransactionType(message);

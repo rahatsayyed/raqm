@@ -266,6 +266,53 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 8) {
+    await database.runAsync(`BEGIN`);
+    try {
+      // Category picker was showing the exact same expense-flavored list (Groceries,
+      // Transport, ...) for income/credit transactions too. 'direction' tags each
+      // category so the picker can filter to what's relevant; 'both' categories (Gifts,
+      // Investments, Other) show up regardless of the transaction's direction.
+      await database.runAsync(`ALTER TABLE categories ADD COLUMN direction TEXT NOT NULL DEFAULT 'expense'`);
+
+      // Only backfill for an install that was already seeded under the old flat category
+      // list — a brand-new install (categories table still empty at this point) gets the
+      // full new set from DEFAULT_CATEGORIES via seedDefaults() instead. Inserting here
+      // unconditionally would make seedDefaults() see a non-zero count and skip its own
+      // seeding, leaving a fresh install with only these rows and none of the rest.
+      const catCountRow = await database.getFirstAsync<{ count: number }>(
+        `SELECT COUNT(*) as count FROM categories`,
+      );
+      if ((catCountRow?.count ?? 0) > 0) {
+        await database.runAsync(`UPDATE categories SET direction = 'income' WHERE name = 'Salary'`);
+        await database.runAsync(`UPDATE categories SET direction = 'both' WHERE name IN ('Gifts', 'Investments', 'Other')`);
+        await database.runAsync(`UPDATE categories SET name = 'Food & Drinks' WHERE name = 'Food & Dining'`);
+        await database.runAsync(`UPDATE categories SET name = 'Bills' WHERE name = 'Bills & Utilities'`);
+
+        for (const [name, emoji, direction] of NEW_V8_CATEGORIES) {
+          const existing = await database.getFirstAsync<{ id: number }>(
+            `SELECT id FROM categories WHERE name = ?`,
+            name,
+          );
+          if (!existing) {
+            await database.runAsync(
+              `INSERT INTO categories (name, emoji, is_custom, direction) VALUES (?, ?, 0, ?)`,
+              name,
+              emoji,
+              direction,
+            );
+          }
+        }
+      }
+
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (8)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -386,6 +433,7 @@ export interface Category {
   name: string;
   emoji: string;
   isCustom: boolean;
+  direction: 'expense' | 'income' | 'both';
 }
 
 export interface Subcategory {
@@ -957,29 +1005,72 @@ export async function restoreTx(id: number): Promise<void> {
 
 // ── Plan 2: Categories, subcategories, rules, seeding ─────────────────────────
 
-const DEFAULT_CATEGORIES: [string, string][] = [
-  ['Food & Dining', '🍔'],
-  ['Groceries', '🛒'],
-  ['Transport', '🚕'],
-  ['Shopping', '🛍️'],
-  ['Bills & Utilities', '📱'],
-  ['Rent & Housing', '🏠'],
-  ['Health', '💊'],
-  ['Entertainment', '🎬'],
-  ['Travel', '✈️'],
-  ['Education', '📚'],
-  ['Salary', '💰'],
-  ['Investments', '📈'],
-  ['Gifts', '🎁'],
-  ['Personal Care', '👤'],
-  ['Other', '📦'],
+type CategoryDirection = 'expense' | 'income' | 'both';
+
+// Expense/income are genuinely different vocabularies (Groceries vs Salary) — a single
+// flat list shown regardless of transaction direction meant the category picker offered
+// nonsense choices for credits. 'both' categories (Gifts, Investments, Other) can go
+// either way and show up for both directions.
+const DEFAULT_CATEGORIES: [string, string, CategoryDirection][] = [
+  // Expense
+  ['Food & Drinks', '🍔', 'expense'],
+  ['Groceries', '🛒', 'expense'],
+  ['Transport', '🚕', 'expense'],
+  ['Shopping', '🛍️', 'expense'],
+  ['Bills', '📱', 'expense'],
+  ['Rent & Housing', '🏠', 'expense'],
+  ['Health', '💊', 'expense'],
+  ['Entertainment', '🎬', 'expense'],
+  ['Travel', '✈️', 'expense'],
+  ['Education', '📚', 'expense'],
+  ['Personal Care', '👤', 'expense'],
+  ['EMI', '💳', 'expense'],
+  ['Fuel', '⛽', 'expense'],
+  ['Transfer', '🔁', 'expense'],
+  // Both
+  ['Investments', '📈', 'both'],
+  ['Gifts', '🎁', 'both'],
+  ['Other', '📦', 'both'],
+  // Income / credit
+  ['Salary', '💰', 'income'],
+  ['A/C Transfer', '🔄', 'income'],
+  ['Bank Deposit', '🏦', 'income'],
+  ['Bill Payment', '🧾', 'income'],
+  ['Business', '🏪', 'income'],
+  ['Credit', '➕', 'income'],
+  ['Interest', '🐖', 'income'],
+  ['Loan', '🤝', 'income'],
+  ['Recharge', '🔋', 'income'],
+  ['Refund', '↩️', 'income'],
+  ['Reimbursement', '📝', 'income'],
+  ['Rewards', '⭐', 'income'],
+];
+
+// Categories added in migration v8 (see runMigrations) — backfilled for an install
+// already seeded under the old flat list. Kept separate from DEFAULT_CATEGORIES (which
+// only runs on a truly empty categories table) so the two lists' purposes don't blur.
+const NEW_V8_CATEGORIES: [string, string, CategoryDirection][] = [
+  ['EMI', '💳', 'expense'],
+  ['Fuel', '⛽', 'expense'],
+  ['Transfer', '🔁', 'expense'],
+  ['A/C Transfer', '🔄', 'income'],
+  ['Bank Deposit', '🏦', 'income'],
+  ['Bill Payment', '🧾', 'income'],
+  ['Business', '🏪', 'income'],
+  ['Credit', '➕', 'income'],
+  ['Interest', '🐖', 'income'],
+  ['Loan', '🤝', 'income'],
+  ['Recharge', '🔋', 'income'],
+  ['Refund', '↩️', 'income'],
+  ['Reimbursement', '📝', 'income'],
+  ['Rewards', '⭐', 'income'],
 ];
 
 const DEFAULT_SUBCATEGORIES: [string, string[]][] = [
-  ['Food & Dining', ['Restaurants', 'Delivery', 'Coffee']],
+  ['Food & Drinks', ['Restaurants', 'Delivery', 'Coffee']],
   ['Groceries', ['Supermarket', 'Vegetables', 'Meat']],
-  ['Transport', ['Fuel', 'Cab', 'Public Transit']],
-  ['Bills & Utilities', ['Electricity', 'Internet', 'Mobile']],
+  ['Transport', ['Cab', 'Public Transit']],
+  ['Bills', ['Electricity', 'Internet', 'Mobile']],
   ['Entertainment', ['Streaming', 'Movies', 'Games']],
 ];
 
@@ -994,11 +1085,12 @@ export async function seedDefaults(): Promise<void> {
     );
     if ((catCountRow?.count ?? 0) === 0) {
       const idByName = new Map<string, number>();
-      for (const [name, emoji] of DEFAULT_CATEGORIES) {
+      for (const [name, emoji, direction] of DEFAULT_CATEGORIES) {
         const result = await database.runAsync(
-          `INSERT INTO categories (name, emoji, is_custom) VALUES (?, ?, 0)`,
+          `INSERT INTO categories (name, emoji, is_custom, direction) VALUES (?, ?, 0, ?)`,
           name,
           emoji,
+          direction,
         );
         idByName.set(name, result.lastInsertRowId);
       }
@@ -1033,12 +1125,29 @@ export async function seedDefaults(): Promise<void> {
   }
 }
 
-export async function getCategories(): Promise<Category[]> {
+/**
+ * `direction` filters to categories relevant for that transaction direction — 'expense'
+ * or 'income' returns matching-direction categories plus 'both' ones; omit it to get
+ * every category (used by Settings/budgets, which iterate all categories regardless
+ * of direction).
+ */
+export async function getCategories(direction?: 'expense' | 'income'): Promise<Category[]> {
   const database = await getDb();
-  const rows = await database.getAllAsync<{ id: number; name: string; emoji: string; is_custom: number }>(
-    `SELECT id, name, emoji, is_custom FROM categories ORDER BY id ASC`,
-  );
-  return rows.map((r) => ({ id: r.id, name: r.name, emoji: r.emoji, isCustom: r.is_custom === 1 }));
+  const rows = direction
+    ? await database.getAllAsync<{ id: number; name: string; emoji: string; is_custom: number; direction: string }>(
+        `SELECT id, name, emoji, is_custom, direction FROM categories WHERE direction = ? OR direction = 'both' ORDER BY id ASC`,
+        direction,
+      )
+    : await database.getAllAsync<{ id: number; name: string; emoji: string; is_custom: number; direction: string }>(
+        `SELECT id, name, emoji, is_custom, direction FROM categories ORDER BY id ASC`,
+      );
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    emoji: r.emoji,
+    isCustom: r.is_custom === 1,
+    direction: r.direction as Category['direction'],
+  }));
 }
 
 export async function getSubcategories(categoryId: number): Promise<Subcategory[]> {
@@ -1050,12 +1159,17 @@ export async function getSubcategories(categoryId: number): Promise<Subcategory[
   return rows.map((r) => ({ id: r.id, categoryId: r.category_id, name: r.name, isCustom: r.is_custom === 1 }));
 }
 
-export async function addCategory(name: string, emoji: string): Promise<number> {
+export async function addCategory(
+  name: string,
+  emoji: string,
+  direction: Category['direction'] = 'both',
+): Promise<number> {
   const database = await getDb();
   const result = await database.runAsync(
-    `INSERT INTO categories (name, emoji, is_custom) VALUES (?, ?, 1)`,
+    `INSERT INTO categories (name, emoji, is_custom, direction) VALUES (?, ?, 1, ?)`,
     name,
     emoji,
+    direction,
   );
   return result.lastInsertRowId;
 }

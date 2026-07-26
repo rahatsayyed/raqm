@@ -162,8 +162,9 @@ export function TransactionDetailScreen({
   const tx = snapshot ?? storeTx ?? fallbackTx;
 
   useEffect(() => {
-    getCategories().then(setCategories);
-  }, []);
+    if (!tx) return;
+    getCategories(isCredit(tx.type) ? "income" : "expense").then(setCategories);
+  }, [tx?.type]);
 
   useEffect(() => {
     setNotesDraft(tx?.notes ?? "");
@@ -806,6 +807,7 @@ export function TransactionDetailScreen({
         visible={categorySheetVisible}
         onClose={() => setCategorySheetVisible(false)}
         categories={categories}
+        direction={isCredit(tx.type) ? "income" : "expense"}
         currentCategoryId={tx.categoryId}
         currentSubcategoryId={tx.subcategoryId}
         onSelect={(categoryId, subcategoryId) => {
@@ -1042,6 +1044,7 @@ function CategorySheet({
   visible,
   onClose,
   categories,
+  direction,
   currentCategoryId,
   currentSubcategoryId,
   onSelect,
@@ -1051,6 +1054,7 @@ function CategorySheet({
   visible: boolean;
   onClose: () => void;
   categories: Category[];
+  direction: "expense" | "income";
   currentCategoryId: number | null;
   currentSubcategoryId?: number | null;
   onSelect: (categoryId: number, subcategoryId?: number) => void;
@@ -1119,8 +1123,8 @@ function CategorySheet({
     if (!name || addingCategory) return;
     setAddingCategory(true);
     try {
-      const id = await addCategory(name, "🏷");
-      const category: Category = { id, name, emoji: "🏷", isCustom: true };
+      const id = await addCategory(name, "🏷", direction);
+      const category: Category = { id, name, emoji: "🏷", isCustom: true, direction };
       onCategoryCreated(category);
       setNewCategoryName("");
       setActiveCategory(category);

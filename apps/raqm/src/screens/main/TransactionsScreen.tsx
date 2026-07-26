@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { MainStackParamList } from '../../navigation/types';
 import { getCategories, mergeTxs, groupTxs, type Category, type TxRecord } from '../../db/database';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
+import { countsTowardTotals } from '../../services/txIntelligence';
 import { formatAmount } from '../../utils/format';
 import {
   SearchIcon, TrendingUpIcon, WalletCardsIcon,
@@ -455,9 +456,10 @@ const TxRow = memo(function TxRow({
 }) {
   const credit = isCredit(tx.type);
   const Icon = categoryIconFor(categoryName, tx);
+  const excluded = !countsTowardTotals(tx);
   return (
     <TouchableOpacity
-      className={`flex-row items-center gap-[16px] py-[16px] ${indent ? 'pl-[24px]' : ''}`}
+      className={`flex-row items-center gap-[16px] py-[16px] ${indent ? 'pl-[24px]' : ''} ${excluded ? 'opacity-40' : ''}`}
       onPress={() => onPressId(tx.id)}
       onLongPress={() => onLongPressId(tx.id)}
       activeOpacity={0.7}

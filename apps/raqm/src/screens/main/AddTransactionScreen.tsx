@@ -7,6 +7,7 @@ import { useTxStore } from '../../store/txStore';
 import { getCategories } from '../../db/database';
 import type { Category } from '../../db/database';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
+import { isCreditType } from '../../services/txIntelligence';
 
 function fmtDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -33,7 +34,10 @@ export function AddTransactionScreen({ route, navigation }: MainStackScreenProps
   const canSave = !Number.isNaN(parsedAmount) && parsedAmount > 0 && bankName.trim().length > 0;
 
   const openCategoryPicker = () => {
-    navigation.navigate('CategoryPicker', { returnTo: 'AddTransaction' });
+    navigation.navigate('CategoryPicker', {
+      returnTo: 'AddTransaction',
+      direction: isCreditType(type) ? 'income' : 'expense',
+    });
   };
 
   useEffect(() => {

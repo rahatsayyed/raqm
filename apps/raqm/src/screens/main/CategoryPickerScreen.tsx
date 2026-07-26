@@ -6,7 +6,7 @@ import { getCategories, getSubcategories, addCategory, addSubcategory } from '..
 import type { Category, Subcategory } from '../../db/database';
 
 export function CategoryPickerScreen({ route, navigation }: MainStackScreenProps<'CategoryPicker'>) {
-  const { returnTo, transactionId } = route.params;
+  const { returnTo, transactionId, direction } = route.params;
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategoriesByCategory, setSubcategoriesByCategory] = useState<Record<number, Subcategory[]>>({});
@@ -20,12 +20,13 @@ export function CategoryPickerScreen({ route, navigation }: MainStackScreenProps
   const [newSubcategoryName, setNewSubcategoryName] = useState('');
 
   const refreshCategories = () => {
-    getCategories().then(setCategories);
+    getCategories(direction).then(setCategories);
   };
 
   useEffect(() => {
     refreshCategories();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [direction]);
 
   const toggleExpand = async (categoryId: number) => {
     if (expandedId === categoryId) {
@@ -66,7 +67,7 @@ export function CategoryPickerScreen({ route, navigation }: MainStackScreenProps
   const handleAddCategory = async () => {
     const name = newCategoryName.trim();
     if (!name) return;
-    await addCategory(name, newCategoryEmoji.trim() || '📦');
+    await addCategory(name, newCategoryEmoji.trim() || '📦', direction ?? 'both');
     setNewCategoryName('');
     setNewCategoryEmoji('📦');
     setShowAddCategory(false);

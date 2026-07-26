@@ -383,6 +383,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
               timeLabel={shortTime(tx.timestamp)}
               amountLabel={formatAmount(tx.amount, tx.currency)}
               isDebit={isDebit(tx.type)}
+              excluded={!countsTowardTotals(tx)}
               onPress={() =>
                 navigation.getParent<NavigationProp<MainStackParamList>>()?.navigate('TransactionDetail', { transactionId: tx.id })
               }

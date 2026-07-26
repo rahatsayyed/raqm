@@ -13,6 +13,7 @@ import {
   Modal,
   Pressable,
   TouchableOpacity,
+  PermissionsAndroid,
 } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -228,12 +229,36 @@ export function DashboardScreen() {
     handleDismissMismatch(manualUpdateTarget);
   }, [manualUpdateTarget, handleDismissMismatch]);
 
+  // Repair path for installs that predate requesting RECEIVE_SMS explicitly: onboarding
+  // used to request only READ_SMS, assuming Android would auto-grant RECEIVE_SMS as a
+  // sibling in the same permission group — that assumption doesn't hold on every OS/OEM
+  // (confirmed false on at least one Samsung/OneUI build), so the live-SMS receiver can
+  // end up permanently unable to fire with no visible error. Checking here means every
+  // existing install gets this fixed the next time they open the app, without needing to
+  // reinstall or redo onboarding.
   useEffect(() => {
+    PermissionsAndroid.check("android.permission.RECEIVE_SMS" as never).then((granted) => {
+      if (!granted) {
+        PermissionsAndroid.request("android.permission.RECEIVE_SMS" as never, {
+          title: "SMS Access",
+          message: "Raqm needs this to detect new transactions the moment they arrive.",
+          buttonPositive: "Allow",
+        });
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    console.log("[RaqmSms] DashboardScreen subscribing to onNewSms");
     const sub = SmsReader.addNewSmsListener(
       async ({ body, sender, timestamp }) => {
+        console.log(`[RaqmSms] JS received onNewSms sender=${sender}`);
         try {
           const tx = BankParserFactory.parse(body, sender, timestamp);
-          if (!tx) return;
+          if (!tx) {
+            console.log("[RaqmSms] BankParserFactory.parse() returned null — not a recognized/parseable transaction");
+            return;
+          }
 
           const id = await useTxStore.getState().addParsedWithLocation(tx);
           if (id === null) {
@@ -641,6 +666,7 @@ export function DashboardScreen() {
                 timeLabel={shortTime(tx.timestamp)}
                 amountLabel={formatAmount(tx.amount, tx.currency)}
                 isDebit={isDebit(tx.type)}
+                excluded={!countsTowardTotals(tx)}
                 onPress={() =>
                   navigation.navigate("TransactionDetail", {
                     transactionId: tx.id,

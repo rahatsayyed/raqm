@@ -74,17 +74,32 @@ export class IndianBankParser extends BaseIndianBankParser {
       if (!isNaN(amount)) return amount;
     }
 
+    // Pattern 5: Sent Rs.440.00 (newer UPI-debit format)
+    const sentPattern = /Sent\s+Rs\.?\s*(\d+(?:,\d{3})*(?:\.\d{2})?)/i;
+    const sentMatch = message.match(sentPattern);
+    if (sentMatch) {
+      const amount = parseFloat(sentMatch[1].replace(/,/g, ''));
+      if (!isNaN(amount)) return amount;
+    }
+
     // Fall back to base class patterns
     return super.extractAmount(message);
   }
 
   extractMerchant(message: string, sender: string): string | null {
-    // Pattern 1: "to Merchant Name" — terminate on a bare period/question mark too, not
-    // just "UPI:" or end-of-string. Without this, a message with no "UPI:" anywhere (e.g.
-    // "to NAME.RRN 123.Avl Bal...SMS BLOCK to 9876543210") fails to match at the correct
-    // "to NAME" (the char class can't cross the period either way) and backtracks to a
-    // LATER "to" in the footer boilerplate, extracting the wrong text as the merchant.
-    const toPattern = /to\s+([^.\n?]+?)(?:[.?]|\s*UPI:|$)/i;
+    // Pattern 0: newer UPI-debit format "to NARMADA FOODS.RRN 213416112187"
+    // Stop at the period before RRN so the RRN/trailing text is not captured.
+    const sentToPattern = /to\s+([^.\n]+?)\.RRN\b/i;
+    const sentToMatch = message.match(sentToPattern);
+    if (sentToMatch) {
+      const merchant = this.cleanMerchantName(sentToMatch[1].trim());
+      if (this.isValidMerchantName(merchant)) {
+        return merchant;
+      }
+    }
+
+    // Pattern 1: "to Merchant Name"
+    const toPattern = /to\s+([^.\n]+?)(?:\.\s*UPI:|UPI:|$)/i;
     const toMatch = message.match(toPattern);
     if (toMatch) {
       const merchant = this.cleanMerchantName(toMatch[1].trim());
@@ -93,8 +108,8 @@ export class IndianBankParser extends BaseIndianBankParser {
       }
     }
 
-    // Pattern 2: "from Sender Name" — same fix as above.
-    const fromPattern = /from\s+([^.\n?]+?)(?:[.?]|\s*UPI:|$)/i;
+    // Pattern 2: "from Sender Name"
+    const fromPattern = /from\s+([^.\n]+?)(?:\.\s*UPI:|UPI:|$)/i;
     const fromMatch = message.match(fromPattern);
     if (fromMatch) {
       const merchant = this.cleanMerchantName(fromMatch[1].trim());
@@ -104,6 +119,8 @@ export class IndianBankParser extends BaseIndianBankParser {
     }
 
     // Pattern 2b: "credited ... by Sender Name" (no "to"/"from" keyword present).
+    // Not an upstream PennyWise pattern — added locally for a format PennyWise hasn't
+    // hit yet ("A/c ... is credited with Rs.X ... by NAME").
     const byPattern = /\bby\s+([^.\n?]+?)(?:[.?]|\s*UPI:|$)/i;
     const byMatch = message.match(byPattern);
     if (byMatch) {
@@ -180,6 +197,15 @@ export class IndianBankParser extends BaseIndianBankParser {
       return upiRefNoMatch[1];
     }
 
+    // Pattern 1b: RRN 213416112187 (newer UPI-debit format). Checked AFTER the UPI-ref
+    // patterns so a message carrying both a UPI ref and an RRN keeps preferring the UPI
+    // ref; the "Sent Rs." format carries only the RRN.
+    const rrnPattern = /RRN\s+(\d+)/i;
+    const rrnMatch = message.match(rrnPattern);
+    if (rrnMatch) {
+      return rrnMatch[1];
+    }
+
     // Pattern 2: Ref No. 123456
     const refNoPattern = /Ref\s+No\.?\s*(\w+)/i;
     const refNoMatch = message.match(refNoPattern);
@@ -226,6 +252,8 @@ export class IndianBankParser extends BaseIndianBankParser {
     if (lowerMessage.includes('debited')) return TransactionType.EXPENSE;
     if (lowerMessage.includes('withdrawn')) return TransactionType.EXPENSE;
     if (lowerMessage.includes('upi payment') && !lowerMessage.includes('received')) return TransactionType.EXPENSE;
+    // Newer UPI-debit format: "Sent Rs.440.00 from A/c ..."
+    if (lowerMessage.includes('sent rs')) return TransactionType.EXPENSE;
 
     if (lowerMessage.includes('credited')) return TransactionType.INCOME;
     if (lowerMessage.includes('deposited')) return TransactionType.INCOME;
@@ -233,6 +261,27 @@ export class IndianBankParser extends BaseIndianBankParser {
 
     // Fall back to base class for other patterns
     return super.extractTransactionType(message);
+  }
+
+  /**
+   * Recognise the newer "Sent Rs.<amt> ... to <merchant>" UPI-debit format as a
+   * transaction. The base isTransactionMessage only knows verbs like debited/credited/
+   * withdrawn, so without this override the message is dropped (parse() returns null)
+   * even though it is a real debit.
+   */
+  isTransactionMessage(message: string): boolean {
+    if (super.isTransactionMessage(message)) return true;
+    return message.toLowerCase().includes('sent rs');
+  }
+
+  /**
+   * Guard against classifying a "Sent Rs. ... Avl Bal ..." debit as a balance-update-only
+   * notification. The base guard treats any message with an "Avl Bal" keyword and no known
+   * txn verb as a pure balance update; "sent" is a txn verb here, so exclude it.
+   */
+  isBalanceUpdateNotification(message: string): boolean {
+    if (message.toLowerCase().includes('sent rs')) return false;
+    return super.isBalanceUpdateNotification(message);
   }
 
   // ==========================================
