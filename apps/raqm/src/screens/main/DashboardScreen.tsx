@@ -258,8 +258,10 @@ export function DashboardScreen() {
   }, []);
 
   useEffect(() => {
+    console.log("[RaqmSms] DashboardScreen subscribing to onNewSms");
     const sub = SmsReader.addNewSmsListener(
       async ({ body, sender, timestamp }) => {
+        console.log(`[RaqmSms] JS received onNewSms sender=${sender}`);
         try {
           const tx = BankParserFactory.parse(body, sender, timestamp);
           if (!tx) return;

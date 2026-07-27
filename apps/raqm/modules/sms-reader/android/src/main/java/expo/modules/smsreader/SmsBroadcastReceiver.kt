@@ -4,9 +4,13 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
+import android.util.Log
+
+private const val TAG = "RaqmSms"
 
 class SmsBroadcastReceiver : BroadcastReceiver() {
   override fun onReceive(context: Context, intent: Intent) {
+    Log.d(TAG, "SmsBroadcastReceiver.onReceive fired, action=${intent.action}")
     if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
 
     val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent) ?: return
@@ -14,6 +18,7 @@ class SmsBroadcastReceiver : BroadcastReceiver() {
       val body = sms.messageBody ?: continue
       val sender = sms.originatingAddress ?: ""
       val timestamp = sms.timestampMillis
+      Log.d(TAG, "forwarding NEW_SMS_ACTION broadcast, sender=$sender")
 
       // Forward every SMS to JS — BankParserFactory.isKnownBankSender()/parse() there is
       // the same authoritative sender-based check Re-scan and onboarding scan use. JS
