@@ -743,6 +743,18 @@ async function getSalaryCategoryId(): Promise<number | null> {
   return cachedSalaryCategoryId;
 }
 
+// Merchant names for well-known online/e-commerce and food-delivery platforms. There's no
+// structured "online vs in-person" signal anywhere in a bank SMS or the parser's output —
+// this is the same keyword-heuristic approach already used for grocery detection
+// (GROCERY_KEYWORDS in DashboardScreen.tsx), just centralized here so it applies to every
+// insert path (live SMS and bulk rescan) instead of only one screen.
+const ONLINE_MERCHANT_KEYWORDS =
+  /amazon|flipkart|myntra|ajio|nykaa|meesho|swiggy|zomato|dominos|domino's|pizza\s*hut|uber\s*eats|zepto|blinkit|bigbasket|instamart/i;
+
+function getAutoTags(merchant: string | null | undefined): string[] {
+  return merchant && ONLINE_MERCHANT_KEYWORDS.test(merchant) ? ['online'] : [];
+}
+
 // Shared categorization decision used by both insertParsedTx and insertParsedTxs.
 // ruleCache lets batch callers avoid repeat DB lookups for the same merchant.
 async function categorizeParsedTx(
@@ -866,6 +878,7 @@ export async function insertParsedTx(tx: ParsedTransaction): Promise<number | nu
   }
 
   const { categoryId, subcategoryId } = await categorizeParsedTx(tx);
+  const autoTags = getAutoTags(tx.merchant);
 
   return insertTx({
     amount: tx.amount,
@@ -881,6 +894,7 @@ export async function insertParsedTx(tx: ParsedTransaction): Promise<number | nu
     subcategoryId,
     rawSms: tx.smsBody,
     reference: tx.reference ?? null,
+    tags: autoTags.length > 0 ? autoTags : undefined,
     isManual: false,
   });
 }
@@ -910,11 +924,12 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
         continue;
       }
       const { categoryId, subcategoryId } = decisions[i];
+      const autoTags = getAutoTags(tx.merchant);
       await database.runAsync(
         `INSERT INTO transactions
            (amount, type, merchant, bankName, accountLast4, timestamp, balance, currency, isFromCard,
-            category_id, subcategory_id, raw_sms, reference, is_manual)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+            category_id, subcategory_id, tags, raw_sms, reference, is_manual)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
         tx.amount,
         tx.type,
         tx.merchant ?? null,
@@ -926,6 +941,7 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
         tx.isFromCard ? 1 : 0,
         categoryId,
         subcategoryId,
+        autoTags.length > 0 ? JSON.stringify(autoTags) : null,
         tx.smsBody ?? null,
         tx.reference ?? null,
       );
