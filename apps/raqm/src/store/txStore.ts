@@ -70,13 +70,18 @@ export const useTxStore = create<TxStore>((set, get) => ({
     const id = await insertParsedTx(tx);
     if (id === null) return null; // reference-based duplicate — see insertParsedTx
 
-    const coords = await getCurrentCoords();
-    if (coords) {
-      await updateTx(id, { lat: coords.lat, lng: coords.lng });
-    }
-
     await get().refresh();
     checkBudgetAlerts().catch(() => {});
+
+    // Location capture is best-effort and can hang for several seconds when GPS/location
+    // services are unavailable (getCurrentPositionAsync's fallback timeout) — never let it
+    // block returning the tx id, since the caller uses that to show the toast/notification
+    // immediately. Patch the coordinate in and refresh again once it resolves, in the
+    // background.
+    getCurrentCoords()
+      .then((coords) => (coords ? updateTx(id, { lat: coords.lat, lng: coords.lng }).then(() => get().refresh()) : undefined))
+      .catch(() => {});
+
     return id;
   },
 
