@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { Colors } from '../../theme';
@@ -16,6 +16,9 @@ const SWIPE_THRESHOLD = 100;
 const FLING_DISTANCE = 500;
 const EXIT_DURATION = 180;
 const MAX_STACK = 3;
+// Fallback until the front card reports its real height via onLayout — the message wraps
+// to 1–3 lines, so a fixed height would either clip the card or leave a gap that the next
+// section (Dues & Reminders) collides with, since the cards are absolutely positioned.
 const CARD_HEIGHT = 176;
 
 function MismatchCard({
@@ -24,12 +27,14 @@ function MismatchCard({
   onDismiss,
   onReportSms,
   onUpdateBalance,
+  onMeasure,
 }: {
   mismatch: BalanceMismatch;
   depth: number; // 0 = front (interactive), 1/2 = stacked behind
   onDismiss: (mismatch: BalanceMismatch) => void;
   onReportSms: (mismatch: BalanceMismatch) => void;
   onUpdateBalance: (mismatch: BalanceMismatch) => void;
+  onMeasure?: (height: number) => void;
 }) {
   const isFront = depth === 0;
   const translateX = useSharedValue(0);
@@ -74,7 +79,14 @@ function MismatchCard({
       style={[{ position: 'absolute', left: 0, right: 0, zIndex: MAX_STACK - depth }, cardStyle]}
       pointerEvents={isFront ? 'auto' : 'none'}
     >
-      <View className="bg-bg-surface border border-secondary rounded-[12px] p-[24px]">
+      <View
+        className="bg-bg-surface border border-secondary rounded-[12px] p-[24px]"
+        onLayout={
+          onMeasure
+            ? (e: LayoutChangeEvent) => onMeasure(e.nativeEvent.layout.height)
+            : undefined
+        }
+      >
         {isFront && (
           <Animated.View
             style={dismissLabelStyle}
@@ -116,11 +128,13 @@ function MismatchCard({
 
 /** Swipe-to-dismiss stack for balance-mismatch alerts — up to 3 shown, front card interactive. */
 export function BalanceMismatchStack({ mismatches, onDismiss, onReportSms, onUpdateBalance }: BalanceMismatchStackProps) {
+  const [cardHeight, setCardHeight] = useState(CARD_HEIGHT);
+
   if (mismatches.length === 0) return null;
   const visible = mismatches.slice(0, MAX_STACK);
 
   return (
-    <View className="mx-[24px] mb-[32px]" style={{ height: CARD_HEIGHT }}>
+    <View className="mx-[24px] mb-[32px]" style={{ height: cardHeight }}>
       {visible.map((mismatch, depth) => (
         <MismatchCard
           key={mismatch.key}
@@ -129,6 +143,8 @@ export function BalanceMismatchStack({ mismatches, onDismiss, onReportSms, onUpd
           onDismiss={onDismiss}
           onReportSms={onReportSms}
           onUpdateBalance={onUpdateBalance}
+          // Only the front card drives the container height; the stacked ones sit behind it.
+          onMeasure={depth === 0 ? setCardHeight : undefined}
         />
       ))}
     </View>

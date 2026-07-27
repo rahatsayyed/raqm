@@ -787,6 +787,9 @@ export function DashboardScreen() {
           onClose={() => setManualUpdateTarget(null)}
           bankName={manualUpdateTarget.bankName}
           last4={manualUpdateTarget.last4}
+          // Pre-fill with the bank's own reported balance — the correct figure the user
+          // would otherwise have to look up, since the alert never states the gap amount.
+          initialAmount={manualUpdateTarget.actual}
           onManualUpdate={handleUpdateMismatchBalance}
         />
       )}
