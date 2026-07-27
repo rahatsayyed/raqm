@@ -12,6 +12,9 @@ interface Props {
   last4: string | null;
   onManualUpdate: (balance: number) => Promise<unknown> | void;
   initialMode?: 'options' | 'manual';
+  /** Pre-fills the "New balance" field — e.g. the bank-reported balance from a mismatch,
+   *  so the user doesn't have to work out the correct figure themselves. */
+  initialAmount?: number;
 }
 
 /**
@@ -21,7 +24,7 @@ interface Props {
  * exported) — replicates its keyboard-lift technique per CLAUDE.md, since the
  * "Update manually" step needs a text input.
  */
-export function RefreshAccountSheet({ visible, onClose, bankName, last4, onManualUpdate, initialMode = 'options' }: Props) {
+export function RefreshAccountSheet({ visible, onClose, bankName, last4, onManualUpdate, initialMode = 'options', initialAmount }: Props) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -32,7 +35,7 @@ export function RefreshAccountSheet({ visible, onClose, bankName, last4, onManua
   useEffect(() => {
     if (visible) {
       setMode(initialMode);
-      setAmount('');
+      setAmount(initialAmount != null ? String(initialAmount) : '');
       Keyboard.dismiss();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
