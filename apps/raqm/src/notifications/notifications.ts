@@ -146,7 +146,9 @@ export function attachNotificationHandlers(
         updateTx(data.txId, { notes: userText.trim() });
         useTxStore.getState().refresh();
       }
-      Notifications.dismissNotificationAsync(notificationId);
+      // Deliberately does NOT dismiss the notification — adding a note is a lightweight
+      // annotation, so the transaction notification stays put for the user to still tap,
+      // edit, or mark not-an-expense afterward.
       return;
     }
 
