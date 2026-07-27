@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, Linking, FlatList, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, Linking, FlatList, Modal, Share } from 'react-native';
 import { File } from 'expo-file-system';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors } from '../../theme';
@@ -21,6 +21,8 @@ import {
   GearIcon, InfoIcon, ChevronRightIcon, GroceryIcon,
   StorefrontIcon, RuleIcon, HelpIcon, LockIcon,
   PaletteIcon, SupportAgentIcon, ImportIcon, CalendarMonthIcon, FlagIcon,
+  LayersIcon, PinIcon, WalletIcon, MergeIcon, TrendingUpIcon,
+  CircleHelpIcon, PhoneIcon, GroupWorkIcon, BackIcon, NotificationIcon,
 } from '../../components/TabIcon';
 import { FEEDBACK_EMAIL } from '../../constants/support';
 
@@ -43,6 +45,8 @@ type RowDef = {
   Icon: React.ComponentType<{ color: string; size?: number }>;
   meta?: string;
   onPress?: () => void;
+  /** Menu item exists in the target IA but has no real feature behind it yet — render inert. */
+  comingSoon?: boolean;
 };
 
 type SectionDef = { title: string; rows: RowDef[] };
@@ -50,17 +54,21 @@ type SectionDef = { title: string; rows: RowDef[] };
 function Row({ row, isLast }: { row: RowDef; isLast: boolean }) {
   return (
     <TouchableOpacity
-      className={`flex-row items-center justify-between py-md ${!isLast ? 'border-b border-border-subtle' : ''}`}
-      onPress={row.onPress}
-      activeOpacity={0.6}
+      className={`flex-row items-center justify-between py-md ${!isLast ? 'border-b border-border-subtle' : ''} ${row.comingSoon ? 'opacity-40' : ''}`}
+      onPress={row.comingSoon ? undefined : row.onPress}
+      activeOpacity={row.comingSoon ? 1 : 0.6}
     >
       <View className="flex-row items-center gap-sm">
         <row.Icon color={Colors.inkLabel} size={16} />
         <Text className="font-inter text-body-standard text-on-surface">{row.label}</Text>
       </View>
       <View className="flex-row items-center gap-xs">
-        {row.meta && <Text className="font-inter text-annotation text-ink-label">{row.meta}</Text>}
-        <ChevronRightIcon color={Colors.inkLabel} size={18} />
+        {row.comingSoon ? (
+          <Text className="font-inter text-annotation text-ink-label">Soon</Text>
+        ) : (
+          row.meta && <Text className="font-inter text-annotation text-ink-label">{row.meta}</Text>
+        )}
+        {!row.comingSoon && <ChevronRightIcon color={Colors.inkLabel} size={18} />}
       </View>
     </TouchableOpacity>
   );
@@ -211,29 +219,28 @@ export function MoreScreen() {
     Alert.alert('About Raqm', `Raqm v${version}\nA private, on-device finance tracker.`);
   };
 
+  const handleInviteFriends = () => {
+    Share.share({
+      message: 'I track my spending privately, on-device, with Raqm — no cloud, no ads. Worth a look.',
+    }).catch(() => {});
+  };
+
   const rescanLabel =
     rescanStatus === 'scanning' ? `Re-scanning… ${rescanCount} found` : 'Re-scan SMS';
 
-  // Only rows backed by real functionality — no dead entries (DESIGN.md: silence is a feature).
+  // Section layout follows MORE.md's target IA. Rows with real functionality are wired;
+  // items with no screen/feature behind them yet render as inert "Soon" placeholders
+  // instead of being built out or silently dropped (DESIGN.md: silence is a feature,
+  // but so is an honest, visible roadmap item).
   const sections: SectionDef[] = [
-    {
-      title: 'ACCOUNTS',
-      rows: [
-        { key: 'manage-accounts', label: 'Manage accounts', Icon: BankIcon, onPress: () => navigation.navigate('ManageAccounts') },
-        { key: 'month-start', label: 'Start of month', Icon: CalendarMonthIcon, meta: ordinal(monthStartDay), onPress: () => setShowDayPicker(true) },
-      ],
-    },
     {
       title: 'MONEY',
       rows: [
-        { key: 'grocery', label: 'Grocery lists', Icon: GroceryIcon as RowDef['Icon'], onPress: () => navigation.navigate('Grocery') },
-        { key: 'recurring', label: 'Recurring payments', Icon: RepeatIcon, onPress: () => navigation.navigate('Tabs', { screen: 'Analytics' }) },
+        { key: 'manage-accounts', label: 'Accounts', Icon: BankIcon, onPress: () => navigation.navigate('ManageAccounts') },
+        { key: 'month-start', label: 'Start of month', Icon: CalendarMonthIcon, meta: ordinal(monthStartDay), onPress: () => setShowDayPicker(true) },
         { key: 'budgets', label: 'Budgets', Icon: BanknoteIcon, onPress: () => navigation.navigate('Settings') },
-      ],
-    },
-    {
-      title: 'AUTOMATION',
-      rows: [
+        { key: 'categories', label: 'Categories', Icon: LayersIcon, comingSoon: true },
+        { key: 'tags', label: 'Tags', Icon: PinIcon, comingSoon: true },
         {
           key: 'merchant-rules',
           label: 'Merchant rules',
@@ -248,12 +255,18 @@ export function MoreScreen() {
           meta: ruleCount == null ? undefined : `${ruleCount} rules`,
           onPress: () => navigation.navigate('CategoryRules'),
         },
-        {
-          key: 'report-undetected-sms',
-          label: 'Report undetected SMS',
-          Icon: FlagIcon,
-          onPress: () => navigation.navigate('SmsInbox'),
-        },
+        { key: 'dues-reminders', label: 'Bills & Reminders', Icon: FlagIcon, onPress: () => navigation.navigate('DuesReminders') },
+        { key: 'weekly-summary', label: 'Weekly Summary', Icon: TrendingUpIcon, comingSoon: true },
+        { key: 'grocery', label: 'Grocery lists', Icon: GroceryIcon as RowDef['Icon'], onPress: () => navigation.navigate('Grocery') },
+        { key: 'recurring', label: 'Recurring payments', Icon: RepeatIcon, onPress: () => navigation.navigate('Tabs', { screen: 'Analytics' }) },
+      ],
+    },
+    {
+      title: 'PRIVACY & SECURITY',
+      rows: [
+        { key: 'app-lock', label: 'App Lock', Icon: LockIcon, comingSoon: true },
+        { key: 'hide-balances', label: 'Hide Balances', Icon: WalletIcon, comingSoon: true },
+        { key: 'permissions', label: 'Permissions', Icon: GearIcon, onPress: () => Linking.openSettings() },
       ],
     },
     {
@@ -263,22 +276,41 @@ export function MoreScreen() {
         { key: 'import-csv', label: csvImporting ? 'Importing…' : 'Import CSV', Icon: ImportIcon, onPress: csvImporting ? undefined : handleImportCsv },
         { key: 'export', label: 'Export data', Icon: ExportIcon, onPress: handleExportData },
         { key: 'deleted', label: 'Deleted transactions', Icon: TrashIcon, onPress: () => navigation.navigate('DeletedTransactions') },
+        { key: 'backup-restore', label: 'Backup & Restore', Icon: MergeIcon, comingSoon: true },
+        { key: 'report-undetected-sms', label: 'Report undetected SMS', Icon: FlagIcon, onPress: () => navigation.navigate('SmsInbox') },
       ],
     },
     {
-      title: 'PREFERENCES',
+      title: 'APP',
       rows: [
         { key: 'settings', label: 'Settings', Icon: GearIcon, onPress: () => navigation.navigate('Settings') },
-        { key: 'appearance', label: 'Appearance', Icon: PaletteIcon, onPress: handleAppearance },
-        { key: 'privacy', label: 'Privacy & security', Icon: LockIcon, onPress: () => Linking.openSettings() },
+        { key: 'appearance', label: 'Theme', Icon: PaletteIcon, onPress: handleAppearance },
+        { key: 'notifications', label: 'Notifications', Icon: NotificationIcon, onPress: () => Linking.openSettings() },
+        { key: 'invite-friends', label: 'Invite Friends', Icon: GroupWorkIcon, onPress: handleInviteFriends },
+        { key: 'about', label: 'About', Icon: InfoIcon, onPress: handleAbout },
       ],
     },
     {
       title: 'SUPPORT',
       rows: [
+        { key: 'help-center', label: 'Help Center', Icon: CircleHelpIcon, comingSoon: true },
         { key: 'feedback', label: 'Feedback', Icon: SupportAgentIcon, onPress: () => Linking.openURL(`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent('Raqm Feedback')}`) },
-        { key: 'feature-request', label: 'Feature request', Icon: HelpIcon, onPress: () => Linking.openURL(`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent('Raqm Feature Request')}`) },
-        { key: 'about', label: 'About Raqm', Icon: InfoIcon, onPress: handleAbout },
+        { key: 'feature-request', label: 'Feature Request', Icon: HelpIcon, onPress: () => Linking.openURL(`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent('Raqm Feature Request')}`) },
+        { key: 'privacy-policy', label: 'Privacy Policy', Icon: LockIcon, comingSoon: true },
+        { key: 'terms', label: 'Terms', Icon: InfoIcon, comingSoon: true },
+        {
+          key: 'contact-support',
+          label: 'Contact Support',
+          Icon: PhoneIcon,
+          onPress: () => Linking.openURL(`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent('Raqm Support')}`),
+        },
+      ],
+    },
+    {
+      title: 'ACCOUNT',
+      rows: [
+        { key: 'delete-account', label: 'Delete Account', Icon: TrashIcon, comingSoon: true },
+        { key: 'sign-out', label: 'Sign Out', Icon: BackIcon, comingSoon: true },
       ],
     },
   ];
