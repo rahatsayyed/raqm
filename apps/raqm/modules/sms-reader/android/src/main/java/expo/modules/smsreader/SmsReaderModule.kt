@@ -5,11 +5,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.provider.Telephony
+import android.util.Log
 import androidx.core.content.ContextCompat
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 const val NEW_SMS_ACTION = "expo.modules.smsreader.NEW_SMS"
+private const val TAG = "RaqmSms"
 
 class SmsReaderModule : Module() {
   private var internalReceiver: BroadcastReceiver? = null
@@ -20,12 +22,20 @@ class SmsReaderModule : Module() {
     Events("onNewSms")
 
     OnCreate {
-      val context = appContext.reactContext ?: return@OnCreate
+      val context = appContext.reactContext
+      if (context == null) {
+        // If reactContext isn't attached yet when this module initializes, registration
+        // is silently skipped — nothing else in this pipeline would log or throw, it
+        // would just look like a receiver that registered fine but never got a broadcast.
+        Log.w(TAG, "OnCreate: appContext.reactContext is NULL — internal receiver NOT registered")
+        return@OnCreate
+      }
       internalReceiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
           val body = intent.getStringExtra("body") ?: return
           val sender = intent.getStringExtra("sender") ?: ""
           val timestamp = intent.getLongExtra("timestamp", System.currentTimeMillis())
+          Log.d(TAG, "internal receiver fired, sender=$sender, dispatching sendEvent(onNewSms)")
           sendEvent(
             "onNewSms", mapOf(
               "body" to body,
@@ -46,9 +56,11 @@ class SmsReaderModule : Module() {
         IntentFilter(NEW_SMS_ACTION),
         ContextCompat.RECEIVER_NOT_EXPORTED,
       )
+      Log.d(TAG, "OnCreate: internal receiver registered for $NEW_SMS_ACTION")
     }
 
     OnDestroy {
+      Log.d(TAG, "OnDestroy firing — unregistering internal receiver")
       val context = appContext.reactContext ?: return@OnDestroy
       internalReceiver?.let {
         try { context.unregisterReceiver(it) } catch (_: Exception) {}
