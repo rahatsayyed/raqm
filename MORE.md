@@ -4,6 +4,7 @@ email icon. Add Email
 
 💰 Money
     Accounts _Manage all your financial accounts, balances, visibility, and account link/merge._
+    Month Start Date _Set the day your financial month begins (e.g. your salary date)_
     Budgets _Create spending limits and track your progress throughout the month._
     Categories _Manage Spend/Debit Category_
     Tags _manage tag add/delete_
@@ -12,9 +13,9 @@ email icon. Add Email
     Weekly Summary _View a concise recap of your weekly income, spending, and financial insights._
 
 🔒 Privacy & Security
+    Permissions _manage permissions: notification, location etc_
     App Lock _Secure Raqm using your device PIN, fingerprint, or Face ID._
     Hide Balances _Mask account balances and sensitive amounts throughout the app._
-    Permissions _manage permissions: notification, location etc_
 
 🗂 Data
     Rescan SMS _Scan SMS again_
@@ -39,5 +40,5 @@ email icon. Add Email
     Contact Support _Reach the support team for account or technical assistance._
 
 👤 Account
-    Delete Account _Permanently delete your Raqm account and associated data._
     Sign Out _Log out from the current device without deleting your data._
+    Delete Account _Permanently delete your Raqm account and associated data._

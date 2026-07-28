@@ -5,7 +5,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 interface AppStore {
   isOnboardingComplete: boolean;
   userName: string;
+  userPhone: string;
+  userEmail: string;
   setOnboardingComplete: (name: string) => void;
+  setUserName: (name: string) => void;
+  setUserPhone: (phone: string) => void;
+  setUserEmail: (email: string) => void;
 }
 
 export const useAppStore = create<AppStore>()(
@@ -13,7 +18,12 @@ export const useAppStore = create<AppStore>()(
     (set) => ({
       isOnboardingComplete: false,
       userName: '',
+      userPhone: '',
+      userEmail: '',
       setOnboardingComplete: (userName) => set({ isOnboardingComplete: true, userName }),
+      setUserName: (userName) => set({ userName }),
+      setUserPhone: (userPhone) => set({ userPhone }),
+      setUserEmail: (userEmail) => set({ userEmail }),
     }),
     {
       name: 'raqm-app',
@@ -21,6 +31,8 @@ export const useAppStore = create<AppStore>()(
       partialize: (state) => ({
         isOnboardingComplete: state.isOnboardingComplete,
         userName: state.userName,
+        userPhone: state.userPhone,
+        userEmail: state.userEmail,
       }),
     },
   ),

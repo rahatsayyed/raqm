@@ -11,18 +11,20 @@ import type { MainStackParamList } from '../../navigation/types';
 import { rescanTransactionsRange } from '../../services/rescan';
 import { buildMonthlySummary, exportCsv, exportPdf } from '../../services/export';
 import { RescanModal } from '../../components/RescanModal';
+import { EditFieldSheet } from '../../components/EditFieldSheet';
 import { parseImportCsv } from '../../services/csvImport';
 import {
   syncDiscoveredAccounts, getCategoryRules, getTransactionGroups,
   getSetting, setSetting, insertCsvRows,
 } from '../../db/database';
 import {
-  BankIcon, RepeatIcon, BanknoteIcon, RefreshIcon, ExportIcon, TrashIcon,
-  GearIcon, InfoIcon, ChevronRightIcon, GroceryIcon,
-  StorefrontIcon, RuleIcon, HelpIcon, LockIcon,
+  BankIcon, BanknoteIcon, RefreshIcon, ExportIcon, TrashIcon,
+  GearIcon, InfoIcon, ChevronRightIcon,
+  RuleIcon, HelpIcon, LockIcon,
   PaletteIcon, SupportAgentIcon, ImportIcon, CalendarMonthIcon, FlagIcon,
   LayersIcon, PinIcon, WalletIcon, MergeIcon, TrendingUpIcon,
   CircleHelpIcon, PhoneIcon, GroupWorkIcon, BackIcon, NotificationIcon,
+  PencilIcon, MailIcon,
 } from '../../components/TabIcon';
 import { FEEDBACK_EMAIL } from '../../constants/support';
 
@@ -75,7 +77,7 @@ function Row({ row, isLast }: { row: RowDef; isLast: boolean }) {
 }
 
 export function MoreScreen() {
-  const { userName } = useAppStore();
+  const { userName, userPhone, userEmail, setUserName, setUserPhone, setUserEmail } = useAppStore();
   const transactions = useTxStore((s) => s.txs);
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
 
@@ -87,6 +89,7 @@ export function MoreScreen() {
   const [monthStartDay, setMonthStartDay] = useState(1);
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [csvImporting, setCsvImporting] = useState(false);
+  const [editField, setEditField] = useState<'name' | 'phone' | 'email' | null>(null);
 
   // These screens stay mounted beneath pushed screens, so counts can go stale
   // without a focus-triggered reload (e.g. deleting a rule, then coming back).
@@ -225,6 +228,7 @@ export function MoreScreen() {
     }).catch(() => {});
   };
 
+
   const rescanLabel =
     rescanStatus === 'scanning' ? `Re-scanning… ${rescanCount} found` : 'Re-scan SMS';
 
@@ -232,58 +236,53 @@ export function MoreScreen() {
   // items with no screen/feature behind them yet render as inert "Soon" placeholders
   // instead of being built out or silently dropped (DESIGN.md: silence is a feature,
   // but so is an honest, visible roadmap item).
+  // Exactly the 8 MONEY / 3 PRIVACY & SECURITY / 6 DATA / 4 APP / 6 SUPPORT / 2 ACCOUNT
+  // rows from MORE.md, in its order. Grocery lists and Recurring payments (real
+  // features, not in MORE.md) were dropped from here per explicit decision — Recurring
+  // stays reachable via the Analytics tab; Grocery's menu entry can come back as its
+  // own scoped task.
   const sections: SectionDef[] = [
     {
       title: 'MONEY',
       rows: [
         { key: 'manage-accounts', label: 'Accounts', Icon: BankIcon, onPress: () => navigation.navigate('ManageAccounts') },
-        { key: 'month-start', label: 'Start of month', Icon: CalendarMonthIcon, meta: ordinal(monthStartDay), onPress: () => setShowDayPicker(true) },
+        { key: 'month-start', label: 'Month Start Date', Icon: CalendarMonthIcon, meta: ordinal(monthStartDay), onPress: () => setShowDayPicker(true) },
         { key: 'budgets', label: 'Budgets', Icon: BanknoteIcon, onPress: () => navigation.navigate('Settings') },
         { key: 'categories', label: 'Categories', Icon: LayersIcon, comingSoon: true },
         { key: 'tags', label: 'Tags', Icon: PinIcon, comingSoon: true },
         {
-          key: 'merchant-rules',
-          label: 'Merchant rules',
-          Icon: StorefrontIcon,
-          meta: groupCount == null ? undefined : `${groupCount} grouped`,
-          onPress: () => navigation.navigate('MerchantRules'),
-        },
-        {
-          key: 'category-rules',
-          label: 'Category rules',
+          key: 'rules',
+          label: 'Rules',
           Icon: RuleIcon,
-          meta: ruleCount == null ? undefined : `${ruleCount} rules`,
-          onPress: () => navigation.navigate('CategoryRules'),
+          meta: ruleCount == null && groupCount == null ? undefined : `${(ruleCount ?? 0) + (groupCount ?? 0)}`,
+          onPress: () => navigation.navigate('Rules'),
         },
         { key: 'dues-reminders', label: 'Bills & Reminders', Icon: FlagIcon, onPress: () => navigation.navigate('DuesReminders') },
         { key: 'weekly-summary', label: 'Weekly Summary', Icon: TrendingUpIcon, comingSoon: true },
-        { key: 'grocery', label: 'Grocery lists', Icon: GroceryIcon as RowDef['Icon'], onPress: () => navigation.navigate('Grocery') },
-        { key: 'recurring', label: 'Recurring payments', Icon: RepeatIcon, onPress: () => navigation.navigate('Tabs', { screen: 'Analytics' }) },
       ],
     },
     {
       title: 'PRIVACY & SECURITY',
       rows: [
+        { key: 'permissions', label: 'Permissions', Icon: GearIcon, onPress: () => Linking.openSettings() },
         { key: 'app-lock', label: 'App Lock', Icon: LockIcon, comingSoon: true },
         { key: 'hide-balances', label: 'Hide Balances', Icon: WalletIcon, comingSoon: true },
-        { key: 'permissions', label: 'Permissions', Icon: GearIcon, onPress: () => Linking.openSettings() },
       ],
     },
     {
       title: 'DATA',
       rows: [
         { key: 'rescan', label: rescanLabel, Icon: RefreshIcon, onPress: rescanStatus === 'scanning' ? undefined : () => setRescanModalVisible(true) },
-        { key: 'import-csv', label: csvImporting ? 'Importing…' : 'Import CSV', Icon: ImportIcon, onPress: csvImporting ? undefined : handleImportCsv },
-        { key: 'export', label: 'Export data', Icon: ExportIcon, onPress: handleExportData },
-        { key: 'deleted', label: 'Deleted transactions', Icon: TrashIcon, onPress: () => navigation.navigate('DeletedTransactions') },
+        { key: 'import-csv', label: csvImporting ? 'Importing…' : 'Import', Icon: ImportIcon, onPress: csvImporting ? undefined : handleImportCsv },
+        { key: 'export', label: 'Export', Icon: ExportIcon, onPress: handleExportData },
+        { key: 'deleted', label: 'Deleted Transactions', Icon: TrashIcon, onPress: () => navigation.navigate('DeletedTransactions') },
         { key: 'backup-restore', label: 'Backup & Restore', Icon: MergeIcon, comingSoon: true },
-        { key: 'report-undetected-sms', label: 'Report undetected SMS', Icon: FlagIcon, onPress: () => navigation.navigate('SmsInbox') },
+        { key: 'report-undetected-sms', label: 'Report Undetected SMS', Icon: FlagIcon, onPress: () => navigation.navigate('SmsInbox') },
       ],
     },
     {
       title: 'APP',
       rows: [
-        { key: 'settings', label: 'Settings', Icon: GearIcon, onPress: () => navigation.navigate('Settings') },
         { key: 'appearance', label: 'Theme', Icon: PaletteIcon, onPress: handleAppearance },
         { key: 'notifications', label: 'Notifications', Icon: NotificationIcon, onPress: () => Linking.openSettings() },
         { key: 'invite-friends', label: 'Invite Friends', Icon: GroupWorkIcon, onPress: handleInviteFriends },
@@ -309,8 +308,8 @@ export function MoreScreen() {
     {
       title: 'ACCOUNT',
       rows: [
-        { key: 'delete-account', label: 'Delete Account', Icon: TrashIcon, comingSoon: true },
         { key: 'sign-out', label: 'Sign Out', Icon: BackIcon, comingSoon: true },
+        { key: 'delete-account', label: 'Delete Account', Icon: TrashIcon, comingSoon: true },
       ],
     },
   ];
@@ -323,19 +322,33 @@ export function MoreScreen() {
         <Text className="font-inter text-body-md text-primary">← Back</Text>
       </TouchableOpacity>
 
-      {/* Header: avatar/name (→ Settings) + gear shortcut, editorial (unboxed) style */}
-      <View className="flex-row justify-between items-center px-container-margin pt-sm pb-md border-b border-border-subtle">
-        <TouchableOpacity className="flex-row items-center gap-sm flex-1" activeOpacity={0.7} onPress={() => navigation.navigate('Settings')}>
-          <View className="w-8 h-8 rounded-full bg-primary-container/20 border border-primary/20 items-center justify-center">
-            <Text className="font-inter-semibold text-[10px] text-primary">{initials}</Text>
+      {/* Header: avatar/name (editable) + phone + email, editorial (unboxed) style */}
+      <View className="px-container-margin pt-sm pb-md border-b border-border-subtle">
+        <View className="flex-row justify-between items-center">
+          <View className="flex-row items-center gap-sm flex-1">
+            <View className="w-8 h-8 rounded-full bg-primary-container/20 border border-primary/20 items-center justify-center">
+              <Text className="font-inter-semibold text-[10px] text-primary">{initials}</Text>
+            </View>
+            <View className="flex-1">
+              <Text className="font-fraunces text-[15px] leading-none text-on-surface" numberOfLines={1}>{userName || 'User'}</Text>
+              <Text className="font-inter text-[10px] text-ink-label opacity-60 mt-[2px]">{transactions.length} transactions on record</Text>
+            </View>
           </View>
-          <View className="flex-1">
-            <Text className="font-fraunces text-[15px] leading-none text-on-surface" numberOfLines={1}>{userName || 'User'}</Text>
-            <Text className="font-inter text-[10px] text-ink-label opacity-60 mt-[2px]">{transactions.length} transactions on record</Text>
-          </View>
+          <TouchableOpacity onPress={() => setEditField('name')} hitSlop={8} className="px-xs">
+            <PencilIcon color={Colors.inkLabel} size={16} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Settings')} hitSlop={8}>
+            <GearIcon color={Colors.inkLabel} size={20} />
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity className="flex-row items-center gap-sm mt-sm" activeOpacity={0.6} onPress={() => setEditField('phone')}>
+          <PhoneIcon color={Colors.inkLabel} size={14} />
+          <Text className="font-inter text-annotation text-ink-label">{userPhone || 'Add phone number'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Settings')} hitSlop={8}>
-          <GearIcon color={Colors.inkLabel} size={20} />
+        <TouchableOpacity className="flex-row items-center gap-sm mt-xs" activeOpacity={0.6} onPress={() => setEditField('email')}>
+          <MailIcon color={Colors.inkLabel} size={14} />
+          <Text className="font-inter text-annotation text-ink-label">{userEmail || 'Add Email'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -360,6 +373,42 @@ export function MoreScreen() {
         visible={rescanModalVisible}
         onClose={() => setRescanModalVisible(false)}
         onScan={handleScan}
+      />
+
+      <EditFieldSheet
+        visible={editField === 'name'}
+        onClose={() => setEditField(null)}
+        title="Edit name"
+        placeholder="Your name"
+        initialValue={userName}
+        onConfirm={(value) => {
+          if (value) setUserName(value);
+          setEditField(null);
+        }}
+      />
+      <EditFieldSheet
+        visible={editField === 'phone'}
+        onClose={() => setEditField(null)}
+        title="Edit phone number"
+        placeholder="9876543210"
+        keyboardType="phone-pad"
+        initialValue={userPhone}
+        onConfirm={(value) => {
+          setUserPhone(value);
+          setEditField(null);
+        }}
+      />
+      <EditFieldSheet
+        visible={editField === 'email'}
+        onClose={() => setEditField(null)}
+        title="Edit email"
+        placeholder="you@example.com"
+        keyboardType="email-address"
+        initialValue={userEmail}
+        onConfirm={(value) => {
+          setUserEmail(value);
+          setEditField(null);
+        }}
       />
 
       <Modal visible={showDayPicker} transparent animationType="fade" onRequestClose={() => setShowDayPicker(false)}>
