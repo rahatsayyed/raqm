@@ -34,6 +34,7 @@ import {
 import type { Category, Subcategory, TxRecord } from "../../db/database";
 import { TransactionType } from "@rahatsayyed/bank-sms-parser";
 import { formatAmount } from "../../utils/format";
+import { accountLabel } from "../../utils/accountLabel";
 import {
   iconForCategoryName,
   FALLBACK_CATEGORY_ICON,
@@ -99,6 +100,7 @@ export function TransactionDetailScreen({
   const { transactionId } = route.params;
   const storeTx = useTxStore((s) => s.txs.find((t) => t.id === transactionId));
   const allTxs = useTxStore((s) => s.txs);
+  const accountLabels = useTxStore((s) => s.accountLabels);
   const removeTx = useTxStore((s) => s.remove);
   const restoreTx = useTxStore((s) => s.restore);
   const updateTx = useTxStore((s) => s.update);
@@ -467,7 +469,7 @@ export function TransactionDetailScreen({
           activeOpacity={0.7}
         >
           <Text className="font-Inter text-xl text-on-surface mt-xs">
-            {tx.merchant || tx.bankName}
+            {tx.merchant || accountLabel(tx.bankName, tx.accountLast4, accountLabels)}
           </Text>
         </TouchableOpacity>
 <TouchableOpacity
@@ -529,7 +531,7 @@ export function TransactionDetailScreen({
                   className="font-inter-medium text-insight-reading text-on-surface shrink"
                   numberOfLines={1}
                 >
-                  {tx.bankName}
+                  {accountLabel(tx.bankName, tx.accountLast4, accountLabels)}
                 </Text>
                 {tx.accountLast4 && (
                   <Text className="font-mono text-[13px] leading-[20px] text-on-surface-variant">
@@ -733,7 +735,7 @@ export function TransactionDetailScreen({
             <View className="bg-surface-container-low rounded-md border border-border-subtle mb-lg overflow-hidden">
               <View className="p-md gap-sm">
                 <Text className="font-inter-medium text-insight-reading text-ink-headline">
-                  {partner.merchant || partner.bankName}
+                  {partner.merchant || accountLabel(partner.bankName, partner.accountLast4, accountLabels)}
                 </Text>
                 <Text className="font-inter text-supporting-text text-ink-body">
                   Type: {tx.linkType}
@@ -1574,6 +1576,7 @@ function LinkPicker({
   candidates: TxRecord[];
   onPick: (id: number) => void;
 }) {
+  const accountLabels = useTxStore((s) => s.accountLabels);
   return (
     <Modal
       visible={visible}
@@ -1604,7 +1607,7 @@ function LinkPicker({
                   className="font-inter text-body-standard text-on-surface"
                   numberOfLines={1}
                 >
-                  {item.merchant || item.bankName} ·{" "}
+                  {item.merchant || accountLabel(item.bankName, item.accountLast4, accountLabels)} ·{" "}
                   {formatAmount(item.amount, item.currency)}
                 </Text>
               </TouchableOpacity>
@@ -1632,6 +1635,7 @@ function GroupPicker({
   candidates: TxRecord[];
   onConfirm: (partnerId: number, name: string) => void;
 }) {
+  const accountLabels = useTxStore((s) => s.accountLabels);
   const [step, setStep] = useState<"pick" | "name">("pick");
   const [pickedId, setPickedId] = useState<number | null>(null);
   const [name, setName] = useState("");
@@ -1687,7 +1691,7 @@ function GroupPicker({
                       className="font-inter text-body-standard text-on-surface"
                       numberOfLines={1}
                     >
-                      {item.merchant || item.bankName} ·{" "}
+                      {item.merchant || accountLabel(item.bankName, item.accountLast4, accountLabels)} ·{" "}
                       {formatAmount(item.amount, item.currency)}
                     </Text>
                   </TouchableOpacity>

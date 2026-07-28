@@ -9,6 +9,7 @@ import { getBudgetStatuses, type BudgetStatus } from '../../services/budgets';
 import { getMonthBounds, type PeriodBounds } from '../../utils/period';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { formatAmount } from '../../utils/format';
+import { accountLabel } from '../../utils/accountLabel';
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -183,6 +184,7 @@ function TxRow({
 }) {
   const debit = tx.type === TransactionType.EXPENSE;
   const color = debit ? Colors.errorMuted : Colors.primary;
+  const accountLabels = useTxStore((s) => s.accountLabels);
   return (
     <TouchableOpacity
       className={`flex-row justify-between items-center py-[12px] ${!isLast ? 'border-b border-outline-variant' : ''}`}
@@ -190,7 +192,7 @@ function TxRow({
     >
       <View className="flex-1">
         <Text className="font-inter-medium text-body-sm text-on-surface" numberOfLines={1}>
-          {tx.merchant || tx.bankName}
+          {tx.merchant || accountLabel(tx.bankName, tx.accountLast4, accountLabels)}
         </Text>
         <Text className="font-mono text-label-sm tracking-[0px] text-on-surface-variant mt-[2px]">{formatDate(tx.timestamp)}</Text>
       </View>

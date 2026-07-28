@@ -9,6 +9,8 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   bankName: string;
+  /** Account alias to show instead of bankName, if one is set. */
+  displayName?: string;
   last4: string | null;
   onManualUpdate: (balance: number) => Promise<unknown> | void;
   initialMode?: 'options' | 'manual';
@@ -24,7 +26,7 @@ interface Props {
  * exported) — replicates its keyboard-lift technique per CLAUDE.md, since the
  * "Update manually" step needs a text input.
  */
-export function RefreshAccountSheet({ visible, onClose, bankName, last4, onManualUpdate, initialMode = 'options', initialAmount }: Props) {
+export function RefreshAccountSheet({ visible, onClose, bankName, displayName, last4, onManualUpdate, initialMode = 'options', initialAmount }: Props) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -88,7 +90,7 @@ export function RefreshAccountSheet({ visible, onClose, bankName, last4, onManua
                 Refresh Account
               </Text>
               <Text className="font-inter text-annotation text-on-surface-variant mt-[4px]">
-                {bankName}
+                {displayName || bankName}
                 {last4 ? ` ••${last4}` : ''}
               </Text>
             </View>

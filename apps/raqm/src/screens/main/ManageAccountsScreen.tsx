@@ -162,6 +162,7 @@ export function ManageAccountsScreen({ navigation }: MainStackScreenProps<'Manag
           if (aliasTarget) await updateAccount(aliasTarget.id, { nickname: value || null });
           setAliasTarget(null);
           await load();
+          await useTxStore.getState().refresh();
         }}
       />
 

@@ -8,6 +8,7 @@ import {
   softDeleteTx,
   restoreTx,
   seedDefaults,
+  getAccounts,
   type TxRecord,
   type NewTxInput,
   type TxPatch,
@@ -16,9 +17,20 @@ import { getCurrentCoords } from '../services/location';
 import { isDuplicateSms } from '../services/txIntelligence';
 import { checkBudgetAlerts } from '../services/budgets';
 
+async function loadAccountLabels(): Promise<Map<string, string>> {
+  const accounts = await getAccounts();
+  const map = new Map<string, string>();
+  for (const a of accounts) {
+    if (a.nickname) map.set(`${a.bankName}|${a.last4 ?? ''}`, a.nickname);
+  }
+  return map;
+}
+
 interface TxStore {
   txs: TxRecord[];
   ready: boolean;
+  /** bankName+last4 -> account alias, kept in sync with txs so every screen shows the same label. */
+  accountLabels: Map<string, string>;
   load: () => Promise<void>;
   refresh: () => Promise<void>;
   add: (input: NewTxInput) => Promise<number>;
@@ -32,16 +44,17 @@ interface TxStore {
 export const useTxStore = create<TxStore>((set, get) => ({
   txs: [],
   ready: false,
+  accountLabels: new Map(),
 
   load: async () => {
     await seedDefaults();
-    const txs = await loadTxRecords();
-    set({ txs, ready: true });
+    const [txs, accountLabels] = await Promise.all([loadTxRecords(), loadAccountLabels()]);
+    set({ txs, accountLabels, ready: true });
   },
 
   refresh: async () => {
-    const txs = await loadTxRecords();
-    set({ txs });
+    const [txs, accountLabels] = await Promise.all([loadTxRecords(), loadAccountLabels()]);
+    set({ txs, accountLabels });
   },
 
   add: async (input) => {

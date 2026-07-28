@@ -5,6 +5,7 @@ import { MainStackScreenProps } from '../../navigation/types';
 import { loadDeletedTxRecords, type TxRecord } from '../../db/database';
 import { useTxStore } from '../../store/txStore';
 import { formatAmount } from '../../utils/format';
+import { accountLabel } from '../../utils/accountLabel';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 
 function formatDate(ts: number): string {
@@ -69,6 +70,7 @@ export function DeletedTransactionsScreen({ navigation }: MainStackScreenProps<'
   const [deleted, setDeleted] = useState<TxRecord[]>([]);
   const [loaded, setLoaded] = useState(false);
   const restore = useTxStore((s) => s.restore);
+  const accountLabels = useTxStore((s) => s.accountLabels);
 
   const load = useCallback(async () => {
     setDeleted(await loadDeletedTxRecords());
@@ -93,7 +95,7 @@ export function DeletedTransactionsScreen({ navigation }: MainStackScreenProps<'
     ({ item: tx }: { item: TxRecord }) => (
       <DeletedTxRow
         id={tx.id}
-        merchant={tx.merchant || tx.bankName}
+        merchant={tx.merchant || accountLabel(tx.bankName, tx.accountLast4, accountLabels)}
         dateLabel={formatDate(tx.timestamp)}
         deletedDateLabel={tx.deletedAt ? formatDate(tx.deletedAt) : '—'}
         amountLabel={formatAmount(tx.amount, tx.currency)}
@@ -101,7 +103,7 @@ export function DeletedTransactionsScreen({ navigation }: MainStackScreenProps<'
         onRestore={handleRestore}
       />
     ),
-    [handleRestore],
+    [handleRestore, accountLabels],
   );
 
   return (

@@ -7,6 +7,7 @@ import { getSetting, type TxRecord } from '../../db/database';
 import { countsTowardTotals } from '../../services/txIntelligence';
 import { getMonthBounds, type PeriodBounds } from '../../utils/period';
 import { formatAmount } from '../../utils/format';
+import { accountLabel } from '../../utils/accountLabel';
 import { Colors } from '../../theme';
 
 function formatDate(ts: number): string {
@@ -23,6 +24,7 @@ function isDebit(type: TransactionType): boolean {
 export function SpendDetailScreen({ route, navigation }: MainStackScreenProps<'SpendDetail'>) {
   const params = route.params;
   const txs = useTxStore((s) => s.txs);
+  const accountLabels = useTxStore((s) => s.accountLabels);
   const [bounds, setBounds] = useState<PeriodBounds | null>(null);
 
   useEffect(() => {
@@ -46,7 +48,8 @@ export function SpendDetailScreen({ route, navigation }: MainStackScreenProps<'S
     [filteredTxs],
   );
 
-  const title = params.filterType === 'category' ? params.categoryName : params.bankName;
+  const title =
+    params.filterType === 'category' ? params.categoryName : accountLabel(params.bankName, params.last4, accountLabels);
   const subtitle = params.filterType === 'category' ? 'Category' : params.last4 ? `•••• ${params.last4}` : 'Account';
 
   return (
@@ -85,13 +88,14 @@ export function SpendDetailScreen({ route, navigation }: MainStackScreenProps<'S
 function SpendTxRow({ tx, isLast, onPress }: { tx: TxRecord; isLast: boolean; onPress: () => void }) {
   const debit = isDebit(tx.type);
   const color = debit ? Colors.errorMuted : Colors.primary;
+  const accountLabels = useTxStore((s) => s.accountLabels);
   return (
     <TouchableOpacity
       className={`flex-row justify-between items-center py-[12px] ${!isLast ? 'border-b border-outline-variant' : ''}`}
       onPress={onPress}
     >
       <View className="flex-1">
-        <Text className="font-inter-medium text-body-sm text-on-surface" numberOfLines={1}>{tx.merchant || tx.bankName}</Text>
+        <Text className="font-inter-medium text-body-sm text-on-surface" numberOfLines={1}>{tx.merchant || accountLabel(tx.bankName, tx.accountLast4, accountLabels)}</Text>
         <Text className="font-mono text-label-sm tracking-[0px] text-on-surface-variant mt-[2px]">{formatDate(tx.timestamp)}</Text>
       </View>
       <Text className="font-mono text-[15px] leading-[20px]" style={{ color }}>

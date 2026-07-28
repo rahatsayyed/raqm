@@ -7,6 +7,8 @@ import { RefreshAccountSheet } from "./RefreshAccountSheet";
 
 interface Props {
   bankName: string;
+  /** Account alias to show instead of bankName, if one is set. */
+  displayName?: string;
   last4: string | null;
   balance: number;
   currency?: string;
@@ -29,6 +31,7 @@ function timeAgo(ts: number): string {
 /** Per-account balance card for the Briefing "Total Liquidity" strip — split bank-identity/balance panels. */
 export function AccountLiquidityCard({
   bankName,
+  displayName,
   last4,
   balance,
   currency = "₹",
@@ -38,6 +41,7 @@ export function AccountLiquidityCard({
   onManualUpdate,
 }: Props) {
   const [sheetVisible, setSheetVisible] = useState(false);
+  const label = displayName || bankName;
 
   return (
     <>
@@ -49,7 +53,7 @@ export function AccountLiquidityCard({
         <View className="w-[35%] bg-surface-container-low p-3 justify-between border-r border-outline-variant">
           <View className="w-[40px] h-[40px] rounded-sm bg-surface-bright items-center justify-center">
             <Text className="font-inter-bold text-body-sm text-primary">
-              {bankName.charAt(0).toUpperCase()}
+              {label.charAt(0).toUpperCase()}
             </Text>
           </View>
           <View>
@@ -57,7 +61,7 @@ export function AccountLiquidityCard({
               className="font-inter-semibold text-annotation text-on-surface"
               numberOfLines={1}
             >
-              {bankName}
+              {label}
             </Text>
             {last4 && (
               <Text className="font-mono text-[9px] text-on-surface-variant mt-[2px]">{`xx${last4}`}</Text>
@@ -109,6 +113,7 @@ export function AccountLiquidityCard({
         visible={sheetVisible}
         onClose={() => setSheetVisible(false)}
         bankName={bankName}
+        displayName={displayName}
         last4={last4}
         onManualUpdate={async (newBalance) => onManualUpdate?.(newBalance)}
       />

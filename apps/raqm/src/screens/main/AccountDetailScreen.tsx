@@ -262,6 +262,7 @@ export function AccountDetailScreen({ route, navigation }: MainStackScreenProps<
                   key={tx.id}
                   tx={tx}
                   currency={currency}
+                  bankLabel={account?.nickname || bankName}
                   isLast={i === accountTxs.length - 1}
                   onPress={() => navigation.navigate('TransactionDetail', { transactionId: tx.id })}
                 />
@@ -275,8 +276,8 @@ export function AccountDetailScreen({ route, navigation }: MainStackScreenProps<
 }
 
 function AccountTxRow({
-  tx, currency, isLast, onPress,
-}: { tx: TxRecord; currency: string; isLast: boolean; onPress: () => void }) {
+  tx, currency, bankLabel, isLast, onPress,
+}: { tx: TxRecord; currency: string; bankLabel: string; isLast: boolean; onPress: () => void }) {
   const debit = isDebit(tx.type);
   const color = txColor(tx.type);
   return (
@@ -289,7 +290,7 @@ function AccountTxRow({
         <Text className="text-[16px] font-inter-bold" style={{ color }}>{debit ? '↓' : '↑'}</Text>
       </View>
       <View className="flex-1">
-        <Text className="font-inter-medium text-body-sm text-on-surface" numberOfLines={1}>{tx.merchant || tx.bankName}</Text>
+        <Text className="font-inter-medium text-body-sm text-on-surface" numberOfLines={1}>{tx.merchant || bankLabel}</Text>
         <Text className="font-mono text-label-sm tracking-[0px] text-on-surface-variant mt-[2px]">{formatDate(tx.timestamp)}</Text>
       </View>
       <Text className="font-mono text-[15px] leading-[20px]" style={{ color }}>{debit ? '-' : '+'}{formatAmount(tx.amount, currency)}</Text>

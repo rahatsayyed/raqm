@@ -4,6 +4,8 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { Colors } from '../../theme';
 import type { BalanceMismatch } from '../../services/balanceIntegrity';
+import { useTxStore } from '../../store/txStore';
+import { accountLabel } from '../../utils/accountLabel';
 
 interface BalanceMismatchStackProps {
   mismatches: BalanceMismatch[];
@@ -39,6 +41,7 @@ function MismatchCard({
   const isFront = depth === 0;
   const translateX = useSharedValue(0);
   const [exiting, setExiting] = useState(false);
+  const accountLabels = useTxStore((s) => s.accountLabels);
 
   useEffect(() => {
     if (!exiting) return;
@@ -100,7 +103,7 @@ function MismatchCard({
           <Text className="font-inter-semibold text-section-header text-secondary">NEEDS YOUR ATTENTION</Text>
         </View>
         <Text className="font-inter-medium text-insight-reading text-on-surface mb-[24px]" numberOfLines={3}>
-          {mismatch.bankName}
+          {accountLabel(mismatch.bankName, mismatch.last4, accountLabels)}
           {mismatch.last4 ? ` ••${mismatch.last4}` : ''}'s balance doesn't match what we've tracked — we may have missed a transaction.
         </Text>
         <View className="flex-row gap-sm">
