@@ -77,6 +77,7 @@ module.exports = function (api) {
             'material-symbols:forum-outline-rounded',
             'material-symbols:notifications-outline-rounded',
             'material-symbols:person-outline-rounded',
+            'material-symbols:mail-outline-rounded',
           ],
         },
       ],

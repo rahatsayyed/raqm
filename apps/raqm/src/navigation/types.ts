@@ -49,8 +49,7 @@ export type MainStackParamList = {
   DeletedTransactions: undefined;
   Grocery: undefined;
   DuesReminders: undefined;
-  CategoryRules: undefined;
-  MerchantRules: undefined;
+  Rules: { section?: 'category' | 'merchant' | 'amount' } | undefined;
   ManageAccounts: undefined;
   SmsInbox: undefined;
   SmsThread: { key: string };
