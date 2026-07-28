@@ -23,6 +23,8 @@ import { RulesScreen } from '../screens/main/RulesScreen';
 import { ManageAccountsScreen } from '../screens/main/ManageAccountsScreen';
 import { SmsInboxScreen } from '../screens/main/SmsInboxScreen';
 import { SmsThreadScreen } from '../screens/main/SmsThreadScreen';
+import { CategoryOverviewScreen } from '../screens/main/CategoryOverviewScreen';
+import { SpendDetailScreen } from '../screens/main/SpendDetailScreen';
 import { HomeIcon, AnalyticsIcon, SplitIcon, ChatIcon } from '../components/TabIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../theme';
@@ -103,6 +105,8 @@ export function MainNavigator() {
       <Stack.Screen name="DeletedTransactions" component={DeletedTransactionsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="DuesReminders" component={DuesRemindersScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="Rules" component={RulesScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="CategoryOverview" component={CategoryOverviewScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="SpendDetail" component={SpendDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="ManageAccounts" component={ManageAccountsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="SmsInbox" component={SmsInboxScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="SmsThread" component={SmsThreadScreen} options={{ animation: 'slide_from_right' }} />

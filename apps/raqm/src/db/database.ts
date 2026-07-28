@@ -313,6 +313,20 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 9) {
+    await database.runAsync(`BEGIN`);
+    try {
+      // Nullable timestamp (not a boolean), matching the deleted_at idiom already used on
+      // transactions — lets a hidden account remember when it was hidden.
+      await database.runAsync(`ALTER TABLE accounts ADD COLUMN hidden_at INTEGER`);
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (9)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -1921,6 +1935,7 @@ export interface Account {
   dueDate: string | null;
   balance: number | null;
   balanceUpdatedAt: number | null;
+  hiddenAt: number | null;
 }
 
 function rowToAccount(row: Record<string, unknown>): Account {
@@ -1935,6 +1950,7 @@ function rowToAccount(row: Record<string, unknown>): Account {
     dueDate: (row.due_date as string | null) ?? null,
     balance: (row.balance as number | null) ?? null,
     balanceUpdatedAt: (row.balance_updated_at as number | null) ?? null,
+    hiddenAt: (row.hidden_at as number | null) ?? null,
   };
 }
 
@@ -2035,6 +2051,60 @@ export async function updateAccount(
   if (sets.length === 0) return;
   values.push(id);
   await database.runAsync(`UPDATE accounts SET ${sets.join(', ')} WHERE id = ?`, ...values as never[]);
+}
+
+export async function setAccountHidden(id: number, hidden: boolean): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`UPDATE accounts SET hidden_at = ? WHERE id = ?`, hidden ? Date.now() : null, id);
+}
+
+/**
+ * Merges one account into another: every transaction under the source's (bankName, last4)
+ * is rewritten to the target's identity, then the now-empty source accounts row is removed.
+ * Keeps the target's balance/nickname/card fields as-is — updateAccountBalanceFromTx will
+ * re-derive balance from the merged-in transactions on the next scan regardless.
+ */
+export async function mergeAccounts(sourceId: number, targetId: number): Promise<void> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{ id: number; bank_name: string; last4: string | null }>(
+    `SELECT id, bank_name, last4 FROM accounts WHERE id IN (?, ?)`,
+    sourceId,
+    targetId,
+  );
+  const source = rows.find((r) => r.id === sourceId);
+  const target = rows.find((r) => r.id === targetId);
+  if (!source || !target) return;
+  await database.runAsync(`BEGIN`);
+  try {
+    await database.runAsync(
+      `UPDATE transactions SET bankName = ?, accountLast4 = ? WHERE bankName = ? AND IFNULL(accountLast4, '') = IFNULL(?, '')`,
+      target.bank_name,
+      target.last4,
+      source.bank_name,
+      source.last4,
+    );
+    await database.runAsync(`DELETE FROM accounts WHERE id = ?`, sourceId);
+    await database.runAsync(`COMMIT`);
+  } catch (e) {
+    await database.runAsync(`ROLLBACK`);
+    throw e;
+  }
+}
+
+/**
+ * Deletes an account: soft-deletes its transactions (recoverable via Deleted transactions,
+ * consistent with the app's soft-delete convention elsewhere) and removes the accounts row.
+ * syncDiscoveredAccounts won't resurrect it — its discovery query already excludes deleted txs.
+ */
+export async function deleteAccount(id: number): Promise<void> {
+  const database = await getDb();
+  const account = await database.getFirstAsync<{ bank_name: string; last4: string | null }>(
+    `SELECT bank_name, last4 FROM accounts WHERE id = ?`,
+    id,
+  );
+  if (!account) return;
+  await softDeleteAccountTxs(account.bank_name, account.last4);
+  await database.runAsync(`DELETE FROM accounts WHERE id = ?`, id);
 }
 
 /**

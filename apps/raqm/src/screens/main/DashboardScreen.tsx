@@ -656,8 +656,7 @@ export function DashboardScreen() {
         <View className="mx-[24px] mb-[32px]">
           <SectionHeader
             title="RECENT ACTIVITY"
-            actionLabel="VIEW ALL"
-            onAction={() => navigation.navigate("Transactions", undefined)}
+            onPress={() => navigation.navigate("Transactions", undefined)}
           />
           {recent.length === 0 ? (
             <Text className="font-inter text-supporting-text text-ink-body">
@@ -735,7 +734,7 @@ export function DashboardScreen() {
         {accounts.length > 0 && (
           <View className="mb-[32px]">
             <View className="mx-[24px]">
-              <SectionHeader title="ACCOUNTS" />
+              <SectionHeader title="ACCOUNTS" onPress={() => navigation.navigate("ManageAccounts")} />
             </View>
             <ScrollView
               horizontal
@@ -764,7 +763,8 @@ export function DashboardScreen() {
                     })
                   }
                   onPress={() =>
-                    navigation.navigate("AccountDetail", {
+                    navigation.navigate("SpendDetail", {
+                      filterType: "account",
                       bankName: acc.bankName,
                       last4: acc.last4 ?? undefined,
                     })
