@@ -16,6 +16,7 @@ import { TrendingUpIcon, TrendingDownIcon, ChevronRightIcon } from '../../compon
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { MainTabScreenProps, MainStackParamList } from '../../navigation/types';
 import { formatAmount } from '../../utils/format';
+import { accountLabel } from '../../utils/accountLabel';
 
 /** Whether a transaction should be included in analytics at all (soft-deleted rows are always excluded). */
 function isCounted(tx: TxRecord): boolean {
@@ -47,7 +48,7 @@ function upcomingLabel(ts: number): string {
 }
 
 export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>) {
-  const { txs } = useTxStore();
+  const { txs, accountLabels } = useTxStore();
   const currency = txs[0]?.currency ?? '₹';
   const [monthStartDay, setMonthStartDay] = useState(1);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -89,7 +90,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
       const map = new Map<string, number>();
       for (const tx of list) {
         const isCredit = tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
-        const name = tx.merchant || tx.bankName;
+        const name = tx.merchant || accountLabel(tx.bankName, tx.accountLast4, accountLabels);
         if (isCredit && tx.linkType === 'refund') {
           map.set(name, (map.get(name) ?? 0) - tx.amount);
         } else if (tx.type === TransactionType.EXPENSE) {
@@ -102,7 +103,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
       const map = new Map<string, number>();
       for (const tx of list) {
         if (tx.type !== TransactionType.EXPENSE) continue;
-        const name = tx.merchant || tx.bankName;
+        const name = tx.merchant || accountLabel(tx.bankName, tx.accountLast4, accountLabels);
         map.set(name, (map.get(name) ?? 0) + 1);
       }
       return map;
@@ -132,7 +133,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
           }
         : null,
     };
-  }, [periodTxs, txs, bounds]);
+  }, [periodTxs, txs, bounds, accountLabels]);
 
   // Dues & Reminders — detected recurring charges + manually-added reminders, soonest
   // first. Detection logic is shared with DashboardScreen and DuesRemindersScreen.
@@ -376,7 +377,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
           recent.map((tx) => (
             <TransactionRow
               key={tx.id}
-              merchant={tx.merchant || tx.bankName}
+              merchant={tx.merchant || accountLabel(tx.bankName, tx.accountLast4, accountLabels)}
               categoryName={categoryName(tx.categoryId)}
               dateLabel={shortDate(tx.timestamp)}
               timeLabel={shortTime(tx.timestamp)}
@@ -500,6 +501,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
               <AccountLiquidityCard
                 key={`${acc.bankName}|${acc.last4 ?? ''}`}
                 bankName={acc.bankName}
+                displayName={accountLabel(acc.bankName, acc.last4, accountLabels)}
                 last4={acc.last4}
                 balance={acc.balance}
                 currency={acc.currency}

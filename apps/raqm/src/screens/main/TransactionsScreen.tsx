@@ -10,6 +10,7 @@ import { getCategories, mergeTxs, groupTxs, type Category, type TxRecord } from 
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { countsTowardTotals } from '../../services/txIntelligence';
 import { formatAmount } from '../../utils/format';
+import { accountLabel } from '../../utils/accountLabel';
 import {
   SearchIcon, TrendingUpIcon, WalletCardsIcon,
   ArrowLeftRightIcon, BadgePercentIcon, LayersIcon, BackIcon,
@@ -88,6 +89,7 @@ const fabShadow = {
 export function TransactionsScreen() {
   const txs = useTxStore((s) => s.txs);
   const refresh = useTxStore((s) => s.refresh);
+  const accountLabels = useTxStore((s) => s.accountLabels);
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const route = useRoute<RouteProp<MainStackParamList, 'Transactions'>>();
   const [query, setQuery] = useState('');
@@ -141,9 +143,12 @@ export function TransactionsScreen() {
     if (!query.trim()) return sorted;
     const q = query.toLowerCase();
     return sorted.filter(
-      tx => (tx.merchant ?? '').toLowerCase().includes(q) || tx.bankName.toLowerCase().includes(q),
+      tx =>
+        (tx.merchant ?? '').toLowerCase().includes(q) ||
+        tx.bankName.toLowerCase().includes(q) ||
+        accountLabel(tx.bankName, tx.accountLast4, accountLabels).toLowerCase().includes(q),
     );
-  }, [sorted, query]);
+  }, [sorted, query, accountLabels]);
 
   // Narrative statement: this week (since Monday) vs the same span last week.
   const statement = useMemo(() => {
@@ -294,6 +299,7 @@ export function TransactionsScreen() {
               tx={m}
               currency={currency}
               categoryName={m.categoryId != null ? categoryNames.get(m.categoryId) ?? null : null}
+              bankLabel={accountLabel(m.bankName, m.accountLast4, accountLabels)}
               indent
               selectMode={selectMode}
               selected={selected.has(m.id)}
@@ -309,13 +315,14 @@ export function TransactionsScreen() {
         tx={item.tx}
         currency={currency}
         categoryName={item.tx.categoryId != null ? categoryNames.get(item.tx.categoryId) ?? null : null}
+        bankLabel={accountLabel(item.tx.bankName, item.tx.accountLast4, accountLabels)}
         selectMode={selectMode}
         selected={selected.has(item.tx.id)}
         onPressId={handleRowPress}
         onLongPressId={handleRowLongPress}
       />
     );
-  }, [expandedGroups, toggleGroup, currency, categoryNames, selectMode, selected, handleRowPress, handleRowLongPress]);
+  }, [expandedGroups, toggleGroup, currency, categoryNames, selectMode, selected, handleRowPress, handleRowLongPress, accountLabels]);
 
   const keyExtractor = useCallback((item: ListItem) => item.key, []);
 
@@ -443,11 +450,12 @@ export function TransactionsScreen() {
 }
 
 const TxRow = memo(function TxRow({
-  tx, currency, categoryName, indent, selectMode, selected, onPressId, onLongPressId,
+  tx, currency, categoryName, bankLabel, indent, selectMode, selected, onPressId, onLongPressId,
 }: {
   tx: TxRecord;
   currency: string;
   categoryName: string | null;
+  bankLabel: string;
   indent?: boolean;
   selectMode: boolean;
   selected: boolean;
@@ -473,7 +481,7 @@ const TxRow = memo(function TxRow({
         <Icon color={credit ? Colors.primary : Colors.onSurfaceVariant} size={20} />
       </View>
       <View className="flex-1">
-        <Text className="font-inter text-body-standard text-on-surface" numberOfLines={1}>{tx.merchant || tx.bankName}</Text>
+        <Text className="font-inter text-body-standard text-on-surface" numberOfLines={1}>{tx.merchant || bankLabel}</Text>
         <Text className="font-inter text-annotation mt-[2px]" numberOfLines={1}>
           {categoryName
             ? <Text className="text-ink-label">{categoryName}</Text>

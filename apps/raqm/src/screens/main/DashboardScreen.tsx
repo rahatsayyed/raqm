@@ -18,6 +18,7 @@ import {
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Colors, Spacing, Radius } from "../../theme";
+import { accountLabel } from "../../utils/accountLabel";
 import { useTxStore } from "../../store/txStore";
 import { SmsReader } from "../../native/SmsReader";
 import { BankParserFactory } from "@rahatsayyed/bank-sms-parser";
@@ -164,6 +165,7 @@ export function DashboardScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const txs = useTxStore((s) => s.txs);
+  const accountLabels = useTxStore((s) => s.accountLabels);
   const [newTxLabel, setNewTxLabel] = React.useState<string | null>(null);
   const toastAnim = useRef(new Animated.Value(0)).current;
   const [linkPromptTxId, setLinkPromptTxId] = useState<number | null>(null);
@@ -287,9 +289,10 @@ export function DashboardScreen() {
           }
 
           const sign = tx.type === TransactionType.EXPENSE ? "-" : "+";
+          const txBankLabel = accountLabel(tx.bankName, tx.accountLast4, useTxStore.getState().accountLabels);
           const label = tx.merchant
             ? `${sign}₹${tx.amount.toLocaleString("en-IN")} · ${tx.merchant}`
-            : `New transaction from ${tx.bankName}`;
+            : `New transaction from ${txBankLabel}`;
           setNewTxLabel(label);
 
           const newTx =
@@ -327,7 +330,7 @@ export function DashboardScreen() {
 
           const notifBody = tx.merchant
             ? `${sign}₹${tx.amount.toLocaleString("en-IN")} · ${tx.merchant}`
-            : `${sign}₹${tx.amount.toLocaleString("en-IN")} · ${tx.bankName}`;
+            : `${sign}₹${tx.amount.toLocaleString("en-IN")} · ${txBankLabel}`;
           await postTxNotification(id, "New transaction", notifBody);
         } catch (error) {
           console.warn("SMS listener error:", error);
@@ -666,7 +669,7 @@ export function DashboardScreen() {
             recent.map((tx) => (
               <TransactionRow
                 key={tx.id}
-                merchant={tx.merchant || tx.bankName}
+                merchant={tx.merchant || accountLabel(tx.bankName, tx.accountLast4, accountLabels)}
                 categoryName={categoryName(tx.categoryId)}
                 dateLabel={shortDate(tx.timestamp)}
                 timeLabel={shortTime(tx.timestamp)}
@@ -745,6 +748,7 @@ export function DashboardScreen() {
                 <AccountLiquidityCard
                   key={`${acc.bankName}|${acc.last4 ?? ""}`}
                   bankName={acc.bankName}
+                  displayName={accountLabel(acc.bankName, acc.last4, accountLabels)}
                   last4={acc.last4}
                   balance={acc.balance}
                   currency={acc.currency}
@@ -786,6 +790,7 @@ export function DashboardScreen() {
           initialMode="manual"
           onClose={() => setManualUpdateTarget(null)}
           bankName={manualUpdateTarget.bankName}
+          displayName={accountLabel(manualUpdateTarget.bankName, manualUpdateTarget.last4, accountLabels)}
           last4={manualUpdateTarget.last4}
           // Pre-fill with the bank's own reported balance — the correct figure the user
           // would otherwise have to look up, since the alert never states the gap amount.
