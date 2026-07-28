@@ -690,10 +690,21 @@ export async function dismissMismatchKey(key: string): Promise<void> {
 
 // ── Plan 2: TxRecord CRUD ─────────────────────────────────────────────────────
 
+// Hidden accounts are excluded here — the single source txStore loads from — rather than
+// filtered per-screen, so hiding an account removes its transactions from every list/total
+// consistently (Dashboard, Analytics, Transactions, budgets, exports...) with one change.
+// Unlike soft-delete, nothing is mutated on the transactions themselves: unhiding restores
+// full visibility immediately, and the `accounts` table (tiny) makes this correlated
+// subquery cheap even against thousands of transaction rows.
 export async function loadTxRecords(): Promise<TxRecord[]> {
   const database = await getDb();
   const rows = await database.getAllAsync<Record<string, unknown>>(
-    `SELECT * FROM transactions WHERE deleted_at IS NULL ORDER BY timestamp DESC`,
+    `SELECT * FROM transactions t WHERE deleted_at IS NULL
+     AND NOT EXISTS (
+       SELECT 1 FROM accounts a
+       WHERE a.hidden_at IS NOT NULL AND a.bank_name = t.bankName AND IFNULL(a.last4, '') = IFNULL(t.accountLast4, '')
+     )
+     ORDER BY timestamp DESC`,
   );
   return rows.map(rowToTxRecord);
 }
@@ -886,8 +897,25 @@ async function isReferenceDuplicate(
   return row != null;
 }
 
+/** Keys (`bankName|last4`, last4 normalized to '') of accounts hidden via the manage-accounts screen. */
+export async function getHiddenAccountKeys(): Promise<Set<string>> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{ bank_name: string; last4: string | null }>(
+    `SELECT bank_name, last4 FROM accounts WHERE hidden_at IS NOT NULL`,
+  );
+  return new Set(rows.map((r) => `${r.bank_name}|${r.last4 ?? ''}`));
+}
+
 export async function insertParsedTx(tx: ParsedTransaction): Promise<number | null> {
   if (tx.reference && (await isReferenceDuplicate(tx.reference, tx.amount, tx.type, tx.timestamp))) {
+    return null;
+  }
+
+  // A hidden account is the user saying "stop tracking this one" — new SMS from it
+  // shouldn't get parsed into the ledger at all (distinct from delete, which soft-deletes
+  // what's already there; hide just stops future intake).
+  const hiddenKeys = await getHiddenAccountKeys();
+  if (hiddenKeys.has(`${tx.bankName}|${tx.accountLast4 ?? ''}`)) {
     return null;
   }
 
@@ -926,6 +954,8 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
     decisions.push(await categorizeParsedTx(tx, ruleCache));
   }
 
+  const hiddenKeys = await getHiddenAccountKeys();
+
   const database = await getDb();
   await database.runAsync('BEGIN');
   try {
@@ -935,6 +965,11 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
       // reported by two different bank/sender identities, which a bulk scan can just as
       // easily pull in together as the live-SMS path can.
       if (tx.reference && (await isReferenceDuplicate(tx.reference, tx.amount, tx.type, tx.timestamp))) {
+        continue;
+      }
+      // Same "hide stops intake" rule as insertParsedTx — checked once against an
+      // in-memory Set rather than per-row, to keep this loop's per-iteration DB calls flat.
+      if (hiddenKeys.has(`${tx.bankName}|${tx.accountLast4 ?? ''}`)) {
         continue;
       }
       const { categoryId, subcategoryId } = decisions[i];
@@ -2089,22 +2124,6 @@ export async function mergeAccounts(sourceId: number, targetId: number): Promise
     await database.runAsync(`ROLLBACK`);
     throw e;
   }
-}
-
-/**
- * Deletes an account: soft-deletes its transactions (recoverable via Deleted transactions,
- * consistent with the app's soft-delete convention elsewhere) and removes the accounts row.
- * syncDiscoveredAccounts won't resurrect it — its discovery query already excludes deleted txs.
- */
-export async function deleteAccount(id: number): Promise<void> {
-  const database = await getDb();
-  const account = await database.getFirstAsync<{ bank_name: string; last4: string | null }>(
-    `SELECT bank_name, last4 FROM accounts WHERE id = ?`,
-    id,
-  );
-  if (!account) return;
-  await softDeleteAccountTxs(account.bank_name, account.last4);
-  await database.runAsync(`DELETE FROM accounts WHERE id = ?`, id);
 }
 
 /**
