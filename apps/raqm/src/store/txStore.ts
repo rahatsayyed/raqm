@@ -68,7 +68,7 @@ export const useTxStore = create<TxStore>((set, get) => ({
     }
 
     const id = await insertParsedTx(tx);
-    if (id === null) return null; // reference-based duplicate — see insertParsedTx
+    if (id === null) return null; // reference-based duplicate, or a hidden account — see insertParsedTx
 
     await get().refresh();
     checkBudgetAlerts().catch(() => {});

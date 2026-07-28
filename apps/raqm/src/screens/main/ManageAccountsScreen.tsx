@@ -3,12 +3,13 @@ import { View, Text, ScrollView, TouchableOpacity, Alert, Modal, FlatList } from
 import { useFocusEffect } from '@react-navigation/native';
 import { MainStackScreenProps } from '../../navigation/types';
 import {
-  getAccounts, setAccountHidden, mergeAccounts, deleteAccount, type Account,
+  getAccounts, setAccountHidden, mergeAccounts, updateAccount, type Account,
 } from '../../db/database';
 import { useTxStore } from '../../store/txStore';
 import { AddAccountModal } from '../../components/AddAccountModal';
+import { EditFieldSheet } from '../../components/EditFieldSheet';
 import { Colors } from '../../theme';
-import { AddIcon, BankIcon, ChevronRightIcon, WalletIcon, MergeIcon, TrashIcon } from '../../components/TabIcon';
+import { AddIcon, BankIcon, ChevronRightIcon, WalletIcon, MergeIcon, PencilIcon } from '../../components/TabIcon';
 import { formatAmount } from '../../utils/format';
 
 function accountLabel(account: Account): string {
@@ -20,6 +21,7 @@ export function ManageAccountsScreen({ navigation }: MainStackScreenProps<'Manag
   const [loaded, setLoaded] = useState(false);
   const [addVisible, setAddVisible] = useState(false);
   const [mergeSource, setMergeSource] = useState<Account | null>(null);
+  const [aliasTarget, setAliasTarget] = useState<Account | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
@@ -38,6 +40,7 @@ export function ManageAccountsScreen({ navigation }: MainStackScreenProps<'Manag
     try {
       await setAccountHidden(account.id, account.hiddenAt == null);
       await load();
+      await useTxStore.getState().refresh();
     } finally {
       setBusyId(null);
     }
@@ -59,30 +62,6 @@ export function ManageAccountsScreen({ navigation }: MainStackScreenProps<'Manag
             setBusyId(source.id);
             try {
               await mergeAccounts(source.id, target.id);
-              await load();
-              await useTxStore.getState().refresh();
-            } finally {
-              setBusyId(null);
-            }
-          },
-        },
-      ],
-    );
-  };
-
-  const handleDelete = (account: Account) => {
-    Alert.alert(
-      'Delete account',
-      `"${accountLabel(account)}" and all of its transactions will move to Deleted transactions. You can restore them from there.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            setBusyId(account.id);
-            try {
-              await deleteAccount(account.id);
               await load();
               await useTxStore.getState().refresh();
             } finally {
@@ -146,6 +125,13 @@ export function ManageAccountsScreen({ navigation }: MainStackScreenProps<'Manag
               <View className="flex-row gap-sm mt-md pt-md border-t border-outline-variant">
                 <TouchableOpacity
                   className="flex-1 flex-row items-center justify-center gap-xs py-sm rounded-lg bg-surface-variant"
+                  onPress={busy ? undefined : () => setAliasTarget(account)}
+                >
+                  <PencilIcon color={Colors.onSurfaceVariant} size={14} />
+                  <Text className="font-inter-medium text-annotation text-on-surface-variant">Alias</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className="flex-1 flex-row items-center justify-center gap-xs py-sm rounded-lg bg-surface-variant"
                   onPress={busy ? undefined : () => handleHide(account)}
                 >
                   <WalletIcon color={Colors.onSurfaceVariant} size={14} />
@@ -158,13 +144,6 @@ export function ManageAccountsScreen({ navigation }: MainStackScreenProps<'Manag
                   <MergeIcon color={Colors.onSurfaceVariant} size={14} />
                   <Text className="font-inter-medium text-annotation text-on-surface-variant">Merge</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  className="flex-1 flex-row items-center justify-center gap-xs py-sm rounded-lg bg-surface-variant"
-                  onPress={busy ? undefined : () => handleDelete(account)}
-                >
-                  <TrashIcon color={Colors.errorMuted} size={14} />
-                  <Text className="font-inter-medium text-annotation text-error-muted">Delete</Text>
-                </TouchableOpacity>
               </View>
             </View>
           );
@@ -172,6 +151,19 @@ export function ManageAccountsScreen({ navigation }: MainStackScreenProps<'Manag
       </ScrollView>
 
       <AddAccountModal visible={addVisible} onClose={() => setAddVisible(false)} onAdded={load} />
+
+      <EditFieldSheet
+        visible={aliasTarget != null}
+        onClose={() => setAliasTarget(null)}
+        title="Edit account alias"
+        placeholder={aliasTarget?.bankName}
+        initialValue={aliasTarget?.nickname ?? ''}
+        onConfirm={async (value) => {
+          if (aliasTarget) await updateAccount(aliasTarget.id, { nickname: value || null });
+          setAliasTarget(null);
+          await load();
+        }}
+      />
 
       <Modal visible={mergeSource != null} transparent animationType="fade" onRequestClose={() => setMergeSource(null)}>
         <TouchableOpacity className="flex-1 bg-black/60 justify-center p-lg" activeOpacity={1} onPress={() => setMergeSource(null)}>
