@@ -12,7 +12,7 @@ import { BriefingHero, NarrativeAdvisor, CategoryShift } from '../../components/
 import { SectionHeader, TransactionRow, ObligationCard } from '../../components/dashboard';
 import { AccountLiquidityCard } from '../../components/AccountLiquidityCard';
 import { TopHeader } from '../../components/TopHeader';
-import { TrendingUpIcon, TrendingDownIcon } from '../../components/TabIcon';
+import { TrendingUpIcon, TrendingDownIcon, ChevronRightIcon } from '../../components/TabIcon';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { MainTabScreenProps, MainStackParamList } from '../../navigation/types';
 import { formatAmount } from '../../utils/format';
@@ -368,8 +368,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
       <View className="mx-[24px] mb-[32px]">
         <SectionHeader
           title="RECENT ACTIVITY"
-          actionLabel="VIEW ALL"
-          onAction={() => navigation.getParent<NavigationProp<MainStackParamList>>()?.navigate('Transactions', undefined)}
+          onPress={() => navigation.getParent<NavigationProp<MainStackParamList>>()?.navigate('Transactions', undefined)}
         />
         {recent.length === 0 ? (
           <Text className="font-inter text-supporting-text text-ink-body">We're still learning your financial patterns.</Text>
@@ -393,7 +392,14 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
       </View>
 
       {/* Shift by category — top categories' spend vs. the prior equal period, with a 7-day trend */}
-      <CategoryShift data={categoryShift} currency={currency} />
+      <CategoryShift
+        data={categoryShift}
+        currency={currency}
+        onPressHeader={() => navigation.getParent<NavigationProp<MainStackParamList>>()?.navigate('CategoryOverview')}
+        onPressRow={(categoryId, name) =>
+          navigation.getParent<NavigationProp<MainStackParamList>>()?.navigate('SpendDetail', { filterType: 'category', categoryId, categoryName: name })
+        }
+      />
 
       {/* Merchant snapshot — top merchant by spend, most frequent by order count */}
       <View className="px-container-margin mb-xl flex-row gap-md">
@@ -474,14 +480,21 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
       {/* Account Analysis / Liquidity — total across non-card accounts, latest known balance each */}
       {liquiditySnapshot.accounts.length > 0 && (
         <View className="mb-xl">
-          <View className="mx-container-margin mb-lg pb-md border-b border-outline-variant">
-            <Text className="font-inter-semibold text-section-header text-on-surface-variant mb-[4px] uppercase tracking-wider">
-              TOTAL LIQUIDITY
-            </Text>
-            <Text className="font-mono-medium text-statement-lg text-on-surface">
-              {formatAmount(liquiditySnapshot.total, currency)}
-            </Text>
-          </View>
+          <TouchableOpacity
+            className="flex-row items-center justify-between mx-container-margin mb-lg pb-md border-b border-outline-variant"
+            activeOpacity={0.7}
+            onPress={() => navigation.getParent<NavigationProp<MainStackParamList>>()?.navigate('ManageAccounts')}
+          >
+            <View>
+              <Text className="font-inter-semibold text-section-header text-on-surface-variant mb-[4px] uppercase tracking-wider">
+                TOTAL LIQUIDITY
+              </Text>
+              <Text className="font-mono-medium text-statement-lg text-on-surface">
+                {formatAmount(liquiditySnapshot.total, currency)}
+              </Text>
+            </View>
+            <ChevronRightIcon color={Colors.onSurfaceVariant} size={18} />
+          </TouchableOpacity>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-md px-container-margin pb-[8px]">
             {liquiditySnapshot.accounts.map((acc) => (
               <AccountLiquidityCard
@@ -507,7 +520,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
                 onPress={() =>
                   navigation
                     .getParent<NavigationProp<MainStackParamList>>()
-                    ?.navigate('AccountDetail', { bankName: acc.bankName, last4: acc.last4 ?? undefined })
+                    ?.navigate('SpendDetail', { filterType: 'account', bankName: acc.bankName, last4: acc.last4 ?? undefined })
                 }
               />
             ))}

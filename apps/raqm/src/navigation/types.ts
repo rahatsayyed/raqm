@@ -53,6 +53,10 @@ export type MainStackParamList = {
   ManageAccounts: undefined;
   SmsInbox: undefined;
   SmsThread: { key: string };
+  CategoryOverview: undefined;
+  SpendDetail:
+    | { filterType: 'category'; categoryId: number; categoryName: string }
+    | { filterType: 'account'; bankName: string; last4?: string };
 };
 
 export type OnboardingScreenProps<T extends keyof OnboardingStackParamList> =
