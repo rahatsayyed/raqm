@@ -16,3 +16,10 @@ android {
     abortOnError false
   }
 }
+
+dependencies {
+  // Needed for HeadlessJsTaskService/HeadlessJsTaskConfig/Arguments (HeadlessSmsTaskService,
+  // SmsBroadcastReceiver) — version resolved by the React Native Gradle Plugin, same as
+  // the app module's own dependency declaration.
+  implementation("com.facebook.react:react-android")
+}

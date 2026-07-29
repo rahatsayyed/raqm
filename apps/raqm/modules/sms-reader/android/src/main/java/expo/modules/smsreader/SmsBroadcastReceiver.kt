@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
 import android.util.Log
+import androidx.core.content.ContextCompat
+import com.facebook.react.HeadlessJsTaskService
 
 private const val TAG = "RaqmSms"
 
@@ -18,23 +20,26 @@ class SmsBroadcastReceiver : BroadcastReceiver() {
       val body = sms.messageBody ?: continue
       val sender = sms.originatingAddress ?: ""
       val timestamp = sms.timestampMillis
-      Log.d(TAG, "forwarding NEW_SMS_ACTION broadcast, sender=$sender")
+      Log.d(TAG, "starting HeadlessSmsTaskService, sender=$sender")
 
-      // Forward every SMS to JS — BankParserFactory.isKnownBankSender()/parse() there is
-      // the same authoritative sender-based check Re-scan and onboarding scan use. JS
-      // (DashboardScreen) parses, inserts, and posts the rich actionable transaction
-      // notification itself (postTxNotification in notifications.ts) — this receiver no
-      // longer builds its own notification, since a native body-keyword heuristic here
-      // used to gate a plain "New bank message" alert and silently dropped real bank
-      // messages worded differently than the keyword list expected.
-      context.sendBroadcast(
-        Intent(NEW_SMS_ACTION).apply {
-          `package` = context.packageName
+      // Previously this forwarded a local broadcast to a receiver registered dynamically
+      // by SmsReaderModule's OnCreate — which only exists while the app's JS/React
+      // context is alive. Once Android kills the process (no foreground service was
+      // keeping it around), that receiver doesn't exist and the broadcast went nowhere —
+      // exactly why live SMS only worked with the app open. HeadlessJsTaskService boots a
+      // JS instance (or reuses the existing one, if the app is already running) to run
+      // the "SmsBackgroundTask" registered in index.ts, independent of any mounted screen.
+      try {
+        val serviceIntent = Intent(context, HeadlessSmsTaskService::class.java).apply {
           putExtra("body", body)
           putExtra("sender", sender)
           putExtra("timestamp", timestamp)
         }
-      )
+        ContextCompat.startForegroundService(context, serviceIntent)
+        HeadlessJsTaskService.acquireWakeLockNow(context)
+      } catch (e: Exception) {
+        Log.e(TAG, "failed to start HeadlessSmsTaskService", e)
+      }
     }
   }
 }
