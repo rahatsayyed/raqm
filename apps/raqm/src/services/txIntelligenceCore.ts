@@ -141,10 +141,16 @@ export function computeRecurringIds(txs: TxRecord[]): number[] {
  * false. A matching reference short-circuits to true regardless of the 60s window.
  */
 export function isDuplicateSms(
-  prev: { amount: number; sender: string; timestamp: number; reference?: string | null } | null,
-  next: { amount: number; sender: string; timestamp: number; reference?: string | null },
+  prev: { amount: number; sender: string; timestamp: number; reference?: string | null; type: TransactionType } | null,
+  next: { amount: number; sender: string; timestamp: number; reference?: string | null; type: TransactionType },
 ): boolean {
   if (!prev) return false;
+  // A transfer's two legs (debit from one bank, credit to another) commonly share the same
+  // UPI reference/RRN — matching on reference alone treated the second leg as a duplicate
+  // of the first and silently dropped it, recoverable only via rescan (which uses the
+  // stricter, type-aware isReferenceDuplicate DB check). Requiring the same type here keeps
+  // this a same-sender-resend check, not a same-transfer check.
+  if (prev.type !== next.type) return false;
   if (prev.reference && next.reference) {
     return prev.reference === next.reference;
   }
