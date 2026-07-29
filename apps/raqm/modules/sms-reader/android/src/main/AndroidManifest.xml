@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <uses-permission android:name="android.permission.RECEIVE_SMS" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
   <application>
     <receiver
@@ -9,6 +11,13 @@
         <action android:name="android.provider.Telephony.SMS_RECEIVED" />
       </intent-filter>
     </receiver>
+
+    <!-- foregroundServiceType required on API 34+ (targetSdk 36) for startForeground() to
+         succeed — "dataSync" fits turning an incoming SMS into stored transaction data. -->
+    <service
+      android:name=".HeadlessSmsTaskService"
+      android:exported="false"
+      android:foregroundServiceType="dataSync" />
 
     <service
       android:name=".RaqmNotificationListenerService"

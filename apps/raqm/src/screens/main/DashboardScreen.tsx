@@ -20,8 +20,6 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Colors, Spacing, Radius } from "../../theme";
 import { accountLabel } from "../../utils/accountLabel";
 import { useTxStore } from "../../store/txStore";
-import { SmsReader } from "../../native/SmsReader";
-import { BankParserFactory } from "@rahatsayyed/bank-sms-parser";
 import { TransactionType } from "@rahatsayyed/bank-sms-parser";
 import type {
   TxRecord,
@@ -41,7 +39,6 @@ import {
 import { countsTowardTotals } from "../../services/txIntelligence";
 import { detectBalanceMismatches, type BalanceMismatch } from "../../services/balanceIntegrity";
 import { detectRecurringDues, mergeDues } from "../../services/dues";
-import { postTxNotification } from "../../notifications/notifications";
 import { getMonthBounds, getDayBounds } from "../../utils/period";
 import type { MainStackParamList } from "../../navigation/types";
 import { formatAmount } from "../../utils/format";
@@ -259,87 +256,66 @@ export function DashboardScreen() {
     });
   }, []);
 
+  // Actual parsing/insert/notification now happens exclusively in processIncomingSms
+  // (src/services/smsProcessing.ts), invoked by the "SmsBackgroundTask" headless JS task
+  // (index.ts) that HeadlessSmsTaskService starts natively — the only path that survives
+  // Android killing the app's process. That single path also runs when this screen is
+  // mounted (React Native reuses the already-running JS instance rather than booting a
+  // second one), so this effect just watches the store for a newly-arrived transaction to
+  // drive this screen's own toast/grocery-link UI, without doing any processing itself.
+  const lastSeenTxIdRef = useRef<number | null>(null);
   useEffect(() => {
-    console.log("[RaqmSms] DashboardScreen subscribing to onNewSms");
-    const sub = SmsReader.addNewSmsListener(
-      async ({ body, sender, timestamp }) => {
-        console.log(`[RaqmSms] JS received onNewSms sender=${sender}`);
-        try {
-          const tx = BankParserFactory.parse(body, sender, timestamp);
-          if (!tx) return;
+    const top = txs[0];
+    if (!top) return;
+    if (lastSeenTxIdRef.current === null) {
+      lastSeenTxIdRef.current = top.id; // don't fire a toast for pre-existing data on mount
+      return;
+    }
+    if (top.id === lastSeenTxIdRef.current) return;
+    lastSeenTxIdRef.current = top.id;
 
-          const id = await useTxStore.getState().addParsedWithLocation(tx);
-          if (id === null) {
-            // duplicate SMS suppressed per T13 - show user feedback
-            setNewTxLabel("Duplicate SMS ignored");
-            Animated.sequence([
-              Animated.timing(toastAnim, {
-                toValue: 1,
-                duration: 300,
-                useNativeDriver: true,
-              }),
-              Animated.delay(2000),
-              Animated.timing(toastAnim, {
-                toValue: 0,
-                duration: 300,
-                useNativeDriver: true,
-              }),
-            ]).start(() => setNewTxLabel(null));
-            return;
-          }
+    // Guards against a rescan/import/hide/merge reshuffling the top row from also firing
+    // this toast — a genuinely new live SMS's timestamp is always "now".
+    if (Date.now() - top.timestamp > 20_000) return;
+    if (top.deletedAt || !countsTowardTotals(top)) return;
 
-          const sign = tx.type === TransactionType.EXPENSE ? "-" : "+";
-          const txBankLabel = accountLabel(tx.bankName, tx.accountLast4, useTxStore.getState().accountLabels);
-          const label = tx.merchant
-            ? `${sign}₹${tx.amount.toLocaleString("en-IN")} · ${tx.merchant}`
-            : `New transaction from ${txBankLabel}`;
-          setNewTxLabel(label);
+    const sign = isDebit(top.type) ? "-" : "+";
+    const txBankLabel = accountLabel(top.bankName, top.accountLast4, accountLabels);
+    const label = top.merchant
+      ? `${sign}₹${top.amount.toLocaleString("en-IN")} · ${top.merchant}`
+      : `New transaction from ${txBankLabel}`;
+    setNewTxLabel(label);
 
-          const newTx =
-            useTxStore.getState().txs.find((t) => t.id === id) ?? null;
-          const isGrocery =
-            (newTx?.categoryId !== null &&
-              newTx?.categoryId === groceriesCategoryIdRef.current) ||
-            (tx.merchant ? GROCERY_KEYWORDS.test(tx.merchant) : false);
+    const isGrocery =
+      (top.categoryId !== null && top.categoryId === groceriesCategoryIdRef.current) ||
+      (top.merchant ? GROCERY_KEYWORDS.test(top.merchant) : false);
 
-          if (isGrocery) {
-            setLinkPromptTxId(id);
-            const lists = await getGroceryLists();
-            setActiveGroceryLists(lists.filter((l) => l.completedAt === null));
-          } else {
-            setLinkPromptTxId(null);
-          }
+    if (isGrocery) {
+      setLinkPromptTxId(top.id);
+      getGroceryLists().then((lists) => setActiveGroceryLists(lists.filter((l) => l.completedAt === null)));
+    } else {
+      setLinkPromptTxId(null);
+    }
 
-          const dismissDelay = isGrocery ? 6000 : 3000;
-          Animated.sequence([
-            Animated.timing(toastAnim, {
-              toValue: 1,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-            Animated.delay(dismissDelay),
-            Animated.timing(toastAnim, {
-              toValue: 0,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-          ]).start(() => {
-            setNewTxLabel(null);
-            setLinkPromptTxId(null);
-          });
-
-          const notifBody = tx.merchant
-            ? `${sign}₹${tx.amount.toLocaleString("en-IN")} · ${tx.merchant}`
-            : `${sign}₹${tx.amount.toLocaleString("en-IN")} · ${txBankLabel}`;
-          await postTxNotification(id, "New transaction", notifBody);
-        } catch (error) {
-          console.warn("SMS listener error:", error);
-        }
-      },
-    );
-    return () => sub.remove();
+    const dismissDelay = isGrocery ? 6000 : 3000;
+    Animated.sequence([
+      Animated.timing(toastAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.delay(dismissDelay),
+      Animated.timing(toastAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setNewTxLabel(null);
+      setLinkPromptTxId(null);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [txs, accountLabels]);
 
   const [metrics, setMetrics] = useState<HomeMetrics>(EMPTY_METRICS);
   const [monthBounds, setMonthBounds] = useState<{

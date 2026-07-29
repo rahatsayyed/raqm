@@ -26,6 +26,7 @@
     ]
   },
   "enabledPlugins": {
-    "expo@claude-plugins-official": true
+    "expo@claude-plugins-official": true,
+    "ecc@ecc": true
   }
 }
