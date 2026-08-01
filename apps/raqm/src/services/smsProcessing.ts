@@ -93,15 +93,14 @@ export async function processIncomingSms(data: { body: string; sender: string; t
   }
 
   const sign = debit ? '-' : '+';
-  const notifBody = tx.merchant
-    ? `${sign}₹${tx.amount.toLocaleString('en-IN')} · ${tx.merchant}`
-    : `${sign}₹${tx.amount.toLocaleString('en-IN')} · ${bankLabel}`;
-  const notificationId = await postTxNotification(
-    id,
-    tx.merchant ? 'New transaction' : `New transaction from ${bankLabel}`,
-    notifBody,
-    notificationColorFor(debit),
-  );
+  const amountStr = `₹${tx.amount.toLocaleString('en-IN')}`;
+  const action = debit ? 'debited' : 'credited';
+  const notifTitle = tx.merchant ? `${amountStr} ${tx.merchant} ${action}` : `${amountStr} ${action}`;
+  const notifBody =
+    tx.balance != null
+      ? `₹${tx.balance.toLocaleString('en-IN')} available balance in ${bankLabel}`
+      : `${sign}${amountStr} · ${bankLabel}`;
+  const notificationId = await postTxNotification(id, notifTitle, notifBody, notificationColorFor(debit));
   prunePendingLegNotifications();
   pendingLegNotifications.set(id, { notificationId, timestamp: Date.now() });
 
