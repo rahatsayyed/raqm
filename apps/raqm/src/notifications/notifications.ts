@@ -73,16 +73,23 @@ export async function initNotifications(): Promise<void> {
  * plugin config points at 'raqm-tx'. Carries `data: { txId }` so attachNotificationHandlers
  * can deep-link on tap, and `categoryIdentifier: 'tx'` so the "Add note" action (T18) appears.
  */
-export async function postTxNotification(txId: number, title: string, body: string): Promise<void> {
-  await Notifications.scheduleNotificationAsync({
+export async function postTxNotification(txId: number, title: string, body: string, color?: string): Promise<string> {
+  return Notifications.scheduleNotificationAsync({
     content: {
       title,
       body,
       data: { txId },
       categoryIdentifier: TX_CATEGORY_ID,
+      color,
     },
     trigger: null,
   });
+}
+
+/** Cancels/removes an already-posted notification by identifier — used when a self-transfer's
+ * second leg arrives and its two individual notifications need to collapse into one. */
+export async function cancelTxNotification(notificationId: string): Promise<void> {
+  await Notifications.dismissNotificationAsync(notificationId);
 }
 
 /**
@@ -142,10 +149,29 @@ export function attachNotificationHandlers(
 
     if (response.actionIdentifier === ADD_NOTE_ACTION_ID) {
       const userText = response.userText;
-      if (typeof data.txId === 'number' && userText && userText.trim().length > 0) {
-        updateTx(data.txId, { notes: userText.trim() });
-        useTxStore.getState().refresh();
-      }
+      const finish = async () => {
+        if (typeof data.txId === 'number' && userText && userText.trim().length > 0) {
+          await updateTx(data.txId, { notes: userText.trim() });
+          await useTxStore.getState().refresh();
+        }
+        // Android's direct-reply (RemoteInput) contract requires the app to re-post a
+        // notification with the SAME identifier once the reply is handled — otherwise the
+        // system leaves the inline input in its "sending" spinner state indefinitely (only
+        // clearing on a fresh render, e.g. closing/reopening the shade). Re-scheduling the
+        // same content under the same identifier is what signals "done" and clears it.
+        const content = response.notification.request.content;
+        await Notifications.scheduleNotificationAsync({
+          identifier: notificationId,
+          content: {
+            title: content.title ?? '',
+            body: content.body ?? '',
+            data: content.data,
+            categoryIdentifier: content.categoryIdentifier ?? undefined,
+          },
+          trigger: null,
+        });
+      };
+      finish().catch(() => {});
       // Deliberately does NOT dismiss the notification — adding a note is a lightweight
       // annotation, so the transaction notification stays put for the user to still tap,
       // edit, or mark not-an-expense afterward.

@@ -1,7 +1,16 @@
 import { BankParserFactory, TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { useTxStore } from '../store/txStore';
-import { postTxNotification } from '../notifications/notifications';
+import { postTxNotification, cancelTxNotification } from '../notifications/notifications';
 import { accountLabel } from '../utils/accountLabel';
+import { linkTxs } from '../db/database';
+import { pairSelfTransfers } from './txIntelligence';
+import { Colors } from '../theme';
+
+const SELF_TRANSFER_COLOR = Colors.mossStructure;
+
+function notificationColorFor(debit: boolean): string {
+  return debit ? Colors.errorMuted : Colors.primary;
+}
 
 export interface ProcessedSms {
   id: number;
@@ -13,6 +22,21 @@ export interface ProcessedSms {
 
 function isDebit(type: TransactionType): boolean {
   return type === TransactionType.EXPENSE || type === TransactionType.TRANSFER || type === TransactionType.INVESTMENT;
+}
+
+// Tracks the notification posted for each not-yet-linked live transaction, so that when its
+// self-transfer partner leg arrives moments later we can cancel the first leg's standalone
+// notification and replace both with a single combined one. In-memory only — if the process
+// gets killed between legs this simply degrades to two individual notifications (the pair
+// still gets linked correctly by the next rescan/app-start run of runDetectionJobs).
+const pendingLegNotifications = new Map<number, { notificationId: string; timestamp: number }>();
+const PENDING_LEG_TTL_MS = 24 * 60 * 60 * 1000; // matches pairSelfTransfers' own pairing window
+
+function prunePendingLegNotifications(): void {
+  const cutoff = Date.now() - PENDING_LEG_TTL_MS;
+  for (const [id, entry] of pendingLegNotifications) {
+    if (entry.timestamp < cutoff) pendingLegNotifications.delete(id);
+  }
 }
 
 /**
@@ -31,13 +55,55 @@ export async function processIncomingSms(data: { body: string; sender: string; t
   const id = await useTxStore.getState().addParsedWithLocation(tx);
   if (id === null) return null; // duplicate, reference-duplicate, or a hidden account — see insertParsedTx
 
-  const bankLabel = accountLabel(tx.bankName, tx.accountLast4 ?? null, useTxStore.getState().accountLabels);
   const debit = isDebit(tx.type);
+  const labels = useTxStore.getState().accountLabels;
+  const bankLabel = accountLabel(tx.bankName, tx.accountLast4 ?? null, labels);
+
+  // Check whether this new leg immediately completes a self-transfer pair with an already-seen,
+  // still-unlinked transaction (the common case: debit-from-bank-A and credit-to-bank-B SMS for
+  // the same UPI transfer usually arrive seconds apart). If so, link them now rather than waiting
+  // for the next rescan, and collapse both notifications into one.
+  const txs = useTxStore.getState().txs;
+  const pair = pairSelfTransfers(txs).find(([a, b]) => a === id || b === id);
+
+  if (pair) {
+    const [debitId, creditId] = pair;
+    await linkTxs(debitId, creditId, 'self_transfer');
+    await useTxStore.getState().refresh();
+
+    const partnerId = debitId === id ? creditId : debitId;
+    const pendingPartner = pendingLegNotifications.get(partnerId);
+    if (pendingPartner) {
+      await cancelTxNotification(pendingPartner.notificationId).catch(() => {});
+      pendingLegNotifications.delete(partnerId);
+    }
+    pendingLegNotifications.delete(id);
+
+    const refreshedTxs = useTxStore.getState().txs;
+    const debitTx = refreshedTxs.find(t => t.id === debitId);
+    const creditTx = refreshedTxs.find(t => t.id === creditId);
+    if (debitTx && creditTx) {
+      const fromLabel = accountLabel(debitTx.bankName, debitTx.accountLast4, labels);
+      const toLabel = accountLabel(creditTx.bankName, creditTx.accountLast4, labels);
+      const amount = `₹${debitTx.amount.toLocaleString('en-IN')}`;
+      await postTxNotification(debitId, 'Self-transfer', `${amount} transferred from ${fromLabel} to ${toLabel}`, SELF_TRANSFER_COLOR);
+    }
+
+    return { id, merchant: tx.merchant ?? null, bankLabel, amount: tx.amount, isDebit: debit };
+  }
+
   const sign = debit ? '-' : '+';
   const notifBody = tx.merchant
     ? `${sign}₹${tx.amount.toLocaleString('en-IN')} · ${tx.merchant}`
     : `${sign}₹${tx.amount.toLocaleString('en-IN')} · ${bankLabel}`;
-  await postTxNotification(id, tx.merchant ? 'New transaction' : `New transaction from ${bankLabel}`, notifBody);
+  const notificationId = await postTxNotification(
+    id,
+    tx.merchant ? 'New transaction' : `New transaction from ${bankLabel}`,
+    notifBody,
+    notificationColorFor(debit),
+  );
+  prunePendingLegNotifications();
+  pendingLegNotifications.set(id, { notificationId, timestamp: Date.now() });
 
   return { id, merchant: tx.merchant ?? null, bankLabel, amount: tx.amount, isDebit: debit };
 }

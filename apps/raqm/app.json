@@ -59,6 +59,8 @@
       [
         "expo-notifications",
         {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#75daa8",
           "defaultChannel": "raqm-tx"
         }
       ],
