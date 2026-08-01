@@ -38,6 +38,7 @@ class HeadlessSmsTaskService : HeadlessJsTaskService() {
       }
       val notification = NotificationCompat.Builder(this, CHANNEL_ID)
         .setContentTitle("Raqm")
+        .setContentText("Analyzing new SMS…")
         .setSmallIcon(android.R.drawable.stat_notify_sync)
         .setPriority(NotificationCompat.PRIORITY_MIN)
         .setCategory(Notification.CATEGORY_SERVICE)
