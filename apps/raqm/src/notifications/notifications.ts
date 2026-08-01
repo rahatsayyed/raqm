@@ -144,14 +144,15 @@ export function attachNotificationHandlers(
   };
 
   const handleResponse = (response: NotificationResponse) => {
-    const data = response.notification.request.content.data as { txId?: number };
+    const data = response.notification.request.content.data as { txId?: number; baseBody?: string };
     const notificationId = response.notification.request.identifier;
 
     if (response.actionIdentifier === ADD_NOTE_ACTION_ID) {
       const userText = response.userText;
+      const noteText = userText && userText.trim().length > 0 ? userText.trim() : null;
       const finish = async () => {
-        if (typeof data.txId === 'number' && userText && userText.trim().length > 0) {
-          await updateTx(data.txId, { notes: userText.trim() });
+        if (typeof data.txId === 'number' && noteText) {
+          await updateTx(data.txId, { notes: noteText });
           await useTxStore.getState().refresh();
         }
         // Android's direct-reply (RemoteInput) contract requires the app to re-post a
@@ -159,14 +160,20 @@ export function attachNotificationHandlers(
         // system leaves the inline input in its "sending" spinner state indefinitely (only
         // clearing on a fresh render, e.g. closing/reopening the shade). Re-scheduling the
         // same content under the same identifier is what signals "done" and clears it.
+        // Also echoes the saved note into the body (WhatsApp-style "you replied" line), keyed
+        // off `baseBody` (stashed in data on first save) so repeated edits replace rather than
+        // stack the echoed line.
         const content = response.notification.request.content;
+        const baseBody = (data as { baseBody?: string }).baseBody ?? content.body ?? '';
+        const updatedBody = noteText ? `${baseBody}\n📝 ${noteText}` : baseBody;
         await Notifications.scheduleNotificationAsync({
           identifier: notificationId,
           content: {
             title: content.title ?? '',
-            body: content.body ?? '',
-            data: content.data,
+            body: updatedBody,
+            data: { ...data, baseBody },
             categoryIdentifier: content.categoryIdentifier ?? undefined,
+            color: (content as unknown as { color?: string | null }).color ?? undefined,
           },
           trigger: null,
         });
