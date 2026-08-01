@@ -95,7 +95,11 @@ export async function processIncomingSms(data: { body: string; sender: string; t
   const sign = debit ? '-' : '+';
   const amountStr = `₹${tx.amount.toLocaleString('en-IN')}`;
   const action = debit ? 'debited' : 'credited';
-  const notifTitle = tx.merchant ? `${amountStr} ${tx.merchant} ${action}` : `${amountStr} ${action}`;
+  const notifTitle = tx.merchant
+    ? debit
+      ? `${amountStr} at ${tx.merchant}`
+      : `${amountStr} ${tx.merchant} ${action}`
+    : `${amountStr} ${action}`;
   const notifBody =
     tx.balance != null
       ? `₹${tx.balance.toLocaleString('en-IN')} available balance in ${bankLabel}`
