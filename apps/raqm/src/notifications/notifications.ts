@@ -1,16 +1,25 @@
 import * as Notifications from 'expo-notifications';
 import type { NotificationResponse } from 'expo-notifications';
 import type { NavigationContainerRef } from '@react-navigation/native';
-import { getSetting, updateTx } from '../db/database';
+import { getSetting, updateTx, getTxById, getCategories } from '../db/database';
 import { useTxStore } from '../store/txStore';
 import type { MainStackParamList } from '../navigation/types';
 import { useAppStore } from '../store/appStore';
+import { accountLabel } from '../utils/accountLabel';
+
+const NOTE_ELLIPSIS_MAX = 40;
+function ellipsize(text: string, max: number): string {
+  return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
+}
 
 const TX_CHANNEL_ID = 'raqm-tx';
 const TX_CATEGORY_ID = 'tx';
 const CATEGORY_ACTION_ID = 'category-tx';
 const ADD_NOTE_ACTION_ID = 'add-note';
 const NOT_EXPENSE_ACTION_ID = 'not-expense';
+
+/** Name shared with index.ts's TaskManager.defineTask registration. */
+export const BACKGROUND_NOTIFICATION_TASK = 'RAQM_BACKGROUND_NOTIFICATION_TASK';
 
 const DAILY_SUMMARY_ID = 'raqm-daily-summary';
 const WEEKLY_SUMMARY_ID = 'raqm-weekly-summary';
@@ -43,6 +52,13 @@ export async function initNotifications(): Promise<void> {
     vibrationPattern: [0, 150, 100, 150],
     enableVibrate: true,
   });
+
+  // Registers the headless task (defined in index.ts via TaskManager.defineTask) that lets
+  // Android run 'add-note'/'not-expense' action taps even when the app process is killed —
+  // per expo-notifications docs, this is the ONLY path (besides opensAppToForeground actions)
+  // that reliably fires in that state; the live addNotificationResponseReceivedListener below
+  // requires a running JS bridge, which a killed process doesn't have until it's reopened.
+  await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK).catch(() => {});
 
   await Notifications.setNotificationCategoryAsync(TX_CATEGORY_ID, [
     {
@@ -127,6 +143,74 @@ export async function postBudgetAlert(title: string, body: string): Promise<void
  * re-saving the same note text) is a no-op in effect.
  * Returns an unsubscribe function.
  */
+/**
+ * Handles the two background ('opensAppToForeground: false') tx actions — 'add-note' and
+ * 'not-expense' — that don't need navigation. Extracted as a standalone function so it can run
+ * from BOTH the live addNotificationResponseReceivedListener below (app process alive) AND the
+ * headless TaskManager task registered in index.ts (app process killed) — see
+ * registerTaskAsync's call in initNotifications() for why the headless path is required at all.
+ * Returns true if the response was one of these two actions (so the caller can skip further
+ * tap/category handling), false otherwise.
+ */
+export async function handleBackgroundAction(response: NotificationResponse): Promise<boolean> {
+  const data = response.notification.request.content.data as { txId?: number; baseBody?: string };
+  const notificationId = response.notification.request.identifier;
+
+  if (response.actionIdentifier === ADD_NOTE_ACTION_ID) {
+    const userText = response.userText;
+    const noteText = userText && userText.trim().length > 0 ? userText.trim() : null;
+    if (typeof data.txId === 'number' && noteText) {
+      await updateTx(data.txId, { notes: noteText });
+      await useTxStore.getState().refresh();
+    }
+    // Android's direct-reply (RemoteInput) contract requires the app to re-post a
+    // notification with the SAME identifier once the reply is handled — otherwise the
+    // system leaves the inline input in its "sending" spinner state indefinitely (only
+    // clearing on a fresh render, e.g. closing/reopening the shade). Re-scheduling the
+    // same content under the same identifier is what signals "done" and clears it.
+    // Also echoes the saved note into the body as "Bank • Category • Note…" (WhatsApp-style
+    // "you replied" line), keyed off `baseBody` (stashed in data on first save) so repeated
+    // edits replace rather than stack the echoed line.
+    const content = response.notification.request.content;
+    const baseBody = (data as { baseBody?: string }).baseBody ?? content.body ?? '';
+    let updatedBody = baseBody;
+    if (noteText && typeof data.txId === 'number') {
+      const [freshTx, categories] = await Promise.all([getTxById(data.txId), getCategories()]);
+      if (freshTx) {
+        const bankLabel = accountLabel(freshTx.bankName, freshTx.accountLast4, useTxStore.getState().accountLabels);
+        const categoryName = categories.find((c) => c.id === freshTx.categoryId)?.name ?? 'Uncategorized';
+        updatedBody = `${bankLabel} • ${categoryName} • ${ellipsize(noteText, NOTE_ELLIPSIS_MAX)}`;
+      }
+    }
+    await Notifications.scheduleNotificationAsync({
+      identifier: notificationId,
+      content: {
+        title: content.title ?? '',
+        body: updatedBody,
+        data: { ...data, baseBody },
+        categoryIdentifier: content.categoryIdentifier ?? undefined,
+        color: (content as unknown as { color?: string | null }).color ?? undefined,
+      },
+      trigger: null,
+    });
+    // Deliberately does NOT dismiss the notification — adding a note is a lightweight
+    // annotation, so the transaction notification stays put for the user to still tap,
+    // edit, or mark not-an-expense afterward.
+    return true;
+  }
+
+  if (response.actionIdentifier === NOT_EXPENSE_ACTION_ID) {
+    if (typeof data.txId === 'number') {
+      await updateTx(data.txId, { linkSettled: true });
+      await useTxStore.getState().refresh();
+    }
+    await Notifications.dismissNotificationAsync(notificationId);
+    return true;
+  }
+
+  return false;
+}
+
 export function attachNotificationHandlers(
   navRef: NavigationContainerRef<MainStackParamList>,
 ): () => void {
@@ -144,55 +228,14 @@ export function attachNotificationHandlers(
   };
 
   const handleResponse = (response: NotificationResponse) => {
-    const data = response.notification.request.content.data as { txId?: number; baseBody?: string };
-    const notificationId = response.notification.request.identifier;
+    handleBackgroundAction(response).then((handled) => {
+      if (handled) return;
+      handleNavigableResponse(response);
+    });
+  };
 
-    if (response.actionIdentifier === ADD_NOTE_ACTION_ID) {
-      const userText = response.userText;
-      const noteText = userText && userText.trim().length > 0 ? userText.trim() : null;
-      const finish = async () => {
-        if (typeof data.txId === 'number' && noteText) {
-          await updateTx(data.txId, { notes: noteText });
-          await useTxStore.getState().refresh();
-        }
-        // Android's direct-reply (RemoteInput) contract requires the app to re-post a
-        // notification with the SAME identifier once the reply is handled — otherwise the
-        // system leaves the inline input in its "sending" spinner state indefinitely (only
-        // clearing on a fresh render, e.g. closing/reopening the shade). Re-scheduling the
-        // same content under the same identifier is what signals "done" and clears it.
-        // Also echoes the saved note into the body (WhatsApp-style "you replied" line), keyed
-        // off `baseBody` (stashed in data on first save) so repeated edits replace rather than
-        // stack the echoed line.
-        const content = response.notification.request.content;
-        const baseBody = (data as { baseBody?: string }).baseBody ?? content.body ?? '';
-        const updatedBody = noteText ? `${baseBody}\n📝 ${noteText}` : baseBody;
-        await Notifications.scheduleNotificationAsync({
-          identifier: notificationId,
-          content: {
-            title: content.title ?? '',
-            body: updatedBody,
-            data: { ...data, baseBody },
-            categoryIdentifier: content.categoryIdentifier ?? undefined,
-            color: (content as unknown as { color?: string | null }).color ?? undefined,
-          },
-          trigger: null,
-        });
-      };
-      finish().catch(() => {});
-      // Deliberately does NOT dismiss the notification — adding a note is a lightweight
-      // annotation, so the transaction notification stays put for the user to still tap,
-      // edit, or mark not-an-expense afterward.
-      return;
-    }
-
-    if (response.actionIdentifier === NOT_EXPENSE_ACTION_ID) {
-      if (typeof data.txId === 'number') {
-        updateTx(data.txId, { linkSettled: true });
-        useTxStore.getState().refresh();
-      }
-      Notifications.dismissNotificationAsync(notificationId);
-      return;
-    }
+  const handleNavigableResponse = (response: NotificationResponse) => {
+    const data = response.notification.request.content.data as { txId?: number };
 
     if (response.actionIdentifier === CATEGORY_ACTION_ID) {
       if (!useAppStore.getState().isOnboardingComplete || typeof data.txId !== 'number') return;

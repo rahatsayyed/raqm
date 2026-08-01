@@ -30,6 +30,7 @@ import {
   addCategory,
   addSubcategory,
   deleteSubcategory,
+  updateTx as dbUpdateTx,
 } from "../../db/database";
 import type { Category, Subcategory, TxRecord } from "../../db/database";
 import { TransactionType } from "@rahatsayyed/bank-sms-parser";
@@ -147,6 +148,13 @@ export function TransactionDetailScreen({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const pendingDateRef = useRef<Date>(new Date());
+
+  // Set when the category sheet applies a new category THIS visit — drives the
+  // "apply to past same-merchant transactions" bottom sheet shown on the way back out.
+  const [categoryJustChangedTo, setCategoryJustChangedTo] = useState<{ categoryId: number; subcategoryId: number | null } | null>(null);
+  const [applySheetVisible, setApplySheetVisible] = useState(false);
+  const [applySelectedIds, setApplySelectedIds] = useState<Set<number>>(new Set());
+  const pendingNavActionRef = useRef<Parameters<typeof navigation.dispatch>[0] | null>(null);
 
   // Snapshot taken right before a soft-delete so the row filtered out of the
   // store doesn't make `tx` disappear (and the undo snackbar with it).
@@ -268,6 +276,65 @@ export function TransactionDetailScreen({
     };
   }, [allTxs, tx?.id, tx?.merchant, tx?.timestamp]);
 
+  // Other transactions for this same merchant that don't already carry the category just
+  // applied this visit — candidates for the "apply to past transactions" bottom sheet.
+  const mismatchedMerchantTxs = useMemo(() => {
+    if (!categoryJustChangedTo || !tx?.merchant) return [];
+    const name = tx.merchant.toLowerCase();
+    return allTxs.filter(
+      (t) =>
+        t.id !== tx.id &&
+        !t.deletedAt &&
+        t.merchant &&
+        t.merchant.toLowerCase() === name &&
+        t.categoryId !== categoryJustChangedTo.categoryId,
+    );
+  }, [allTxs, tx?.id, tx?.merchant, categoryJustChangedTo]);
+
+  // Intercepts every way of leaving this screen (header back, hardware back, swipe gesture —
+  // they all dispatch a REMOVE action that fires this event) so the bulk-apply sheet can be
+  // shown before the navigation actually completes.
+  useEffect(() => {
+    const sub = navigation.addListener("beforeRemove", (e) => {
+      if (!categoryJustChangedTo || mismatchedMerchantTxs.length === 0) return;
+      e.preventDefault();
+      pendingNavActionRef.current = e.data.action;
+      setApplySelectedIds(new Set(mismatchedMerchantTxs.map((t) => t.id)));
+      setApplySheetVisible(true);
+    });
+    return sub;
+  }, [navigation, categoryJustChangedTo, mismatchedMerchantTxs]);
+
+  const proceedWithPendingNav = () => {
+    setApplySheetVisible(false);
+    setCategoryJustChangedTo(null);
+    const action = pendingNavActionRef.current;
+    pendingNavActionRef.current = null;
+    if (action) navigation.dispatch(action);
+  };
+
+  const toggleApplySelected = (id: number) => {
+    setApplySelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleApplyConfirm = async () => {
+    if (categoryJustChangedTo) {
+      for (const id of applySelectedIds) {
+        await dbUpdateTx(id, {
+          categoryId: categoryJustChangedTo.categoryId,
+          subcategoryId: categoryJustChangedTo.subcategoryId,
+        });
+      }
+      await refreshStore();
+    }
+    proceedWithPendingNav();
+  };
+
   const handleUndo = (id: number) => {
     if (deleteTimerRef.current) {
       clearTimeout(deleteTimerRef.current);
@@ -321,7 +388,7 @@ export function TransactionDetailScreen({
   }
 
   const credit = isCredit(tx.type);
-  const countsToward = tx.type !== TransactionType.BALANCE_UPDATE;
+  const countsToward = !tx.linkSettled;
 
   const saveNotes = () => {
     if (notesDraft !== (tx.notes ?? "")) {
@@ -369,18 +436,9 @@ export function TransactionDetailScreen({
     updateTx(tx.id, { recurring: !tx.recurring });
   };
 
-  const toggleCountsToward = (next: boolean) => {
-    if (next) {
-      updateTx(tx.id, {
-        type: tx.originalType ?? TransactionType.EXPENSE,
-        originalType: null,
-      });
-    } else {
-      updateTx(tx.id, {
-        type: TransactionType.BALANCE_UPDATE,
-        originalType: tx.type,
-      });
-    }
+  const toggleCountsToward = async (next: boolean) => {
+    await setLinkSettled(tx.id, !next);
+    await refreshStore();
   };
 
   const handleSplitDone = async () => {
@@ -552,7 +610,7 @@ export function TransactionDetailScreen({
           </View>
           <View className="flex-row items-center gap-sm shrink-0 ml-md">
             <Text className="font-inter text-annotation text-on-surface-variant">
-              Expense
+              {credit ? "Income" : "Expense"}
             </Text>
             <Switch
               value={countsToward}
@@ -814,12 +872,24 @@ export function TransactionDetailScreen({
         currentSubcategoryId={tx.subcategoryId}
         onSelect={(categoryId, subcategoryId) => {
           updateTx(tx.id, { categoryId, subcategoryId: subcategoryId ?? null });
+          setCategoryJustChangedTo({ categoryId, subcategoryId: subcategoryId ?? null });
           setCategorySheetVisible(false);
         }}
         onCategoryCreated={(cat) => setCategories((prev) => [...prev, cat])}
         onSubcategoryDeleted={(subcategoryId) => {
           if (tx.subcategoryId === subcategoryId) refreshStore();
         }}
+      />
+
+      <ApplyCategorySheet
+        visible={applySheetVisible}
+        categoryName={categories.find((c) => c.id === categoryJustChangedTo?.categoryId)?.name ?? ""}
+        merchant={tx.merchant ?? ""}
+        candidates={mismatchedMerchantTxs}
+        selectedIds={applySelectedIds}
+        onToggle={toggleApplySelected}
+        onSkip={proceedWithPendingNav}
+        onConfirm={handleApplyConfirm}
       />
 
       <AmountSheet
@@ -1562,6 +1632,90 @@ function SplitModal({
         </Pressable>
       </Pressable>
     </Modal>
+  );
+}
+
+// ── Apply category to past same-merchant transactions ──────────────────────
+
+function ApplyCategorySheet({
+  visible,
+  categoryName,
+  merchant,
+  candidates,
+  selectedIds,
+  onToggle,
+  onSkip,
+  onConfirm,
+}: {
+  visible: boolean;
+  categoryName: string;
+  merchant: string;
+  candidates: TxRecord[];
+  selectedIds: Set<number>;
+  onToggle: (id: number) => void;
+  onSkip: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <BottomSheet visible={visible} onClose={onSkip}>
+      <View className="px-lg pt-sm pb-lg gap-md">
+        <Text className="font-inter-semibold text-insight-reading text-ink-headline">
+          Apply "{categoryName}" to past {merchant} transactions?
+        </Text>
+        <Text className="font-inter text-supporting-text text-ink-body">
+          {candidates.length} other transaction{candidates.length === 1 ? "" : "s"} for this
+          merchant {candidates.length === 1 ? "has" : "have"} a different category.
+        </Text>
+        <FlatList
+          data={candidates}
+          keyExtractor={(t) => String(t.id)}
+          style={{ maxHeight: 320 }}
+          renderItem={({ item }) => {
+            const selected = selectedIds.has(item.id);
+            return (
+              <TouchableOpacity
+                className="flex-row items-center gap-sm py-sm border-b border-border-subtle"
+                onPress={() => onToggle(item.id)}
+              >
+                <View
+                  className={`w-[22px] h-[22px] rounded-full border-2 items-center justify-center ${
+                    selected ? "bg-primary border-primary" : "border-ink-label"
+                  }`}
+                >
+                  {selected && <Text className="text-on-primary text-[12px] font-inter-bold">✓</Text>}
+                </View>
+                <View className="flex-1">
+                  <Text className="font-mono text-body-standard text-on-surface" numberOfLines={1}>
+                    {formatAmount(item.amount, item.currency)}
+                  </Text>
+                  <Text className="font-inter text-annotation text-ink-label" numberOfLines={1}>
+                    {shortDate(item.timestamp)}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+        />
+        <View className="flex-row gap-sm mt-sm">
+          <TouchableOpacity
+            className="flex-1 items-center py-md rounded-full bg-surface-container-high"
+            onPress={onSkip}
+          >
+            <Text className="font-inter-semibold text-body-standard text-on-surface">Skip</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className="flex-1 items-center py-md rounded-full bg-primary"
+            disabled={selectedIds.size === 0}
+            style={{ opacity: selectedIds.size === 0 ? 0.5 : 1 }}
+            onPress={onConfirm}
+          >
+            <Text className="font-inter-semibold text-body-standard text-on-primary">
+              Apply to {selectedIds.size}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </BottomSheet>
   );
 }
 

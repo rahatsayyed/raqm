@@ -327,6 +327,29 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 10) {
+    await database.runAsync(`BEGIN`);
+    try {
+      // "Not an expense" used to be represented by flipping type to BALANCE_UPDATE (stashing
+      // the real type in original_type) — a second, separate mechanism from link_settled,
+      // which countsTowardTotals() actually checks and which the "Not An Expense" notification
+      // action already used. The two never agreed, so TransactionDetailScreen's toggle and the
+      // notification action silently diverged. Standardizing on link_settled as the one
+      // "excluded from totals" flag: migrate any row previously toggled off via the old
+      // mechanism (recognizable by having original_type set — genuine balance-correction stub
+      // rows from the balance-mismatch flow never set it) back to its real type, marked settled.
+      await database.runAsync(
+        `UPDATE transactions SET type = original_type, link_settled = 1, original_type = NULL
+         WHERE type = 'balance_update' AND original_type IS NOT NULL`,
+      );
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (10)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
