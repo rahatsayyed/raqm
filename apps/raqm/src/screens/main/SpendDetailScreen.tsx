@@ -36,6 +36,7 @@ export function SpendDetailScreen({ route, navigation }: MainStackScreenProps<'S
     return txs
       .filter((tx) => {
         if (tx.deletedAt || !countsTowardTotals(tx)) return false;
+        if (tx.type === TransactionType.BALANCE_UPDATE) return false; // ₹0 internal bookkeeping marker, not real activity
         if (tx.timestamp < bounds.from || tx.timestamp > bounds.to) return false;
         if (params.filterType === 'category') return tx.categoryId === params.categoryId;
         return tx.bankName === params.bankName && (tx.accountLast4 ?? '') === (params.last4 ?? '');

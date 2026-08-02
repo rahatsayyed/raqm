@@ -13,7 +13,12 @@ function ellipsize(text: string, max: number): string {
 }
 
 const TX_CHANNEL_ID = 'raqm-tx';
-const TX_CATEGORY_ID = 'tx';
+// expo-notifications categories have fixed button text — an "expense" and "income" variant
+// are needed so the not-expense/not-income action reads correctly for the tx's direction.
+// Both share the same action identifiers (NOT_EXPENSE_ACTION_ID handles either), only the
+// button title differs, so handleBackgroundAction's logic doesn't need to branch on category.
+const TX_CATEGORY_EXPENSE_ID = 'tx';
+const TX_CATEGORY_INCOME_ID = 'tx-income';
 const CATEGORY_ACTION_ID = 'category-tx';
 const ADD_NOTE_ACTION_ID = 'add-note';
 const NOT_EXPENSE_ACTION_ID = 'not-expense';
@@ -58,9 +63,11 @@ export async function initNotifications(): Promise<void> {
   // per expo-notifications docs, this is the ONLY path (besides opensAppToForeground actions)
   // that reliably fires in that state; the live addNotificationResponseReceivedListener below
   // requires a running JS bridge, which a killed process doesn't have until it's reopened.
-  await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK).catch(() => {});
+  await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK).catch((e) => {
+    console.error('[notifications] registerTaskAsync failed — background add-note/not-expense actions will not fire while the app is killed', e);
+  });
 
-  await Notifications.setNotificationCategoryAsync(TX_CATEGORY_ID, [
+  const baseActions = (notExpenseButtonTitle: string): Notifications.NotificationAction[] => [
     {
       identifier: CATEGORY_ACTION_ID,
       buttonTitle: 'Category',
@@ -77,10 +84,13 @@ export async function initNotifications(): Promise<void> {
     },
     {
       identifier: NOT_EXPENSE_ACTION_ID,
-      buttonTitle: 'Not An Expense',
+      buttonTitle: notExpenseButtonTitle,
       options: { opensAppToForeground: false },
     },
-  ]);
+  ];
+
+  await Notifications.setNotificationCategoryAsync(TX_CATEGORY_EXPENSE_ID, baseActions('Not An Expense'));
+  await Notifications.setNotificationCategoryAsync(TX_CATEGORY_INCOME_ID, baseActions('Not An Income'));
 }
 
 /**
@@ -89,13 +99,19 @@ export async function initNotifications(): Promise<void> {
  * plugin config points at 'raqm-tx'. Carries `data: { txId }` so attachNotificationHandlers
  * can deep-link on tap, and `categoryIdentifier: 'tx'` so the "Add note" action (T18) appears.
  */
-export async function postTxNotification(txId: number, title: string, body: string, color?: string): Promise<string> {
+export async function postTxNotification(
+  txId: number,
+  title: string,
+  body: string,
+  color?: string,
+  isIncome?: boolean,
+): Promise<string> {
   return Notifications.scheduleNotificationAsync({
     content: {
       title,
       body,
       data: { txId },
-      categoryIdentifier: TX_CATEGORY_ID,
+      categoryIdentifier: isIncome ? TX_CATEGORY_INCOME_ID : TX_CATEGORY_EXPENSE_ID,
       color,
     },
     trigger: null,

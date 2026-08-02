@@ -35,8 +35,16 @@ export function AccountDetailScreen({ route, navigation }: MainStackScreenProps<
   const [dueDate, setDueDate] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // BALANCE_UPDATE rows are ₹0 internal bookkeeping markers (manual balance corrections /
+  // balance-inquiry SMS), not real activity — never list them here.
   const accountTxs = useMemo(
-    () => txs.filter(t => t.bankName === bankName && (t.accountLast4 ?? '') === (last4 ?? '')),
+    () =>
+      txs.filter(
+        t =>
+          t.bankName === bankName &&
+          (t.accountLast4 ?? '') === (last4 ?? '') &&
+          t.type !== TransactionType.BALANCE_UPDATE,
+      ),
     [txs, bankName, last4],
   );
 
