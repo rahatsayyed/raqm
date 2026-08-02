@@ -104,7 +104,7 @@ export async function processIncomingSms(data: { body: string; sender: string; t
     tx.balance != null
       ? `₹${tx.balance.toLocaleString('en-IN')} available balance in ${bankLabel}`
       : `${sign}${amountStr} · ${bankLabel}`;
-  const notificationId = await postTxNotification(id, notifTitle, notifBody, notificationColorFor(debit));
+  const notificationId = await postTxNotification(id, notifTitle, notifBody, notificationColorFor(debit), !debit);
   prunePendingLegNotifications();
   pendingLegNotifications.set(id, { notificationId, timestamp: Date.now() });
 

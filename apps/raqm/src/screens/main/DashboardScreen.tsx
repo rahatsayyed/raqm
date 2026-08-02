@@ -462,8 +462,15 @@ export function DashboardScreen() {
     return Array.from(map.values()).sort((a, b) => b.monthSpend - a.monthSpend);
   }, [txs, monthBounds]);
 
+  // BALANCE_UPDATE rows are ₹0 internal bookkeeping markers (manual balance corrections /
+  // balance-inquiry SMS) — real for balanceIntegrity.ts's mismatch math, but not activity
+  // the user should see surfacing as a "recent" transaction.
   const recent = useMemo(
-    () => [...txs].sort((a, b) => b.timestamp - a.timestamp).slice(0, 4),
+    () =>
+      txs
+        .filter((t) => t.type !== TransactionType.BALANCE_UPDATE)
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 4),
     [txs],
   );
 

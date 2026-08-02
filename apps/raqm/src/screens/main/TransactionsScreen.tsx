@@ -134,9 +134,17 @@ export function TransactionsScreen() {
 
   const currency = txs[0]?.currency ?? '₹';
 
-  const sorted = useMemo(
-    () => [...txs].sort((a, b) => b.timestamp - a.timestamp),
+  // BALANCE_UPDATE rows are ₹0 internal bookkeeping markers (manual balance corrections /
+  // balance-inquiry SMS) that balanceIntegrity.ts's mismatch detection needs present in the
+  // store, but they aren't real activity — never show them in the user-facing ledger.
+  const realTxs = useMemo(
+    () => txs.filter((t) => t.type !== TransactionType.BALANCE_UPDATE),
     [txs],
+  );
+
+  const sorted = useMemo(
+    () => [...realTxs].sort((a, b) => b.timestamp - a.timestamp),
+    [realTxs],
   );
 
   const filtered = useMemo(() => {
@@ -152,16 +160,16 @@ export function TransactionsScreen() {
 
   // Narrative statement: this week (since Monday) vs the same span last week.
   const statement = useMemo(() => {
-    if (txs.length === 0) return null;
+    if (realTxs.length === 0) return null;
     const now = new Date();
     const monday = startOfDay(now.getTime()) - ((now.getDay() + 6) % 7) * DAY_MS;
     const span = now.getTime() - monday;
-    const thisWeek = txs.filter(t => t.timestamp >= monday).length;
+    const thisWeek = realTxs.filter(t => t.timestamp >= monday).length;
     if (thisWeek === 0) return 'A quiet week so far — no transactions since Monday.';
-    const lastWeek = txs.filter(t => t.timestamp >= monday - 7 * DAY_MS && t.timestamp < monday - 7 * DAY_MS + span).length;
+    const lastWeek = realTxs.filter(t => t.timestamp >= monday - 7 * DAY_MS && t.timestamp < monday - 7 * DAY_MS + span).length;
     const pace = thisWeek < lastWeek ? 'quiet' : thisWeek > lastWeek ? 'busy' : 'steady';
     return `You had a ${pace} start to the week, with ${thisWeek} transaction${thisWeek === 1 ? '' : 's'} since Monday.`;
-  }, [txs]);
+  }, [realTxs]);
 
   // Day-grouped ledger: header items interleaved with rows; grouped txs stay
   // one row (expandable) keyed to their most recent member's day. The header
