@@ -19,8 +19,8 @@ export const SmsReader = {
     SmsReaderModule.openNotificationListenerSettings();
   },
 
-  addCategoryAction(notificationId: string, txId: number): void {
+  attachTxActions(notificationId: string, txId: number, notExpenseLabel: string): void {
     if (Platform.OS !== 'android') return;
-    SmsReaderModule.addCategoryAction(notificationId, txId);
+    SmsReaderModule.attachTxActions(notificationId, txId, notExpenseLabel);
   },
 };

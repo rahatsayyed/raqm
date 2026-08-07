@@ -1,39 +1,26 @@
 import * as Notifications from 'expo-notifications';
 import type { NotificationResponse } from 'expo-notifications';
 import type { NavigationContainerRef } from '@react-navigation/native';
-import { getSetting, updateTx, getTxById, getCategories } from '../db/database';
-import { useTxStore } from '../store/txStore';
+import { getSetting } from '../db/database';
 import type { MainStackParamList } from '../navigation/types';
 import { useAppStore } from '../store/appStore';
-import { accountLabel } from '../utils/accountLabel';
-import { SmsReader } from '../native/SmsReader';
-
-const NOTE_ELLIPSIS_MAX = 40;
-function ellipsize(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
-}
 
 const TX_CHANNEL_ID = 'raqm-tx';
-// expo-notifications categories have fixed button text — an "expense" and "income" variant
-// are needed so the not-expense/not-income action reads correctly for the tx's direction.
-// Both share the same action identifiers (NOT_EXPENSE_ACTION_ID handles either), only the
-// button title differs, so handleBackgroundAction's logic doesn't need to branch on category.
-const TX_CATEGORY_EXPENSE_ID = 'tx';
-const TX_CATEGORY_INCOME_ID = 'tx-income';
-const ADD_NOTE_ACTION_ID = 'add-note';
-const NOT_EXPENSE_ACTION_ID = 'not-expense';
-
-/** Name shared with index.ts's TaskManager.defineTask registration. */
-export const BACKGROUND_NOTIFICATION_TASK = 'RAQM_BACKGROUND_NOTIFICATION_TASK';
 
 const DAILY_SUMMARY_ID = 'raqm-daily-summary';
 const WEEKLY_SUMMARY_ID = 'raqm-weekly-summary';
 const MONTHLY_SUMMARY_ID = 'raqm-monthly-summary';
 
 /**
- * Sets the foreground notification handler, requests POST_NOTIFICATIONS permission,
- * creates the Android notification channel used by every notification this app posts,
- * and registers the 'tx' action category with its inline text-input "Add note" action (T18).
+ * Sets the foreground notification handler, requests POST_NOTIFICATIONS permission, and
+ * creates the Android notification channel used by every notification this app posts.
+ * The Category/Add note/Not An Expense actions are NOT registered here — they're appended
+ * natively per-notification (see SmsReaderModule.attachTxActions, called from
+ * smsProcessing.ts right after posting) so they're handled entirely by native code
+ * (CategoryPickerActivity / NotificationActionReceiver) and never need to boot the JS/RN
+ * engine — the previous expo-task-manager based path for Add note/Not An Expense was
+ * unreliable specifically because that boot is exactly what aggressive OEM battery managers
+ * (MIUI, ColorOS, etc.) are most likely to kill when the app process is fully dead.
  * Safe to call multiple times (idempotent on the native side).
  */
 export async function initNotifications(): Promise<void> {
@@ -57,59 +44,27 @@ export async function initNotifications(): Promise<void> {
     vibrationPattern: [0, 150, 100, 150],
     enableVibrate: true,
   });
-
-  // Registers the headless task (defined in index.ts via TaskManager.defineTask) that lets
-  // Android run 'add-note'/'not-expense' action taps even when the app process is killed —
-  // per expo-notifications docs, this is the ONLY path (besides opensAppToForeground actions)
-  // that reliably fires in that state; the live addNotificationResponseReceivedListener below
-  // requires a running JS bridge, which a killed process doesn't have until it's reopened.
-  await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK).catch((e) => {
-    console.error('[notifications] registerTaskAsync failed — background add-note/not-expense actions will not fire while the app is killed', e);
-  });
-
-  // Deliberately no "Category" action registered here — it's appended natively to each
-  // notification after posting (see SmsReaderModule.addCategoryAction / smsProcessing.ts) so
-  // its PendingIntent can open CategoryPickerActivity directly instead of MainActivity.
-  const baseActions = (notExpenseButtonTitle: string): Notifications.NotificationAction[] => [
-    {
-      identifier: ADD_NOTE_ACTION_ID,
-      buttonTitle: 'Add note',
-      textInput: {
-        placeholder: 'Add a note…',
-        submitButtonTitle: 'Save',
-      },
-      options: { opensAppToForeground: false },
-    },
-    {
-      identifier: NOT_EXPENSE_ACTION_ID,
-      buttonTitle: notExpenseButtonTitle,
-      options: { opensAppToForeground: false },
-    },
-  ];
-
-  await Notifications.setNotificationCategoryAsync(TX_CATEGORY_EXPENSE_ID, baseActions('Not An Expense'));
-  await Notifications.setNotificationCategoryAsync(TX_CATEGORY_INCOME_ID, baseActions('Not An Income'));
 }
 
 /**
  * Posts the styled transaction notification (T17, T23's JS-side half). Uses trigger: null
  * (immediate) so it lands on the app's default channel, which app.json's expo-notifications
  * plugin config points at 'raqm-tx'. Carries `data: { txId }` so attachNotificationHandlers
- * can deep-link on tap, and `categoryIdentifier: 'tx'` so the "Add note" action (T18) appears.
+ * can deep-link on tap. No action category here — smsProcessing.ts calls
+ * SmsReader.attachTxActions right after this resolves to append Category/Add note/Not An
+ * Expense natively.
  */
 export async function postTxNotification(
   txId: number,
   title: string,
   body: string,
   color?: string,
-  isIncome?: boolean,
 ): Promise<string> {
   return Notifications.scheduleNotificationAsync({
     content: {
       title,
       body,
       data: { txId },
-      categoryIdentifier: isIncome ? TX_CATEGORY_INCOME_ID : TX_CATEGORY_EXPENSE_ID,
       color,
     },
     trigger: null,
@@ -143,95 +98,14 @@ export async function postBudgetAlert(title: string, body: string): Promise<void
  * - Tap with a txId in data (T17): navigate to TransactionDetail.
  * - Tap with no txId (summary notifications): navigate to the tab root (Dashboard is the
  *   first tab, so this lands the user there).
- * - 'Category' action: NOT handled here — it's a natively-added action (see
- *   SmsReaderModule.addCategoryAction) whose PendingIntent opens CategoryPickerActivity
- *   directly, so it never reaches this JS listener at all.
- * - 'add-note' action with typed text (T18): save the note directly to the DB without
- *   navigating or opening the app to the foreground.
- * - 'not-expense' action: flips linkSettled (same flag countsTowardTotals() already checks
- *   everywhere else) without opening the app, then dismisses the notification.
+ * - Category/Add note/Not An Expense actions: NOT handled here at all — they're natively
+ *   added (see SmsReaderModule.attachTxActions) and handled entirely by
+ *   CategoryPickerActivity/NotificationActionReceiver, so they never reach this JS listener.
  * Also handles the cold-start case: if the app was launched by tapping a notification,
  * addNotificationResponseReceivedListener never fires for that response, so we fetch it
  * explicitly via getLastNotificationResponseAsync() and run it through the same handler.
- * If both the cold-start check and the live listener somehow fire for the same response,
- * handleResponse runs twice — harmless, since navigating to the same route twice (or
- * re-saving the same note text) is a no-op in effect.
  * Returns an unsubscribe function.
  */
-/**
- * Handles the two background ('opensAppToForeground: false') tx actions — 'add-note' and
- * 'not-expense' — that don't need navigation. Extracted as a standalone function so it can run
- * from BOTH the live addNotificationResponseReceivedListener below (app process alive) AND the
- * headless TaskManager task registered in index.ts (app process killed) — see
- * registerTaskAsync's call in initNotifications() for why the headless path is required at all.
- * Returns true if the response was one of these two actions (so the caller can skip further
- * tap/category handling), false otherwise.
- */
-export async function handleBackgroundAction(response: NotificationResponse): Promise<boolean> {
-  const data = response.notification.request.content.data as { txId?: number; baseBody?: string };
-  const notificationId = response.notification.request.identifier;
-
-  if (response.actionIdentifier === ADD_NOTE_ACTION_ID) {
-    const userText = response.userText;
-    const noteText = userText && userText.trim().length > 0 ? userText.trim() : null;
-    if (typeof data.txId === 'number' && noteText) {
-      await updateTx(data.txId, { notes: noteText });
-      await useTxStore.getState().refresh();
-    }
-    // Android's direct-reply (RemoteInput) contract requires the app to re-post a
-    // notification with the SAME identifier once the reply is handled — otherwise the
-    // system leaves the inline input in its "sending" spinner state indefinitely (only
-    // clearing on a fresh render, e.g. closing/reopening the shade). Re-scheduling the
-    // same content under the same identifier is what signals "done" and clears it.
-    // Also echoes the saved note into the body as "Bank • Category • Note…" (WhatsApp-style
-    // "you replied" line), keyed off `baseBody` (stashed in data on first save) so repeated
-    // edits replace rather than stack the echoed line.
-    const content = response.notification.request.content;
-    const baseBody = (data as { baseBody?: string }).baseBody ?? content.body ?? '';
-    let updatedBody = baseBody;
-    if (noteText && typeof data.txId === 'number') {
-      const [freshTx, categories] = await Promise.all([getTxById(data.txId), getCategories()]);
-      if (freshTx) {
-        const bankLabel = accountLabel(freshTx.bankName, freshTx.accountLast4, useTxStore.getState().accountLabels);
-        const categoryName = categories.find((c) => c.id === freshTx.categoryId)?.name ?? 'Uncategorized';
-        updatedBody = `${bankLabel} • ${categoryName} • ${ellipsize(noteText, NOTE_ELLIPSIS_MAX)}`;
-      }
-    }
-    await Notifications.scheduleNotificationAsync({
-      identifier: notificationId,
-      content: {
-        title: content.title ?? '',
-        body: updatedBody,
-        data: { ...data, baseBody },
-        categoryIdentifier: content.categoryIdentifier ?? undefined,
-        color: (content as unknown as { color?: string | null }).color ?? undefined,
-      },
-      trigger: null,
-    });
-    // scheduleNotificationAsync above rebuilds the notification from expo's own category
-    // actions (Add note, Not An Expense) only — it knows nothing about the natively-appended
-    // Category action, so it must be re-added here or it would silently vanish after a note.
-    if (typeof data.txId === 'number') {
-      SmsReader.addCategoryAction(notificationId, data.txId);
-    }
-    // Deliberately does NOT dismiss the notification — adding a note is a lightweight
-    // annotation, so the transaction notification stays put for the user to still tap,
-    // edit, or mark not-an-expense afterward.
-    return true;
-  }
-
-  if (response.actionIdentifier === NOT_EXPENSE_ACTION_ID) {
-    if (typeof data.txId === 'number') {
-      await updateTx(data.txId, { linkSettled: true });
-      await useTxStore.getState().refresh();
-    }
-    await Notifications.dismissNotificationAsync(notificationId);
-    return true;
-  }
-
-  return false;
-}
-
 export function attachNotificationHandlers(
   navRef: NavigationContainerRef<MainStackParamList>,
 ): () => void {
@@ -249,13 +123,6 @@ export function attachNotificationHandlers(
   };
 
   const handleResponse = (response: NotificationResponse) => {
-    handleBackgroundAction(response).then((handled) => {
-      if (handled) return;
-      handleNavigableResponse(response);
-    });
-  };
-
-  const handleNavigableResponse = (response: NotificationResponse) => {
     const data = response.notification.request.content.data as { txId?: number };
 
     if (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {

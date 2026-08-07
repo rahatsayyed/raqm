@@ -93,7 +93,7 @@ export async function processIncomingSms(data: { body: string; sender: string; t
         `${amount} transferred from ${fromLabel} to ${toLabel}`,
         SELF_TRANSFER_COLOR,
       );
-      SmsReader.addCategoryAction(selfTransferNotificationId, debitId);
+      SmsReader.attachTxActions(selfTransferNotificationId, debitId, 'Not An Expense');
     }
 
     return { id, merchant: tx.merchant ?? null, bankLabel, amount: tx.amount, isDebit: debit };
@@ -111,8 +111,8 @@ export async function processIncomingSms(data: { body: string; sender: string; t
     tx.balance != null
       ? `₹${tx.balance.toLocaleString('en-IN')} available balance in ${bankLabel}`
       : `${sign}${amountStr} · ${bankLabel}`;
-  const notificationId = await postTxNotification(id, notifTitle, notifBody, notificationColorFor(debit), !debit);
-  SmsReader.addCategoryAction(notificationId, id);
+  const notificationId = await postTxNotification(id, notifTitle, notifBody, notificationColorFor(debit));
+  SmsReader.attachTxActions(notificationId, id, debit ? 'Not An Expense' : 'Not An Income');
   prunePendingLegNotifications();
   pendingLegNotifications.set(id, { notificationId, timestamp: Date.now() });
 
