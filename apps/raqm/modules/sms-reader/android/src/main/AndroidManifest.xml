@@ -28,5 +28,17 @@
         <action android:name="android.service.notification.NotificationListenerService" />
       </intent-filter>
     </service>
+
+    <!-- Launched directly by the "Category" notification action's PendingIntent (see
+         SmsReaderModule.addCategoryAction) instead of MainActivity, so picking a category
+         from the notification never brings the app to the foreground. taskAffinity=""
+         + excludeFromRecents keeps it out of the app's own task/recents entirely. -->
+    <activity
+      android:name=".CategoryPickerActivity"
+      android:theme="@android:style/Theme.Translucent.NoTitleBar"
+      android:excludeFromRecents="true"
+      android:taskAffinity=""
+      android:launchMode="singleInstance"
+      android:exported="false" />
   </application>
 </manifest>

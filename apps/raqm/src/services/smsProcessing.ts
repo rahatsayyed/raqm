@@ -1,6 +1,7 @@
 import { BankParserFactory, TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { useTxStore } from '../store/txStore';
 import { postTxNotification, cancelTxNotification } from '../notifications/notifications';
+import { SmsReader } from '../native/SmsReader';
 import { accountLabel } from '../utils/accountLabel';
 import { linkTxs } from '../db/database';
 import { pairSelfTransfers } from './txIntelligence';
@@ -86,7 +87,13 @@ export async function processIncomingSms(data: { body: string; sender: string; t
       const fromLabel = accountLabel(debitTx.bankName, debitTx.accountLast4, labels);
       const toLabel = accountLabel(creditTx.bankName, creditTx.accountLast4, labels);
       const amount = `₹${debitTx.amount.toLocaleString('en-IN')}`;
-      await postTxNotification(debitId, 'Self-transfer', `${amount} transferred from ${fromLabel} to ${toLabel}`, SELF_TRANSFER_COLOR);
+      const selfTransferNotificationId = await postTxNotification(
+        debitId,
+        'Self-transfer',
+        `${amount} transferred from ${fromLabel} to ${toLabel}`,
+        SELF_TRANSFER_COLOR,
+      );
+      SmsReader.addCategoryAction(selfTransferNotificationId, debitId);
     }
 
     return { id, merchant: tx.merchant ?? null, bankLabel, amount: tx.amount, isDebit: debit };
@@ -105,6 +112,7 @@ export async function processIncomingSms(data: { body: string; sender: string; t
       ? `₹${tx.balance.toLocaleString('en-IN')} available balance in ${bankLabel}`
       : `${sign}${amountStr} · ${bankLabel}`;
   const notificationId = await postTxNotification(id, notifTitle, notifBody, notificationColorFor(debit), !debit);
+  SmsReader.addCategoryAction(notificationId, id);
   prunePendingLegNotifications();
   pendingLegNotifications.set(id, { notificationId, timestamp: Date.now() });
 

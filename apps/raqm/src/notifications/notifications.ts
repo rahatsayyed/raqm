@@ -6,6 +6,7 @@ import { useTxStore } from '../store/txStore';
 import type { MainStackParamList } from '../navigation/types';
 import { useAppStore } from '../store/appStore';
 import { accountLabel } from '../utils/accountLabel';
+import { SmsReader } from '../native/SmsReader';
 
 const NOTE_ELLIPSIS_MAX = 40;
 function ellipsize(text: string, max: number): string {
@@ -19,7 +20,6 @@ const TX_CHANNEL_ID = 'raqm-tx';
 // button title differs, so handleBackgroundAction's logic doesn't need to branch on category.
 const TX_CATEGORY_EXPENSE_ID = 'tx';
 const TX_CATEGORY_INCOME_ID = 'tx-income';
-const CATEGORY_ACTION_ID = 'category-tx';
 const ADD_NOTE_ACTION_ID = 'add-note';
 const NOT_EXPENSE_ACTION_ID = 'not-expense';
 
@@ -67,12 +67,10 @@ export async function initNotifications(): Promise<void> {
     console.error('[notifications] registerTaskAsync failed — background add-note/not-expense actions will not fire while the app is killed', e);
   });
 
+  // Deliberately no "Category" action registered here — it's appended natively to each
+  // notification after posting (see SmsReaderModule.addCategoryAction / smsProcessing.ts) so
+  // its PendingIntent can open CategoryPickerActivity directly instead of MainActivity.
   const baseActions = (notExpenseButtonTitle: string): Notifications.NotificationAction[] => [
-    {
-      identifier: CATEGORY_ACTION_ID,
-      buttonTitle: 'Category',
-      options: { opensAppToForeground: true },
-    },
     {
       identifier: ADD_NOTE_ACTION_ID,
       buttonTitle: 'Add note',
@@ -145,8 +143,9 @@ export async function postBudgetAlert(title: string, body: string): Promise<void
  * - Tap with a txId in data (T17): navigate to TransactionDetail.
  * - Tap with no txId (summary notifications): navigate to the tab root (Dashboard is the
  *   first tab, so this lands the user there).
- * - 'category-tx' action: navigate to EditTransaction with autoOpenCategoryPicker so the
- *   user lands straight on the category grid instead of the full edit form.
+ * - 'Category' action: NOT handled here — it's a natively-added action (see
+ *   SmsReaderModule.addCategoryAction) whose PendingIntent opens CategoryPickerActivity
+ *   directly, so it never reaches this JS listener at all.
  * - 'add-note' action with typed text (T18): save the note directly to the DB without
  *   navigating or opening the app to the foreground.
  * - 'not-expense' action: flips linkSettled (same flag countsTowardTotals() already checks
@@ -209,6 +208,12 @@ export async function handleBackgroundAction(response: NotificationResponse): Pr
       },
       trigger: null,
     });
+    // scheduleNotificationAsync above rebuilds the notification from expo's own category
+    // actions (Add note, Not An Expense) only — it knows nothing about the natively-appended
+    // Category action, so it must be re-added here or it would silently vanish after a note.
+    if (typeof data.txId === 'number') {
+      SmsReader.addCategoryAction(notificationId, data.txId);
+    }
     // Deliberately does NOT dismiss the notification — adding a note is a lightweight
     // annotation, so the transaction notification stays put for the user to still tap,
     // edit, or mark not-an-expense afterward.
@@ -252,14 +257,6 @@ export function attachNotificationHandlers(
 
   const handleNavigableResponse = (response: NotificationResponse) => {
     const data = response.notification.request.content.data as { txId?: number };
-
-    if (response.actionIdentifier === CATEGORY_ACTION_ID) {
-      if (!useAppStore.getState().isOnboardingComplete || typeof data.txId !== 'number') return;
-      navigateWhenReady(() => {
-        navRef.navigate('EditTransaction', { transactionId: data.txId as number, autoOpenCategoryPicker: true });
-      });
-      return;
-    }
 
     if (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
       if (!useAppStore.getState().isOnboardingComplete) return;
