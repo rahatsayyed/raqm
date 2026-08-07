@@ -3,7 +3,9 @@ package expo.modules.smsreader
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.RemoteInput
 import android.content.Intent
+import android.os.Build
 import android.provider.Telephony
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -64,36 +66,72 @@ class SmsReaderModule : Module() {
       }
     }
 
-    // Appends a "Category" action to an already-posted tx notification whose PendingIntent
-    // opens CategoryPickerActivity directly (not MainActivity) — see that Activity's doc
-    // comment for why. expo-notifications' JS category API has no way to point an action's
-    // PendingIntent anywhere but the app's launch intent, so this action is added natively,
-    // after the fact, instead of being registered through Notifications.setNotificationCategoryAsync.
-    Function("addCategoryAction") { notificationId: String, txId: Int ->
+    // Appends all three tx notification actions — Category, Add note, Not An Expense/Income —
+    // to an already-posted notification, entirely natively. expo-notifications' JS category API
+    // has no way to point an action's PendingIntent anywhere but the app's launch intent (needed
+    // for Category to open CategoryPickerActivity directly instead of MainActivity), and routing
+    // Add note/Not An Expense through expo-task-manager to reach JS requires booting a full RN
+    // engine from a killed process — exactly the kind of expensive wake-up aggressive OEM battery
+    // managers (MIUI, ColorOS, etc.) are most likely to kill mid-flight. All three are handled
+    // natively instead: Category by CategoryPickerActivity, the other two by
+    // NotificationActionReceiver — both read/write SQLite directly, no JS involved.
+    //
+    // Mutates the existing Notification object's actions array in place and re-notifies with
+    // that SAME object, rather than reconstructing one via Notification.Builder.recoverBuilder —
+    // recoverBuilder rebuilds contentIntent/extras from scratch and isn't guaranteed to preserve
+    // them faithfully (that's what broke tapping the notification body: the rebuilt contentIntent
+    // lost the txId expo-notifications had marshalled into the original extras). Appending in
+    // place touches nothing but the actions array, so contentIntent/extras are untouched.
+    Function("attachTxActions") { notificationId: String, txId: Int, notExpenseLabel: String ->
       val context = appContext.reactContext ?: return@Function
       val nm = context.getSystemService(NotificationManager::class.java) ?: return@Function
       val sbn = nm.activeNotifications.firstOrNull { it.tag == notificationId } ?: return@Function
 
-      val pickerIntent = Intent(context, CategoryPickerActivity::class.java).apply {
+      val categoryIntent = Intent(context, CategoryPickerActivity::class.java).apply {
         putExtra(CategoryPickerActivity.EXTRA_TX_ID, txId)
         flags = Intent.FLAG_ACTIVITY_NEW_TASK
       }
-      val pendingIntent = PendingIntent.getActivity(
+      val categoryPendingIntent = PendingIntent.getActivity(
         context,
         notificationId.hashCode(),
-        pickerIntent,
+        categoryIntent,
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
       )
-      val action = Notification.Action.Builder(0, "Category", pendingIntent).build()
-      // Mutate the existing Notification object's actions array in place and re-notify with
-      // that SAME object, rather than reconstructing one via Notification.Builder.recoverBuilder
-      // — recoverBuilder rebuilds contentIntent/extras from scratch and isn't guaranteed to
-      // preserve them faithfully (that's exactly what broke tapping the notification body: it
-      // stopped landing on TransactionDetail because the rebuilt contentIntent lost the txId
-      // expo-notifications had marshalled into the original extras). Appending in place touches
-      // nothing but the actions array, so contentIntent/extras are untouched.
+      val categoryAction = Notification.Action.Builder(0, "Category", categoryPendingIntent).build()
+
+      fun receiverIntent(action: String) = Intent(context, NotificationActionReceiver::class.java).apply {
+        this.action = action
+        putExtra(NotificationActionReceiver.EXTRA_TX_ID, txId)
+        putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_TAG, sbn.tag)
+        putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_INT_ID, sbn.id)
+      }
+
+      val notExpensePendingIntent = PendingIntent.getBroadcast(
+        context,
+        (notificationId + "notexpense").hashCode(),
+        receiverIntent(NotificationActionReceiver.ACTION_NOT_EXPENSE),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+      )
+      val notExpenseAction = Notification.Action.Builder(0, notExpenseLabel, notExpensePendingIntent).build()
+
+      // RemoteInput requires a mutable PendingIntent from API 31 onward — matches
+      // expo-notifications' own conditional (NotificationsService.createNotificationResponseIntent).
+      val mutableFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
+      val addNotePendingIntent = PendingIntent.getBroadcast(
+        context,
+        (notificationId + "addnote").hashCode(),
+        receiverIntent(NotificationActionReceiver.ACTION_ADD_NOTE),
+        PendingIntent.FLAG_UPDATE_CURRENT or mutableFlag,
+      )
+      val remoteInput = RemoteInput.Builder(NotificationActionReceiver.EXTRA_NOTE_INPUT)
+        .setLabel("Add a note…")
+        .build()
+      val addNoteAction = Notification.Action.Builder(0, "Add note", addNotePendingIntent)
+        .addRemoteInput(remoteInput)
+        .build()
+
       val notification = sbn.notification
-      notification.actions = (notification.actions ?: emptyArray()) + action
+      notification.actions = arrayOf(categoryAction, addNoteAction, notExpenseAction)
       nm.notify(sbn.tag, sbn.id, notification)
     }
   }

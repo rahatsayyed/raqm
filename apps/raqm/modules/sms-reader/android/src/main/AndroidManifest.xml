@@ -30,7 +30,7 @@
     </service>
 
     <!-- Launched directly by the "Category" notification action's PendingIntent (see
-         SmsReaderModule.addCategoryAction) instead of MainActivity, so picking a category
+         SmsReaderModule.attachTxActions) instead of MainActivity, so picking a category
          from the notification never brings the app to the foreground. taskAffinity=""
          + excludeFromRecents keeps it out of the app's own task/recents entirely. -->
     <activity
@@ -39,6 +39,13 @@
       android:excludeFromRecents="true"
       android:taskAffinity=""
       android:launchMode="singleInstance"
+      android:exported="false" />
+
+    <!-- Handles "Not An Expense"/"Not An Income" and "Add note" natively (see
+         NotificationActionReceiver) — exported=false since only our own app's PendingIntents
+         (built in SmsReaderModule.attachTxActions) ever target it. -->
+    <receiver
+      android:name=".NotificationActionReceiver"
       android:exported="false" />
   </application>
 </manifest>

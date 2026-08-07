@@ -15,8 +15,8 @@ export function openNotificationListenerSettings(): void {
   native.openNotificationListenerSettings();
 }
 
-/** Appends a "Category" action to an already-posted tx notification whose PendingIntent opens
- * CategoryPickerActivity directly, bypassing MainActivity entirely — see the native module. */
-export function addCategoryAction(notificationId: string, txId: number): void {
-  native.addCategoryAction(notificationId, txId);
+/** Appends the Category, Add note, and Not An Expense/Income actions to an already-posted tx
+ * notification, all handled natively (no JS/RN engine boot required) — see the native module. */
+export function attachTxActions(notificationId: string, txId: number, notExpenseLabel: string): void {
+  native.attachTxActions(notificationId, txId, notExpenseLabel);
 }
