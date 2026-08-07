@@ -39,7 +39,6 @@ export type MainStackParamList = {
     transactionId: number;
     pickedCategoryId?: number;
     pickedSubcategoryId?: number;
-    autoOpenCategoryPicker?: boolean;
   };
   CategoryPicker: { returnTo: 'AddTransaction' | 'EditTransaction'; transactionId?: number; direction?: 'expense' | 'income' };
   AccountDetail: { bankName: string; last4?: string };

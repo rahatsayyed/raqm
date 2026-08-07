@@ -1,5 +1,8 @@
 package expo.modules.smsreader
 
+import android.app.Notification
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Intent
 import android.provider.Telephony
 import expo.modules.kotlin.modules.Module
@@ -59,6 +62,33 @@ class SmsReaderModule : Module() {
         }
         context.startActivity(intent)
       }
+    }
+
+    // Appends a "Category" action to an already-posted tx notification whose PendingIntent
+    // opens CategoryPickerActivity directly (not MainActivity) — see that Activity's doc
+    // comment for why. expo-notifications' JS category API has no way to point an action's
+    // PendingIntent anywhere but the app's launch intent, so this action is added natively,
+    // after the fact, instead of being registered through Notifications.setNotificationCategoryAsync.
+    Function("addCategoryAction") { notificationId: String, txId: Int ->
+      val context = appContext.reactContext ?: return@Function
+      val nm = context.getSystemService(NotificationManager::class.java) ?: return@Function
+      val sbn = nm.activeNotifications.firstOrNull { it.tag == notificationId } ?: return@Function
+
+      val pickerIntent = Intent(context, CategoryPickerActivity::class.java).apply {
+        putExtra(CategoryPickerActivity.EXTRA_TX_ID, txId)
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+      }
+      val pendingIntent = PendingIntent.getActivity(
+        context,
+        notificationId.hashCode(),
+        pickerIntent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+      )
+      val action = Notification.Action.Builder(0, "Category", pendingIntent).build()
+      val rebuilt = Notification.Builder.recoverBuilder(context, sbn.notification)
+        .addAction(action)
+        .build()
+      nm.notify(sbn.tag, sbn.id, rebuilt)
     }
   }
 }
