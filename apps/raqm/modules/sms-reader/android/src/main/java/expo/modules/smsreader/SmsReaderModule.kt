@@ -85,10 +85,16 @@ class SmsReaderModule : Module() {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
       )
       val action = Notification.Action.Builder(0, "Category", pendingIntent).build()
-      val rebuilt = Notification.Builder.recoverBuilder(context, sbn.notification)
-        .addAction(action)
-        .build()
-      nm.notify(sbn.tag, sbn.id, rebuilt)
+      // Mutate the existing Notification object's actions array in place and re-notify with
+      // that SAME object, rather than reconstructing one via Notification.Builder.recoverBuilder
+      // — recoverBuilder rebuilds contentIntent/extras from scratch and isn't guaranteed to
+      // preserve them faithfully (that's exactly what broke tapping the notification body: it
+      // stopped landing on TransactionDetail because the rebuilt contentIntent lost the txId
+      // expo-notifications had marshalled into the original extras). Appending in place touches
+      // nothing but the actions array, so contentIntent/extras are untouched.
+      val notification = sbn.notification
+      notification.actions = (notification.actions ?: emptyArray()) + action
+      nm.notify(sbn.tag, sbn.id, notification)
     }
   }
 }
