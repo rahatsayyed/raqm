@@ -1,25 +1,43 @@
 package expo.modules.smsreader
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
+import android.view.WindowManager
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.TextView
 import java.io.File
 
 /**
  * A translucent, no-history Activity that lets the user pick a category straight from the
  * "Category" notification action, without ever bringing Raqm's real UI to the foreground —
  * see AndroidManifest.xml's taskAffinity="" + excludeFromRecents on this entry, and
- * SmsReaderModule.addCategoryAction which points the action's PendingIntent here directly.
+ * SmsReaderModule.attachTxActions which points the action's PendingIntent here directly.
  * Reads/writes SQLite directly rather than going through the JS layer so this keeps working
- * even when the app process is fully killed (the JS/TaskManager background path is unreliable
- * in that state — see notes on the "Add note" action).
+ * even when the app process is fully killed — see NotificationActionReceiver for the same
+ * reasoning applied to the other two tx notification actions.
+ *
+ * The picker itself is a bottom-anchored grid built to visually match the in-app category
+ * picker (TransactionDetailScreen's CategorySheet: 3-column grid, rounded cells, emoji, dark
+ * theme colors) rather than a plain system AlertDialog list — colors are hardcoded from
+ * src/theme/colors.ts since this Activity has no access to NativeWind/theme tokens.
  */
 class CategoryPickerActivity : Activity() {
+  private var db: SQLiteDatabase? = null
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+    window.setGravity(Gravity.BOTTOM)
+    window.setDimAmount(0f) // we draw our own scrim below, avoid double-dimming
 
     val txId = intent.getIntExtra(EXTRA_TX_ID, -1)
     if (txId == -1) {
@@ -28,64 +46,187 @@ class CategoryPickerActivity : Activity() {
     }
 
     val dbPath = File(filesDir.canonicalPath, "SQLite/raqm.db").path
-    val db = try {
+    val database = try {
       SQLiteDatabase.openDatabase(dbPath, null, SQLiteDatabase.OPEN_READWRITE)
     } catch (e: Exception) {
-      Log.e("CategoryPickerActivity", "Could not open raqm.db", e)
+      Log.e(TAG, "Could not open raqm.db", e)
       finish()
       return
     }
+    db = database
 
-    val ids = mutableListOf<Int>()
-    val labels = mutableListOf<String>()
+    var currentCategoryId = -1
+    database.rawQuery("SELECT category_id FROM transactions WHERE id = ?", arrayOf(txId.toString())).use { cursor ->
+      if (cursor.moveToFirst() && !cursor.isNull(0)) currentCategoryId = cursor.getInt(0)
+    }
+
+    val categories = mutableListOf<Triple<Int, String, String>>() // id, name, emoji
     try {
-      db.rawQuery("SELECT id, name, emoji FROM categories ORDER BY name ASC", null).use { cursor ->
+      database.rawQuery("SELECT id, name, emoji FROM categories ORDER BY name ASC", null).use { cursor ->
         while (cursor.moveToNext()) {
-          ids.add(cursor.getInt(0))
-          labels.add("${cursor.getString(2)}  ${cursor.getString(1)}")
+          categories.add(Triple(cursor.getInt(0), cursor.getString(1), cursor.getString(2)))
         }
       }
     } catch (e: Exception) {
-      Log.e("CategoryPickerActivity", "Could not read categories", e)
-      db.close()
-      finish()
+      Log.e(TAG, "Could not read categories", e)
+      closeAndFinish()
       return
     }
 
-    if (labels.isEmpty()) {
-      db.close()
-      finish()
+    if (categories.isEmpty()) {
+      closeAndFinish()
       return
     }
 
-    AlertDialog.Builder(this)
-      .setTitle("Set category")
-      .setItems(labels.toTypedArray()) { _, index ->
-        try {
-          // Every other category-change path (see TransactionDetailScreen's CategorySheet
-          // onSelect) clears subcategory_id alongside category_id — a subcategory only makes
-          // sense scoped to its parent category, so leaving the old one here would point at a
-          // subcategory belonging to whatever category this tx had before.
-          val values = ContentValues().apply {
-            put("category_id", ids[index])
-            putNull("subcategory_id")
-          }
-          db.update("transactions", values, "id = ?", arrayOf(txId.toString()))
-        } catch (e: Exception) {
-          Log.e("CategoryPickerActivity", "Could not update category", e)
-        } finally {
-          db.close()
-          finish()
+    setContentView(buildPickerView(categories, currentCategoryId, txId))
+  }
+
+  private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+  private fun buildPickerView(
+    categories: List<Triple<Int, String, String>>,
+    currentCategoryId: Int,
+    txId: Int,
+  ): View {
+    val scrim = FrameLayout(this).apply {
+      layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+      setBackgroundColor(Color.parseColor("#99000000"))
+      isClickable = true
+      setOnClickListener { closeAndFinish() }
+    }
+
+    val card = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      isClickable = true
+      setOnClickListener { /* swallow taps on the card so they don't fall through to the scrim */ }
+      background = GradientDrawable().apply {
+        setColor(Color.parseColor(COLOR_SURFACE))
+        cornerRadii = floatArrayOf(
+          dp(20).toFloat(), dp(20).toFloat(),
+          dp(20).toFloat(), dp(20).toFloat(),
+          0f, 0f,
+          0f, 0f,
+        )
+      }
+      setPadding(dp(20), dp(20), dp(20), dp(28))
+    }
+
+    val title = TextView(this).apply {
+      text = "Set category"
+      setTextColor(Color.parseColor(COLOR_ON_SURFACE))
+      textSize = 16f
+      setTypeface(typeface, android.graphics.Typeface.BOLD)
+      setPadding(0, 0, 0, dp(16))
+    }
+    card.addView(title)
+
+    categories.chunked(3).forEach { row ->
+      val rowLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+          bottomMargin = dp(8)
         }
       }
-      .setOnCancelListener {
-        db.close()
-        finish()
+      row.forEach { (catId, name, emoji) ->
+        rowLayout.addView(buildCell(catId, name, emoji, selected = catId == currentCategoryId, txId = txId))
       }
-      .show()
+      repeat(3 - row.size) {
+        rowLayout.addView(View(this).apply {
+          layoutParams = LinearLayout.LayoutParams(0, 0, 1f)
+        })
+      }
+      card.addView(rowLayout)
+    }
+
+    val cardParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+      gravity = Gravity.BOTTOM
+    }
+    scrim.addView(card, cardParams)
+    return scrim
+  }
+
+  private fun buildCell(catId: Int, name: String, emoji: String, selected: Boolean, txId: Int): View {
+    val cellBg = GradientDrawable().apply {
+      cornerRadius = dp(10).toFloat()
+      if (selected) {
+        setColor(Color.parseColor(COLOR_PRIMARY_10))
+        setStroke(dp(1), Color.parseColor(COLOR_PRIMARY))
+      } else {
+        setColor(Color.parseColor(COLOR_SURFACE_CONTAINER_HIGH))
+      }
+    }
+
+    val emojiView = TextView(this).apply {
+      text = emoji
+      textSize = 24f
+      gravity = Gravity.CENTER
+    }
+    val nameView = TextView(this).apply {
+      text = name
+      textSize = 11f
+      gravity = Gravity.CENTER
+      maxLines = 1
+      ellipsize = android.text.TextUtils.TruncateAt.END
+      setTextColor(Color.parseColor(if (selected) COLOR_ON_SURFACE else COLOR_ON_SURFACE_VARIANT))
+      setPadding(dp(2), dp(4), dp(2), 0)
+    }
+
+    return LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      gravity = Gravity.CENTER
+      background = cellBg
+      layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+        marginStart = dp(4)
+        marginEnd = dp(4)
+      }
+      setPadding(dp(8), dp(10), dp(8), dp(10))
+      addView(emojiView)
+      addView(nameView)
+      setOnClickListener {
+        selectCategory(catId, txId)
+      }
+    }
+  }
+
+  private fun selectCategory(categoryId: Int, txId: Int) {
+    try {
+      // Every other category-change path (see TransactionDetailScreen's CategorySheet
+      // onSelect) clears subcategory_id alongside category_id — a subcategory only makes
+      // sense scoped to its parent category, so leaving the old one here would point at a
+      // subcategory belonging to whatever category this tx had before.
+      val values = ContentValues().apply {
+        put("category_id", categoryId)
+        putNull("subcategory_id")
+      }
+      db?.update("transactions", values, "id = ?", arrayOf(txId.toString()))
+    } catch (e: Exception) {
+      Log.e(TAG, "Could not update category", e)
+    } finally {
+      closeAndFinish()
+    }
+  }
+
+  private fun closeAndFinish() {
+    db?.close()
+    db = null
+    finish()
+  }
+
+  override fun onDestroy() {
+    db?.close()
+    super.onDestroy()
   }
 
   companion object {
+    private const val TAG = "CategoryPickerActivity"
     const val EXTRA_TX_ID = "txId"
+
+    // Mirrors src/theme/colors.ts — this Activity has no access to NativeWind/theme tokens.
+    private const val COLOR_SURFACE = "#0e1512"
+    private const val COLOR_SURFACE_CONTAINER_HIGH = "#242c28"
+    private const val COLOR_ON_SURFACE = "#dde4df"
+    private const val COLOR_ON_SURFACE_VARIANT = "#bdcac0"
+    private const val COLOR_PRIMARY = "#75daa8"
+    private const val COLOR_PRIMARY_10 = "#1a75daa8" // primary at ~10% alpha, matches bg-primary/10
   }
 }
