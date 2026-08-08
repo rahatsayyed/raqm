@@ -7,6 +7,7 @@ import android.app.RemoteInput
 import android.content.Intent
 import android.os.Build
 import android.provider.Telephony
+import android.util.Log
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -82,10 +83,28 @@ class SmsReaderModule : Module() {
     // them faithfully (that's what broke tapping the notification body: the rebuilt contentIntent
     // lost the txId expo-notifications had marshalled into the original extras). Appending in
     // place touches nothing but the actions array, so contentIntent/extras are untouched.
-    Function("attachTxActions") { notificationId: String, txId: Int, notExpenseLabel: String ->
-      val context = appContext.reactContext ?: return@Function
-      val nm = context.getSystemService(NotificationManager::class.java) ?: return@Function
-      val sbn = nm.activeNotifications.firstOrNull { it.tag == notificationId } ?: return@Function
+    AsyncFunction("attachTxActions") { notificationId: String, txId: Int, notExpenseLabel: String ->
+      val context = appContext.reactContext ?: return@AsyncFunction
+      val nm = context.getSystemService(NotificationManager::class.java) ?: return@AsyncFunction
+
+      // expo-notifications' own scheduleNotification(), for an immediate (trigger: null)
+      // notification, hands off to a fire-and-forget CoroutineScope(Dispatchers.IO).launch {}
+      // that isn't awaited before the JS scheduleNotificationAsync() promise resolves (see
+      // ExpoPresentationDelegate.presentNotification). So the notification this call is meant
+      // to attach actions to may not have actually posted to the system yet — poll briefly
+      // rather than looking up activeNotifications exactly once and silently no-op'ing.
+      var pendingSbn = nm.activeNotifications.firstOrNull { it.tag == notificationId }
+      var attempts = 0
+      while (pendingSbn == null && attempts < 10) {
+        Thread.sleep(30)
+        pendingSbn = nm.activeNotifications.firstOrNull { it.tag == notificationId }
+        attempts++
+      }
+      val sbn = pendingSbn
+      if (sbn == null) {
+        Log.e("SmsReaderModule", "attachTxActions: notification $notificationId never appeared after ${attempts * 30}ms")
+        return@AsyncFunction
+      }
 
       val categoryIntent = Intent(context, CategoryPickerActivity::class.java).apply {
         putExtra(CategoryPickerActivity.EXTRA_TX_ID, txId)
