@@ -32,6 +32,8 @@ import java.io.File
  */
 class CategoryPickerActivity : Activity() {
   private var db: SQLiteDatabase? = null
+  private var notificationTag: String? = null
+  private var notificationIntId: Int = -1
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -44,6 +46,8 @@ class CategoryPickerActivity : Activity() {
       finish()
       return
     }
+    notificationTag = intent.getStringExtra(EXTRA_NOTIFICATION_TAG)
+    notificationIntId = intent.getIntExtra(EXTRA_NOTIFICATION_INT_ID, -1)
 
     val dbPath = File(filesDir.canonicalPath, "SQLite/raqm.db").path
     val database = try {
@@ -199,6 +203,11 @@ class CategoryPickerActivity : Activity() {
         putNull("subcategory_id")
       }
       db?.update("transactions", values, "id = ?", arrayOf(txId.toString()))
+      val database = db
+      val tag = notificationTag
+      if (database != null && tag != null && notificationIntId != -1) {
+        refreshTxNotificationBody(this, database, txId, tag, notificationIntId)
+      }
     } catch (e: Exception) {
       Log.e(TAG, "Could not update category", e)
     } finally {
@@ -220,6 +229,8 @@ class CategoryPickerActivity : Activity() {
   companion object {
     private const val TAG = "CategoryPickerActivity"
     const val EXTRA_TX_ID = "txId"
+    const val EXTRA_NOTIFICATION_TAG = "notificationTag"
+    const val EXTRA_NOTIFICATION_INT_ID = "notificationIntId"
 
     // Mirrors src/theme/colors.ts — this Activity has no access to NativeWind/theme tokens.
     private const val COLOR_SURFACE = "#0e1512"

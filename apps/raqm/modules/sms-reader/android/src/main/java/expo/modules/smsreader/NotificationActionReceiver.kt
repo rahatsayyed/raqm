@@ -1,6 +1,5 @@
 package expo.modules.smsreader
 
-import android.app.Notification
 import android.app.NotificationManager
 import android.app.RemoteInput
 import android.content.BroadcastReceiver
@@ -60,7 +59,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
           }
           // Re-notify with the same (tag, id) regardless of whether text was empty — Android's
           // RemoteInput contract requires this to clear the inline input's "sending" spinner.
-          updateNoteNotification(context, db, txId, tag, id, noteText)
+          refreshTxNotificationBody(context, db, txId, tag, id)
         }
       }
     } catch (e: Exception) {
@@ -68,52 +67,6 @@ class NotificationActionReceiver : BroadcastReceiver() {
     } finally {
       db.close()
     }
-  }
-
-  private fun updateNoteNotification(
-    context: Context,
-    db: SQLiteDatabase,
-    txId: Int,
-    tag: String,
-    id: Int,
-    noteText: String?,
-  ) {
-    val nm = context.getSystemService(NotificationManager::class.java) ?: return
-    val sbn = nm.activeNotifications.firstOrNull { it.tag == tag && it.id == id } ?: return
-    val notification = sbn.notification
-
-    if (!noteText.isNullOrEmpty()) {
-      var bankLabel = ""
-      var categoryName = "Uncategorized"
-      // Mirrors accountLabel.ts (nickname override else raw bank name) and the "Bank • Category
-      // • Note" echo line the old JS path built — recomputed fresh each time rather than stashing
-      // an original body, since bank/category rarely change and this avoids any stash bookkeeping.
-      db.rawQuery(
-        """
-        SELECT t.bankName,
-               (SELECT a.nickname FROM accounts a
-                WHERE a.bank_name = t.bankName AND COALESCE(a.last4, '') = COALESCE(t.accountLast4, '')
-                LIMIT 1) AS nickname,
-               c.name AS categoryName
-        FROM transactions t
-        LEFT JOIN categories c ON c.id = t.category_id
-        WHERE t.id = ?
-        """.trimIndent(),
-        arrayOf(txId.toString()),
-      ).use { cursor ->
-        if (cursor.moveToFirst()) {
-          val bankName = cursor.getString(0) ?: ""
-          val nickname = cursor.getString(1)
-          bankLabel = if (!nickname.isNullOrEmpty()) nickname else bankName
-          categoryName = cursor.getString(2) ?: "Uncategorized"
-        }
-      }
-      val ellipsized = if (noteText.length > 40) noteText.take(40).trimEnd() + "…" else noteText
-      val newBody = "$bankLabel • $categoryName • $ellipsized"
-      notification.extras.putCharSequence(Notification.EXTRA_TEXT, newBody)
-      notification.extras.putCharSequence(Notification.EXTRA_BIG_TEXT, newBody)
-    }
-    nm.notify(tag, id, notification)
   }
 
   companion object {
