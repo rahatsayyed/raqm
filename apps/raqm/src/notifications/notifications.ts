@@ -126,15 +126,30 @@ export function attachNotificationHandlers(
     const data = response.notification.request.content.data as { txId?: number };
 
     if (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
-      if (!useAppStore.getState().isOnboardingComplete) return;
+      const proceed = () => {
+        if (!useAppStore.getState().isOnboardingComplete) return;
+        navigateWhenReady(() => {
+          if (typeof data.txId === 'number') {
+            navRef.navigate('TransactionDetail', { transactionId: data.txId });
+          } else {
+            navRef.navigate('Tabs');
+          }
+        });
+      };
 
-      navigateWhenReady(() => {
-        if (typeof data.txId === 'number') {
-          navRef.navigate('TransactionDetail', { transactionId: data.txId });
-        } else {
-          navRef.navigate('Tabs');
-        }
-      });
+      // A notification tap that cold-starts the app fires this via getLastNotificationResponseAsync
+      // below, right as AppNavigator mounts — well before useAppStore's persisted
+      // isOnboardingComplete finishes hydrating (it defaults to false until then). Checking it
+      // immediately silently dropped the navigation, landing the user on the normal app instead
+      // of TransactionDetail. Wait for hydration first so the check reads the real value.
+      if (useAppStore.persist.hasHydrated()) {
+        proceed();
+      } else {
+        const unsub = useAppStore.persist.onFinishHydration(() => {
+          unsub();
+          proceed();
+        });
+      }
     }
   };
 

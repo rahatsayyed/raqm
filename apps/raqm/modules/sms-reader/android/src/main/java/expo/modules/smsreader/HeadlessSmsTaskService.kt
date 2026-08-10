@@ -27,9 +27,14 @@ class HeadlessSmsTaskService : HeadlessJsTaskService() {
 
   // Starting a Service via startForegroundService requires calling startForeground()
   // within a few seconds or the system kills the app — this satisfies that requirement
-  // with a MIN-importance, silent notification that shouldn't surface to the user.
+  // with a MIN-importance, silent notification that shouldn't surface to the user. Only
+  // needed when SmsBroadcastReceiver started us via startForegroundService in the first
+  // place (app was backgrounded/killed) — when the app was already in the foreground it
+  // used plain startService(), which has no such requirement, so skip this entirely and
+  // the notification never appears.
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+    val appWasForeground = intent?.getBooleanExtra("appWasForeground", false) ?: false
+    if (!appWasForeground && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       val manager = getSystemService(NotificationManager::class.java)
       if (manager.getNotificationChannel(CHANNEL_ID) == null) {
         manager.createNotificationChannel(

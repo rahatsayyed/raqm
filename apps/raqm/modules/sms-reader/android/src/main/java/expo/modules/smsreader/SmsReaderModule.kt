@@ -108,6 +108,8 @@ class SmsReaderModule : Module() {
 
       val categoryIntent = Intent(context, CategoryPickerActivity::class.java).apply {
         putExtra(CategoryPickerActivity.EXTRA_TX_ID, txId)
+        putExtra(CategoryPickerActivity.EXTRA_NOTIFICATION_TAG, sbn.tag)
+        putExtra(CategoryPickerActivity.EXTRA_NOTIFICATION_INT_ID, sbn.id)
         flags = Intent.FLAG_ACTIVITY_NEW_TASK
       }
       val categoryPendingIntent = PendingIntent.getActivity(
