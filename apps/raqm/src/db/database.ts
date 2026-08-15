@@ -639,12 +639,12 @@ export async function getReconciliationCandidates(): Promise<ReconciliationCandi
   }>(
     `SELECT id, amount, type, timestamp, category_id, notes, tags, accountLast4
      FROM transactions
-     WHERE deleted_at IS NULL AND type IN ('expense', 'income')`,
+     WHERE deleted_at IS NULL AND type IN ('EXPENSE', 'INCOME')`,
   );
   return rows.map((r) => ({
     id: r.id,
     amount: r.amount,
-    type: r.type as 'expense' | 'income',
+    type: r.type === 'EXPENSE' ? 'expense' : 'income',
     timestamp: r.timestamp,
     categoryId: r.category_id,
     notes: r.notes,
@@ -1532,11 +1532,19 @@ export async function applyImportReconciliation(
       // categoryRaw === null means the CSV row had no category data at all for this row —
       // omit categoryId from the patch entirely (updateTx only touches a column when its key
       // is present) so we don't overwrite an existing real category with null.
-      const patch: TxPatch = { notes: u.notes, tags: u.tags };
+      const patch: TxPatch = {};
       if (u.categoryRaw !== null) {
         patch.categoryId = u.categoryId;
       }
-      await updateTx(u.txId, patch);
+      if (u.notes !== null) {
+        patch.notes = u.notes;
+      }
+      if (u.tags.length > 0) {
+        patch.tags = u.tags;
+      }
+      if (Object.keys(patch).length > 0) {
+        await updateTx(u.txId, patch);
+      }
       updated++;
     }
     for (const ins of input.inserts) {
@@ -1549,6 +1557,7 @@ export async function applyImportReconciliation(
         categoryId: ins.categoryId,
         notes: ins.notes,
         tags: ins.tags,
+        accountLast4: ins.last4,
         isManual: true,
       });
       inserted++;

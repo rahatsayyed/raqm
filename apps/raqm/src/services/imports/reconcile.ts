@@ -18,6 +18,9 @@ export interface PlannedUpdate {
   notes: string | null;
   tags: string[];
   conflict: boolean;
+  existingCategoryId: number | null;
+  existingNotes: string | null;
+  existingTags: string[];
 }
 
 export interface PlannedInsert {
@@ -30,6 +33,7 @@ export interface PlannedInsert {
   categoryRaw: string | null;
   notes: string | null;
   tags: string[];
+  last4: string;
 }
 
 export interface ReconciliationPlan {
@@ -69,6 +73,27 @@ function resolveCategoryId(categoryRaw: string | null, categories: { id: number;
   return match ? match.id : null;
 }
 
+/**
+ * Whether an incoming (category/notes/tags) set conflicts with what a matched transaction
+ * already has. Pure so it can be reused both when the plan is first built and again after
+ * the user applies an unmapped-category override (which can change `newCategoryId` without
+ * changing what the transaction already had).
+ */
+export function computeConflict(
+  existingCategoryId: number | null,
+  existingNotes: string | null,
+  existingTags: string[],
+  newCategoryId: number | null,
+  newNotes: string | null,
+  newTags: string[],
+): boolean {
+  return (
+    (existingCategoryId !== null && existingCategoryId !== newCategoryId) ||
+    (existingNotes !== null && existingNotes !== '' && existingNotes !== newNotes) ||
+    (existingTags.length > 0 && JSON.stringify([...existingTags].sort()) !== JSON.stringify([...newTags].sort()))
+  );
+}
+
 export function buildReconciliationPlan(
   rows: AxioRow[],
   candidates: ReconciliationCandidate[],
@@ -91,10 +116,7 @@ export function buildReconciliationPlan(
 
     if (match) {
       claimed.add(match.id);
-      const conflict =
-        (match.categoryId !== null && match.categoryId !== categoryId) ||
-        (match.notes !== null && match.notes !== '' && match.notes !== row.note) ||
-        (match.tags.length > 0 && JSON.stringify([...match.tags].sort()) !== JSON.stringify([...row.tags].sort()));
+      const conflict = computeConflict(match.categoryId, match.notes, match.tags, categoryId, row.note, row.tags);
       updates.push({
         txId: match.id,
         categoryId,
@@ -102,6 +124,9 @@ export function buildReconciliationPlan(
         notes: row.note,
         tags: row.tags,
         conflict,
+        existingCategoryId: match.categoryId,
+        existingNotes: match.notes,
+        existingTags: match.tags,
       });
     } else {
       inserts.push({
@@ -114,6 +139,7 @@ export function buildReconciliationPlan(
         categoryRaw: row.categoryRaw,
         notes: row.note,
         tags: row.tags,
+        last4: row.last4,
       });
     }
   }
