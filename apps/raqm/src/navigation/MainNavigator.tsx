@@ -18,6 +18,8 @@ import { GroceryListDetailScreen } from '../screens/main/GroceryListDetailScreen
 import { SettingsScreen } from '../screens/main/SettingsScreen';
 import { CategoryDetailScreen } from '../screens/main/CategoryDetailScreen';
 import { DeletedTransactionsScreen } from '../screens/main/DeletedTransactionsScreen';
+import { ImportScreen } from '../screens/main/ImportScreen';
+import { AxioImportScreen } from '../screens/main/AxioImportScreen';
 import { DuesRemindersScreen } from '../screens/main/DuesRemindersScreen';
 import { RulesScreen } from '../screens/main/RulesScreen';
 import { ManageAccountsScreen } from '../screens/main/ManageAccountsScreen';
@@ -103,6 +105,8 @@ export function MainNavigator() {
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="DeletedTransactions" component={DeletedTransactionsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="Import" component={ImportScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="AxioImport" component={AxioImportScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="DuesReminders" component={DuesRemindersScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="Rules" component={RulesScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="CategoryOverview" component={CategoryOverviewScreen} options={{ animation: 'slide_from_right' }} />
