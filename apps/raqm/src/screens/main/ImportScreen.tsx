@@ -32,7 +32,7 @@ export function ImportScreen({ navigation }: MainStackScreenProps<'Import'>) {
           <TouchableOpacity
             key={source.key}
             disabled={!source.enabled}
-            onPress={() => navigation.navigate('AxioImport')}
+            onPress={source.key === 'axio' ? () => navigation.navigate('AxioImport') : undefined}
             className={`mb-3 rounded-2xl border border-outline-variant bg-surface-container-high p-4 ${
               source.enabled ? '' : 'opacity-50'
             }`}

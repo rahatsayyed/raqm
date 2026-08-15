@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { File } from 'expo-file-system';
 import { MainStackScreenProps } from '../../navigation/types';
 import { parseAxioCsv } from '../../services/imports/axioCsv';
-import { buildReconciliationPlan, type ReconciliationPlan } from '../../services/imports/reconcile';
+import { buildReconciliationPlan, computeConflict, type ReconciliationPlan } from '../../services/imports/reconcile';
 import {
   getReconciliationCandidates,
   getCategories,
@@ -12,7 +12,7 @@ import {
 } from '../../db/database';
 import { useTxStore } from '../../store/txStore';
 
-type Step = 'idle' | 'unmapped-categories' | 'preview' | 'importing' | 'done';
+type Step = 'idle' | 'unmapped-categories' | 'preview' | 'importing';
 
 function resolvePlanWithOverrides(
   basePlan: ReconciliationPlan,
@@ -21,11 +21,15 @@ function resolvePlanWithOverrides(
   if (Object.keys(overrides).length === 0) return basePlan;
   return {
     ...basePlan,
-    updates: basePlan.updates.map((u) =>
-      u.categoryId === null && u.categoryRaw && u.categoryRaw in overrides
-        ? { ...u, categoryId: overrides[u.categoryRaw] }
-        : u,
-    ),
+    updates: basePlan.updates.map((u) => {
+      if (u.categoryId !== null || !u.categoryRaw || !(u.categoryRaw in overrides)) return u;
+      const newCategoryId = overrides[u.categoryRaw];
+      return {
+        ...u,
+        categoryId: newCategoryId,
+        conflict: computeConflict(u.existingCategoryId, u.existingNotes, u.existingTags, newCategoryId, u.notes, u.tags),
+      };
+    }),
     inserts: basePlan.inserts.map((ins) =>
       ins.categoryId === null && ins.categoryRaw && ins.categoryRaw in overrides
         ? { ...ins, categoryId: overrides[ins.categoryRaw] }
@@ -110,7 +114,7 @@ export function AxioImportScreen({ navigation }: MainStackScreenProps<'AxioImpor
           These Axio categories don't match any of your existing categories. Pick one to use, or leave blank.
         </Text>
 
-        <View className="flex-1">
+        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator={false}>
           {plan.unmappedCategoryNames.map((rawName) => (
             <View key={rawName} className="mb-4">
               <Text className="mb-2 font-inter-semibold text-body-sm text-on-surface">{rawName}</Text>
@@ -118,7 +122,7 @@ export function AxioImportScreen({ navigation }: MainStackScreenProps<'AxioImpor
                 <TouchableOpacity
                   onPress={() => setCategoryOverrides((prev) => ({ ...prev, [rawName]: null }))}
                   className={`rounded-lg border px-3 py-2 ${
-                    categoryOverrides[rawName] === null ? 'border-primary bg-primary/10' : 'border-outline-variant'
+                    (categoryOverrides[rawName] ?? null) === null ? 'border-primary bg-primary/10' : 'border-outline-variant'
                   }`}
                 >
                   <Text className="font-inter text-caption text-on-surface">Leave blank</Text>
@@ -139,10 +143,10 @@ export function AxioImportScreen({ navigation }: MainStackScreenProps<'AxioImpor
               </View>
             </View>
           ))}
-          <TouchableOpacity onPress={() => setStep('preview')} className="mt-2 rounded-2xl bg-primary px-6 py-3">
-            <Text className="text-center font-inter-semibold text-body-sm text-on-primary">Continue</Text>
-          </TouchableOpacity>
-        </View>
+        </ScrollView>
+        <TouchableOpacity onPress={() => setStep('preview')} className="mt-2 rounded-2xl bg-primary px-6 py-3">
+          <Text className="text-center font-inter-semibold text-body-sm text-on-primary">Continue</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -153,6 +157,8 @@ export function AxioImportScreen({ navigation }: MainStackScreenProps<'AxioImpor
     const cleanUpdateCount = resolved.updates.length - conflictCount;
 
     const handleConfirm = async () => {
+      if (busy) return;
+      setBusy(true);
       setStep('importing');
       try {
         const { updated, inserted } = await applyImportReconciliation({
@@ -169,6 +175,8 @@ export function AxioImportScreen({ navigation }: MainStackScreenProps<'AxioImpor
       } catch (e) {
         Alert.alert('Import failed', e instanceof Error ? e.message : 'Unknown error');
         setStep('preview');
+      } finally {
+        setBusy(false);
       }
     };
 
@@ -219,7 +227,11 @@ export function AxioImportScreen({ navigation }: MainStackScreenProps<'AxioImpor
               </View>
             </View>
           )}
-          <TouchableOpacity onPress={handleConfirm} className="mt-6 rounded-2xl bg-primary px-6 py-3">
+          <TouchableOpacity
+            disabled={busy}
+            onPress={handleConfirm}
+            className={`mt-6 rounded-2xl bg-primary px-6 py-3 ${busy ? 'opacity-50' : ''}`}
+          >
             <Text className="text-center font-inter-semibold text-body-sm text-on-primary">Import</Text>
           </TouchableOpacity>
         </View>
