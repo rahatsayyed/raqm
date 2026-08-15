@@ -238,6 +238,7 @@ These appear in V1 UI as non-clickable cards with a "Coming Soon" badge.
 | Should I Buy? | AI-assisted purchase decision based on current budget and goals |
 | Split Expenses | Split a bill with friends; track who owes what |
 | Financial Goals | Set savings targets (e.g. save ₹50,000 by Dec 2026) |
+| Bank/Payment Notification Scan | Optional, user-toggleable scan of bank + payment-app (GPay/PhonePe, exact app list TBD) notifications, dedup'd against SMS-derived transactions by amount + type + time-window match (reference: Pennywise's `BankNotificationListenerService` — parse first, then skip if an existing transaction matches within ±2 minutes). Scoped as its own brainstorm/spec/plan cycle when picked up. |
 
 ---
 
