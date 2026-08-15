@@ -1,6 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import type { ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
+import type { ReconciliationCandidate, PlannedUpdate, PlannedInsert } from '../services/imports/reconcile';
 
 
 async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
@@ -617,6 +618,39 @@ export async function getScannedIdentitiesSince(from: number): Promise<Set<strin
     from,
   );
   return new Set(rows.map(r => `${r.bankName}|${r.amount}|${r.timestamp}`));
+}
+
+/**
+ * Lean read of every live (non-deleted) transaction for Axio-import matching — only the
+ * columns `buildReconciliationPlan` needs, not the full `TxRecord` shape (thousands of rows
+ * would otherwise mean thousands of unused joined/parsed fields).
+ */
+export async function getReconciliationCandidates(): Promise<ReconciliationCandidate[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    id: number;
+    amount: number;
+    type: string;
+    timestamp: number;
+    category_id: number | null;
+    notes: string | null;
+    tags: string | null;
+    accountLast4: string | null;
+  }>(
+    `SELECT id, amount, type, timestamp, category_id, notes, tags, accountLast4
+     FROM transactions
+     WHERE deleted_at IS NULL AND type IN ('expense', 'income')`,
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    amount: r.amount,
+    type: r.type as 'expense' | 'income',
+    timestamp: r.timestamp,
+    categoryId: r.category_id,
+    notes: r.notes,
+    tags: parseTags(r.tags),
+    last4: r.accountLast4,
+  }));
 }
 
 /** Soft-deleted transactions, newest deletion first — the "Deleted transactions" screen. */
@@ -1462,6 +1496,70 @@ export async function insertCsvRows(rows: CsvImportRow[]): Promise<CsvImportResu
   }
 
   return { inserted, duplicates };
+}
+
+export interface ApplyReconciliationInput {
+  updates: PlannedUpdate[];
+  inserts: PlannedInsert[];
+  conflictPolicy: 'overwrite' | 'skip';
+}
+
+export interface ApplyReconciliationResult {
+  updated: number;
+  inserted: number;
+}
+
+/**
+ * Writes a reconciliation plan (see reconcile.ts's buildReconciliationPlan) to SQLite —
+ * matched rows via updateTx, unmatched rows via insertTx, all in one transaction. Conflicting
+ * matches (the existing tx already had a category/notes/tags that differ) are skipped
+ * entirely when conflictPolicy is 'skip', or applied like any other update when 'overwrite' —
+ * this is a single all-or-nothing choice for the whole import, not resolved per row.
+ */
+export async function applyImportReconciliation(
+  input: ApplyReconciliationInput,
+): Promise<ApplyReconciliationResult> {
+  const database = await getDb();
+  let updated = 0;
+  let inserted = 0;
+
+  await database.runAsync('BEGIN');
+  try {
+    // Sequential, not Promise.all — see insertParsedTxs/insertCsvRows for why a batch of
+    // concurrent expo-sqlite writes crashes on large imports.
+    for (const u of input.updates) {
+      if (u.conflict && input.conflictPolicy === 'skip') continue;
+      // categoryRaw === null means the CSV row had no category data at all for this row —
+      // omit categoryId from the patch entirely (updateTx only touches a column when its key
+      // is present) so we don't overwrite an existing real category with null.
+      const patch: TxPatch = { notes: u.notes, tags: u.tags };
+      if (u.categoryRaw !== null) {
+        patch.categoryId = u.categoryId;
+      }
+      await updateTx(u.txId, patch);
+      updated++;
+    }
+    for (const ins of input.inserts) {
+      await insertTx({
+        amount: ins.amount,
+        type: ins.type === 'expense' ? TransactionType.EXPENSE : TransactionType.INCOME,
+        merchant: ins.merchant,
+        bankName: ins.bankName,
+        timestamp: ins.timestamp,
+        categoryId: ins.categoryId,
+        notes: ins.notes,
+        tags: ins.tags,
+        isManual: true,
+      });
+      inserted++;
+    }
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+
+  return { updated, inserted };
 }
 
 // ── Multi-row transaction ops (Plan 3) ─────────────────────────────────────────
