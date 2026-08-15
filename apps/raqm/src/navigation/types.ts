@@ -46,6 +46,8 @@ export type MainStackParamList = {
   Settings: undefined;
   CategoryDetail: { categoryId: number; categoryName: string; period?: string };
   DeletedTransactions: undefined;
+  Import: undefined;
+  AxioImport: undefined;
   Grocery: undefined;
   DuesReminders: undefined;
   Rules: { section?: 'category' | 'merchant' | 'amount' } | undefined;

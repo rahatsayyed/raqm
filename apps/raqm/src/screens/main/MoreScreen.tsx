@@ -273,7 +273,7 @@ export function MoreScreen() {
       title: 'DATA',
       rows: [
         { key: 'rescan', label: rescanLabel, Icon: RefreshIcon, onPress: rescanStatus === 'scanning' ? undefined : () => setRescanModalVisible(true) },
-        { key: 'import-csv', label: csvImporting ? 'Importing…' : 'Import', Icon: ImportIcon, onPress: csvImporting ? undefined : handleImportCsv },
+        { key: 'import-csv', label: 'Import', Icon: ImportIcon, onPress: () => navigation.navigate('Import') },
         { key: 'export', label: 'Export', Icon: ExportIcon, onPress: handleExportData },
         { key: 'deleted', label: 'Deleted Transactions', Icon: TrashIcon, onPress: () => navigation.navigate('DeletedTransactions') },
         { key: 'backup-restore', label: 'Backup & Restore', Icon: MergeIcon, comingSoon: true },
