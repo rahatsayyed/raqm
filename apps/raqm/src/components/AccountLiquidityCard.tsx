@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from "react-native";
 import { Colors } from "../theme";
 import { ArrowUpRightIcon, RefreshIcon } from "./TabIcon";
 import { formatAmount } from "../utils/format";
+import { MaskedValue } from "./MaskedValue";
 import { RefreshAccountSheet } from "./RefreshAccountSheet";
 
 interface Props {
@@ -81,12 +82,13 @@ export function AccountLiquidityCard({
               <Text className="font-inter-semibold text-[9px] leading-[14px] tracking-[0.05em] text-on-surface-variant mb-[2px]">
                 Available Balance
               </Text>
-              <Text
+              <MaskedValue
+                kind="bank_balance"
+                value={balance}
+                currency={currency}
                 className="font-mono-medium text-[22px] leading-[26px] text-on-surface"
                 numberOfLines={1}
-              >
-                {formatAmount(balance, currency)}
-              </Text>
+              />
             </View>
             <View className="flex-row items-center justify-between">
               <Text
