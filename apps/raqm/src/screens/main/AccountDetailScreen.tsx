@@ -8,6 +8,7 @@ import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import type { TxRecord } from '../../db/database';
 import { formatAmount } from '../../utils/format';
 import { rescanTransactions } from '../../services/rescan';
+import { MaskedValue } from '../../components/MaskedValue';
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -171,9 +172,16 @@ export function AccountDetailScreen({ route, navigation }: MainStackScreenProps<
           <Text className="font-inter-bold text-headline-sm text-on-surface">{account?.nickname || bankName}</Text>
           <Text className="font-inter text-body-md text-on-surface-variant">{last4 ? `•••• ${last4}` : 'Account'}</Text>
           <Text className="font-mono text-label-sm text-on-surface-variant mt-md">Last known balance</Text>
-          <Text className="font-mono-medium text-numeric-xl text-on-surface">
-            {lastBalanceTx?.balance != null ? formatAmount(lastBalanceTx.balance, currency) : '—'}
-          </Text>
+          {lastBalanceTx?.balance != null ? (
+            <MaskedValue
+              kind="bank_balance"
+              value={lastBalanceTx.balance}
+              currency={currency}
+              className="font-mono-medium text-numeric-xl text-on-surface"
+            />
+          ) : (
+            <Text className="font-mono-medium text-numeric-xl text-on-surface">—</Text>
+          )}
           {lastBalanceTx && (
             <Text className="font-mono text-label-sm text-outline">as of {formatDate(lastBalanceTx.timestamp)}</Text>
           )}
@@ -216,7 +224,12 @@ export function AccountDetailScreen({ route, navigation }: MainStackScreenProps<
             {outstanding != null && (
               <View className="flex-row justify-between mt-sm">
                 <Text className="font-mono text-label-sm text-on-surface-variant">Outstanding</Text>
-                <Text className="font-mono-medium text-[16px] leading-[28px] text-error">{formatAmount(outstanding, currency)}</Text>
+                <MaskedValue
+                  kind="bank_balance"
+                  value={outstanding}
+                  currency={currency}
+                  className="font-mono-medium text-[16px] leading-[28px] text-error"
+                />
               </View>
             )}
             <TouchableOpacity
