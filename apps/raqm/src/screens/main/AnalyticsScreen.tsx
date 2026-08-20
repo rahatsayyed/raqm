@@ -16,6 +16,7 @@ import { TrendingUpIcon, TrendingDownIcon, ChevronRightIcon } from '../../compon
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { MainTabScreenProps, MainStackParamList } from '../../navigation/types';
 import { formatAmount } from '../../utils/format';
+import { MaskedValue } from '../../components/MaskedValue';
 import { accountLabel } from '../../utils/accountLabel';
 
 /** Whether a transaction should be included in analytics at all (soft-deleted rows are always excluded). */
@@ -355,7 +356,19 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
         onSearchPress={() => navigation.getParent<NavigationProp<MainStackParamList>>()?.navigate('Transactions', { focusSearch: true })}
       />
 
-      <BriefingHero label={heroLabel} value={formatAmount(heroTotal, currency)} data={heroSparkline} currency={currency} />
+      <BriefingHero
+        label={heroLabel}
+        value={
+          <MaskedValue
+            kind="expense"
+            value={heroTotal}
+            currency={currency}
+            className="font-mono-medium text-metric-hero text-ink-headline tracking-tight"
+          />
+        }
+        data={heroSparkline}
+        currency={currency}
+      />
 
       {narrativeComparison && (
         <NarrativeAdvisor
@@ -490,9 +503,12 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
               <Text className="font-inter-semibold text-section-header text-on-surface-variant mb-[4px] uppercase tracking-wider">
                 TOTAL LIQUIDITY
               </Text>
-              <Text className="font-mono-medium text-statement-lg text-on-surface">
-                {formatAmount(liquiditySnapshot.total, currency)}
-              </Text>
+              <MaskedValue
+                kind="bank_balance"
+                value={liquiditySnapshot.total}
+                currency={currency}
+                className="font-mono-medium text-statement-lg text-on-surface"
+              />
             </View>
             <ChevronRightIcon color={Colors.onSurfaceVariant} size={18} />
           </TouchableOpacity>
