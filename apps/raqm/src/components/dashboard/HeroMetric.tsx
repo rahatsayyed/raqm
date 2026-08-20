@@ -4,13 +4,15 @@ import { HeroGlow } from '../HeroGlow';
 
 interface HeroStat {
   label: string;
-  value: string;
+  value: React.ReactNode;
   direction: 'up' | 'down';
 }
 
 interface HeroMetricProps {
   label: string;
-  value: string;
+  /** A string is wrapped in the metric-hero Text; a node is rendered as-is
+   *  (MaskedValue brings its own Text with the same classes). */
+  value: React.ReactNode;
   valueColorClassName?: string;
   sublabel?: string;
   stats?: HeroStat[];
@@ -23,7 +25,11 @@ export function HeroMetric({ label, value, valueColorClassName = 'text-ink-headl
       <HeroGlow />
       <View className="items-center">
         <Text className="font-inter-semibold text-label-caps text-ink-label mb-[4px]">{label}</Text>
-        <Text className={`font-mono-medium text-metric-hero ${valueColorClassName}`}>{value}</Text>
+        {typeof value === 'string' ? (
+          <Text className={`font-mono-medium text-metric-hero ${valueColorClassName}`}>{value}</Text>
+        ) : (
+          value
+        )}
         {sublabel && <Text className="font-inter text-body-standard text-ink-body mt-[2px]">{sublabel}</Text>}
       </View>
       {stats && stats.length > 0 && (
@@ -37,7 +43,11 @@ export function HeroMetric({ label, value, valueColorClassName = 'text-ink-headl
                   <Text className={`text-body-standard ${s.direction === 'up' ? 'text-error-muted' : 'text-primary'}`}>
                     {s.direction === 'up' ? '↗' : '↘'}
                   </Text>
-                  <Text className="font-mono-medium text-body-standard text-on-surface">{s.value}</Text>
+                  {typeof s.value === 'string' ? (
+                    <Text className="font-mono-medium text-body-standard text-on-surface">{s.value}</Text>
+                  ) : (
+                    s.value
+                  )}
                 </View>
               </View>
             </React.Fragment>
