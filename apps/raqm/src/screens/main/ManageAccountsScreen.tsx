@@ -10,7 +10,7 @@ import { AddAccountModal } from '../../components/AddAccountModal';
 import { EditFieldSheet } from '../../components/EditFieldSheet';
 import { Colors } from '../../theme';
 import { AddIcon, BankIcon, ChevronRightIcon, WalletIcon, MergeIcon, PencilIcon } from '../../components/TabIcon';
-import { formatAmount } from '../../utils/format';
+import { MaskedValue } from '../../components/MaskedValue';
 
 function accountLabel(account: Account): string {
   return account.nickname || account.bankName;
@@ -117,7 +117,11 @@ export function ManageAccountsScreen({ navigation }: MainStackScreenProps<'Manag
                   </Text>
                 </View>
                 {account.balance != null && (
-                  <Text className="font-mono-medium text-numeric-sm text-on-surface mr-xs">{formatAmount(account.balance)}</Text>
+                  <MaskedValue
+                    kind="bank_balance"
+                    value={account.balance}
+                    className="font-mono-medium text-numeric-sm text-on-surface mr-xs"
+                  />
                 )}
                 <ChevronRightIcon color={Colors.inkLabel} size={18} />
               </TouchableOpacity>

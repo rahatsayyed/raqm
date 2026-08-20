@@ -11,6 +11,7 @@ import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { countsTowardTotals } from '../../services/txIntelligence';
 import { formatAmount } from '../../utils/format';
 import { accountLabel } from '../../utils/accountLabel';
+import { MaskedValue } from '../../components/MaskedValue';
 import {
   SearchIcon, TrendingUpIcon, WalletCardsIcon,
   ArrowLeftRightIcon, BadgePercentIcon, LayersIcon, BackIcon,
@@ -280,7 +281,12 @@ export function TransactionsScreen() {
       return (
         <View className="flex-row justify-between items-baseline bg-background pt-[32px] pb-[12px] border-b border-border-subtle">
           <Text className="font-inter-semibold text-section-header text-ink-label">{item.label}</Text>
-          <Text className="font-mono text-[13px] leading-[20px] text-ink-label">{formatAmount(item.total, currency)}</Text>
+          <MaskedValue
+            kind="expense"
+            value={item.total}
+            currency={currency}
+            className="font-mono text-[13px] leading-[20px] text-ink-label"
+          />
         </View>
       );
     }
