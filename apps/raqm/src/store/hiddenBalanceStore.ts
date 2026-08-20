@@ -48,19 +48,28 @@ export const useHiddenBalanceStore = create<HiddenBalanceStore>((set) => ({
   hydrate: async () => {
     if (hydratePromise) return hydratePromise;
     hydratePromise = (async () => {
-      const raws = await Promise.all(
-        ALL_KINDS.map((kind) => getSetting(HIDE_SETTING_KEYS[kind])),
-      );
-      const hidden: Record<MaskedKind, boolean> = {
-        income: false,
-        expense: false,
-        net: false,
-        bank_balance: false,
-      };
-      ALL_KINDS.forEach((kind, i) => {
-        hidden[kind] = raws[i] === '1';
-      });
-      set({ hidden, hydrated: true });
+      try {
+        const raws = await Promise.all(
+          ALL_KINDS.map((kind) => getSetting(HIDE_SETTING_KEYS[kind])),
+        );
+        const hidden: Record<MaskedKind, boolean> = {
+          income: false,
+          expense: false,
+          net: false,
+          bank_balance: false,
+        };
+        ALL_KINDS.forEach((kind, i) => {
+          hidden[kind] = raws[i] === '1';
+        });
+        set({ hidden, hydrated: true });
+      } catch (err) {
+        // Don't get stuck forever masking every figure app-wide: clear the
+        // cached (rejected) promise so a future hydrate() call can retry,
+        // instead of every MaskedValue being wedged at `hydrated: false` for
+        // the rest of the process's life.
+        console.error('[hiddenBalanceStore] hydrate failed', err);
+        hydratePromise = null;
+      }
     })();
     return hydratePromise;
   },

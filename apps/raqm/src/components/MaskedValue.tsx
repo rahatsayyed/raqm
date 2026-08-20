@@ -37,6 +37,7 @@ export const MaskedValue = React.memo(function MaskedValue({
 }: MaskedValueProps) {
   const hiddenSetting = useHiddenBalanceStore((s) => s.hidden[kind]);
   const hydrated = useHiddenBalanceStore((s) => s.hydrated);
+  const hydrate = useHiddenBalanceStore((s) => s.hydrate);
   const sessionUnlocked = useHiddenBalanceStore((s) => s.sessionUnlocked);
   const unlockSession = useHiddenBalanceStore((s) => s.unlockSession);
 
@@ -78,6 +79,32 @@ export const MaskedValue = React.memo(function MaskedValue({
       setRevealed(false);
     }
   }, [hiddenSetting, clearTimer]);
+
+  // Retry path for a hydration that failed on module load (e.g. a transient
+  // SQLite error): `hydrate()` is a no-op if a hydration is already in
+  // flight/cached, and the store clears its cached promise on failure, so
+  // firing this once per mount whenever we're not yet hydrated is safe and
+  // doesn't spam retries once hydration has actually succeeded.
+  useEffect(() => {
+    if (!hydrated) {
+      void hydrate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
+
+  // Two MaskedValue instances can each open their own RevealAuthSheet before
+  // either has authenticated (e.g. two quick taps on Dashboard's figures).
+  // Android's BiometricPrompt can't run two device-auth calls concurrently,
+  // so the "loser" sheet would show a spurious failure even though the
+  // "winner" just unlocked the session. If our own sheet is still open when
+  // the session flips to unlocked out from under us, treat it as a win too:
+  // close the now-moot sheet and reveal this value.
+  useEffect(() => {
+    if (sessionUnlocked && sheetVisible) {
+      setSheetVisible(false);
+      revealForAWhile();
+    }
+  }, [sessionUnlocked, sheetVisible, revealForAWhile]);
 
   const onPress = useCallback(() => {
     // Already unlocked this session (including after an auto-hide): reveal
