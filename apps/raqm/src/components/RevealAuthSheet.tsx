@@ -53,6 +53,21 @@ export function RevealAuthSheet({ visible, onClose, onSuccess }: Props) {
   // have shipped twice in this app (CLAUDE.md).
   const busyRef = useRef(false);
   const passwordRef = useRef<TextInput | null>(null);
+  // True only while this open-session hasn't been explicitly cancelled — set
+  // false the instant the user taps Cancel/the scrim, or when `visible` flips
+  // to false for any other reason, so a slow authenticateWithDevice /
+  // verifyAppPassword / setAppPassword promise that resolves *after* the
+  // user backed out can never still call succeed() (reveal-after-cancel race).
+  const activeRef = useRef(false);
+  // Always-current onSuccess/onClose so succeed() has a stable identity that
+  // never forces the open-effect below to re-run on an unrelated parent
+  // re-render (which would otherwise wipe an in-progress password/confirm).
+  const onSuccessRef = useRef(onSuccess);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+    onCloseRef.current = onClose;
+  }, [onSuccess, onClose]);
 
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', (e) =>
@@ -65,10 +80,18 @@ export function RevealAuthSheet({ visible, onClose, onSuccess }: Props) {
     };
   }, []);
 
+  // Stable forever (no deps) — reads onSuccess/onClose via refs, and refuses
+  // to fire once the sheet has been explicitly cancelled or closed.
   const succeed = useCallback(() => {
-    onSuccess();
-    onClose();
-  }, [onSuccess, onClose]);
+    if (!activeRef.current) return;
+    onSuccessRef.current();
+    onCloseRef.current();
+  }, []);
+
+  const cancel = useCallback(() => {
+    activeRef.current = false;
+    onCloseRef.current();
+  }, []);
 
   const runDeviceAuth = useCallback(async () => {
     if (busyRef.current) return;
@@ -87,9 +110,21 @@ export function RevealAuthSheet({ visible, onClose, onSuccess }: Props) {
   }, [succeed]);
 
   // Resolve the method on each open and immediately fire the OS prompt in the
-  // 'device' case, so that branch needs no extra tap.
+  // 'device' case, so that branch needs no extra tap. Depends on `visible`
+  // only — `runDeviceAuth`'s identity is stable (it only depends on the now-
+  // stable `succeed`), so this fires exactly on genuine open/close
+  // transitions, never on an unrelated re-render of the host screen.
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      activeRef.current = false;
+      return;
+    }
+    activeRef.current = true;
+    // A prior submit's `finally` may not have run yet if the sheet was closed
+    // and reopened quickly — don't let that stale in-flight flag silently
+    // no-op this open's auto-fired device auth.
+    busyRef.current = false;
+    setBusy(false);
     let cancelled = false;
     setPassword('');
     setConfirm('');
@@ -110,6 +145,7 @@ export function RevealAuthSheet({ visible, onClose, onSuccess }: Props) {
     })();
     return () => {
       cancelled = true;
+      activeRef.current = false;
     };
   }, [visible, runDeviceAuth]);
 
@@ -158,8 +194,8 @@ export function RevealAuthSheet({ visible, onClose, onSuccess }: Props) {
       : windowHeight * 0.8;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable className="flex-1 bg-[#0e151299] justify-end" onPress={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={cancel}>
+      <Pressable className="flex-1 bg-[#0e151299] justify-end" onPress={cancel}>
         <Pressable
           className="bg-surface-container-low rounded-t-2xl border-t border-border-subtle"
           style={{ maxHeight: maxSheetHeight, marginBottom: keyboardHeight }}
@@ -281,7 +317,7 @@ export function RevealAuthSheet({ visible, onClose, onSuccess }: Props) {
                 <Text className="font-inter text-supporting-text text-error mt-sm">{error}</Text>
               )}
 
-              <TouchableOpacity className="py-md items-center mt-xs" onPress={onClose}>
+              <TouchableOpacity className="py-md items-center mt-xs" onPress={cancel}>
                 <Text className="font-inter text-body-md text-on-surface-variant">Cancel</Text>
               </TouchableOpacity>
             </View>
