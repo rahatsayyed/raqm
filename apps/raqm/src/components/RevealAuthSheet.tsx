@@ -175,6 +175,10 @@ export function RevealAuthSheet({ visible, onClose, onSuccess }: Props) {
       const ok = await verifyAppPassword(password);
       if (ok) succeed();
       else setError('Incorrect password.');
+    } catch {
+      // No dead end: an underlying getSetting/expo-crypto failure must surface
+      // as a visible error instead of an unhandled rejection with a stuck sheet.
+      setError('Something went wrong. Try again.');
     } finally {
       if (sessionIdRef.current === mySession) {
         busyRef.current = false;
@@ -202,6 +206,10 @@ export function RevealAuthSheet({ visible, onClose, onSuccess }: Props) {
       // The password the user just typed counts as verified — the spec is
       // explicit that there is no separate re-entry step.
       succeed();
+    } catch {
+      // No dead end: an underlying setSetting/expo-crypto failure must surface
+      // as a visible error instead of an unhandled rejection with a stuck sheet.
+      setError('Something went wrong. Try again.');
     } finally {
       if (sessionIdRef.current === mySession) {
         busyRef.current = false;
