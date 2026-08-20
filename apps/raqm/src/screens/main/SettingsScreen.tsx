@@ -86,8 +86,17 @@ export function SettingsScreen({ navigation }: MainStackScreenProps<'Settings'>)
         return;
       }
     }
-    setAppLock(value);
-    await setAppLockEnabled(value);
+    try {
+      await setAppLockEnabled(value);
+      setAppLock(value);
+    } catch {
+      // Persist failed — leave `appLock` (and thus the switch) showing its
+      // prior value rather than optimistically showing a state that was
+      // never actually saved. This is a security-relevant setting: a user
+      // believing lock is ON when it silently isn't is worse than a toggle
+      // that visibly failed to move.
+      Alert.alert("Couldn't save setting", 'Please try again.');
+    }
   }
 
   function updateDraft(categoryId: number, patch: Partial<{ amount: string; periodType: 'monthly' | 'weekly'; rollover: boolean }>) {

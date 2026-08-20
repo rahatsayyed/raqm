@@ -30,6 +30,11 @@ function AppContent({ onLayout }: { onLayout: () => void }) {
   // AppState event or a button tap during the mount prompt would otherwise
   // stack two BiometricPrompts.
   const authInFlightRef = useRef(false);
+  // Absorbs the OS's own background->active transition that the device-credential
+  // fallback (pre-Android-11) can trigger via startActivityForResult while
+  // runUnlock is still resolving — without this a successful unlock could
+  // immediately retrigger evaluateLock() and re-prompt.
+  const lastUnlockAtRef = useRef(0);
 
   useEffect(() => {
     NavigationBar.setStyle('dark');
@@ -41,7 +46,10 @@ function AppContent({ onLayout }: { onLayout: () => void }) {
     setAuthInFlight(true);
     try {
       const ok = await authenticateWithDevice('Unlock Raqm');
-      if (ok) setLocked(false);
+      if (ok) {
+        lastUnlockAtRef.current = Date.now();
+        setLocked(false);
+      }
     } finally {
       authInFlightRef.current = false;
       setAuthInFlight(false);
@@ -53,20 +61,26 @@ function AppContent({ onLayout }: { onLayout: () => void }) {
   // change made in Settings takes effect on the very next foreground cycle
   // without an app restart.
   const evaluateLock = useCallback(async () => {
-    const enabled = await isAppLockEnabled();
-    if (!enabled) {
+    try {
+      const enabled = await isAppLockEnabled();
+      if (!enabled) {
+        setLocked(false);
+        return;
+      }
+      // Safety valve: if the user removed their device screen lock after enabling
+      // App Lock, presenting LockScreen would strand them with no way to unlock.
+      const usable = await canUseDeviceAuth();
+      if (!usable) {
+        setLocked(false);
+        return;
+      }
+      setLocked(true);
+      await runUnlock();
+    } catch {
+      // Fail open: if the check itself blows up (e.g. DB not ready), never
+      // strand the user on a permanently blank screen behind an unresolved lock.
       setLocked(false);
-      return;
     }
-    // Safety valve: if the user removed their device screen lock after enabling
-    // App Lock, presenting LockScreen would strand them with no way to unlock.
-    const usable = await canUseDeviceAuth();
-    if (!usable) {
-      setLocked(false);
-      return;
-    }
-    setLocked(true);
-    await runUnlock();
   }, [runUnlock]);
 
   useEffect(() => {
@@ -82,6 +96,8 @@ function AppContent({ onLayout }: { onLayout: () => void }) {
       const prev = prevAppState.current;
       prevAppState.current = next;
       if (prev === 'background' && next === 'active') {
+        if (authInFlightRef.current) return;
+        if (Date.now() - lastUnlockAtRef.current < 1000) return;
         evaluateLock();
       }
     });
@@ -93,11 +109,18 @@ function AppContent({ onLayout }: { onLayout: () => void }) {
     // padding here too doubled the gap above the system nav bar.
     <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: Colors.surface }} onLayout={onLayout}>
       <StatusBar style="light" />
-      {locked === undefined ? null : locked ? (
-        <LockScreen onUnlock={runUnlock} busy={authInFlight} />
-      ) : (
-        <AppNavigator />
-      )}
+      {/* AppNavigator stays mounted for the app's whole lifetime once started —
+          it must never remount on re-lock, since its mount effect re-runs the
+          full startup pass (loadTxs, detection jobs, notifications, etc.) and
+          resets navigation state. LockScreen is an opaque overlay on top of it,
+          covering both the locked and not-yet-resolved (`undefined`) states so
+          the navigator is never flashed before the initial check resolves. */}
+      <AppNavigator />
+      {locked !== false ? (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+          <LockScreen onUnlock={runUnlock} busy={authInFlight} />
+        </View>
+      ) : null}
     </View>
   );
 }
