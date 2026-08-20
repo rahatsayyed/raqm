@@ -4,6 +4,7 @@ import { Colors } from '../../theme';
 import { MainStackScreenProps } from '../../navigation/types';
 import { getSetting, setSetting, getCategories, getBudgets, upsertBudget, deleteBudget, type Category, type Budget } from '../../db/database';
 import { scheduleSummaries } from '../../notifications/notifications';
+import { useHiddenBalanceStore, type MaskedKind } from '../../store/hiddenBalanceStore';
 import { canUseDeviceAuth, isAppLockEnabled, setAppLockEnabled } from '../../services/auth/appLock';
 
 const MONTH_START_DAYS = Array.from({ length: 28 }, (_, i) => i + 1);
@@ -19,6 +20,12 @@ export function SettingsScreen({ navigation }: MainStackScreenProps<'Settings'>)
   const [categories, setCategories] = useState<Category[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [drafts, setDrafts] = useState<Record<number, { amount: string; periodType: 'monthly' | 'weekly'; rollover: boolean }>>({});
+  // Read straight from the store rather than adding four more useState +
+  // getSetting calls to `reload`: the store is already the source of truth for
+  // these keys and is hydrated at bundle-eval time, so the switches are correct
+  // on first paint and stay in sync with every on-screen MaskedValue.
+  const hiddenBalances = useHiddenBalanceStore((s) => s.hidden);
+  const setHiddenBalance = useHiddenBalanceStore((s) => s.setHidden);
 
   const reload = useCallback(async () => {
     const [day, daily, weekly, monthly, alerts, appLockOn, cats, buds] = await Promise.all([
@@ -253,6 +260,30 @@ export function SettingsScreen({ navigation }: MainStackScreenProps<'Settings'>)
               trackColor={{ true: Colors.primary, false: Colors.surfaceVariant }}
             />
           </View>
+        </View>
+
+        {/* HIDE BALANCES */}
+        <Text className="font-inter-semibold text-section-header text-on-surface-variant mt-lg mb-sm">HIDE BALANCES</Text>
+        <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md">
+          <Text className="font-inter text-supporting-text text-on-surface-variant mb-sm">
+            Hidden figures show as **** until you tap them and confirm it's you. Once
+            confirmed, the rest of the session needs no further confirmation.
+          </Text>
+          {([
+            ['net', 'Net this month'],
+            ['income', 'Income totals'],
+            ['expense', 'Spending totals'],
+            ['bank_balance', 'Bank balances'],
+          ] as [MaskedKind, string][]).map(([kind, label]) => (
+            <View key={kind} className="flex-row justify-between items-center py-[10px]">
+              <Text className="font-inter text-body-standard text-on-surface flex-1 pr-md">{label}</Text>
+              <Switch
+                value={hiddenBalances[kind]}
+                onValueChange={(value) => { void setHiddenBalance(kind, value); }}
+                trackColor={{ true: Colors.primary, false: Colors.surfaceVariant }}
+              />
+            </View>
+          ))}
         </View>
 
         {/* APPEARANCE */}
