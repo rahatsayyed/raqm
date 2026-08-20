@@ -42,6 +42,8 @@ import { detectRecurringDues, mergeDues } from "../../services/dues";
 import { getMonthBounds, getDayBounds } from "../../utils/period";
 import type { MainStackParamList } from "../../navigation/types";
 import { formatAmount } from "../../utils/format";
+import { MaskedValue, MASK_TEXT } from "../../components/MaskedValue";
+import { useHiddenBalanceStore } from "../../store/hiddenBalanceStore";
 import { TopHeader } from "../../components/TopHeader";
 import {
   HeroMetric,
@@ -500,12 +502,22 @@ export function DashboardScreen() {
   const currency = txs[0]?.currency ?? "₹";
   const netIsNegative = metrics.net < 0;
 
+  // The advisor sentence interpolates the month-spend figure into prose, so it
+  // can't host a MaskedValue — substitute the mask text at the string level
+  // instead, or the expense mask would be trivially bypassed by reading this
+  // card. Masked-while-unhydrated for the same reason MaskedValue is.
+  const hideExpenseText = useHiddenBalanceStore(
+    (s) => s.hidden.expense || !s.hydrated,
+  );
+
   // Advisor line: calm, factual, never shaming (DESIGN.md §11/§12).
   const advisorLine = useMemo(() => {
     if (txs.length === 0)
       return "We're still learning your financial patterns. Insights will appear as your timeline grows.";
     if (metrics.vsLastMonthPct == null) {
-      return `You've spent ${formatAmount(metrics.monthSpent, currency)} so far this month.`;
+      return `You've spent ${
+        hideExpenseText ? MASK_TEXT : formatAmount(metrics.monthSpent, currency)
+      } so far this month.`;
     }
     if (metrics.vsLastMonthPct <= 0) {
       return `Your spending is ${Math.abs(metrics.vsLastMonthPct)}% lower than this time last month.`;
@@ -514,7 +526,7 @@ export function DashboardScreen() {
       ? `, led by ${metrics.topCategoryName}`
       : "";
     return `Spending is ${metrics.vsLastMonthPct}% higher than this time last month${driver}.`;
-  }, [txs.length, metrics, currency]);
+  }, [txs.length, metrics, currency, hideExpenseText]);
 
   return (
     <View className="flex-1">
@@ -611,7 +623,17 @@ export function DashboardScreen() {
         {/* Hero: net this month, over a soft radial glow */}
         <HeroMetric
           label="NET THIS MONTH"
-          value={`${netIsNegative ? "−" : ""}${formatAmount(metrics.net, currency)}`}
+          value={
+            <MaskedValue
+              kind="net"
+              value={metrics.net}
+              currency={currency}
+              prefix={netIsNegative ? "−" : ""}
+              className={`font-mono-medium text-metric-hero ${
+                netIsNegative ? "text-error-muted" : "text-ink-headline"
+              }`}
+            />
+          }
           valueColorClassName={
             netIsNegative ? "text-error-muted" : "text-ink-headline"
           }
@@ -619,12 +641,26 @@ export function DashboardScreen() {
           stats={[
             {
               label: "Debit",
-              value: formatAmount(metrics.monthSpent, currency),
+              value: (
+                <MaskedValue
+                  kind="expense"
+                  value={metrics.monthSpent}
+                  currency={currency}
+                  className="font-mono-medium text-body-standard text-on-surface"
+                />
+              ),
               direction: "up",
             },
             {
               label: "Credit",
-              value: formatAmount(metrics.income, currency),
+              value: (
+                <MaskedValue
+                  kind="income"
+                  value={metrics.income}
+                  currency={currency}
+                  className="font-mono-medium text-body-standard text-on-surface"
+                />
+              ),
               direction: "down",
             },
           ]}
