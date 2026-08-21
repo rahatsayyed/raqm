@@ -1123,6 +1123,11 @@ function ActionsSheet({
 }
 
 // ── Category + subcategory sheet ────────────────────────────────────────────
+// Mirrored natively by CategoryPickerActivity.kt
+// (apps/raqm/modules/sms-reader/android/src/main/java/expo/modules/smsreader/CategoryPickerActivity.kt),
+// the translucent Activity the "Category" notification action launches when the app process is
+// dead. Same picker UX in two runtimes (React Native here vs. a native Kotlin Activity there)
+// that cannot share code — keep both in sync by hand when either changes.
 
 function CategorySheet({
   visible,
