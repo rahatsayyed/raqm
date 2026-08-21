@@ -265,8 +265,8 @@ export function MoreScreen() {
       title: 'PRIVACY & SECURITY',
       rows: [
         { key: 'permissions', label: 'Permissions', Icon: GearIcon, onPress: () => Linking.openSettings() },
-        { key: 'app-lock', label: 'App Lock', Icon: LockIcon, comingSoon: true },
-        { key: 'hide-balances', label: 'Hide Balances', Icon: WalletIcon, comingSoon: true },
+        { key: 'app-lock', label: 'App Lock', Icon: LockIcon, onPress: () => navigation.navigate('Settings') },
+        { key: 'hide-balances', label: 'Hide Balances', Icon: WalletIcon, onPress: () => navigation.navigate('Settings') },
       ],
     },
     {
