@@ -55,22 +55,28 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
   const [categories, setCategories] = useState<Category[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
 
-  const loadMeta = useCallback(() => {
+  // Categories and reminders rarely change and aren't affected by settings changes made
+  // from the pushed Settings screen (categories are only ever added from
+  // TransactionDetailScreen) — load them once on mount rather than on every tx update/focus.
+  useEffect(() => {
     getCategories().then(setCategories);
-    getSetting('month_start_day').then((v) => setMonthStartDay(v ? Number(v) : 1));
     getReminders().then(setReminders);
-  }, [txs]);
+  }, []);
+
+  const loadMonthStartDay = useCallback(() => {
+    getSetting('month_start_day').then((v) => setMonthStartDay(v ? Number(v) : 1));
+  }, []);
 
   useEffect(() => {
-    loadMeta();
-  }, [loadMeta]);
+    loadMonthStartDay();
+  }, [loadMonthStartDay]);
 
   // Re-read month_start_day when returning from Settings — this screen stays mounted
-  // beneath the pushed Settings screen, so [txs] alone won't re-fire.
+  // beneath the pushed Settings screen, so a mount-only effect alone won't re-fire.
   useFocusEffect(
     useCallback(() => {
-      loadMeta();
-    }, [loadMeta]),
+      loadMonthStartDay();
+    }, [loadMonthStartDay]),
   );
 
   // Clamp so a corrupted/legacy setting can't push the reference date into an adjacent month.
