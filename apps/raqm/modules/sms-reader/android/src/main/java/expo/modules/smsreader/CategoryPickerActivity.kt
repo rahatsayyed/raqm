@@ -60,13 +60,25 @@ class CategoryPickerActivity : Activity() {
     db = database
 
     var currentCategoryId = -1
-    database.rawQuery("SELECT category_id FROM transactions WHERE id = ?", arrayOf(txId.toString())).use { cursor ->
-      if (cursor.moveToFirst() && !cursor.isNull(0)) currentCategoryId = cursor.getInt(0)
+    var txType = ""
+    database.rawQuery("SELECT category_id, type FROM transactions WHERE id = ?", arrayOf(txId.toString())).use { cursor ->
+      if (cursor.moveToFirst()) {
+        if (!cursor.isNull(0)) currentCategoryId = cursor.getInt(0)
+        txType = cursor.getString(1) ?: ""
+      }
     }
+    // Mirrors TransactionDetailScreen.tsx's isCredit(): INCOME/CREDIT -> "income" direction,
+    // everything else (EXPENSE, TRANSFER, INVESTMENT, ...) -> "expense" direction. Same
+    // direction-scoping the in-app category picker uses, so this notification-driven picker
+    // offers the same list instead of every category in the table.
+    val direction = if (txType == "INCOME" || txType == "CREDIT") "income" else "expense"
 
     val categories = mutableListOf<Triple<Int, String, String>>() // id, name, emoji
     try {
-      database.rawQuery("SELECT id, name, emoji FROM categories ORDER BY name ASC", null).use { cursor ->
+      database.rawQuery(
+        "SELECT id, name, emoji FROM categories WHERE direction = ? OR direction = 'both' ORDER BY name ASC",
+        arrayOf(direction),
+      ).use { cursor ->
         while (cursor.moveToNext()) {
           categories.add(Triple(cursor.getInt(0), cursor.getString(1), cursor.getString(2)))
         }
