@@ -131,14 +131,18 @@ class SmsReaderModule : Module() {
       // rather than looking up activeNotifications exactly once and silently no-op'ing.
       var pendingSbn = nm.activeNotifications.firstOrNull { it.tag == notificationId }
       var attempts = 0
-      while (pendingSbn == null && attempts < 10) {
-        Thread.sleep(30)
+      // Up to 20 tries at 45ms (~900ms total) — several SMS arriving close together are
+      // processed sequentially (see database.ts's insertParsedTxs invariant), so a later
+      // notification's post can take longer than the previous fixed 300ms budget allowed for.
+      val pollIntervalMs = 45L
+      while (pendingSbn == null && attempts < 20) {
+        Thread.sleep(pollIntervalMs)
         pendingSbn = nm.activeNotifications.firstOrNull { it.tag == notificationId }
         attempts++
       }
       val sbn = pendingSbn
       if (sbn == null) {
-        Log.e("SmsReaderModule", "attachTxActions: notification $notificationId never appeared after ${attempts * 30}ms")
+        Log.e("SmsReaderModule", "attachTxActions: notification $notificationId never appeared after ${attempts * pollIntervalMs}ms")
         return@AsyncFunction
       }
 
