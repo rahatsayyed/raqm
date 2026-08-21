@@ -3,7 +3,7 @@ import { useTxStore } from '../store/txStore';
 import { postTxNotification, cancelTxNotification } from '../notifications/notifications';
 import { SmsReader } from '../native/SmsReader';
 import { accountLabel } from '../utils/accountLabel';
-import { linkTxs } from '../db/database';
+import { getCategories, linkTxs } from '../db/database';
 import { pairSelfTransfers } from './txIntelligence';
 import { Colors } from '../theme';
 
@@ -99,7 +99,6 @@ export async function processIncomingSms(data: { body: string; sender: string; t
     return { id, merchant: tx.merchant ?? null, bankLabel, amount: tx.amount, isDebit: debit };
   }
 
-  const sign = debit ? '-' : '+';
   const amountStr = `₹${tx.amount.toLocaleString('en-IN')}`;
   const action = debit ? 'debited' : 'credited';
   const notifTitle = tx.merchant
@@ -107,7 +106,19 @@ export async function processIncomingSms(data: { body: string; sender: string; t
       ? `${amountStr} at ${tx.merchant}`
       : `${amountStr} ${tx.merchant} ${action}`
     : `${amountStr} ${action}`;
-  const notifBody = `${sign}${amountStr} · ${bankLabel}`;
+  // Always "Bank • Category" — never the raw sign/amount line — so the body matches what
+  // NotificationBodySync.kt rebuilds after the user picks a category or adds a note from the
+  // notification itself (see that file's refreshTxNotificationBody). Category is never left
+  // blank: a transaction with no category_id yet reads as "Uncategorized", matching the native
+  // side's fallback. A note is deliberately NOT shown here — it only appears once the user adds
+  // one from the notification, at which point refreshTxNotificationBody appends it.
+  const insertedTx = useTxStore.getState().txs.find((t) => t.id === id);
+  let categoryName = 'Uncategorized';
+  if (insertedTx?.categoryId != null) {
+    const categories = await getCategories();
+    categoryName = categories.find((c) => c.id === insertedTx.categoryId)?.name ?? 'Uncategorized';
+  }
+  const notifBody = `${bankLabel} • ${categoryName}`;
   const notificationId = await postTxNotification(id, notifTitle, notifBody, notificationColorFor(debit));
   SmsReader.attachTxActions(notificationId, id, debit ? 'Not An Expense' : 'Not An Income');
   prunePendingLegNotifications();
