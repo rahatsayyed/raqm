@@ -351,6 +351,23 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 11) {
+    await database.runAsync(`BEGIN`);
+    try {
+      // Speeds up the merchant majority-vote categorization lookup (categorizeParsedTx),
+      // which groups this merchant's transactions by category_id — cheap even without the
+      // index at real-world per-merchant row counts, but keeps it cheap during full rescans.
+      await database.runAsync(
+        `CREATE INDEX IF NOT EXISTS idx_transactions_merchant ON transactions(merchant)`,
+      );
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (11)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -841,16 +858,55 @@ function getAutoTags(merchant: string | null | undefined): string[] {
   return merchant && ONLINE_MERCHANT_KEYWORDS.test(merchant) ? ['online'] : [];
 }
 
+// Majority-vote-with-recency-tiebreak fallback for categorizeParsedTx: when a merchant
+// has no explicit category_rules row, look at how this merchant's past (non-deleted,
+// categorized) transactions were actually categorized and reuse whichever category was
+// used most often, tie-broken by most recently used (the SQL ORDER BY already implements
+// the tiebreak). Everyday categorization (TransactionDetailScreen's category picker) only
+// ever updates the single transaction's category_id/subcategory_id and never writes a
+// category_rules row, so this is what lets the *next* transaction from that merchant pick
+// up a sensible category instead of falling through to keyword rules/Uncategorized.
+async function getMajorityCategoryForMerchant(
+  merchant: string,
+): Promise<{ categoryId: number; subcategoryId: number | null } | null> {
+  const database = await getDb();
+  const winner = await database.getFirstAsync<{ category_id: number }>(
+    `SELECT category_id, COUNT(*) as cnt, MAX(timestamp) as last_ts
+     FROM transactions
+     WHERE merchant = ? AND category_id IS NOT NULL AND deleted_at IS NULL
+     GROUP BY category_id
+     ORDER BY cnt DESC, last_ts DESC
+     LIMIT 1`,
+    merchant,
+  );
+  if (!winner) return null;
+
+  const subRow = await database.getFirstAsync<{ subcategory_id: number | null }>(
+    `SELECT subcategory_id FROM transactions
+     WHERE merchant = ? AND category_id = ? AND deleted_at IS NULL AND subcategory_id IS NOT NULL
+     ORDER BY timestamp DESC
+     LIMIT 1`,
+    merchant,
+    winner.category_id,
+  );
+
+  return { categoryId: winner.category_id, subcategoryId: subRow?.subcategory_id ?? null };
+}
+
 // Shared categorization decision used by both insertParsedTx and insertParsedTxs.
-// ruleCache lets batch callers avoid repeat DB lookups for the same merchant.
+// ruleCache/majorityCache let batch callers avoid repeat DB lookups for the same merchant
+// across one insertParsedTxs batch.
 async function categorizeParsedTx(
   tx: ParsedTransaction,
   ruleCache?: Map<string, { categoryId: number; subcategoryId: number | null } | null>,
+  majorityCache?: Map<string, { categoryId: number; subcategoryId: number | null } | null>,
 ): Promise<{ categoryId: number | null; subcategoryId: number | null }> {
   let categoryId: number | null = null;
   let subcategoryId: number | null = null;
 
-  // C7: apply an existing category rule for this merchant, if any.
+  // C7: apply an existing category rule for this merchant, if any. This represents a
+  // deliberate user override (written via EditTransactionScreen's "always categorize
+  // as" flow) and always wins over the majority-vote fallback below.
   if (tx.merchant) {
     const merchantKey = tx.merchant.toLowerCase();
     let rule: { categoryId: number; subcategoryId: number | null } | null | undefined;
@@ -863,6 +919,22 @@ async function categorizeParsedTx(
     if (rule) {
       categoryId = rule.categoryId;
       subcategoryId = rule.subcategoryId;
+    }
+  }
+
+  // Fallback: majority category used historically for this merchant (recency tiebreak).
+  if (categoryId === null && tx.merchant) {
+    const merchantKey = tx.merchant.toLowerCase();
+    let majority: { categoryId: number; subcategoryId: number | null } | null | undefined;
+    if (majorityCache && majorityCache.has(merchantKey)) {
+      majority = majorityCache.get(merchantKey);
+    } else {
+      majority = await getMajorityCategoryForMerchant(tx.merchant);
+      majorityCache?.set(merchantKey, majority ?? null);
+    }
+    if (majority) {
+      categoryId = majority.categoryId;
+      subcategoryId = majority.subcategoryId;
     }
   }
 
@@ -1010,9 +1082,10 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
   // any lookup resolves), which both defeated the cache and could crash expo-sqlite
   // on large scans. Sequential, the cache limits DB reads to one per unique merchant.
   const ruleCache = new Map<string, { categoryId: number; subcategoryId: number | null } | null>();
+  const majorityCache = new Map<string, { categoryId: number; subcategoryId: number | null } | null>();
   const decisions: Array<{ categoryId: number | null; subcategoryId: number | null }> = [];
   for (const tx of txs) {
-    decisions.push(await categorizeParsedTx(tx, ruleCache));
+    decisions.push(await categorizeParsedTx(tx, ruleCache, majorityCache));
   }
 
   const hiddenKeys = await getHiddenAccountKeys();
