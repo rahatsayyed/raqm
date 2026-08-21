@@ -111,15 +111,31 @@ export function attachNotificationHandlers(
 ): () => void {
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // Cold-starting via a notification tap races AppNavigator's startup sequence (loadTxs,
+  // syncDiscoveredAccounts, runDetectionJobs, initNotifications, scheduleSummaries all run
+  // sequentially before NavigationContainer even mounts) — on a device with thousands of
+  // transactions that can take well over 500ms. A single one-shot retry silently dropped the
+  // navigation if the app wasn't ready by then, so poll instead: every 500ms, up to ~15s.
+  const NAV_READY_RETRY_MS = 500;
+  const NAV_READY_MAX_ATTEMPTS = 30;
+
   const navigateWhenReady = (navigate: () => void) => {
     if (navRef.isReady()) {
       navigate();
-    } else {
-      retryTimer = setTimeout(() => {
-        retryTimer = null;
-        if (navRef.isReady()) navigate();
-      }, 500);
+      return;
     }
+    let attempts = 0;
+    const tryNavigate = () => {
+      retryTimer = null;
+      if (navRef.isReady()) {
+        navigate();
+        return;
+      }
+      attempts++;
+      if (attempts >= NAV_READY_MAX_ATTEMPTS) return;
+      retryTimer = setTimeout(tryNavigate, NAV_READY_RETRY_MS);
+    };
+    retryTimer = setTimeout(tryNavigate, NAV_READY_RETRY_MS);
   };
 
   const handleResponse = (response: NotificationResponse) => {
