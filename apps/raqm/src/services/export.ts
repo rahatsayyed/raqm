@@ -108,7 +108,7 @@ export async function exportCsv(): Promise<void> {
 
   const header = [
     'id', 'date', 'amount', 'type', 'merchant', 'bank', 'accountLast4',
-    'category', 'subcategory', 'notes', 'tags', 'isManual',
+    'category', 'subcategory', 'notes', 'tags', 'isManual', 'location',
   ].join(',');
 
   const rows = txs.map(tx => [
@@ -124,6 +124,7 @@ export async function exportCsv(): Promise<void> {
     tx.notes ?? '',
     tx.tags.join('|'),
     tx.isManual ? 'true' : 'false',
+    tx.lat != null && tx.lng != null ? `${tx.lat},${tx.lng}` : '',
   ].map(v => csvEscape(String(v))).join(','));
 
   const csv = [header, ...rows].join('\n');
