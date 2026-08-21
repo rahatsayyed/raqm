@@ -9,6 +9,7 @@ export interface ReconciliationCandidate {
   notes: string | null;
   tags: string[];
   last4: string | null;
+  linkSettled: boolean;
 }
 
 export interface PlannedUpdate {
@@ -21,6 +22,8 @@ export interface PlannedUpdate {
   existingCategoryId: number | null;
   existingNotes: string | null;
   existingTags: string[];
+  excluded: boolean;
+  existingLinkSettled: boolean;
 }
 
 export interface PlannedInsert {
@@ -34,6 +37,7 @@ export interface PlannedInsert {
   notes: string | null;
   tags: string[];
   last4: string;
+  excluded: boolean;
 }
 
 export interface ReconciliationPlan {
@@ -127,6 +131,8 @@ export function buildReconciliationPlan(
         existingCategoryId: match.categoryId,
         existingNotes: match.notes,
         existingTags: match.tags,
+        excluded: row.excluded,
+        existingLinkSettled: match.linkSettled,
       });
     } else {
       inserts.push({
@@ -140,6 +146,7 @@ export function buildReconciliationPlan(
         notes: row.note,
         tags: row.tags,
         last4: row.last4,
+        excluded: row.excluded,
       });
     }
   }
