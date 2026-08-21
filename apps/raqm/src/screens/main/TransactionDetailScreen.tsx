@@ -291,6 +291,26 @@ export function TransactionDetailScreen({
     );
   }, [allTxs, tx?.id, tx?.merchant, categoryJustChangedTo]);
 
+  // Candidate lists for the Link/Group picker sheets — memoized since allTxs can hold
+  // 5000+ rows and these were previously re-filtered on every render regardless of
+  // whether the pickers were even visible.
+  const linkCandidates = useMemo(
+    () => allTxs.filter((t) => t.id !== tx?.id && !t.deletedAt && !t.isSplitChild),
+    [allTxs, tx?.id],
+  );
+
+  const groupCandidates = useMemo(
+    () =>
+      allTxs.filter(
+        (t) =>
+          t.id !== tx?.id &&
+          !t.deletedAt &&
+          !t.isSplitChild &&
+          t.groupId == null,
+      ),
+    [allTxs, tx?.id],
+  );
+
   // Intercepts every way of leaving this screen (header back, hardware back, swipe gesture —
   // they all dispatch a REMOVE action that fires this event) so the bulk-apply sheet can be
   // shown before the navigation actually completes.
@@ -921,21 +941,13 @@ export function TransactionDetailScreen({
       <LinkPicker
         visible={linkVisible}
         onClose={() => setLinkVisible(false)}
-        candidates={allTxs.filter(
-          (t) => t.id !== tx.id && !t.deletedAt && !t.isSplitChild,
-        )}
+        candidates={linkCandidates}
         onPick={handleLinkPick}
       />
       <GroupPicker
         visible={groupVisible}
         onClose={() => setGroupVisible(false)}
-        candidates={allTxs.filter(
-          (t) =>
-            t.id !== tx.id &&
-            !t.deletedAt &&
-            !t.isSplitChild &&
-            t.groupId == null,
-        )}
+        candidates={groupCandidates}
         onConfirm={handleGroupConfirm}
       />
     </View>
