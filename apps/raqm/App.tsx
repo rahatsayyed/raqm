@@ -16,6 +16,7 @@ import { AppNavigator } from './src/navigation/AppNavigator';
 import { Colors } from './src/theme';
 import { LockScreen } from './src/components/LockScreen';
 import { authenticateWithDevice, canUseDeviceAuth, isAppLockEnabled } from './src/services/auth/appLock';
+import { SmsReader } from './src/native/SmsReader';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -87,9 +88,22 @@ function AppContent({ onLayout }: { onLayout: () => void }) {
     evaluateLock();
   }, [evaluateLock]);
 
-  // Re-lock on every background -> active transition. Android also emits
-  // 'inactive' on some transitions, so we only treat a real 'background' as
-  // having left the app.
+  // Tracks whether the device screen was actually turned off (locked) at any point while
+  // the app was backgrounded, via the native "screenLocked" event (Android ACTION_SCREEN_OFF —
+  // JS-level AppState alone can't distinguish a real lock from merely switching apps).
+  const screenLockedSinceBackgroundRef = useRef(false);
+  useEffect(() => {
+    const sub = SmsReader.addScreenLockedListener(() => {
+      screenLockedSinceBackgroundRef.current = true;
+    });
+    return () => sub.remove();
+  }, []);
+
+  // Only re-lock on a background -> active transition if the screen was actually locked
+  // while backgrounded; otherwise just clear the backgrounded state without prompting.
+  // A fully closed app (process killed / removed from recents) always re-prompts via the
+  // mount-time evaluateLock() effect above, regardless of this flag. Android also emits
+  // 'inactive' on some transitions, so we only treat a real 'background' as having left the app.
   const prevAppState = useRef<AppStateStatus>(AppState.currentState);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
@@ -98,7 +112,13 @@ function AppContent({ onLayout }: { onLayout: () => void }) {
       if (prev === 'background' && next === 'active') {
         if (authInFlightRef.current) return;
         if (Date.now() - lastUnlockAtRef.current < 1000) return;
-        evaluateLock();
+        const wasScreenLocked = screenLockedSinceBackgroundRef.current;
+        screenLockedSinceBackgroundRef.current = false;
+        if (wasScreenLocked) {
+          evaluateLock();
+        } else {
+          setLocked(false);
+        }
       }
     });
     return () => sub.remove();
