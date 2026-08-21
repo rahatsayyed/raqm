@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import type { EventSubscription } from 'expo-modules-core';
 import * as SmsReaderModule from '../../modules/sms-reader/src/SmsReaderModule';
 
 export type { SmsMessage } from '../../modules/sms-reader/src/SmsReader.types';
@@ -22,5 +23,12 @@ export const SmsReader = {
   attachTxActions(notificationId: string, txId: number, notExpenseLabel: string): void {
     if (Platform.OS !== 'android') return;
     SmsReaderModule.attachTxActions(notificationId, txId, notExpenseLabel);
+  },
+
+  /** Subscribes to the native "screenLocked" event (Android ACTION_SCREEN_OFF). Returns a
+   * no-op subscription on non-Android platforms. */
+  addScreenLockedListener(listener: () => void): EventSubscription | { remove: () => void } {
+    if (Platform.OS !== 'android') return { remove: () => {} };
+    return SmsReaderModule.addScreenLockedListener(listener);
   },
 };

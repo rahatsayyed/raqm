@@ -4,7 +4,10 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.RemoteInput
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.provider.Telephony
 import android.util.Log
@@ -12,8 +15,41 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 class SmsReaderModule : Module() {
+  // ACTION_SCREEN_OFF is a protected broadcast — it can only be observed by registering a
+  // receiver dynamically at runtime (context.registerReceiver), never declared in the
+  // manifest. Used to tell App.tsx's re-lock logic apart from a mere background transition:
+  // only a real screen-off (device locked) should force re-authentication on next foreground.
+  private var screenOffReceiver: BroadcastReceiver? = null
+
   override fun definition() = ModuleDefinition {
     Name("SmsReader")
+
+    Events("screenLocked")
+
+    OnCreate {
+      val context = appContext.reactContext ?: return@OnCreate
+      if (screenOffReceiver != null) return@OnCreate
+      val receiver = object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context, intent: Intent) {
+          if (intent.action == Intent.ACTION_SCREEN_OFF) {
+            sendEvent("screenLocked")
+          }
+        }
+      }
+      screenOffReceiver = receiver
+      context.registerReceiver(receiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
+    }
+
+    OnDestroy {
+      screenOffReceiver?.let { receiver ->
+        try {
+          appContext.reactContext?.unregisterReceiver(receiver)
+        } catch (e: IllegalArgumentException) {
+          // Already unregistered (e.g. context torn down first) — safe to ignore.
+        }
+      }
+      screenOffReceiver = null
+    }
 
     AsyncFunction("readInbox") { fromTimestamp: Double, toTimestamp: Double ->
       val context = appContext.reactContext ?: throw Exception("No context available")
