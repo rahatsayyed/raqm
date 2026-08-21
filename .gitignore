@@ -17,3 +17,6 @@ web-build/
 # TypeScript build info
 *.tsbuildinfo
 
+# Local git worktrees for parallel agent work
+.worktrees/
+
