@@ -7,6 +7,7 @@ export interface AxioRow {
   type: 'expense' | 'income';
   bankAbbrev: string;
   last4: string;
+  excluded: boolean;
   categoryRaw: string | null;
   tags: string[];
   note: string | null;
@@ -24,6 +25,8 @@ const COL = {
   AMOUNT: 3,
   DRCR: 4,
   ACCOUNT: 5,
+  EXPENSE: 6,
+  INCOME: 7,
   CATEGORY: 8,
   TAGS: 9,
   NOTE: 10,
@@ -65,6 +68,13 @@ function parseAccountColumn(raw: string): { bankAbbrev: string; last4: string } 
   return { bankAbbrev, last4 };
 }
 
+// Axio's EXPENSE/INCOME columns hold "Yes" when the row counts toward that direction's
+// totals, and a placeholder like "'-" (leading apostrophe, Excel-safe dash) otherwise.
+// Anything not case-insensitively "yes" is treated as "no".
+function isAxioYes(raw: string): boolean {
+  return raw.trim().toLowerCase() === 'yes';
+}
+
 function parseAxioTags(raw: string): string[] {
   return raw
     .split('#')
@@ -96,13 +106,18 @@ export function parseAxioCsv(text: string): AxioParseResult {
       continue;
     }
 
+    const type: 'expense' | 'income' = drcr === 'DR' ? 'expense' : 'income';
+    const excluded =
+      type === 'expense' ? !isAxioYes(line[COL.EXPENSE] ?? '') : !isAxioYes(line[COL.INCOME] ?? '');
+
     rows.push({
       timestamp,
       place: (line[COL.PLACE] ?? '').trim() || null,
       amount,
-      type: drcr === 'DR' ? 'expense' : 'income',
+      type,
       bankAbbrev: account.bankAbbrev,
       last4: account.last4,
+      excluded,
       categoryRaw: (line[COL.CATEGORY] ?? '').trim() || null,
       tags: parseAxioTags(line[COL.TAGS] ?? ''),
       note: (line[COL.NOTE] ?? '').trim() || null,

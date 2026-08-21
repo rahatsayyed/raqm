@@ -442,6 +442,7 @@ export interface NewTxInput {
   lat?: number | null;
   lng?: number | null;
   isManual?: boolean;
+  linkSettled?: boolean;
 }
 
 export interface TxPatch {
@@ -636,8 +637,9 @@ export async function getReconciliationCandidates(): Promise<ReconciliationCandi
     notes: string | null;
     tags: string | null;
     accountLast4: string | null;
+    link_settled: number;
   }>(
-    `SELECT id, amount, type, timestamp, category_id, notes, tags, accountLast4
+    `SELECT id, amount, type, timestamp, category_id, notes, tags, accountLast4, link_settled
      FROM transactions
      WHERE deleted_at IS NULL AND type IN ('EXPENSE', 'INCOME')`,
   );
@@ -650,6 +652,7 @@ export async function getReconciliationCandidates(): Promise<ReconciliationCandi
     notes: r.notes,
     tags: parseTags(r.tags),
     last4: r.accountLast4,
+    linkSettled: r.link_settled === 1,
   }));
 }
 
@@ -780,8 +783,8 @@ export async function insertTx(input: NewTxInput): Promise<number> {
   const result = await database.runAsync(
     `INSERT INTO transactions
        (amount, type, merchant, bankName, accountLast4, timestamp, balance, currency, isFromCard,
-        category_id, subcategory_id, notes, tags, raw_sms, reference, lat, lng, is_manual)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        category_id, subcategory_id, notes, tags, raw_sms, reference, lat, lng, is_manual, link_settled)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     input.amount,
     input.type,
     input.merchant ?? null,
@@ -800,6 +803,7 @@ export async function insertTx(input: NewTxInput): Promise<number> {
     input.lat ?? null,
     input.lng ?? null,
     input.isManual ? 1 : 0,
+    input.linkSettled ? 1 : 0,
   );
   if (input.balance != null) {
     await updateAccountBalanceFromTx({
@@ -1542,6 +1546,9 @@ export async function applyImportReconciliation(
       if (u.tags.length > 0) {
         patch.tags = u.tags;
       }
+      if (u.excluded !== u.existingLinkSettled) {
+        patch.linkSettled = u.excluded;
+      }
       if (Object.keys(patch).length > 0) {
         await updateTx(u.txId, patch);
       }
@@ -1559,6 +1566,7 @@ export async function applyImportReconciliation(
         tags: ins.tags,
         accountLast4: ins.last4,
         isManual: true,
+        linkSettled: ins.excluded,
       });
       inserted++;
     }
