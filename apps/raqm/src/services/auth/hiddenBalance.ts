@@ -1,7 +1,7 @@
 import * as Crypto from 'expo-crypto';
 
 import { getSetting, setSetting } from '../../db/database';
-import { canUseDeviceAuth, isAppLockEnabled } from './appLock';
+import { canUseDeviceAuth } from './appLock';
 
 /** `app_settings` key holding the lowercase-hex SHA-256 of `salt:password`. */
 export const PASSWORD_HASH_KEY = 'hidden_balance_password_hash';
@@ -82,15 +82,15 @@ export async function verifyAppPassword(password: string): Promise<boolean> {
 }
 
 /**
- * Device auth wins when it is genuinely available: App Lock on AND the device
- * has a biometric or PIN/pattern/password. Otherwise fall back to the custom
- * password, and if there isn't one yet, ask the user to create one.
+ * Device auth wins whenever it's genuinely available — a biometric or
+ * PIN/pattern/password set up on the device — regardless of whether App
+ * Lock itself is toggled on. App Lock's on/off setting only controls
+ * whether Raqm shows a lock screen on open; it doesn't gate whether an
+ * existing device credential can be reused here. Otherwise fall back to
+ * the custom password, and if there isn't one yet, ask the user to create
+ * one.
  */
 export async function getRevealAuthMethod(): Promise<RevealAuthMethod> {
-  const [lockOn, deviceUsable] = await Promise.all([
-    isAppLockEnabled(),
-    canUseDeviceAuth(),
-  ]);
-  if (lockOn && deviceUsable) return 'device';
+  if (await canUseDeviceAuth()) return 'device';
   return (await hasAppPassword()) ? 'password' : 'setup-password';
 }
