@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, Linking, FlatList, Modal, Share } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, Linking, FlatList, Modal, Share, Switch } from 'react-native';
 import { File } from 'expo-file-system';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors } from '../../theme';
@@ -27,6 +27,7 @@ import {
   PencilIcon, MailIcon,
 } from '../../components/TabIcon';
 import { FEEDBACK_EMAIL } from '../../constants/support';
+import { canUseDeviceAuth, isAppLockEnabled, setAppLockEnabled } from '../../services/auth/appLock';
 
 const MONTH_START_DAYS = Array.from({ length: 28 }, (_, i) => i + 1);
 
@@ -49,6 +50,8 @@ type RowDef = {
   onPress?: () => void;
   /** Menu item exists in the target IA but has no real feature behind it yet — render inert. */
   comingSoon?: boolean;
+  /** Toggle rows render a Switch instead of the navigate chevron and have no onPress. */
+  toggle?: { value: boolean; onValueChange: (value: boolean) => void };
 };
 
 type SectionDef = { title: string; rows: RowDef[] };
@@ -57,20 +60,28 @@ function Row({ row, isLast }: { row: RowDef; isLast: boolean }) {
   return (
     <TouchableOpacity
       className={`flex-row items-center justify-between py-md ${!isLast ? 'border-b border-border-subtle' : ''} ${row.comingSoon ? 'opacity-40' : ''}`}
-      onPress={row.comingSoon ? undefined : row.onPress}
-      activeOpacity={row.comingSoon ? 1 : 0.6}
+      onPress={row.comingSoon || row.toggle ? undefined : row.onPress}
+      activeOpacity={row.comingSoon || row.toggle ? 1 : 0.6}
     >
       <View className="flex-row items-center gap-sm">
         <row.Icon color={Colors.inkLabel} size={16} />
         <Text className="font-inter text-body-standard text-on-surface">{row.label}</Text>
       </View>
       <View className="flex-row items-center gap-xs">
-        {row.comingSoon ? (
+        {row.toggle ? (
+          <Switch
+            value={row.toggle.value}
+            onValueChange={row.toggle.onValueChange}
+            trackColor={{ true: Colors.primary, false: Colors.surfaceVariant }}
+          />
+        ) : row.comingSoon ? (
           <Text className="font-inter text-annotation text-ink-label">Soon</Text>
         ) : (
-          row.meta && <Text className="font-inter text-annotation text-ink-label">{row.meta}</Text>
+          <>
+            {row.meta && <Text className="font-inter text-annotation text-ink-label">{row.meta}</Text>}
+            <ChevronRightIcon color={Colors.inkLabel} size={18} />
+          </>
         )}
-        {!row.comingSoon && <ChevronRightIcon color={Colors.inkLabel} size={18} />}
       </View>
     </TouchableOpacity>
   );
@@ -90,6 +101,7 @@ export function MoreScreen() {
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [csvImporting, setCsvImporting] = useState(false);
   const [editField, setEditField] = useState<'name' | 'phone' | 'email' | null>(null);
+  const [appLock, setAppLock] = useState(false);
 
   // These screens stay mounted beneath pushed screens, so counts can go stale
   // without a focus-triggered reload (e.g. deleting a rule, then coming back).
@@ -98,8 +110,36 @@ export function MoreScreen() {
       getCategoryRules().then((rules) => setRuleCount(rules.length));
       getTransactionGroups().then((groups) => setGroupCount(groups.length));
       getSetting('month_start_day').then((day) => setMonthStartDay(day ? Number(day) : 1));
+      isAppLockEnabled().then(setAppLock);
     }, []),
   );
+
+  // Turning ON requires a usable device credential — otherwise the lock screen
+  // would have no way to be unlocked. Turning OFF is immediate and needs no
+  // confirmation: the user already passed the lock to reach More.
+  const handleToggleAppLock = async (value: boolean) => {
+    if (value) {
+      const usable = await canUseDeviceAuth();
+      if (!usable) {
+        Alert.alert(
+          'No screen lock found',
+          "Set up a fingerprint, PIN, pattern or password in your phone's settings first, then turn on App Lock.",
+        );
+        return;
+      }
+    }
+    try {
+      await setAppLockEnabled(value);
+      setAppLock(value);
+    } catch {
+      // Persist failed — leave `appLock` (and thus the switch) showing its
+      // prior value rather than optimistically showing a state that was
+      // never actually saved. This is a security-relevant setting: a user
+      // believing lock is ON when it silently isn't is worse than a toggle
+      // that visibly failed to move.
+      Alert.alert("Couldn't save setting", 'Please try again.');
+    }
+  };
 
   const handleSelectMonthStartDay = async (day: number) => {
     setMonthStartDay(day);
@@ -265,8 +305,8 @@ export function MoreScreen() {
       title: 'PRIVACY & SECURITY',
       rows: [
         { key: 'permissions', label: 'Permissions', Icon: GearIcon, onPress: () => Linking.openSettings() },
-        { key: 'app-lock', label: 'App Lock', Icon: LockIcon, onPress: () => navigation.navigate('Settings') },
-        { key: 'hide-balances', label: 'Hide Balances', Icon: WalletIcon, onPress: () => navigation.navigate('Settings') },
+        { key: 'app-lock', label: 'App Lock', Icon: LockIcon, toggle: { value: appLock, onValueChange: handleToggleAppLock } },
+        { key: 'hide-balances', label: 'Hide Balances', Icon: WalletIcon, onPress: () => navigation.navigate('HideBalances') },
       ],
     },
     {

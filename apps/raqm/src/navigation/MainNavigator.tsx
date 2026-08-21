@@ -16,6 +16,7 @@ import { CategoryPickerScreen } from '../screens/main/CategoryPickerScreen';
 import { AccountDetailScreen } from '../screens/main/AccountDetailScreen';
 import { GroceryListDetailScreen } from '../screens/main/GroceryListDetailScreen';
 import { SettingsScreen } from '../screens/main/SettingsScreen';
+import { HideBalancesScreen } from '../screens/main/HideBalancesScreen';
 import { CategoryDetailScreen } from '../screens/main/CategoryDetailScreen';
 import { DeletedTransactionsScreen } from '../screens/main/DeletedTransactionsScreen';
 import { ImportScreen } from '../screens/main/ImportScreen';
@@ -103,6 +104,7 @@ export function MainNavigator() {
       <Stack.Screen name="Grocery" component={GroceryScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="GroceryListDetail" component={GroceryListDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="HideBalances" component={HideBalancesScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="DeletedTransactions" component={DeletedTransactionsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="Import" component={ImportScreen} options={{ animation: 'slide_from_right' }} />

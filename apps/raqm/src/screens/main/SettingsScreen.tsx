@@ -1,11 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, TextInput, Modal, FlatList, Alert } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Switch, TextInput, Modal, FlatList } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Colors } from '../../theme';
 import { MainStackScreenProps } from '../../navigation/types';
 import { getSetting, setSetting, getCategories, getBudgets, upsertBudget, deleteBudget, type Category, type Budget } from '../../db/database';
 import { scheduleSummaries } from '../../notifications/notifications';
-import { useHiddenBalanceStore, type MaskedKind } from '../../store/hiddenBalanceStore';
-import { canUseDeviceAuth, isAppLockEnabled, setAppLockEnabled } from '../../services/auth/appLock';
 
 const MONTH_START_DAYS = Array.from({ length: 28 }, (_, i) => i + 1);
 
@@ -16,25 +15,17 @@ export function SettingsScreen({ navigation }: MainStackScreenProps<'Settings'>)
   const [notifWeekly, setNotifWeekly] = useState(true);
   const [notifMonthly, setNotifMonthly] = useState(true);
   const [budgetAlerts, setBudgetAlerts] = useState(true);
-  const [appLock, setAppLock] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [drafts, setDrafts] = useState<Record<number, { amount: string; periodType: 'monthly' | 'weekly'; rollover: boolean }>>({});
-  // Read straight from the store rather than adding four more useState +
-  // getSetting calls to `reload`: the store is already the source of truth for
-  // these keys and is hydrated at bundle-eval time, so the switches are correct
-  // on first paint and stay in sync with every on-screen MaskedValue.
-  const hiddenBalances = useHiddenBalanceStore((s) => s.hidden);
-  const setHiddenBalance = useHiddenBalanceStore((s) => s.setHidden);
 
   const reload = useCallback(async () => {
-    const [day, daily, weekly, monthly, alerts, appLockOn, cats, buds] = await Promise.all([
+    const [day, daily, weekly, monthly, alerts, cats, buds] = await Promise.all([
       getSetting('month_start_day'),
       getSetting('notif_daily'),
       getSetting('notif_weekly'),
       getSetting('notif_monthly'),
       getSetting('budget_alerts'),
-      isAppLockEnabled(),
       getCategories('expense'), // budgets are an expense-control concept — Salary/Interest/etc. don't apply
       getBudgets(),
     ]);
@@ -43,7 +34,6 @@ export function SettingsScreen({ navigation }: MainStackScreenProps<'Settings'>)
     setNotifWeekly(weekly !== '0');
     setNotifMonthly(monthly !== '0');
     setBudgetAlerts(alerts !== '0');
-    setAppLock(appLockOn);
     setCategories(cats);
     setBudgets(buds);
     const nextDrafts: Record<number, { amount: string; periodType: 'monthly' | 'weekly'; rollover: boolean }> = {};
@@ -58,9 +48,14 @@ export function SettingsScreen({ navigation }: MainStackScreenProps<'Settings'>)
     setDrafts(nextDrafts);
   }, []);
 
-  useEffect(() => {
-    reload();
-  }, [reload]);
+  // Settings stays mounted beneath pushed screens (e.g. CategoryPicker,
+  // AddTransaction reached from elsewhere), so a mount-only read can show
+  // stale categories/budgets when the user comes back here.
+  useFocusEffect(
+    useCallback(() => {
+      reload();
+    }, [reload]),
+  );
 
   async function onSelectMonthStartDay(day: number) {
     setMonthStartDay(day);
@@ -77,33 +72,6 @@ export function SettingsScreen({ navigation }: MainStackScreenProps<'Settings'>)
   async function onToggleBudgetAlerts(value: boolean) {
     setBudgetAlerts(value);
     await setSetting('budget_alerts', value ? '1' : '0');
-  }
-
-  // Turning ON requires a usable device credential — otherwise the lock screen
-  // would have no way to be unlocked. Turning OFF is immediate and needs no
-  // confirmation: the user already passed the lock to reach Settings.
-  async function onToggleAppLock(value: boolean) {
-    if (value) {
-      const usable = await canUseDeviceAuth();
-      if (!usable) {
-        Alert.alert(
-          'No screen lock found',
-          "Set up a fingerprint, PIN, pattern or password in your phone's settings first, then turn on App Lock.",
-        );
-        return;
-      }
-    }
-    try {
-      await setAppLockEnabled(value);
-      setAppLock(value);
-    } catch {
-      // Persist failed — leave `appLock` (and thus the switch) showing its
-      // prior value rather than optimistically showing a state that was
-      // never actually saved. This is a security-relevant setting: a user
-      // believing lock is ON when it silently isn't is worse than a toggle
-      // that visibly failed to move.
-      Alert.alert("Couldn't save setting", 'Please try again.');
-    }
   }
 
   function updateDraft(categoryId: number, patch: Partial<{ amount: string; periodType: 'monthly' | 'weekly'; rollover: boolean }>) {
@@ -242,48 +210,6 @@ export function SettingsScreen({ navigation }: MainStackScreenProps<'Settings'>)
               </View>
             );
           })}
-        </View>
-
-        {/* SECURITY */}
-        <Text className="font-inter-semibold text-section-header text-on-surface-variant mt-lg mb-sm">SECURITY</Text>
-        <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md">
-          <View className="flex-row justify-between items-center py-[10px]">
-            <View className="flex-1 pr-md">
-              <Text className="font-inter text-body-standard text-on-surface">App Lock</Text>
-              <Text className="font-inter text-supporting-text text-on-surface-variant">
-                Require your fingerprint, PIN or pattern to open Raqm
-              </Text>
-            </View>
-            <Switch
-              value={appLock}
-              onValueChange={onToggleAppLock}
-              trackColor={{ true: Colors.primary, false: Colors.surfaceVariant }}
-            />
-          </View>
-        </View>
-
-        {/* HIDE BALANCES */}
-        <Text className="font-inter-semibold text-section-header text-on-surface-variant mt-lg mb-sm">HIDE BALANCES</Text>
-        <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md">
-          <Text className="font-inter text-supporting-text text-on-surface-variant mb-sm">
-            Hidden figures show as **** until you tap them and confirm it's you. Once
-            confirmed, the rest of the session needs no further confirmation.
-          </Text>
-          {([
-            ['net', 'Net this month'],
-            ['income', 'Income totals'],
-            ['expense', 'Spending totals'],
-            ['bank_balance', 'Bank balances'],
-          ] as [MaskedKind, string][]).map(([kind, label]) => (
-            <View key={kind} className="flex-row justify-between items-center py-[10px]">
-              <Text className="font-inter text-body-standard text-on-surface flex-1 pr-md">{label}</Text>
-              <Switch
-                value={hiddenBalances[kind]}
-                onValueChange={(value) => { void setHiddenBalance(kind, value); }}
-                trackColor={{ true: Colors.primary, false: Colors.surfaceVariant }}
-              />
-            </View>
-          ))}
         </View>
 
         {/* APPEARANCE */}
