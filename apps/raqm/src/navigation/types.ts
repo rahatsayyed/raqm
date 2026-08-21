@@ -44,6 +44,7 @@ export type MainStackParamList = {
   AccountDetail: { bankName: string; last4?: string };
   GroceryListDetail: { listId: number; listName: string };
   Settings: undefined;
+  HideBalances: undefined;
   CategoryDetail: { categoryId: number; categoryName: string; period?: string };
   DeletedTransactions: undefined;
   Import: undefined;
