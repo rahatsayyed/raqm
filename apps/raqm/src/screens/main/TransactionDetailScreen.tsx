@@ -11,6 +11,7 @@ import {
   Switch,
   Keyboard,
   useWindowDimensions,
+  Animated,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -968,6 +969,7 @@ function BottomSheet({
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const marginBottomAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) Keyboard.dismiss();
@@ -977,19 +979,33 @@ function BottomSheet({
   // Expo SDK 56 — Android's adjustResize does NOT shrink it when the keyboard
   // opens, so scroll-into-view math alone can't clear the keyboard. Instead,
   // track the keyboard height ourselves and lift the whole sheet card above
-  // it (and shrink its max height so it still fits on screen).
+  // it (and shrink its max height so it still fits on screen). The lift
+  // itself is animated (matching the keyboard's own show/hide duration) so
+  // the card slides smoothly instead of snapping — `keyboardHeight` (plain
+  // state) still drives the synchronous maxHeight/padding math below, since
+  // those don't need to animate.
   useEffect(() => {
-    const show = Keyboard.addListener("keyboardDidShow", (e) =>
-      setKeyboardHeight(e.endCoordinates.height),
-    );
-    const hide = Keyboard.addListener("keyboardDidHide", () =>
-      setKeyboardHeight(0),
-    );
+    const show = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      Animated.timing(marginBottomAnim, {
+        toValue: e.endCoordinates.height,
+        duration: e.duration || 250,
+        useNativeDriver: false,
+      }).start();
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", (e) => {
+      setKeyboardHeight(0);
+      Animated.timing(marginBottomAnim, {
+        toValue: 0,
+        duration: e?.duration || 200,
+        useNativeDriver: false,
+      }).start();
+    });
     return () => {
       show.remove();
       hide.remove();
     };
-  }, []);
+  }, [marginBottomAnim]);
 
   const maxSheetHeight =
     keyboardHeight > 0
@@ -1007,9 +1023,10 @@ function BottomSheet({
         className="flex-1 bg-[#0e151299] justify-end"
         onPress={onClose}
       >
+        <Animated.View style={{ marginBottom: marginBottomAnim }}>
         <Pressable
           className="bg-surface-container-low rounded-t-2xl border-t border-border-subtle"
-          style={{ maxHeight: maxSheetHeight, marginBottom: keyboardHeight }}
+          style={{ maxHeight: maxSheetHeight }}
           onPress={(e) => e.stopPropagation()}
         >
           <View className="items-center py-3">
@@ -1031,6 +1048,7 @@ function BottomSheet({
             {children}
           </KeyboardAwareScrollView>
         </Pressable>
+        </Animated.View>
       </Pressable>
     </Modal>
   );
