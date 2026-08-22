@@ -21,7 +21,7 @@ export function AppNavigator() {
     const unsub = useAppStore.persist.onFinishHydration(async () => {
       await loadTxs();
       await syncDiscoveredAccounts();
-      await runDetectionJobs();
+      await runDetectionJobs(useTxStore.getState().txs);
       useTxStore.getState().refresh();
       if (cancelled) return;
       await initNotifications();
@@ -32,7 +32,7 @@ export function AppNavigator() {
     if (useAppStore.persist.hasHydrated()) {
       loadTxs().then(async () => {
         await syncDiscoveredAccounts();
-        await runDetectionJobs();
+        await runDetectionJobs(useTxStore.getState().txs);
         useTxStore.getState().refresh();
         if (cancelled) return;
         await initNotifications();

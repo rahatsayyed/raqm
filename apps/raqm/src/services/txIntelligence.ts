@@ -1,4 +1,5 @@
 import { loadTxRecords, linkTxs, updateTx } from '../db/database';
+import type { TxRecord } from '../db/database';
 import { pairSelfTransfers, pairRefunds, computeRecurringIds } from './txIntelligenceCore';
 
 export {
@@ -10,39 +11,59 @@ export {
   isCreditType,
 } from './txIntelligenceCore';
 
-/** T11 */
-export async function detectSelfTransfers(): Promise<number> {
-  const txs = await loadTxRecords();
-  const pairs = pairSelfTransfers(txs);
+/** T11. `txs`, when given, is used instead of re-querying SQLite — callers that already have a
+ * fresh-enough snapshot (see `runDetectionJobs`) skip a full-table reload this way. */
+export async function detectSelfTransfers(txs?: TxRecord[]): Promise<number> {
+  const rows = txs ?? await loadTxRecords();
+  const pairs = pairSelfTransfers(rows);
   for (const [a, b] of pairs) {
     await linkTxs(a, b, 'self_transfer');
   }
   return pairs.length;
 }
 
-/** T12 */
-export async function detectRefunds(): Promise<number> {
-  const txs = await loadTxRecords();
-  const pairs = pairRefunds(txs);
+/** T12. See `detectSelfTransfers` for the `txs` param's purpose. */
+export async function detectRefunds(txs?: TxRecord[]): Promise<number> {
+  const rows = txs ?? await loadTxRecords();
+  const pairs = pairRefunds(rows);
   for (const [a, b] of pairs) {
     await linkTxs(a, b, 'refund');
   }
   return pairs.length;
 }
 
-/** R1 */
-export async function detectSubscriptions(): Promise<number> {
-  const txs = await loadTxRecords();
-  const ids = computeRecurringIds(txs);
+/** R1. See `detectSelfTransfers` for the `txs` param's purpose. Skips transactions already
+ * flagged recurring so a steady-state app start doesn't re-write every recurring tx ever
+ * found, every single launch. */
+export async function detectSubscriptions(txs?: TxRecord[]): Promise<number> {
+  const rows = txs ?? await loadTxRecords();
+  const ids = computeRecurringIds(rows);
+  const alreadyRecurring = new Set(rows.filter(t => t.recurring).map(t => t.id));
+  let updated = 0;
   for (const id of ids) {
+    if (alreadyRecurring.has(id)) continue;
     await updateTx(id, { recurring: true });
+    updated++;
   }
-  return ids.length;
+  return updated;
 }
 
-/** Runs all three jobs. Called after scan/rescan and once on app start (contract §3). */
-export async function runDetectionJobs(): Promise<void> {
-  await detectSelfTransfers();
-  await detectRefunds();
-  await detectSubscriptions();
+/**
+ * Runs all three jobs. Called after scan/rescan and once on app start (contract §3).
+ *
+ * Loads the transaction table at most twice instead of the naive 3x-plus-callers'-own-reload:
+ * `initialTxs` (when the caller already has a fresh snapshot, e.g. AppNavigator right after
+ * `loadTxs()`) is reused for self-transfer detection and, if that step made no changes, for
+ * refund/subscription detection too. `detectSelfTransfers` and `detectRefunds` both filter on
+ * `linkType === null` (see `isLinked` in txIntelligenceCore.ts) — reusing a snapshot across a
+ * step that actually linked something would risk pairing an already-linked row again, so a
+ * fresh reload is forced only when self-transfer pairing found at least one pair. Subscription
+ * detection never reads `linkType`, so it's always safe to reuse whichever snapshot is current.
+ */
+export async function runDetectionJobs(initialTxs?: TxRecord[]): Promise<void> {
+  const first = initialTxs ?? await loadTxRecords();
+  const selfTransferCount = await detectSelfTransfers(first);
+  const afterSelfTransfer = selfTransferCount > 0 ? await loadTxRecords() : first;
+  await detectRefunds(afterSelfTransfer);
+  await detectSubscriptions(afterSelfTransfer);
 }
