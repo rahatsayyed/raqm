@@ -43,7 +43,8 @@ export type MainStackParamList = {
   CategoryPicker: { returnTo: 'AddTransaction' | 'EditTransaction'; transactionId?: number; direction?: 'expense' | 'income' };
   AccountDetail: { bankName: string; last4?: string };
   GroceryListDetail: { listId: number; listName: string };
-  Settings: undefined;
+  Budgets: undefined;
+  NotificationSettings: undefined;
   HideBalances: undefined;
   CategoryDetail: { categoryId: number; categoryName: string; period?: string };
   DeletedTransactions: undefined;

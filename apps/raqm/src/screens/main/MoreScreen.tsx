@@ -287,7 +287,7 @@ export function MoreScreen() {
       rows: [
         { key: 'manage-accounts', label: 'Accounts', Icon: BankIcon, onPress: () => navigation.navigate('ManageAccounts') },
         { key: 'month-start', label: 'Month Start Date', Icon: CalendarMonthIcon, meta: ordinal(monthStartDay), onPress: () => setShowDayPicker(true) },
-        { key: 'budgets', label: 'Budgets', Icon: BanknoteIcon, onPress: () => navigation.navigate('Settings') },
+        { key: 'budgets', label: 'Budgets', Icon: BanknoteIcon, onPress: () => navigation.navigate('Budgets') },
         { key: 'categories', label: 'Categories', Icon: LayersIcon, comingSoon: true },
         { key: 'tags', label: 'Tags', Icon: PinIcon, comingSoon: true },
         {
@@ -324,7 +324,7 @@ export function MoreScreen() {
       title: 'APP',
       rows: [
         { key: 'appearance', label: 'Theme', Icon: PaletteIcon, onPress: handleAppearance },
-        { key: 'notifications', label: 'Notifications', Icon: NotificationIcon, onPress: () => Linking.openSettings() },
+        { key: 'notifications', label: 'Notifications', Icon: NotificationIcon, onPress: () => navigation.navigate('NotificationSettings') },
         { key: 'invite-friends', label: 'Invite Friends', Icon: GroupWorkIcon, onPress: handleInviteFriends },
         { key: 'about', label: 'About', Icon: InfoIcon, onPress: handleAbout },
       ],
@@ -377,7 +377,7 @@ export function MoreScreen() {
           <TouchableOpacity onPress={() => setEditField('name')} hitSlop={8} className="px-xs">
             <PencilIcon color={Colors.inkLabel} size={16} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Settings')} hitSlop={8}>
+          <TouchableOpacity onPress={() => navigation.navigate('Budgets')} hitSlop={8}>
             <GearIcon color={Colors.inkLabel} size={20} />
           </TouchableOpacity>
         </View>
