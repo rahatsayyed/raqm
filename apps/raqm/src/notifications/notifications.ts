@@ -172,7 +172,14 @@ export function attachNotificationHandlers(
   const sub = Notifications.addNotificationResponseReceivedListener(handleResponse);
 
   Notifications.getLastNotificationResponseAsync().then(response => {
-    if (response) handleResponse(response);
+    // Expo caches this response and keeps returning the SAME one on every future call —
+    // including a later plain app-icon launch with no notification tap at all — until it's
+    // explicitly cleared. Without clearing, tapping one transaction notification once would
+    // make every subsequent cold start reopen that same TransactionDetail screen forever.
+    if (response) {
+      handleResponse(response);
+      Notifications.clearLastNotificationResponseAsync().catch(() => {});
+    }
   });
 
   return () => {
