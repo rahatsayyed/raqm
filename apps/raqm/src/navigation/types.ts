@@ -59,7 +59,8 @@ export type MainStackParamList = {
   CategoryOverview: undefined;
   SpendDetail:
     | { filterType: 'category'; categoryId: number; categoryName: string }
-    | { filterType: 'account'; bankName: string; last4?: string };
+    | { filterType: 'account'; bankName: string; last4?: string }
+    | { filterType: 'merchant'; merchant: string };
 };
 
 export type OnboardingScreenProps<T extends keyof OnboardingStackParamList> =

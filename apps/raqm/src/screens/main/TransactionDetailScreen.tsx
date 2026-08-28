@@ -670,7 +670,7 @@ export function TransactionDetailScreen({
               <TouchableOpacity
                 className="flex-row items-center gap-[2px] self-start mt-md"
                 onPress={() =>
-                  navigation.navigate("Transactions", { initialQuery: tx.merchant! })
+                  navigation.navigate("SpendDetail", { filterType: "merchant", merchant: tx.merchant! })
                 }
                 hitSlop={4}
               >
@@ -957,7 +957,7 @@ export function TransactionDetailScreen({
 
 // ── Bottom sheet shell ───────────────────────────────────────────────────────
 
-function BottomSheet({
+export function BottomSheet({
   visible,
   onClose,
   children,
