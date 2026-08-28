@@ -230,9 +230,13 @@ async function cancelIfScheduled(identifier: string): Promise<void> {
  * toggle changes) — it is fully idempotent.
  */
 export async function scheduleSummaries(): Promise<void> {
-  await cancelIfScheduled(DAILY_SUMMARY_ID);
-  await cancelIfScheduled(WEEKLY_SUMMARY_ID);
-  await cancelIfScheduled(MONTHLY_SUMMARY_ID);
+  // Three independent identifiers, no shared state between them — safe to cancel in parallel
+  // rather than three sequential native-bridge round trips on every app launch.
+  await Promise.all([
+    cancelIfScheduled(DAILY_SUMMARY_ID),
+    cancelIfScheduled(WEEKLY_SUMMARY_ID),
+    cancelIfScheduled(MONTHLY_SUMMARY_ID),
+  ]);
 
   const [dailyEnabled, weeklyEnabled, monthlyEnabled, monthStartDayRaw] = await Promise.all([
     getSetting('notif_daily'),
