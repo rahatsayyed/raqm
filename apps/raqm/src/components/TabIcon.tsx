@@ -276,3 +276,7 @@ export function FlagIcon({ color, size = 24 }: Props) {
 export function MailIcon({ color, size = 24 }: Props) {
   return <Iconify icon="material-symbols:mail-outline-rounded" size={size} color={color} />;
 }
+
+export function FilterIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:filter-list-rounded" size={size} color={color} />;
+}
