@@ -17,6 +17,7 @@ import { Colors } from './src/theme';
 import { LockScreen } from './src/components/LockScreen';
 import { authenticateWithDevice, canUseDeviceAuth, isAppLockEnabled } from './src/services/auth/appLock';
 import { SmsReader } from './src/native/SmsReader';
+import { useHiddenBalanceStore } from './src/store/hiddenBalanceStore';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -95,6 +96,12 @@ function AppContent({ onLayout }: { onLayout: () => void }) {
   useEffect(() => {
     const sub = SmsReader.addScreenLockedListener(() => {
       screenLockedSinceBackgroundRef.current = true;
+      // Hide Balances' reveal is independent of App Lock (it works even when App
+      // Lock is off) and re-masks on the exact same trigger: a real device screen
+      // lock, not merely backgrounding the app. Reset immediately rather than
+      // waiting for the next foreground — the value is masked on screen either
+      // way, this only affects whether the next tap needs reveal-auth again.
+      useHiddenBalanceStore.getState().lockSession();
     });
     return () => sub.remove();
   }, []);

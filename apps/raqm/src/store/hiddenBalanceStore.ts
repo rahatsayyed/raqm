@@ -29,6 +29,14 @@ interface HiddenBalanceStore {
   hydrate: () => Promise<void>;
   setHidden: (kind: MaskedKind, value: boolean) => Promise<void>;
   unlockSession: () => void;
+  /**
+   * Re-masks every value by clearing the session unlock, without waiting for
+   * a full cold start. Called from App.tsx's native "screenLocked" listener —
+   * the same signal App Lock uses to decide whether to re-prompt — so Hide
+   * Balances re-locks exactly when the device screen actually locks, not
+   * just when the whole app process is later killed.
+   */
+  lockSession: () => void;
 }
 
 /**
@@ -82,6 +90,7 @@ export const useHiddenBalanceStore = create<HiddenBalanceStore>((set) => ({
   },
 
   unlockSession: () => set({ sessionUnlocked: true }),
+  lockSession: () => set({ sessionUnlocked: false }),
 }));
 
 // Kick hydration off at module load. This module is imported by MaskedValue,
