@@ -25,6 +25,12 @@ export const SmsReader = {
     SmsReaderModule.attachTxActions(notificationId, txId, notExpenseLabel);
   },
 
+  /** Absolute filesystem path to the native diagnostic log file (native.log). */
+  getNativeLogPath(): Promise<string> {
+    if (Platform.OS !== 'android') return Promise.resolve('');
+    return SmsReaderModule.getNativeLogPath();
+  },
+
   /** Subscribes to the native "screenLocked" event (Android ACTION_SCREEN_OFF). Returns a
    * no-op subscription on non-Android platforms. */
   addScreenLockedListener(listener: () => void): EventSubscription | { remove: () => void } {

@@ -22,6 +22,11 @@ export function attachTxActions(notificationId: string, txId: number, notExpense
   native.attachTxActions(notificationId, txId, notExpenseLabel);
 }
 
+/** Returns the absolute filesystem path to the native diagnostic log file (native.log). */
+export function getNativeLogPath(): Promise<string> {
+  return native.getNativeLogPath();
+}
+
 /** Fires whenever Android's ACTION_SCREEN_OFF broadcast is observed natively (device screen
  * turned off/locked) — used to distinguish a real lock from a mere app backgrounding, which
  * JS-level AppState alone cannot do. See the native module's OnCreate for the receiver. */
