@@ -6,6 +6,7 @@ import java.io.FileWriter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 /**
  * Single native-side diagnostic log writer. Writes ONLY to native.log — js.log is
@@ -16,10 +17,13 @@ import java.util.Locale
  */
 object DiagnosticLog {
     private const val MAX_BYTES = 3 * 1024 * 1024 // 3 MB
-    private val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+    private val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
 
     fun logFile(context: Context): File = File(context.filesDir, "native.log")
 
+    @Synchronized
     fun write(context: Context, tag: String, message: String) {
         try {
             val file = logFile(context)
