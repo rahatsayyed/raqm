@@ -103,6 +103,11 @@ class SmsReaderModule : Module() {
       }
     }
 
+    Function("getNativeLogPath") {
+      DiagnosticLog.logFile(appContext.reactContext ?: return@Function "")
+        .absolutePath
+    }
+
     // Appends all three tx notification actions — Category, Add note, Not An Expense/Income —
     // to an already-posted notification, entirely natively. expo-notifications' JS category API
     // has no way to point an action's PendingIntent anywhere but the app's launch intent (needed
@@ -143,8 +148,10 @@ class SmsReaderModule : Module() {
       val sbn = pendingSbn
       if (sbn == null) {
         Log.e("SmsReaderModule", "attachTxActions: notification $notificationId never appeared after ${attempts * pollIntervalMs}ms")
+        DiagnosticLog.write(context, "notif.actions_attached", "failed txId=$txId notificationId=$notificationId waitedMs=${attempts * pollIntervalMs}")
         return@AsyncFunction
       }
+      DiagnosticLog.write(context, "notif.actions_attached", "success txId=$txId notificationId=$notificationId")
 
       val categoryIntent = Intent(context, CategoryPickerActivity::class.java).apply {
         putExtra(CategoryPickerActivity.EXTRA_TX_ID, txId)
