@@ -43,6 +43,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
         ACTION_NOT_EXPENSE -> {
           db.execSQL("UPDATE transactions SET link_settled = 1 WHERE id = ?", arrayOf(txId))
           context.getSystemService(NotificationManager::class.java)?.cancel(tag, id)
+          DiagnosticLog.write(context, "notif.action_tapped", "action=not_expense txId=$txId")
         }
         ACTION_ADD_NOTE -> {
           val noteText = RemoteInput.getResultsFromIntent(intent)
@@ -57,6 +58,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
               arrayOf(txId.toString()),
             )
           }
+          DiagnosticLog.write(context, "notif.action_tapped", "action=add_note txId=$txId")
           // Re-notify with the same (tag, id) regardless of whether text was empty — Android's
           // RemoteInput contract requires this to clear the inline input's "sending" spinner.
           refreshTxNotificationBody(context, db, txId, tag, id)
@@ -64,6 +66,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
       }
     } catch (e: Exception) {
       Log.e(TAG, "Failed handling ${intent.action} for tx $txId", e)
+      DiagnosticLog.write(context, "error.caught", "NotificationActionReceiver: ${e.message}")
     } finally {
       db.close()
     }

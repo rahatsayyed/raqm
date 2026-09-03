@@ -351,6 +351,7 @@ class CategoryPickerActivity : Activity() {
         if (subcategoryId != null) put("subcategory_id", subcategoryId) else putNull("subcategory_id")
       }
       db?.update("transactions", values, "id = ?", arrayOf(txId.toString()))
+      DiagnosticLog.write(this, "notif.action_tapped", "action=category txId=$txId categoryId=$categoryId")
       val database = db
       val tag = notificationTag
       if (database != null && tag != null && notificationIntId != -1) {
@@ -358,6 +359,7 @@ class CategoryPickerActivity : Activity() {
       }
     } catch (e: Exception) {
       Log.e(TAG, "Could not update category", e)
+      DiagnosticLog.write(this, "error.caught", "CategoryPickerActivity: ${e.message}")
     } finally {
       closeAndFinish()
     }
