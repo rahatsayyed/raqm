@@ -16,6 +16,7 @@ import { Colors } from '../../theme';
 import { SmsReader } from '../../native/SmsReader';
 import { useOnboardingStore, dateRangeToTimestamps } from '../../store/onboardingStore';
 import { runDetectionJobs } from '../../services/txIntelligence';
+import { logEvent } from '../../services/logger';
 
 const RADIUS = 90;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -101,6 +102,7 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
         // Don't silently land on an empty AccountSelection pretending success —
         // surface the failure and give the DB write a second chance before moving on.
         console.warn('Onboarding scan failed:', e);
+        logEvent('error.caught', `ScanningProgressScreen onboarding scan: ${e instanceof Error ? e.message : String(e)}`);
         setStatus('Something went wrong while saving. Retrying…');
         try {
           const { from, to } = dateRangeToTimestamps(dateRange, customFrom, customTo);
@@ -116,6 +118,7 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
           setTimeout(() => navigation.replace('AccountSelection'), 1200);
         } catch (retryError) {
           console.warn('Onboarding scan retry failed:', retryError);
+          logEvent('error.caught', `ScanningProgressScreen retry: ${retryError instanceof Error ? retryError.message : String(retryError)}`);
           setStatus('Scan failed. You can re-scan later from More → Re-scan SMS.');
           setTimeout(() => navigation.replace('AccountSelection'), 2500);
         }

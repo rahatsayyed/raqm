@@ -1,4 +1,5 @@
 import * as Location from 'expo-location';
+import { logEvent } from './logger';
 
 /** L1/L3: returns null on any failure or denial — never throws. */
 export async function getCurrentCoords(): Promise<{ lat: number; lng: number } | null> {
@@ -23,6 +24,7 @@ export async function getCurrentCoords(): Promise<{ lat: number; lng: number } |
     return { lat: pos.coords.latitude, lng: pos.coords.longitude };
   } catch (error) {
     console.warn('getCurrentCoords failed:', error);
+    logEvent('error.caught', `location.getCurrentCoords: ${error instanceof Error ? error.message : String(error)}`);
     return null;
   }
 }

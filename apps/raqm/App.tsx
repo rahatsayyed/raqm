@@ -18,8 +18,20 @@ import { LockScreen } from './src/components/LockScreen';
 import { authenticateWithDevice, canUseDeviceAuth, isAppLockEnabled } from './src/services/auth/appLock';
 import { SmsReader } from './src/native/SmsReader';
 import { useHiddenBalanceStore } from './src/store/hiddenBalanceStore';
+import { logEvent } from './src/services/logger';
 
 SplashScreen.preventAutoHideAsync();
+
+// Global uncaught-error handler: chains onto RN's existing handler (rather than replacing it)
+// so the default crash behavior (dev red screen, or the native crash reporter in a release
+// build) still runs — this only adds a log line before that existing behavior.
+if (typeof ErrorUtils !== 'undefined') {
+  const originalHandler = ErrorUtils.getGlobalHandler();
+  ErrorUtils.setGlobalHandler((error, isFatal) => {
+    logEvent('error.uncaught', `${isFatal ? 'FATAL ' : ''}${error.message}`);
+    originalHandler(error, isFatal);
+  });
+}
 
 function AppContent({ onLayout }: { onLayout: () => void }) {
   const insets = useSafeAreaInsets();

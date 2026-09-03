@@ -6,6 +6,7 @@ import { accountLabel } from '../utils/accountLabel';
 import { getCategories, linkTxs } from '../db/database';
 import { pairSelfTransfers } from './txIntelligence';
 import { Colors } from '../theme';
+import { logEvent } from './logger';
 
 const SELF_TRANSFER_COLOR = Colors.mossStructure;
 
@@ -51,10 +52,12 @@ function prunePendingLegNotifications(): void {
  */
 export async function processIncomingSms(data: { body: string; sender: string; timestamp: number }): Promise<ProcessedSms | null> {
   const tx = BankParserFactory.parse(data.body, data.sender, data.timestamp);
+  logEvent('sms.parsed', tx ? `success bank=${tx.bankName} type=${tx.type}` : 'failed');
   if (!tx) return null;
 
   const id = await useTxStore.getState().addParsedWithLocation(tx);
   if (id === null) return null; // duplicate, reference-duplicate, or a hidden account — see insertParsedTx
+  logEvent('tx.inserted', `txId=${id}`);
 
   const debit = isDebit(tx.type);
   const labels = useTxStore.getState().accountLabels;
@@ -93,6 +96,7 @@ export async function processIncomingSms(data: { body: string; sender: string; t
         `${amount} transferred from ${fromLabel} to ${toLabel}`,
         SELF_TRANSFER_COLOR,
       );
+      logEvent('notif.posted', `txId=${id}`);
       SmsReader.attachTxActions(selfTransferNotificationId, debitId, 'Not An Expense');
     }
 
@@ -120,6 +124,7 @@ export async function processIncomingSms(data: { body: string; sender: string; t
   }
   const notifBody = `${bankLabel} • ${categoryName}`;
   const notificationId = await postTxNotification(id, notifTitle, notifBody, notificationColorFor(debit));
+  logEvent('notif.posted', `txId=${id}`);
   SmsReader.attachTxActions(notificationId, id, debit ? 'Not An Expense' : 'Not An Income');
   prunePendingLegNotifications();
   pendingLegNotifications.set(id, { notificationId, timestamp: Date.now() });

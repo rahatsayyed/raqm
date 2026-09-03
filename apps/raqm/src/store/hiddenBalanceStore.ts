@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getSetting, setSetting } from '../db/database';
+import { logEvent } from '../services/logger';
 
 /** The four maskable figure classes, one per `hide_*` setting. */
 export type MaskedKind = 'income' | 'expense' | 'net' | 'bank_balance';
@@ -76,6 +77,7 @@ export const useHiddenBalanceStore = create<HiddenBalanceStore>((set) => ({
         // instead of every MaskedValue being wedged at `hydrated: false` for
         // the rest of the process's life.
         console.error('[hiddenBalanceStore] hydrate failed', err);
+        logEvent('error.caught', `hiddenBalanceStore hydrate: ${err instanceof Error ? err.message : String(err)}`);
         hydratePromise = null;
       }
     })();
