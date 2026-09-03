@@ -10,6 +10,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../../navigation/types';
 import { rescanTransactionsRange } from '../../services/rescan';
 import { buildMonthlySummary, exportCsv, exportPdf } from '../../services/export';
+import { shareDiagnosticLogs } from '../../services/diagnosticLogs';
 import { RescanModal } from '../../components/RescanModal';
 import { EditFieldSheet } from '../../components/EditFieldSheet';
 import { parseImportCsv } from '../../services/csvImport';
@@ -24,7 +25,7 @@ import {
   PaletteIcon, SupportAgentIcon, ImportIcon, CalendarMonthIcon, FlagIcon,
   LayersIcon, PinIcon, WalletIcon, MergeIcon, TrendingUpIcon,
   CircleHelpIcon, PhoneIcon, GroupWorkIcon, BackIcon, NotificationIcon,
-  PencilIcon, MailIcon,
+  PencilIcon, MailIcon, DiagnosticLogIcon,
 } from '../../components/TabIcon';
 import { FEEDBACK_EMAIL } from '../../constants/support';
 import { canUseDeviceAuth, isAppLockEnabled, setAppLockEnabled } from '../../services/auth/appLock';
@@ -253,6 +254,23 @@ export function MoreScreen() {
     }
   };
 
+  const handleShareDiagnosticLogs = () => {
+    Alert.alert('Export diagnostic logs', 'Choose a time range', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: '1 hour', onPress: () => runShareDiagnosticLogs(1) },
+      { text: '1 day', onPress: () => runShareDiagnosticLogs(24) },
+      { text: '7 days', onPress: () => runShareDiagnosticLogs(168) },
+    ]);
+  };
+
+  const runShareDiagnosticLogs = async (hours: number) => {
+    try {
+      await shareDiagnosticLogs(hours);
+    } catch (e) {
+      Alert.alert('Export failed', e instanceof Error ? e.message : 'Unknown error');
+    }
+  };
+
   const handleAppearance = () => {
     Alert.alert('Appearance', 'Raqm is dark-only for now — a light theme is planned.');
   };
@@ -315,6 +333,7 @@ export function MoreScreen() {
         { key: 'rescan', label: rescanLabel, Icon: RefreshIcon, onPress: rescanStatus === 'scanning' ? undefined : () => setRescanModalVisible(true) },
         { key: 'import-csv', label: 'Import', Icon: ImportIcon, onPress: () => navigation.navigate('Import') },
         { key: 'export', label: 'Export', Icon: ExportIcon, onPress: handleExportData },
+        { key: 'diagnosticLogs', label: 'Share diagnostic logs', Icon: DiagnosticLogIcon, onPress: handleShareDiagnosticLogs },
         { key: 'deleted', label: 'Deleted Transactions', Icon: TrashIcon, onPress: () => navigation.navigate('DeletedTransactions') },
         { key: 'backup-restore', label: 'Backup & Restore', Icon: MergeIcon, comingSoon: true },
         { key: 'report-undetected-sms', label: 'Report Undetected SMS', Icon: FlagIcon, onPress: () => navigation.navigate('SmsInbox') },
