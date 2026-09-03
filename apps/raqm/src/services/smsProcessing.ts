@@ -96,7 +96,7 @@ export async function processIncomingSms(data: { body: string; sender: string; t
         `${amount} transferred from ${fromLabel} to ${toLabel}`,
         SELF_TRANSFER_COLOR,
       );
-      logEvent('notif.posted', `txId=${id}`);
+      logEvent('notif.posted', `txId=${debitId}`);
       SmsReader.attachTxActions(selfTransferNotificationId, debitId, 'Not An Expense');
     }
 
