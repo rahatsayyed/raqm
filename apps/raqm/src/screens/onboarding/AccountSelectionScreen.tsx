@@ -4,6 +4,7 @@ import { OnboardingScreenProps } from '../../navigation/types';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { softDeleteAccountTxs } from '../../db/database';
+import { logEvent } from '../../services/logger';
 
 type Account = { id: string; bank: string; last4: string | null; type: string; icon: string; txCount: number };
 
@@ -122,6 +123,7 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
             } catch (e) {
               // Non-fatal: nothing is lost — proceed rather than stranding the user here.
               console.warn('Deselect cleanup failed:', e);
+              logEvent('error.caught', `AccountSelectionScreen deselect cleanup: ${e instanceof Error ? e.message : String(e)}`);
             }
             navigation.replace('ScanComplete');
           }}

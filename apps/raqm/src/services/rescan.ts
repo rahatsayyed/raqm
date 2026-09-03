@@ -4,6 +4,7 @@ import type { ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
 import { insertParsedTxs, getScannedIdentitiesSince } from '../db/database';
 import { useTxStore } from '../store/txStore';
 import { runDetectionJobs } from './txIntelligence';
+import { logEvent } from './logger';
 
 export interface RescanResult {
   found: number;
@@ -31,30 +32,37 @@ function serialize(op: () => Promise<RescanResult>): Promise<RescanResult> {
  * categories, notes, tags, links, and deletions all survive every scan.
  */
 async function scanMissing(from: number, to: number = Date.now()): Promise<RescanResult> {
-  const [messages, seen] = await Promise.all([
-    SmsReader.readInbox(from, to),
-    getScannedIdentitiesSince(from),
-  ]);
+  logEvent('rescan.start');
+  try {
+    const [messages, seen] = await Promise.all([
+      SmsReader.readInbox(from, to),
+      getScannedIdentitiesSince(from),
+    ]);
 
-  const parsed: ParsedTransaction[] = [];
-  for (const msg of messages) {
-    if (!BankParserFactory.isKnownBankSender(msg.sender)) continue; // S5
-    const tx = BankParserFactory.parse(msg.body, msg.sender, msg.timestamp);
-    if (!tx) continue;
-    const identity = `${tx.bankName}|${tx.amount}|${tx.timestamp}`;
-    if (seen.has(identity)) continue; // already present (or user-deleted) — skip
-    seen.add(identity); // also dedupes repeats within this batch
-    parsed.push(tx);
+    const parsed: ParsedTransaction[] = [];
+    for (const msg of messages) {
+      if (!BankParserFactory.isKnownBankSender(msg.sender)) continue; // S5
+      const tx = BankParserFactory.parse(msg.body, msg.sender, msg.timestamp);
+      if (!tx) continue;
+      const identity = `${tx.bankName}|${tx.amount}|${tx.timestamp}`;
+      if (seen.has(identity)) continue; // already present (or user-deleted) — skip
+      seen.add(identity); // also dedupes repeats within this batch
+      parsed.push(tx);
+    }
+
+    if (parsed.length > 0) {
+      await insertParsedTxs(parsed);
+      await runDetectionJobs();
+    }
+    // Refresh even when nothing new was found so a pull still syncs any external DB changes.
+    await useTxStore.getState().refresh();
+
+    logEvent('rescan.done');
+    return { found: parsed.length };
+  } catch (e) {
+    logEvent('rescan.failed', e instanceof Error ? e.message : String(e));
+    throw e; // preserve existing behavior — callers still see the rejection
   }
-
-  if (parsed.length > 0) {
-    await insertParsedTxs(parsed);
-    await runDetectionJobs();
-  }
-  // Refresh even when nothing new was found so a pull still syncs any external DB changes.
-  await useTxStore.getState().refresh();
-
-  return { found: parsed.length };
 }
 
 /**

@@ -4,6 +4,7 @@ import { countsTowardTotals } from './txIntelligence';
 import { getMonthBounds, getWeekBounds, type PeriodBounds } from '../utils/period';
 import { postBudgetAlert } from '../notifications/notifications';
 import { formatAmount } from '../utils/format';
+import { logEvent } from './logger';
 
 export interface BudgetStatus {
   budget: Budget;
@@ -81,34 +82,44 @@ async function alreadySent(dedupKey: string): Promise<boolean> {
 }
 
 export async function checkBudgetAlerts(): Promise<void> {
-  const alertsEnabled = await getSetting('budget_alerts');
-  if (alertsEnabled === '0') return;
+  logEvent('budget_alert.start');
+  try {
+    const alertsEnabled = await getSetting('budget_alerts');
+    if (alertsEnabled === '0') {
+      logEvent('budget_alert.done');
+      return;
+    }
 
-  const now = new Date();
-  const statuses = await getBudgetStatuses(now);
+    const now = new Date();
+    const statuses = await getBudgetStatuses(now);
 
-  for (const status of statuses) {
-    const bounds = await currentBounds(status.budget, now);
-    const baseKey = `budget_alert_sent_${status.budget.id}_${bounds.from}`;
+    for (const status of statuses) {
+      const bounds = await currentBounds(status.budget, now);
+      const baseKey = `budget_alert_sent_${status.budget.id}_${bounds.from}`;
 
-    if (status.pct > 100) {
-      const key = `${baseKey}_100`;
-      if (!(await alreadySent(key))) {
-        await postBudgetAlert(
-          'Budget exceeded',
-          `You've spent ${formatAmount(status.spent)} of your ${formatAmount(status.limit)} budget.`,
-        );
-        await setSetting(key, '1');
-      }
-    } else if (status.pct >= 80) {
-      const key = `${baseKey}_80`;
-      if (!(await alreadySent(key))) {
-        await postBudgetAlert(
-          'Approaching budget limit',
-          `You've used ${Math.round(status.pct)}% of this period's budget.`,
-        );
-        await setSetting(key, '1');
+      if (status.pct > 100) {
+        const key = `${baseKey}_100`;
+        if (!(await alreadySent(key))) {
+          await postBudgetAlert(
+            'Budget exceeded',
+            `You've spent ${formatAmount(status.spent)} of your ${formatAmount(status.limit)} budget.`,
+          );
+          await setSetting(key, '1');
+        }
+      } else if (status.pct >= 80) {
+        const key = `${baseKey}_80`;
+        if (!(await alreadySent(key))) {
+          await postBudgetAlert(
+            'Approaching budget limit',
+            `You've used ${Math.round(status.pct)}% of this period's budget.`,
+          );
+          await setSetting(key, '1');
+        }
       }
     }
+    logEvent('budget_alert.done');
+  } catch (e) {
+    logEvent('budget_alert.failed', e instanceof Error ? e.message : String(e));
+    throw e;
   }
 }

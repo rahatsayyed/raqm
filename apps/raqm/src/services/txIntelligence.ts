@@ -1,6 +1,7 @@
 import { loadTxRecords, linkTxs, updateTx } from '../db/database';
 import type { TxRecord } from '../db/database';
 import { pairSelfTransfers, pairRefunds, computeRecurringIds } from './txIntelligenceCore';
+import { logEvent } from './logger';
 
 export {
   pairSelfTransfers,
@@ -61,9 +62,16 @@ export async function detectSubscriptions(txs?: TxRecord[]): Promise<number> {
  * detection never reads `linkType`, so it's always safe to reuse whichever snapshot is current.
  */
 export async function runDetectionJobs(initialTxs?: TxRecord[]): Promise<void> {
-  const first = initialTxs ?? await loadTxRecords();
-  const selfTransferCount = await detectSelfTransfers(first);
-  const afterSelfTransfer = selfTransferCount > 0 ? await loadTxRecords() : first;
-  await detectRefunds(afterSelfTransfer);
-  await detectSubscriptions(afterSelfTransfer);
+  logEvent('detection.start');
+  try {
+    const first = initialTxs ?? await loadTxRecords();
+    const selfTransferCount = await detectSelfTransfers(first);
+    const afterSelfTransfer = selfTransferCount > 0 ? await loadTxRecords() : first;
+    await detectRefunds(afterSelfTransfer);
+    await detectSubscriptions(afterSelfTransfer);
+    logEvent('detection.done');
+  } catch (e) {
+    logEvent('detection.failed', e instanceof Error ? e.message : String(e));
+    throw e;
+  }
 }
