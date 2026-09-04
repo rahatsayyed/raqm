@@ -333,7 +333,6 @@ export function MoreScreen() {
         { key: 'rescan', label: rescanLabel, Icon: RefreshIcon, onPress: rescanStatus === 'scanning' ? undefined : () => setRescanModalVisible(true) },
         { key: 'import-csv', label: 'Import', Icon: ImportIcon, onPress: () => navigation.navigate('Import') },
         { key: 'export', label: 'Export', Icon: ExportIcon, onPress: handleExportData },
-        { key: 'diagnosticLogs', label: 'Share diagnostic logs', Icon: DiagnosticLogIcon, onPress: handleShareDiagnosticLogs },
         { key: 'deleted', label: 'Deleted Transactions', Icon: TrashIcon, onPress: () => navigation.navigate('DeletedTransactions') },
         { key: 'backup-restore', label: 'Backup & Restore', Icon: MergeIcon, comingSoon: true },
         { key: 'report-undetected-sms', label: 'Report Undetected SMS', Icon: FlagIcon, onPress: () => navigation.navigate('SmsInbox') },
@@ -351,6 +350,7 @@ export function MoreScreen() {
     {
       title: 'SUPPORT',
       rows: [
+        { key: 'diagnosticLogs', label: 'Share diagnostic logs', Icon: DiagnosticLogIcon, onPress: handleShareDiagnosticLogs },
         { key: 'help-center', label: 'Help Center', Icon: CircleHelpIcon, comingSoon: true },
         { key: 'feedback', label: 'Feedback', Icon: SupportAgentIcon, onPress: () => Linking.openURL(`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent('Raqm Feedback')}`) },
         { key: 'feature-request', label: 'Feature Request', Icon: HelpIcon, onPress: () => Linking.openURL(`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent('Raqm Feature Request')}`) },
