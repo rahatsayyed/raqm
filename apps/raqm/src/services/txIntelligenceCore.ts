@@ -50,6 +50,28 @@ export function pairSelfTransfers(txs: TxRecord[]): [number, number][] {
   return pairs;
 }
 
+/** Targeted single-tx version of pairSelfTransfers for the per-SMS hot path (smsProcessing.ts):
+ * checking one new transaction for a partner previously rebuilt every pair for the whole table
+ * on every incoming SMS. Same matching rules as pairSelfTransfers — same amount, different
+ * account, within 24h, neither already linked — but a single pass, no bucket map. */
+export function findSelfTransferPartner(txs: TxRecord[], newTx: TxRecord): [number, number] | null {
+  if (isLinked(newTx) || newTx.isSplitChild) return null;
+  const newIsDebit = isDebitType(newTx.type);
+  const newIsCredit = isCreditType(newTx.type);
+  if (!newIsDebit && !newIsCredit) return null;
+
+  for (const t of txs) {
+    if (t.id === newTx.id) continue;
+    if (t.amount !== newTx.amount) continue;
+    if (isLinked(t) || t.isSplitChild) continue;
+    if (Math.abs(t.timestamp - newTx.timestamp) > DAY_MS) continue;
+    if (accountKey(t) === accountKey(newTx)) continue;
+    if (newIsDebit && isCreditType(t.type)) return [newTx.id, t.id];
+    if (newIsCredit && isDebitType(t.type)) return [t.id, newTx.id];
+  }
+  return null;
+}
+
 /** T12: pairs [debitId, creditId] — same amount + same merchant (case-insensitive), credit within 0–30 days after debit. */
 export function pairRefunds(txs: TxRecord[]): [number, number][] {
   const pairs: [number, number][] = [];

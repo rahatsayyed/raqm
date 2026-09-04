@@ -4,7 +4,7 @@ import { postTxNotification, cancelTxNotification } from '../notifications/notif
 import { SmsReader } from '../native/SmsReader';
 import { accountLabel } from '../utils/accountLabel';
 import { getCategories, linkTxs } from '../db/database';
-import { pairSelfTransfers } from './txIntelligence';
+import { findSelfTransferPartner } from './txIntelligence';
 import { Colors } from '../theme';
 import { logEvent } from './logger';
 
@@ -68,7 +68,8 @@ export async function processIncomingSms(data: { body: string; sender: string; t
   // the same UPI transfer usually arrive seconds apart). If so, link them now rather than waiting
   // for the next rescan, and collapse both notifications into one.
   const txs = useTxStore.getState().txs;
-  const pair = pairSelfTransfers(txs).find(([a, b]) => a === id || b === id);
+  const newTx = txs.find(t => t.id === id);
+  const pair = newTx ? findSelfTransferPartner(txs, newTx) : null;
 
   if (pair) {
     const [debitId, creditId] = pair;

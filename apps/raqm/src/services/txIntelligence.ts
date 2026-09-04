@@ -6,6 +6,7 @@ import { logEvent } from './logger';
 export {
   pairSelfTransfers,
   pairRefunds,
+  findSelfTransferPartner,
   computeRecurringIds,
   isDuplicateSms,
   countsTowardTotals,
