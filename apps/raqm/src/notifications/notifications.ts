@@ -245,47 +245,52 @@ export async function scheduleSummaries(): Promise<void> {
     getSetting('month_start_day'),
   ]);
 
-  if ((dailyEnabled ?? '1') === '1') {
-    await Notifications.scheduleNotificationAsync({
-      identifier: DAILY_SUMMARY_ID,
-      content: {
-        title: 'Daily summary',
-        body: 'Your daily spend summary is ready.',
-        data: {},
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DAILY,
-        hour: 21,
-        minute: 0,
-        channelId: TX_CHANNEL_ID,
-      },
-    });
-  }
+  // Same reasoning as the cancel step above: three independent identifiers, no shared state —
+  // each scheduleNotificationAsync call is its own native-bridge round trip, and running them
+  // sequentially was measured taking 7+ seconds on-device on app cold start.
+  await Promise.all([
+    (dailyEnabled ?? '1') === '1'
+      ? Notifications.scheduleNotificationAsync({
+          identifier: DAILY_SUMMARY_ID,
+          content: {
+            title: 'Daily summary',
+            body: 'Your daily spend summary is ready.',
+            data: {},
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DAILY,
+            hour: 21,
+            minute: 0,
+            channelId: TX_CHANNEL_ID,
+          },
+        })
+      : Promise.resolve(),
 
-  if ((weeklyEnabled ?? '1') === '1') {
-    await Notifications.scheduleNotificationAsync({
-      identifier: WEEKLY_SUMMARY_ID,
-      content: {
-        title: 'Weekly summary',
-        body: 'Your weekly spend summary is ready.',
-        data: {},
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-        weekday: 1, // 1 = Sunday per expo-notifications convention
-        hour: 20,
-        minute: 0,
-        channelId: TX_CHANNEL_ID,
-      },
-    });
-  }
+    (weeklyEnabled ?? '1') === '1'
+      ? Notifications.scheduleNotificationAsync({
+          identifier: WEEKLY_SUMMARY_ID,
+          content: {
+            title: 'Weekly summary',
+            body: 'Your weekly spend summary is ready.',
+            data: {},
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+            weekday: 1, // 1 = Sunday per expo-notifications convention
+            hour: 20,
+            minute: 0,
+            channelId: TX_CHANNEL_ID,
+          },
+        })
+      : Promise.resolve(),
 
-  if ((monthlyEnabled ?? '1') === '1') {
-    const startDay = Number(monthStartDayRaw ?? '1');
-    const fireDate = lastDayOfPeriod(startDay);
-    fireDate.setHours(20, 0, 0, 0);
+    (async () => {
+      if ((monthlyEnabled ?? '1') !== '1') return;
+      const startDay = Number(monthStartDayRaw ?? '1');
+      const fireDate = lastDayOfPeriod(startDay);
+      fireDate.setHours(20, 0, 0, 0);
+      if (fireDate.getTime() <= Date.now()) return;
 
-    if (fireDate.getTime() > Date.now()) {
       await Notifications.scheduleNotificationAsync({
         identifier: MONTHLY_SUMMARY_ID,
         content: {
@@ -299,8 +304,8 @@ export async function scheduleSummaries(): Promise<void> {
           channelId: TX_CHANNEL_ID,
         },
       });
-    }
-  }
+    })(),
+  ]);
 }
 
 /**
