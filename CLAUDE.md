@@ -58,7 +58,7 @@ Expo API surface changed significantly in SDK 56 — check https://docs.expo.dev
 
 ## Git
 
-Never commit or push without explicit user confirmation. Commit messages are conventional (`feat(raqm): …`, `fix(raqm): …`).
+Never commit or push without explicit user confirmation. Commit messages are conventional (`feat(raqm): …`, `fix(raqm): …`). Never append a `Claude-Session:` link or any other session-identifying trailer to a commit message — this applies to every commit, including ones made by dispatched subagents.
 
 ## Context & Subagent Discipline
 

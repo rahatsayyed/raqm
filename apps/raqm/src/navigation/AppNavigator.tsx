@@ -19,71 +19,38 @@ export function AppNavigator() {
 
   useEffect(() => {
     let cancelled = false;
-    const unsub = useAppStore.persist.onFinishHydration(async () => {
-      let t0 = Date.now();
-      logEvent('startup.loadTxs.start');
-      await loadTxs();
-      logEvent('startup.loadTxs.done', `${Date.now() - t0}ms`);
 
-      t0 = Date.now();
-      logEvent('startup.syncAccounts.start');
-      await syncDiscoveredAccounts();
-      logEvent('startup.syncAccounts.done', `${Date.now() - t0}ms`);
+    // syncAccounts/initNotifications/scheduleSummaries each hit the DB or native APIs on
+    // their own and never read loadTxs's in-memory result, so they run in parallel with it
+    // instead of waiting behind it. Only detectionJobs needs loadTxs's txs, so it still
+    // runs after that one step resolves.
+    const runStartup = async () => {
+      const timed = async (tag: string, fn: () => Promise<void>) => {
+        const t0 = Date.now();
+        logEvent(`${tag}.start`);
+        await fn();
+        logEvent(`${tag}.done`, `${Date.now() - t0}ms`);
+      };
 
-      t0 = Date.now();
-      logEvent('startup.detectionJobs.start');
-      await runDetectionJobs(useTxStore.getState().txs);
-      logEvent('startup.detectionJobs.done', `${Date.now() - t0}ms`);
+      await Promise.all([
+        timed('startup.loadTxs', loadTxs),
+        timed('startup.syncAccounts', syncDiscoveredAccounts),
+        timed('startup.initNotifications', initNotifications),
+        timed('startup.scheduleSummaries', scheduleSummaries),
+      ]);
+      if (cancelled) return;
 
+      await timed('startup.detectionJobs', () =>
+        runDetectionJobs(useTxStore.getState().txs),
+      );
       useTxStore.getState().refresh();
-      if (cancelled) return;
-
-      t0 = Date.now();
-      logEvent('startup.initNotifications.start');
-      await initNotifications();
-      logEvent('startup.initNotifications.done', `${Date.now() - t0}ms`);
-
-      if (cancelled) return;
-
-      t0 = Date.now();
-      logEvent('startup.scheduleSummaries.start');
-      await scheduleSummaries();
-      logEvent('startup.scheduleSummaries.done', `${Date.now() - t0}ms`);
 
       if (!cancelled) setReady(true);
-    });
+    };
+
+    const unsub = useAppStore.persist.onFinishHydration(runStartup);
     if (useAppStore.persist.hasHydrated()) {
-      let loadT0 = Date.now();
-      logEvent('startup.loadTxs.start');
-      loadTxs().then(async () => {
-        logEvent('startup.loadTxs.done', `${Date.now() - loadT0}ms`);
-        let t0 = Date.now();
-        logEvent('startup.syncAccounts.start');
-        await syncDiscoveredAccounts();
-        logEvent('startup.syncAccounts.done', `${Date.now() - t0}ms`);
-
-        t0 = Date.now();
-        logEvent('startup.detectionJobs.start');
-        await runDetectionJobs(useTxStore.getState().txs);
-        logEvent('startup.detectionJobs.done', `${Date.now() - t0}ms`);
-
-        useTxStore.getState().refresh();
-        if (cancelled) return;
-
-        t0 = Date.now();
-        logEvent('startup.initNotifications.start');
-        await initNotifications();
-        logEvent('startup.initNotifications.done', `${Date.now() - t0}ms`);
-
-        if (cancelled) return;
-
-        t0 = Date.now();
-        logEvent('startup.scheduleSummaries.start');
-        await scheduleSummaries();
-        logEvent('startup.scheduleSummaries.done', `${Date.now() - t0}ms`);
-
-        if (!cancelled) setReady(true);
-      });
+      runStartup();
     }
     return () => {
       cancelled = true;

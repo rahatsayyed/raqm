@@ -293,23 +293,28 @@ export function TransactionDetailScreen({
   }, [allTxs, tx?.id, tx?.merchant, categoryJustChangedTo]);
 
   // Candidate lists for the Link/Group picker sheets — memoized since allTxs can hold
-  // 5000+ rows and these were previously re-filtered on every render regardless of
-  // whether the pickers were even visible.
+  // 5000+ rows. Only computed while the matching sheet is open, since these ran on
+  // every open/change of this screen even when the sheet was never opened.
   const linkCandidates = useMemo(
-    () => allTxs.filter((t) => t.id !== tx?.id && !t.deletedAt && !t.isSplitChild),
-    [allTxs, tx?.id],
+    () =>
+      linkVisible
+        ? allTxs.filter((t) => t.id !== tx?.id && !t.deletedAt && !t.isSplitChild)
+        : [],
+    [allTxs, tx?.id, linkVisible],
   );
 
   const groupCandidates = useMemo(
     () =>
-      allTxs.filter(
-        (t) =>
-          t.id !== tx?.id &&
-          !t.deletedAt &&
-          !t.isSplitChild &&
-          t.groupId == null,
-      ),
-    [allTxs, tx?.id],
+      groupVisible
+        ? allTxs.filter(
+            (t) =>
+              t.id !== tx?.id &&
+              !t.deletedAt &&
+              !t.isSplitChild &&
+              t.groupId == null,
+          )
+        : [],
+    [allTxs, tx?.id, groupVisible],
   );
 
   // Intercepts every way of leaving this screen (header back, hardware back, swipe gesture —
