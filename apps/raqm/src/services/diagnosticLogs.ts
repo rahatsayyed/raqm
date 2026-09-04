@@ -47,8 +47,22 @@ function fileFromAbsolutePath(absolutePath: string): File {
   return new File(`file://${absolutePath}`);
 }
 
+// Android's share sheet rejects a second shareAsync call while one is still open (rapid
+// double-tap on the row) with "another share request is being processed now". Serialize
+// through one in-flight promise, same pattern as rescan.ts, so a second call joins the first
+// instead of firing a second native share intent.
+let inFlight: Promise<void> | null = null;
+
 /** E-diagnostic-1 — filters both logs to the last `rangeHours`, merges, shares as one file. */
-export async function shareDiagnosticLogs(rangeHours: number): Promise<void> {
+export function shareDiagnosticLogs(rangeHours: number): Promise<void> {
+  if (inFlight) return inFlight;
+  inFlight = doShareDiagnosticLogs(rangeHours).finally(() => {
+    inFlight = null;
+  });
+  return inFlight;
+}
+
+async function doShareDiagnosticLogs(rangeHours: number): Promise<void> {
   const nativeLogPath = await SmsReader.getNativeLogPath();
   const nativeLogFile = nativeLogPath ? fileFromAbsolutePath(nativeLogPath) : null;
   const jsLogFile = new File(Paths.document, JS_LOG_FILENAME);
