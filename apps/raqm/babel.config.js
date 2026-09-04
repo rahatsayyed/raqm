@@ -78,6 +78,8 @@ module.exports = function (api) {
             'material-symbols:notifications-outline-rounded',
             'material-symbols:person-outline-rounded',
             'material-symbols:mail-outline-rounded',
+            'material-symbols:filter-list-rounded',
+            'material-symbols:description-outline-rounded',
           ],
         },
       ],
