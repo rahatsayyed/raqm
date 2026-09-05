@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Colors mirror src/theme/colors.ts via CategoryPickerActivity.kt's constants:
+         COLOR_PRIMARY #75daa8 on COLOR_SURFACE #0e1512. -->
+    <path
+        android:fillColor="#75daa8"
+        android:pathData="M24,24m-20,0a20,20 0,1 1,40 0a20,20 0,1 1,-40 0" />
+    <path
+        android:fillColor="#0e1512"
+        android:pathData="M22,13h4v9h9v4h-9v9h-4v-9h-9v-4h9z" />
+</vector>

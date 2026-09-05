@@ -13,6 +13,9 @@ import android.os.Build
 import android.provider.Telephony
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.pm.ShortcutInfoCompat
+import androidx.core.content.pm.ShortcutManagerCompat
+import androidx.core.graphics.drawable.IconCompat
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -40,6 +43,31 @@ class SmsReaderModule : Module() {
       }
       screenOffReceiver = receiver
       context.registerReceiver(receiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
+
+      // Dynamic (not manifest-static) shortcut, so it needs no build-time manifest entry and
+      // could later be hidden behind a setting without a rebuild. pushDynamicShortcut replaces
+      // by id, so re-pushing on every app start is idempotent. Wrapped: a shortcut failure
+      // must never break module init.
+      try {
+        val shortcutIntent = context.packageManager
+          .getLaunchIntentForPackage(context.packageName)
+          ?.apply {
+            action = Intent.ACTION_VIEW
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            putExtra(QuickAdd.EXTRA_OPEN_QUICK_ADD, true)
+          }
+        if (shortcutIntent != null) {
+          val shortcut = ShortcutInfoCompat.Builder(context, "quick_add_cash")
+            .setShortLabel("Add Cash Spend")
+            .setLongLabel("Add Cash Spend")
+            .setIcon(IconCompat.createWithResource(context, R.drawable.ic_add_cash))
+            .setIntent(shortcutIntent)
+            .build()
+          ShortcutManagerCompat.pushDynamicShortcut(context, shortcut)
+        }
+      } catch (e: Exception) {
+        DiagnosticLog.write(context, "error.caught", "pushDynamicShortcut: ${e.message}")
+      }
     }
 
     OnDestroy {

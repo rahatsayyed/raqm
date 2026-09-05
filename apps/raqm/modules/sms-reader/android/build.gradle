@@ -22,4 +22,7 @@ dependencies {
   // SmsBroadcastReceiver) — version resolved by the React Native Gradle Plugin, same as
   // the app module's own dependency declaration.
   implementation("com.facebook.react:react-android")
+
+  // ShortcutManagerCompat / IconCompat for the "Add Cash Spend" launcher shortcut.
+  implementation("androidx.core:core-ktx:1.13.1")
 }
