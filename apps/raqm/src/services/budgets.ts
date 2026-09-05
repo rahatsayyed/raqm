@@ -21,11 +21,18 @@ function isCredit(tx: TxRecord): boolean {
   return tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
 }
 
-async function sumSpend(txs: TxRecord[], categoryId: number, bounds: PeriodBounds): Promise<number> {
+async function sumSpend(
+  txs: TxRecord[],
+  categoryId: number,
+  bounds: PeriodBounds,
+  byId: Map<number, TxRecord>,
+): Promise<number> {
   // Refund credits net against the refunded expense's category (resolved via the link
   // partner, since the credit itself usually carries no categoryId) — otherwise a
   // refunded purchase counts against its budget forever. Clamped at 0 so pct can't go negative.
-  const byId = new Map(txs.map((t) => [t.id, t]));
+  // `byId` is built once by the caller (getBudgetStatuses) and shared across every budget/period
+  // call, instead of rebuilt here on every one of those calls — checkBudgetAlerts runs this on
+  // every single transaction insert, so a per-call full-table Map rebuild adds up fast.
   let total = 0;
   for (const tx of txs) {
     if (tx.timestamp < bounds.from || tx.timestamp > bounds.to) continue;
@@ -56,16 +63,17 @@ function previousWeekRef(now: Date): Date {
 
 export async function getBudgetStatuses(now: Date = new Date()): Promise<BudgetStatus[]> {
   const [budgets, txs] = await Promise.all([getBudgets(), loadTxRecords()]);
+  const byId = new Map(txs.map((t) => [t.id, t]));
   const statuses: BudgetStatus[] = [];
 
   for (const budget of budgets) {
     const bounds = await currentBounds(budget, now);
-    const spent = await sumSpend(txs, budget.categoryId, bounds);
+    const spent = await sumSpend(txs, budget.categoryId, bounds, byId);
 
     let limit = budget.amount;
     if (budget.periodType === 'weekly' && budget.rollover) {
       const lastWeekBounds = getWeekBounds(previousWeekRef(now));
-      const lastWeekSpent = await sumSpend(txs, budget.categoryId, lastWeekBounds);
+      const lastWeekSpent = await sumSpend(txs, budget.categoryId, lastWeekBounds, byId);
       const carry = Math.max(0, budget.amount - lastWeekSpent);
       limit = budget.amount + carry;
     }
