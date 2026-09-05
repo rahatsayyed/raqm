@@ -392,7 +392,7 @@ export function MoreScreen() {
         { key: 'export', label: 'Export', Icon: ExportIcon, onPress: handleExportData },
         { key: 'deleted', label: 'Deleted Transactions', Icon: TrashIcon, onPress: () => navigation.navigate('DeletedTransactions') },
         { key: 'backup-restore', label: 'Backup & Restore', Icon: MergeIcon, comingSoon: true },
-        { key: 'report-undetected-sms', label: 'Report Undetected SMS', Icon: FlagIcon, onPress: () => navigation.navigate('SmsInbox') },
+        { key: 'report-undetected-sms', label: 'Report Undetected SMS & Apps', Icon: FlagIcon, onPress: () => navigation.navigate('SmsInbox') },
       ],
     },
     {

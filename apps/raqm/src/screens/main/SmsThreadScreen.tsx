@@ -45,16 +45,22 @@ export function SmsThreadScreen({ navigation, route }: MainStackScreenProps<'Sms
   }, [messages, query]);
 
   const handleReport = (message: InboxMessage) => {
+    const isNotification = message.origin === 'notification';
     Alert.alert(
-      'Report this SMS?',
-      "This opens an email to report the message text so parser support can be added for this format.",
+      isNotification ? 'Report this notification?' : 'Report this SMS?',
+      isNotification
+        ? 'This opens an email to report the notification text so parser support can be added for this app.'
+        : 'This opens an email to report the message text so parser support can be added for this format.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Report',
           onPress: () => {
-            const subject = `Raqm: Unsupported SMS format (${message.sender})`;
-            const body = `Sender: ${message.sender}\nReceived: ${new Date(message.timestamp).toString()}\n\nMessage:\n${message.body}`;
+            const subject = isNotification
+              ? `Raqm: Unsupported app notification (${message.sender})`
+              : `Raqm: Unsupported SMS format (${message.sender})`;
+            const label = isNotification ? 'App package' : 'Sender';
+            const body = `${label}: ${message.sender}\nReceived: ${new Date(message.timestamp).toString()}\n\n${isNotification ? 'Notification' : 'Message'}:\n${message.body}`;
             Linking.openURL(`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
           },
         },
