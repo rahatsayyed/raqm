@@ -55,8 +55,8 @@ export function SmsInboxScreen({ navigation }: MainStackScreenProps<'SmsInbox'>)
 
   const handleInfo = useCallback(() => {
     Alert.alert(
-      'Report undetected SMS',
-      'Groups your SMS inbox (last 90 days) by sender. Messages Raqm\'s parser doesn\'t recognize are tagged "Request to support" — open one and report it to have that format added.',
+      'Report undetected messages',
+      'Groups your SMS inbox (last 90 days) by sender, plus any app notifications Raqm captured but couldn\'t parse. Anything tagged "Request to support" can be opened and reported so that format gets added.',
     );
   }, []);
 
@@ -88,7 +88,7 @@ export function SmsInboxScreen({ navigation }: MainStackScreenProps<'SmsInbox'>)
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={8}>
           <BackIcon color={Colors.onSurface} size={22} />
         </TouchableOpacity>
-        <Text className="font-inter-bold text-headline-sm text-on-surface flex-1 text-center" numberOfLines={1}>Report undetected SMS</Text>
+        <Text className="font-inter-bold text-headline-sm text-on-surface flex-1 text-center" numberOfLines={1}>Report undetected</Text>
         <TouchableOpacity onPress={handleInfo} hitSlop={8}>
           <InfoIcon color={Colors.onSurfaceVariant} size={20} />
         </TouchableOpacity>
