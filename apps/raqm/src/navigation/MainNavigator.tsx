@@ -17,6 +17,7 @@ import { AccountDetailScreen } from '../screens/main/AccountDetailScreen';
 import { GroceryListDetailScreen } from '../screens/main/GroceryListDetailScreen';
 import { BudgetsScreen } from '../screens/main/BudgetsScreen';
 import { NotificationSettingsScreen } from '../screens/main/NotificationSettingsScreen';
+import { NotificationAppsScreen } from '../screens/main/NotificationAppsScreen';
 import { HideBalancesScreen } from '../screens/main/HideBalancesScreen';
 import { CategoryDetailScreen } from '../screens/main/CategoryDetailScreen';
 import { DeletedTransactionsScreen } from '../screens/main/DeletedTransactionsScreen';
@@ -106,6 +107,7 @@ export function MainNavigator() {
       <Stack.Screen name="GroceryListDetail" component={GroceryListDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="Budgets" component={BudgetsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="NotificationApps" component={NotificationAppsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="HideBalances" component={HideBalancesScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="DeletedTransactions" component={DeletedTransactionsScreen} options={{ animation: 'slide_from_right' }} />
