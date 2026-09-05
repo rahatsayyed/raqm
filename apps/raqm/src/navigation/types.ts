@@ -45,6 +45,7 @@ export type MainStackParamList = {
   GroceryListDetail: { listId: number; listName: string };
   Budgets: undefined;
   NotificationSettings: undefined;
+  NotificationApps: undefined;
   HideBalances: undefined;
   CategoryDetail: { categoryId: number; categoryName: string; period?: string };
   DeletedTransactions: undefined;
