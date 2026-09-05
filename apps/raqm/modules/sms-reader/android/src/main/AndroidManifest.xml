@@ -52,5 +52,20 @@
     <receiver
       android:name=".NotificationActionReceiver"
       android:exported="false" />
+
+    <!-- Quick Settings tile: static "Add Transaction", opens quick-add via the same
+         MainActivity trampoline as the launcher shortcut and the widgets (QuickAdd.kt).
+         Android does not permit adding this to the active tile set programmatically — the
+         user adds it from the shade's "Edit tiles" panel. -->
+    <service
+      android:name=".AddTransactionTileService"
+      android:label="Add Transaction"
+      android:icon="@drawable/ic_tile_add"
+      android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="android.service.quicksettings.action.QS_TILE" />
+      </intent-filter>
+    </service>
   </application>
 </manifest>
