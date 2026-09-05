@@ -87,11 +87,21 @@ export const useTxStore = create<TxStore>((set, get) => ({
       return null;
     }
 
-    const id = await insertParsedTx(tx, source);
-    if (id === null) return null; // reference-based duplicate, or a hidden account — see insertParsedTx
+    const result = await insertParsedTx(tx, source);
+    if (result === null) return null; // reference-based duplicate, or a hidden account — see insertParsedTx
+    const { id, merged } = result;
 
     await get().refresh();
     checkBudgetAlerts().catch(() => {});
+
+    if (merged) {
+      // Cross-source merge: an existing row (from the other ingestion source) was updated
+      // in place rather than a new one inserted. The DB did change, so we still refresh
+      // above, but this is not a fresh transaction — return null (like a true duplicate) so
+      // callers (processIncomingSms/processIncomingNotification) skip posting a duplicate
+      // notification and skip self-transfer pairing.
+      return null;
+    }
 
     // Location capture is best-effort and can hang for several seconds when GPS/location
     // services are unavailable (getCurrentPositionAsync's fallback timeout) — never let it

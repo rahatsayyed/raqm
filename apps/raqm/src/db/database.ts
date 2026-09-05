@@ -513,6 +513,8 @@ export interface TxPatch {
   originalType?: TransactionType | null;
   rawSms?: string | null;
   reference?: string | null;
+  bankName?: string;
+  accountLast4?: string | null;
 }
 
 export interface Category {
@@ -1176,15 +1178,19 @@ function merchantKeysMatch(a: string, b: string): boolean {
 export async function findCrossSourceDuplicate(
   tx: { amount: number; merchant: string | null; timestamp: number },
   source: TxSource,
+  options?: { includeDeleted?: boolean },
 ): Promise<TxRecord | null> {
   const key = normalizeMerchantKey(tx.merchant);
   if (key.length < MIN_MERCHANT_KEY_LEN) return null;
 
   const otherSource: TxSource = source === 'sms' ? 'notification' : 'sms';
   const database = await getDb();
+  // includeDeleted is used only by the bulk-scan path, to detect (and not resurrect) a
+  // cross-source transaction the user has since soft-deleted — see insertParsedTxs.
+  const deletedClause = options?.includeDeleted ? '' : 'AND deleted_at IS NULL';
   const rows = await database.getAllAsync<Record<string, unknown>>(
     `SELECT * FROM transactions
-     WHERE source = ? AND amount = ? AND deleted_at IS NULL AND ABS(timestamp - ?) <= ?`,
+     WHERE source = ? AND amount = ? ${deletedClause} AND ABS(timestamp - ?) <= ?`,
     otherSource,
     tx.amount,
     tx.timestamp,
@@ -1197,10 +1203,17 @@ export async function findCrossSourceDuplicate(
   return match ?? null;
 }
 
+/**
+ * `null` means a true no-op: reference-based duplicate or a hidden account — nothing in the
+ * DB changed. `{ id, merged: true }` means an existing row (from the other source) was
+ * updated in place rather than a new one inserted — callers must still refresh the store
+ * (the DB did change) but must NOT treat it as a freshly-inserted transaction (no duplicate
+ * notification, no self-transfer pairing). `{ id, merged: false }` is a normal new insert.
+ */
 export async function insertParsedTx(
   tx: ParsedTransaction,
   source: TxSource = 'sms',
-): Promise<number | null> {
+): Promise<{ id: number; merged: boolean } | null> {
   if (tx.reference && (await isReferenceDuplicate(tx.reference, tx.amount, tx.type, tx.timestamp))) {
     return null;
   }
@@ -1234,13 +1247,20 @@ export async function insertParsedTx(
         timestamp: Math.min(crossDup.timestamp, tx.timestamp),
         rawSms: tx.smsBody,
         reference: tx.reference ?? crossDup.reference,
+        // The merged row's identity must become the SMS's — the notification app's
+        // bankName ('Google Pay') would otherwise stick around forever, breaking account
+        // labels, hidden-account filtering (keyed on bankName|accountLast4), and balance sync.
+        bankName: tx.bankName,
+        accountLast4: tx.accountLast4 ?? null,
         ...(categoryId != null ? { categoryId, subcategoryId } : {}),
       });
+      return { id: crossDup.id, merged: true };
     }
+    // Notification arriving second onto an SMS row: dropped, nothing changed.
     return null;
   }
 
-  return insertTx({
+  const newId = await insertTx({
     amount: tx.amount,
     type: tx.type,
     merchant: tx.merchant ?? null,
@@ -1258,6 +1278,7 @@ export async function insertParsedTx(
     isManual: false,
     source,
   });
+  return { id: newId, merged: false };
 }
 
 export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
@@ -1296,14 +1317,24 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
       // transaction already captured from an app notification must update that row,
       // not add a second one. This runs inside the open BEGIN; both statements are
       // plain runAsync on the same connection, so no nested transaction is created.
+      // includeDeleted: true — a rescan must also see a soft-deleted cross-source row, so it
+      // can recognize "the user already deleted this real-world transaction" and skip
+      // re-inserting it, rather than only ever finding (and merging into) live rows.
       const crossDup = await findCrossSourceDuplicate(
         { amount: tx.amount, merchant: tx.merchant ?? null, timestamp: tx.timestamp },
         'sms',
+        { includeDeleted: true },
       );
       if (crossDup) {
+        if (crossDup.deletedAt != null) {
+          // The user already deleted the notification-sourced transaction this SMS
+          // represents. Deletions must survive every scan — do not resurrect it by
+          // inserting a fresh SMS-sourced row for the same real-world transaction.
+          continue;
+        }
         await database.runAsync(
           `UPDATE transactions
-             SET amount = ?, type = ?, merchant = ?, timestamp = ?, raw_sms = ?, reference = ?
+             SET amount = ?, type = ?, merchant = ?, timestamp = ?, raw_sms = ?, reference = ?, bankName = ?, accountLast4 = ?
            WHERE id = ?`,
           tx.amount,
           tx.type,
@@ -1311,6 +1342,8 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
           Math.min(crossDup.timestamp, tx.timestamp),
           tx.smsBody ?? null,
           tx.reference ?? crossDup.reference,
+          tx.bankName,
+          tx.accountLast4 ?? null,
           crossDup.id,
         );
         continue;
@@ -1386,6 +1419,8 @@ export async function updateTx(id: number, patch: TxPatch): Promise<void> {
     ['originalType', 'original_type', (v) => v],
     ['rawSms', 'raw_sms', (v) => v],
     ['reference', 'reference', (v) => v],
+    ['bankName', 'bankName', (v) => v],
+    ['accountLast4', 'accountLast4', (v) => v],
   ];
 
   for (const [key, column, transform] of columnMap) {
