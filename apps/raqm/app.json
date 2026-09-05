@@ -21,6 +21,7 @@
       },
       "package": "com.raqm.money",
       "predictiveBackGestureEnabled": false,
+      "allowBackup": false,
       "permissions": [
         "android.permission.READ_SMS",
         "android.permission.RECEIVE_SMS",

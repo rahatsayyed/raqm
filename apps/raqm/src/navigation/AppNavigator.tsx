@@ -32,20 +32,28 @@ export function AppNavigator() {
         logEvent(`${tag}.done`, `${Date.now() - t0}ms`);
       };
 
-      await Promise.all([
-        timed('startup.loadTxs', loadTxs),
-        timed('startup.syncAccounts', syncDiscoveredAccounts),
-        timed('startup.initNotifications', initNotifications),
-        timed('startup.scheduleSummaries', scheduleSummaries),
-      ]);
-      if (cancelled) return;
+      // A throw from any step here (detectionJobs/insertParsedTxs/initNotifications can all
+      // throw) must never leave the app stuck on the loading spinner forever — always reach
+      // setReady, even on failure. The user still gets a working (if incompletely-initialized)
+      // app instead of a permanent blank screen.
+      try {
+        await Promise.all([
+          timed('startup.loadTxs', loadTxs),
+          timed('startup.syncAccounts', syncDiscoveredAccounts),
+          timed('startup.initNotifications', initNotifications),
+          timed('startup.scheduleSummaries', scheduleSummaries),
+        ]);
+        if (cancelled) return;
 
-      await timed('startup.detectionJobs', () =>
-        runDetectionJobs(useTxStore.getState().txs),
-      );
-      useTxStore.getState().refresh();
-
-      if (!cancelled) setReady(true);
+        await timed('startup.detectionJobs', () =>
+          runDetectionJobs(useTxStore.getState().txs),
+        );
+        useTxStore.getState().refresh();
+      } catch (e) {
+        logEvent('startup.failed', e instanceof Error ? e.message : String(e));
+      } finally {
+        if (!cancelled) setReady(true);
+      }
     };
 
     const unsub = useAppStore.persist.onFinishHydration(runStartup);

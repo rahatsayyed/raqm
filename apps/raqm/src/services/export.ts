@@ -84,11 +84,15 @@ export async function buildMonthlySummary(ref: Date): Promise<MonthlySummary> {
   return { from, to, income, expense, savingsRate, topCategories };
 }
 
+// A merchant/bank string starting with =, +, -, or @ (easy for a scam SMS to contain) is
+// interpreted as a formula by Excel/Sheets when the exported CSV is opened. Prefixing a
+// single-quote defuses this without changing the visible value in any spreadsheet app.
 function csvEscape(value: string): string {
-  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-    return `"${value.replace(/"/g, '""')}"`;
+  const guarded = /^[=+\-@]/.test(value) ? `'${value}` : value;
+  if (guarded.includes(',') || guarded.includes('"') || guarded.includes('\n')) {
+    return `"${guarded.replace(/"/g, '""')}"`;
   }
-  return value;
+  return guarded;
 }
 
 /** E2 — all non-deleted transactions, columns per contract, written to cache then shared. */
