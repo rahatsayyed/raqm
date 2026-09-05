@@ -18,6 +18,29 @@ object QuickAdd {
   const val EXTRA_OPEN_TRANSACTION = "openTransaction"
 
   /**
+   * The launcher-activity intent carrying the deep-link extras. Glance's `actionStartActivity`
+   * takes a raw Intent (it has no PendingIntent overload), so widgets use this directly while
+   * the shortcut/tile wrap it below — one place builds the intent either way.
+   * Returns null if the launcher intent can't be resolved (never throws).
+   */
+  fun mainActivityIntent(
+    context: Context,
+    quickAdd: Boolean,
+    transactionId: Int? = null,
+  ): Intent? {
+    val intent = try {
+      context.packageManager.getLaunchIntentForPackage(context.packageName)
+    } catch (e: Exception) {
+      null
+    } ?: return null
+
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+    if (quickAdd) intent.putExtra(EXTRA_OPEN_QUICK_ADD, true)
+    if (transactionId != null) intent.putExtra(EXTRA_OPEN_TRANSACTION, transactionId)
+    return intent
+  }
+
+  /**
    * A PendingIntent that (re)launches the app's own launcher activity carrying the
    * deep-link extras. `requestCode` must be distinct per caller/row, otherwise Android
    * reuses one PendingIntent and every widget row would open the same transaction.
@@ -29,15 +52,7 @@ object QuickAdd {
     quickAdd: Boolean,
     transactionId: Int? = null,
   ): PendingIntent? {
-    val intent = try {
-      context.packageManager.getLaunchIntentForPackage(context.packageName)
-    } catch (e: Exception) {
-      null
-    } ?: return null
-
-    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-    if (quickAdd) intent.putExtra(EXTRA_OPEN_QUICK_ADD, true)
-    if (transactionId != null) intent.putExtra(EXTRA_OPEN_TRANSACTION, transactionId)
+    val intent = mainActivityIntent(context, quickAdd, transactionId) ?: return null
 
     return try {
       PendingIntent.getActivity(
