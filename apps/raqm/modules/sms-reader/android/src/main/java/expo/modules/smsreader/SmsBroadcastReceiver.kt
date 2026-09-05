@@ -1,6 +1,5 @@
 package expo.modules.smsreader
 
-import android.app.ActivityManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -12,20 +11,6 @@ import com.facebook.react.HeadlessJsTaskService
 private const val TAG = "RaqmSms"
 
 class SmsBroadcastReceiver : BroadcastReceiver() {
-  // When the app's own process is already alive and in the foreground, Android lets a
-  // plain (non-foreground) Service start with no restrictions — no notification required.
-  // Only the killed/backgrounded case genuinely needs the foreground-service promotion (and
-  // therefore HeadlessSmsTaskService's "Analyzing new SMS…" notification) to guarantee the
-  // process isn't cut off mid-processing. Checking our OWN process's importance this way is
-  // unrestricted (the getRunningAppProcesses() restrictions target seeing OTHER apps' info).
-  private fun isAppInForeground(context: Context): Boolean {
-    val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager ?: return false
-    val processes = am.runningAppProcesses ?: return false
-    return processes.any {
-      it.processName == context.packageName && it.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
-    }
-  }
-
   override fun onReceive(context: Context, intent: Intent) {
     Log.d(TAG, "SmsBroadcastReceiver.onReceive fired, action=${intent.action}")
     if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
@@ -52,7 +37,7 @@ class SmsBroadcastReceiver : BroadcastReceiver() {
       }
 
       try {
-        if (isAppInForeground(context)) {
+        if (AppProcess.isForeground(context)) {
           context.startService(buildIntent(foreground = true))
         } else {
           ContextCompat.startForegroundService(context, buildIntent(foreground = false))

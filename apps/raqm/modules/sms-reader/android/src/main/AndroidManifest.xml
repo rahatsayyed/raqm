@@ -3,6 +3,11 @@
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
+  <!-- The notification-source app picker lists the user's installed apps. Android 11+
+       hides other packages without this. Raqm is not distributed through Play, so the
+       Play policy restriction on QUERY_ALL_PACKAGES does not apply. -->
+  <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
   <application>
     <receiver
       android:name=".SmsBroadcastReceiver"

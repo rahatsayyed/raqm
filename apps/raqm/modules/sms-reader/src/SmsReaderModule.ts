@@ -1,6 +1,6 @@
 import { requireNativeModule } from 'expo-modules-core';
 import type { EventSubscription } from 'expo-modules-core';
-import type { SmsMessage } from './SmsReader.types';
+import type { SmsMessage, InstalledApp } from './SmsReader.types';
 
 const native = requireNativeModule('SmsReader');
 
@@ -32,4 +32,19 @@ export function getNativeLogPath(): Promise<string> {
  * JS-level AppState alone cannot do. See the native module's OnCreate for the receiver. */
 export function addScreenLockedListener(listener: () => void): EventSubscription {
   return native.addListener('screenLocked', listener);
+}
+
+/** Whether Raqm's NotificationListenerService currently has notification access granted. */
+export function isNotificationListenerEnabled(): boolean {
+  return native.isNotificationListenerEnabled();
+}
+
+/** Mirrors the monitored-app package list into native SharedPreferences. */
+export function setMonitoredNotificationPackages(packages: string[]): Promise<void> {
+  return native.setMonitoredNotificationPackages(packages);
+}
+
+/** Launchable, user-visible installed apps, sorted by display name. */
+export function getInstalledApps(): Promise<InstalledApp[]> {
+  return native.getInstalledApps();
 }
