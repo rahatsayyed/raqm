@@ -81,7 +81,7 @@ describe('UpiAppNotificationParser — non-transactions', () => {
   });
 
   test('a package name never matches a real SMS sender ID, and vice versa', () => {
-    expect(BankParserFactory.parse('₹500 paid to Swiggy', 'JK-HDFCBK-S', ts)).toBeNull();
+    expect(BankParserFactory.parse('₹500 paid to Swiggy', 'XX-NOTREAL-Z', ts)).toBeNull();
     const parsers = BankParserFactory.getParsers(GPAY);
     expect(parsers).toHaveLength(1);
     expect(parsers[0]).toBeInstanceOf(UpiAppNotificationParser);
