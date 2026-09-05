@@ -44,6 +44,12 @@ export function setMonitoredNotificationPackages(packages: string[]): Promise<vo
   return native.setMonitoredNotificationPackages(packages);
 }
 
+/** Mirrors the month_start_day setting into native SharedPreferences so the home-screen
+ * widgets can compute period bounds without opening a second SQLite connection. */
+export function setMonthStartDay(day: number): Promise<void> {
+  return native.setMonthStartDay(day);
+}
+
 /** Launchable, user-visible installed apps, sorted by display name. */
 export function getInstalledApps(): Promise<InstalledApp[]> {
   return native.getInstalledApps();
