@@ -110,6 +110,27 @@ class SmsReaderModule : Module() {
       NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
     }
 
+    /**
+     * Reads (and clears) the quick-add / open-transaction extras from MainActivity's current
+     * intent. Called by JS on mount and on every background→active transition (see
+     * src/navigation/deepLinks.ts). Clearing is what stops a single shortcut tap from
+     * re-navigating on every later foreground — the same trap
+     * getLastNotificationResponseAsync has (see notifications.ts).
+     */
+    Function("consumeLaunchDeepLink") {
+      val activity = appContext.currentActivity ?: return@Function null
+      val intent = activity.intent ?: return@Function null
+      val quickAdd = intent.getBooleanExtra(QuickAdd.EXTRA_OPEN_QUICK_ADD, false)
+      val txId = intent.getIntExtra(QuickAdd.EXTRA_OPEN_TRANSACTION, -1)
+      if (!quickAdd && txId == -1) return@Function null
+      intent.removeExtra(QuickAdd.EXTRA_OPEN_QUICK_ADD)
+      intent.removeExtra(QuickAdd.EXTRA_OPEN_TRANSACTION)
+      mapOf(
+        "openQuickAdd" to quickAdd,
+        "openTransaction" to if (txId == -1) null else txId,
+      )
+    }
+
     // Mirrors the user's app-picker selection into SharedPreferences, where
     // RaqmNotificationListenerService can read it with no JS engine and no DB open.
     AsyncFunction("setMonitoredNotificationPackages") { packages: List<String> ->

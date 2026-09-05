@@ -9,6 +9,7 @@ import { runDetectionJobs } from '../services/txIntelligence';
 import { navigationRef } from './navigationRef';
 import { syncDiscoveredAccounts } from '../db/database';
 import { initNotifications, attachNotificationHandlers, scheduleSummaries } from '../notifications/notifications';
+import { attachDeepLinkHandler } from './deepLinks';
 import { Colors } from '../theme';
 import { logEvent } from '../services/logger';
 
@@ -73,8 +74,12 @@ export function AppNavigator() {
   }, [isOnboardingComplete]);
 
   useEffect(() => {
-    const detach = attachNotificationHandlers(navigationRef);
-    return detach;
+    const detachNotifications = attachNotificationHandlers(navigationRef);
+    const detachDeepLinks = attachDeepLinkHandler(navigationRef);
+    return () => {
+      detachNotifications();
+      detachDeepLinks();
+    };
   }, []);
 
   if (!ready) {
