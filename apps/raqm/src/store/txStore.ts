@@ -12,6 +12,7 @@ import {
   type TxRecord,
   type NewTxInput,
   type TxPatch,
+  type TxSource,
 } from '../db/database';
 import { getCurrentCoords } from '../services/location';
 import { isDuplicateSms } from '../services/txIntelligence';
@@ -35,7 +36,7 @@ interface TxStore {
   refresh: () => Promise<void>;
   add: (input: NewTxInput) => Promise<number>;
   addParsed: (tx: ParsedTransaction) => Promise<void>;
-  addParsedWithLocation: (tx: ParsedTransaction) => Promise<number | null>;
+  addParsedWithLocation: (tx: ParsedTransaction, source?: TxSource) => Promise<number | null>;
   update: (id: number, patch: TxPatch) => Promise<void>;
   remove: (id: number) => Promise<void>;
   restore: (id: number) => Promise<void>;
@@ -70,7 +71,7 @@ export const useTxStore = create<TxStore>((set, get) => ({
     checkBudgetAlerts().catch(() => {});
   },
 
-  addParsedWithLocation: async (tx) => {
+  addParsedWithLocation: async (tx, source = 'sms') => {
     const state = get();
     const last = state.txs[0]
       ? {
@@ -86,7 +87,7 @@ export const useTxStore = create<TxStore>((set, get) => ({
       return null;
     }
 
-    const id = await insertParsedTx(tx);
+    const id = await insertParsedTx(tx, source);
     if (id === null) return null; // reference-based duplicate, or a hidden account — see insertParsedTx
 
     await get().refresh();
