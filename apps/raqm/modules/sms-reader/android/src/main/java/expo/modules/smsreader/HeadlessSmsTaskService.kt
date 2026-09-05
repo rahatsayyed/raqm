@@ -43,7 +43,7 @@ class HeadlessSmsTaskService : HeadlessJsTaskService() {
       }
       val notification = NotificationCompat.Builder(this, CHANNEL_ID)
         .setContentTitle("Raqm")
-        .setContentText("Analyzing new SMS…")
+        .setContentText("Analyzing new activity…")
         .setSmallIcon(android.R.drawable.stat_notify_sync)
         .setPriority(NotificationCompat.PRIORITY_MIN)
         .setCategory(Notification.CATEGORY_SERVICE)
@@ -55,8 +55,12 @@ class HeadlessSmsTaskService : HeadlessJsTaskService() {
 
   override fun getTaskConfig(intent: Intent?): HeadlessJsTaskConfig? {
     val extras = intent?.extras ?: return null
+    // "task" lets the notification-source path (RaqmNotificationListenerService) reuse this
+    // exact service and its foreground-promotion handling instead of duplicating it — the
+    // only difference between the two paths is which JS handler runs and what's in extras.
+    val taskName = extras.getString("task") ?: "SmsBackgroundTask"
     return HeadlessJsTaskConfig(
-      "SmsBackgroundTask",
+      taskName,
       Arguments.fromBundle(extras),
       TASK_TIMEOUT_MS,
       true, // allowedInForeground — lets this run even while the app is in the foreground

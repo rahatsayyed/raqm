@@ -8,9 +8,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ApplicationInfo
 import android.os.Build
 import android.provider.Telephony
 import android.util.Log
+import androidx.core.app.NotificationManagerCompat
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -101,6 +103,38 @@ class SmsReaderModule : Module() {
         }
         context.startActivity(intent)
       }
+    }
+
+    Function("isNotificationListenerEnabled") {
+      val context = appContext.reactContext ?: return@Function false
+      NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
+    }
+
+    // Mirrors the user's app-picker selection into SharedPreferences, where
+    // RaqmNotificationListenerService can read it with no JS engine and no DB open.
+    AsyncFunction("setMonitoredNotificationPackages") { packages: List<String> ->
+      val context = appContext.reactContext ?: throw Exception("No context available")
+      MonitoredApps.set(context, packages)
+    }
+
+    // Launchable, user-visible apps only — the picker is a list the user reads, and the
+    // full getInstalledApplications() result is mostly system packages with no launcher
+    // entry. Requires QUERY_ALL_PACKAGES (declared in the module's AndroidManifest).
+    AsyncFunction("getInstalledApps") {
+      val context = appContext.reactContext ?: throw Exception("No context available")
+      val pm = context.packageManager
+      pm.getInstalledApplications(0)
+        .asSequence()
+        .filter { it.packageName != context.packageName }
+        .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
+        .map { info: ApplicationInfo ->
+          mapOf(
+            "packageName" to info.packageName,
+            "appName" to pm.getApplicationLabel(info).toString(),
+          )
+        }
+        .sortedBy { it["appName"]?.lowercase() }
+        .toList()
     }
 
     Function("getNativeLogPath") {

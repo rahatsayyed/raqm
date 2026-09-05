@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import type { EventSubscription } from 'expo-modules-core';
 import * as SmsReaderModule from '../../modules/sms-reader/src/SmsReaderModule';
 
-export type { SmsMessage } from '../../modules/sms-reader/src/SmsReader.types';
+export type { SmsMessage, InstalledApp } from '../../modules/sms-reader/src/SmsReader.types';
 
 export const SmsReader = {
   readInbox(fromTimestamp: number, toTimestamp: number) {
@@ -36,5 +36,20 @@ export const SmsReader = {
   addScreenLockedListener(listener: () => void): EventSubscription | { remove: () => void } {
     if (Platform.OS !== 'android') return { remove: () => {} };
     return SmsReaderModule.addScreenLockedListener(listener);
+  },
+
+  isNotificationListenerEnabled(): boolean {
+    if (Platform.OS !== 'android') return false;
+    return SmsReaderModule.isNotificationListenerEnabled();
+  },
+
+  setMonitoredNotificationPackages(packages: string[]): Promise<void> {
+    if (Platform.OS !== 'android') return Promise.resolve();
+    return SmsReaderModule.setMonitoredNotificationPackages(packages);
+  },
+
+  getInstalledApps() {
+    if (Platform.OS !== 'android') return Promise.resolve([]);
+    return SmsReaderModule.getInstalledApps();
   },
 };
