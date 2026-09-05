@@ -67,5 +67,21 @@
         <action android:name="android.service.quicksettings.action.QS_TILE" />
       </intent-filter>
     </service>
+
+    <!-- Home-screen widgets (Jetpack Glance). All four declare widgetCategory
+         home_screen|keyguard: the lock-screen variant is display-only, since Android's
+         keyguard widgets cannot take taps. updatePeriodMillis is 30 min (the platform's
+         effective floor); the real freshness comes from the event-driven refresh in
+         WidgetRefresh.refreshAll, fired from txStore.refresh(). -->
+    <receiver
+      android:name=".widget.AddTransactionWidgetReceiver"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/widget_add_transaction_info" />
+    </receiver>
   </application>
 </manifest>
