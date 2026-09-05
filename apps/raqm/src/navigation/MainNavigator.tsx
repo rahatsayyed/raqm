@@ -11,6 +11,7 @@ import { GroceryScreen } from '../screens/main/GroceryScreen';
 import { MoreScreen } from '../screens/main/MoreScreen';
 import { TransactionDetailScreen } from '../screens/main/TransactionDetailScreen';
 import { AddTransactionScreen } from '../screens/main/AddTransactionScreen';
+import { QuickAddCashScreen } from '../screens/main/QuickAddCashScreen';
 import { EditTransactionScreen } from '../screens/main/EditTransactionScreen';
 import { CategoryPickerScreen } from '../screens/main/CategoryPickerScreen';
 import { AccountDetailScreen } from '../screens/main/AccountDetailScreen';
@@ -100,6 +101,7 @@ export function MainNavigator() {
       <Stack.Screen name="More" component={MoreScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="TransactionDetail" component={TransactionDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="AddTransaction" component={AddTransactionScreen} options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="QuickAddCash" component={QuickAddCashScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="EditTransaction" component={EditTransactionScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="CategoryPicker" component={CategoryPickerScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="AccountDetail" component={AccountDetailScreen} options={{ animation: 'slide_from_right' }} />
