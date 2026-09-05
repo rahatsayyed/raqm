@@ -123,6 +123,7 @@ import { ZenithBankParser } from './banks/ZenithBankParser';
 import { KeystoneBankParser } from './banks/KeystoneBankParser';
 import { JaizBankParser } from './banks/JaizBankParser';
 import { OpayBankParser } from './banks/OpayBankParser';
+import { UPI_APP_PARSERS } from './apps';
 
 const parsers: BankParser[] = [
   new HDFCMutualFundParser(),
@@ -248,6 +249,9 @@ const parsers: BankParser[] = [
   new KeystoneBankParser(),
   new JaizBankParser(),
   new OpayBankParser(),
+
+  // Notification-source parsers, keyed by app package name instead of SMS sender ID.
+  ...UPI_APP_PARSERS,
 ];
 
 export const BankParserFactory = {
