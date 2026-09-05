@@ -1,6 +1,6 @@
 import { requireNativeModule } from 'expo-modules-core';
 import type { EventSubscription } from 'expo-modules-core';
-import type { SmsMessage, InstalledApp } from './SmsReader.types';
+import type { SmsMessage, InstalledApp, LaunchDeepLink } from './SmsReader.types';
 
 const native = requireNativeModule('SmsReader');
 
@@ -47,4 +47,11 @@ export function setMonitoredNotificationPackages(packages: string[]): Promise<vo
 /** Launchable, user-visible installed apps, sorted by display name. */
 export function getInstalledApps(): Promise<InstalledApp[]> {
   return native.getInstalledApps();
+}
+
+/** Reads and clears the quick-add / open-transaction extras from MainActivity's intent.
+ * Returns null when the app was launched normally. Synchronous — it only touches the
+ * already-delivered Intent. */
+export function consumeLaunchDeepLink(): LaunchDeepLink | null {
+  return native.consumeLaunchDeepLink() ?? null;
 }
