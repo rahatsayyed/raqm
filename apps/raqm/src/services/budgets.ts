@@ -61,19 +61,26 @@ function previousWeekRef(now: Date): Date {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
 }
 
-export async function getBudgetStatuses(now: Date = new Date()): Promise<BudgetStatus[]> {
-  const [budgets, txs] = await Promise.all([getBudgets(), loadTxRecords()]);
-  const byId = new Map(txs.map((t) => [t.id, t]));
+// `txs`, when passed, is used as-is instead of re-scanning the transactions table — the hot
+// insert path (txStore's addParsedWithLocation/add/update) already has a just-refreshed array
+// in memory, and re-querying it here was a second full-table scan on every single insert,
+// competing with the notification-posting path's own DB read on expo-sqlite's one serialized
+// connection and delaying when the OS notification actually posts (see attachTxActions' poll
+// in SmsReaderModule.kt) by however long that scan took. Standalone callers (screens) that
+// have no fresh array on hand keep loading it themselves by simply not passing one.
+export async function getBudgetStatuses(now: Date = new Date(), txs?: TxRecord[]): Promise<BudgetStatus[]> {
+  const [budgets, resolvedTxs] = await Promise.all([getBudgets(), txs ?? loadTxRecords()]);
+  const byId = new Map(resolvedTxs.map((t) => [t.id, t]));
   const statuses: BudgetStatus[] = [];
 
   for (const budget of budgets) {
     const bounds = await currentBounds(budget, now);
-    const spent = await sumSpend(txs, budget.categoryId, bounds, byId);
+    const spent = await sumSpend(resolvedTxs, budget.categoryId, bounds, byId);
 
     let limit = budget.amount;
     if (budget.periodType === 'weekly' && budget.rollover) {
       const lastWeekBounds = getWeekBounds(previousWeekRef(now));
-      const lastWeekSpent = await sumSpend(txs, budget.categoryId, lastWeekBounds, byId);
+      const lastWeekSpent = await sumSpend(resolvedTxs, budget.categoryId, lastWeekBounds, byId);
       const carry = Math.max(0, budget.amount - lastWeekSpent);
       limit = budget.amount + carry;
     }
@@ -89,7 +96,7 @@ async function alreadySent(dedupKey: string): Promise<boolean> {
   return (await getSetting(dedupKey)) === '1';
 }
 
-export async function checkBudgetAlerts(): Promise<void> {
+export async function checkBudgetAlerts(txs?: TxRecord[]): Promise<void> {
   logEvent('budget_alert.start');
   try {
     const alertsEnabled = await getSetting('budget_alerts');
@@ -99,7 +106,7 @@ export async function checkBudgetAlerts(): Promise<void> {
     }
 
     const now = new Date();
-    const statuses = await getBudgetStatuses(now);
+    const statuses = await getBudgetStatuses(now, txs);
 
     for (const status of statuses) {
       const bounds = await currentBounds(status.budget, now);

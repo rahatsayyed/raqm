@@ -61,14 +61,22 @@ export const useTxStore = create<TxStore>((set, get) => ({
   add: async (input) => {
     const id = await insertTx(input);
     await get().refresh();
-    checkBudgetAlerts().catch(() => {});
+    // Pass the array refresh() just loaded — checkBudgetAlerts would otherwise re-scan the
+    // whole transactions table a second time on every single insert, right when the
+    // notification-posting path needs its own quick DB read (see budgets.ts for why this
+    // used to delay notifications on the live SMS/notification path).
+    checkBudgetAlerts(get().txs).catch(() => {});
     return id;
   },
 
   addParsed: async (tx) => {
     await insertParsedTx(tx);
     await get().refresh();
-    checkBudgetAlerts().catch(() => {});
+    // Pass the array refresh() just loaded — checkBudgetAlerts would otherwise re-scan the
+    // whole transactions table a second time on every single insert, right when the
+    // notification-posting path needs its own quick DB read (see budgets.ts for why this
+    // used to delay notifications on the live SMS/notification path).
+    checkBudgetAlerts(get().txs).catch(() => {});
   },
 
   addParsedWithLocation: async (tx, source = 'sms') => {
@@ -92,7 +100,11 @@ export const useTxStore = create<TxStore>((set, get) => ({
     const { id, merged } = result;
 
     await get().refresh();
-    checkBudgetAlerts().catch(() => {});
+    // Pass the array refresh() just loaded — checkBudgetAlerts would otherwise re-scan the
+    // whole transactions table a second time on every single insert, right when the
+    // notification-posting path needs its own quick DB read (see budgets.ts for why this
+    // used to delay notifications on the live SMS/notification path).
+    checkBudgetAlerts(get().txs).catch(() => {});
 
     if (merged) {
       // Cross-source merge: an existing row (from the other ingestion source) was updated
@@ -118,7 +130,11 @@ export const useTxStore = create<TxStore>((set, get) => ({
   update: async (id, patch) => {
     await updateTx(id, patch);
     await get().refresh();
-    checkBudgetAlerts().catch(() => {});
+    // Pass the array refresh() just loaded — checkBudgetAlerts would otherwise re-scan the
+    // whole transactions table a second time on every single insert, right when the
+    // notification-posting path needs its own quick DB read (see budgets.ts for why this
+    // used to delay notifications on the live SMS/notification path).
+    checkBudgetAlerts(get().txs).catch(() => {});
   },
 
   remove: async (id) => {

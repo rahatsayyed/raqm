@@ -170,11 +170,14 @@ class SmsReaderModule : Module() {
       // rather than looking up activeNotifications exactly once and silently no-op'ing.
       var pendingSbn = nm.activeNotifications.firstOrNull { it.tag == notificationId }
       var attempts = 0
-      // Up to 20 tries at 45ms (~900ms total) — several SMS arriving close together are
-      // processed sequentially (see database.ts's insertParsedTxs invariant), so a later
-      // notification's post can take longer than the previous fixed 300ms budget allowed for.
+      // Up to 30 tries at 45ms (~1.35s total). The real cause of missed buttons was JS-side
+      // (see txStore.ts/budgets.ts: checkBudgetAlerts was re-scanning the whole transactions
+      // table a second time on every insert, delaying the notification post itself) — that's
+      // now fixed, so this budget is a safety margin for the poll, not the fix. Was 900ms.
+      // ponytail: still a poll, not a real completion signal — an event-based hook (e.g. a
+      // NotificationManager listener) would remove the guesswork if this ceiling is ever hit again.
       val pollIntervalMs = 45L
-      while (pendingSbn == null && attempts < 20) {
+      while (pendingSbn == null && attempts < 30) {
         Thread.sleep(pollIntervalMs)
         pendingSbn = nm.activeNotifications.firstOrNull { it.tag == notificationId }
         attempts++
