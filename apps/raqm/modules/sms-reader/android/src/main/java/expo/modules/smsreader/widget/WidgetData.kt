@@ -2,6 +2,7 @@ package expo.modules.smsreader.widget
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import expo.modules.smsreader.DiagnosticLog
 import expo.modules.smsreader.MonthStartDay
 import java.io.File
 import java.text.NumberFormat
@@ -50,11 +51,15 @@ object WidgetData {
 
   // --- database ------------------------------------------------------------------------
 
+  // OPEN_READWRITE, matching CategoryPickerActivity/NotificationActionReceiver: expo-sqlite's
+  // WAL journal mode needs write access to the -shm/-wal sidecar files even for a
+  // connection that only ever issues SELECTs, or opens/reads can fail or see stale data.
   private fun openDb(context: Context): SQLiteDatabase? =
     try {
       val path = File(context.filesDir.canonicalPath, "SQLite/raqm.db").path
-      SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY)
+      SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READWRITE)
     } catch (e: Exception) {
+      DiagnosticLog.write(context, "WidgetData", "Could not open raqm.db: ${e.message}")
       null
     }
 
@@ -63,6 +68,7 @@ object WidgetData {
     return try {
       block(db)
     } catch (e: Exception) {
+      DiagnosticLog.write(context, "WidgetData", "Query failed: ${e.message}")
       fallback
     } finally {
       try { db.close() } catch (e: Exception) { /* ignore */ }
@@ -262,7 +268,10 @@ object WidgetData {
    * Per-category expense totals for the current custom month, refunds netted the same way
    * sumSpend does. EXPENSE only — the Analytics-side convention (Dashboard's inclusion of
    * TRANSFER/INVESTMENT is the documented, accepted divergence). Descending by total,
-   * categories with a zero/negative net dropped.
+   * categories with a zero/negative net dropped. Uncategorized rows (categoryId null) are
+   * bucketed under -1 rather than dropped, matching AnalyticsScreen.tsx's `tx.categoryId ?? -1`
+   * convention — they still belong in the period spend total (periodSpendTotal sums this list),
+   * just with no named category to slice into.
    */
   fun categoryTotals(context: Context): List<CategorySlice> = withDb(context, emptyList()) { db ->
     val (from, to) = monthBounds(System.currentTimeMillis(), MonthStartDay.get(context))
@@ -271,12 +280,12 @@ object WidgetData {
     for (row in readTxRows(db, from, to)) {
       if (!countsTowardTotals(row)) continue
       if (isCreditType(row.type) && row.linkType == "refund") {
-        val effective = row.linkPartnerId?.let { partnerCategoryId(db, it) } ?: row.categoryId
-        if (effective != null) totals[effective] = (totals[effective] ?: 0.0) - row.amount
+        val effective = row.linkPartnerId?.let { partnerCategoryId(db, it) } ?: row.categoryId ?: -1
+        totals[effective] = (totals[effective] ?: 0.0) - row.amount
         continue
       }
       if (row.type != "EXPENSE") continue
-      val categoryId = row.categoryId ?: continue
+      val categoryId = row.categoryId ?: -1
       totals[categoryId] = (totals[categoryId] ?: 0.0) + row.amount
     }
 
