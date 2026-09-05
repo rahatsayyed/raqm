@@ -7,11 +7,12 @@ import { useAppStore } from '../store/appStore';
 import { useTxStore } from '../store/txStore';
 import { runDetectionJobs } from '../services/txIntelligence';
 import { navigationRef } from './navigationRef';
-import { syncDiscoveredAccounts } from '../db/database';
+import { syncDiscoveredAccounts, getSetting } from '../db/database';
 import { initNotifications, attachNotificationHandlers, scheduleSummaries } from '../notifications/notifications';
 import { attachDeepLinkHandler } from './deepLinks';
 import { Colors } from '../theme';
 import { logEvent } from '../services/logger';
+import { SmsReader } from '../native/SmsReader';
 
 export function AppNavigator() {
   const isOnboardingComplete = useAppStore(s => s.isOnboardingComplete);
@@ -38,11 +39,24 @@ export function AppNavigator() {
       // setReady, even on failure. The user still gets a working (if incompletely-initialized)
       // app instead of a permanent blank screen.
       try {
+        // One-time backfill: users who already had a custom month_start_day before the
+        // widgets shipped have no native mirror yet (MoreScreen only writes it going
+        // forward), so every widget would silently use day 1 until they re-opened
+        // Settings. Re-syncing it unconditionally on every cold start is idempotent and
+        // cheap (one setting read + one SharedPreferences write), so no "only if missing"
+        // check is needed.
+        const syncMonthStartDay = async () => {
+          const raw = await getSetting('month_start_day');
+          const day = raw ? Number(raw) : 1;
+          await SmsReader.setMonthStartDay(day).catch(() => {});
+        };
+
         await Promise.all([
           timed('startup.loadTxs', loadTxs),
           timed('startup.syncAccounts', syncDiscoveredAccounts),
           timed('startup.initNotifications', initNotifications),
           timed('startup.scheduleSummaries', scheduleSummaries),
+          timed('startup.syncMonthStartDay', syncMonthStartDay),
         ]);
         if (cancelled) return;
 
