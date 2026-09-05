@@ -1,4 +1,4 @@
-import { BankParserFactory, TransactionType } from '@rahatsayyed/bank-sms-parser';
+import { BankParserFactory, TransactionType, type ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
 import { useTxStore } from '../store/txStore';
 import { postTxNotification, cancelTxNotification } from '../notifications/notifications';
 import { SmsReader } from '../native/SmsReader';
@@ -39,6 +39,45 @@ function prunePendingLegNotifications(): void {
   for (const [id, entry] of pendingLegNotifications) {
     if (entry.timestamp < cutoff) pendingLegNotifications.delete(id);
   }
+}
+
+/**
+ * Posts Raqm's own "₹500 at Swiggy" notification for a freshly stored transaction and
+ * attaches the native Category / Add note / Not An Expense actions. Shared by the SMS
+ * path and the app-notification path so both produce an identical-looking notification.
+ *
+ * Always "Bank • Category" — never the raw sign/amount line — so the body matches what
+ * NotificationBodySync.kt rebuilds after the user picks a category or adds a note from the
+ * notification itself (see that file's refreshTxNotificationBody). Category is never left
+ * blank: a transaction with no category_id yet reads as "Uncategorized", matching the native
+ * side's fallback. A note is deliberately NOT shown here — it only appears once the user adds
+ * one from the notification, at which point refreshTxNotificationBody appends it.
+ */
+export async function postParsedTxNotification(
+  id: number,
+  tx: ParsedTransaction,
+  bankLabel: string,
+): Promise<string> {
+  const debit = isDebit(tx.type);
+  const amountStr = `₹${tx.amount.toLocaleString('en-IN')}`;
+  const action = debit ? 'debited' : 'credited';
+  const notifTitle = tx.merchant
+    ? debit
+      ? `${amountStr} at ${tx.merchant}`
+      : `${amountStr} ${tx.merchant} ${action}`
+    : `${amountStr} ${action}`;
+
+  const insertedTx = useTxStore.getState().txs.find((t) => t.id === id);
+  let categoryName = 'Uncategorized';
+  if (insertedTx?.categoryId != null) {
+    const categories = await getCategories();
+    categoryName = categories.find((c) => c.id === insertedTx.categoryId)?.name ?? 'Uncategorized';
+  }
+  const notifBody = `${bankLabel} • ${categoryName}`;
+  const notificationId = await postTxNotification(id, notifTitle, notifBody, notificationColorFor(debit));
+  logEvent('notif.posted', `txId=${id}`);
+  SmsReader.attachTxActions(notificationId, id, debit ? 'Not An Expense' : 'Not An Income');
+  return notificationId;
 }
 
 /**
@@ -104,29 +143,7 @@ export async function processIncomingSms(data: { body: string; sender: string; t
     return { id, merchant: tx.merchant ?? null, bankLabel, amount: tx.amount, isDebit: debit };
   }
 
-  const amountStr = `₹${tx.amount.toLocaleString('en-IN')}`;
-  const action = debit ? 'debited' : 'credited';
-  const notifTitle = tx.merchant
-    ? debit
-      ? `${amountStr} at ${tx.merchant}`
-      : `${amountStr} ${tx.merchant} ${action}`
-    : `${amountStr} ${action}`;
-  // Always "Bank • Category" — never the raw sign/amount line — so the body matches what
-  // NotificationBodySync.kt rebuilds after the user picks a category or adds a note from the
-  // notification itself (see that file's refreshTxNotificationBody). Category is never left
-  // blank: a transaction with no category_id yet reads as "Uncategorized", matching the native
-  // side's fallback. A note is deliberately NOT shown here — it only appears once the user adds
-  // one from the notification, at which point refreshTxNotificationBody appends it.
-  const insertedTx = useTxStore.getState().txs.find((t) => t.id === id);
-  let categoryName = 'Uncategorized';
-  if (insertedTx?.categoryId != null) {
-    const categories = await getCategories();
-    categoryName = categories.find((c) => c.id === insertedTx.categoryId)?.name ?? 'Uncategorized';
-  }
-  const notifBody = `${bankLabel} • ${categoryName}`;
-  const notificationId = await postTxNotification(id, notifTitle, notifBody, notificationColorFor(debit));
-  logEvent('notif.posted', `txId=${id}`);
-  SmsReader.attachTxActions(notificationId, id, debit ? 'Not An Expense' : 'Not An Income');
+  const notificationId = await postParsedTxNotification(id, tx, bankLabel);
   prunePendingLegNotifications();
   pendingLegNotifications.set(id, { notificationId, timestamp: Date.now() });
 
