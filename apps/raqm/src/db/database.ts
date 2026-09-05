@@ -829,6 +829,43 @@ export async function setMonitoredNotificationPackages(packages: string[]): Prom
   await setSetting(MONITORED_PACKAGES_KEY, JSON.stringify(Array.from(new Set(packages))));
 }
 
+const UNSUPPORTED_NOTIFICATIONS_KEY = 'unsupported_notifications';
+const UNSUPPORTED_NOTIFICATIONS_MAX = 100;
+
+export interface UnsupportedNotification {
+  packageName: string;
+  appName: string;
+  title: string;
+  text: string;
+  timestamp: number;
+}
+
+/**
+ * Notifications from a monitored app that no parser understood. Kept so the user can
+ * surface and report the format (Report Undetected SMS & Apps) — notifications are
+ * transient, so unlike SMS there is nothing to re-read later if we don't keep it.
+ * Capped, newest-last, and de-duplicated on app+text so a repeated format doesn't
+ * flood out the other apps' samples.
+ */
+export async function getUnsupportedNotifications(): Promise<UnsupportedNotification[]> {
+  const raw = await getSetting(UNSUPPORTED_NOTIFICATIONS_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? (parsed as UnsupportedNotification[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function recordUnsupportedNotification(entry: UnsupportedNotification): Promise<void> {
+  const existing = await getUnsupportedNotifications();
+  const isSame = (e: UnsupportedNotification) =>
+    e.packageName === entry.packageName && e.title === entry.title && e.text === entry.text;
+  const next = [...existing.filter((e) => !isSame(e)), entry].slice(-UNSUPPORTED_NOTIFICATIONS_MAX);
+  await setSetting(UNSUPPORTED_NOTIFICATIONS_KEY, JSON.stringify(next));
+}
+
 // ── Plan 2: TxRecord CRUD ─────────────────────────────────────────────────────
 
 // Hidden accounts are excluded here — the single source txStore loads from — rather than
@@ -1104,6 +1141,62 @@ export async function getHiddenAccountKeys(): Promise<Set<string>> {
   return new Set(rows.map((r) => `${r.bank_name}|${r.last4 ?? ''}`));
 }
 
+/** Half of PennywiseAI's ±2 min window on each side — see the design doc. */
+const CROSS_SOURCE_WINDOW_MS = 2 * 60 * 1000;
+const MIN_MERCHANT_KEY_LEN = 3;
+
+/** Lowercase, punctuation-free merchant key. "SWIGGY LIMITED*IN" -> "swiggy limited in". */
+export function normalizeMerchantKey(name: string | null | undefined): string {
+  return (name ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function merchantKeysMatch(a: string, b: string): boolean {
+  if (a.length < MIN_MERCHANT_KEY_LEN || b.length < MIN_MERCHANT_KEY_LEN) return false;
+  return a === b || a.includes(b) || b.includes(a);
+}
+
+/**
+ * Finds an existing transaction from the OTHER ingestion source that is the same real-world
+ * transaction as `tx`: same amount, overlapping merchant, within ±2 minutes.
+ *
+ * Deliberately does NOT match on bankName/accountLast4, unlike the design doc's first draft:
+ * an SMS row for a Swiggy payment carries bankName 'HDFC Bank' while the GPay notification
+ * for that same payment carries 'Google Pay' and no account digits, so requiring bank
+ * identity to match would make this check never fire — i.e. ship the duplicate-row bug it
+ * exists to prevent. Merchant containment covers the naming gap ('SWIGGY LIMITED' vs
+ * 'Swiggy'); a row with no usable merchant on either side is never matched, because
+ * amount+time alone would collapse genuinely distinct transactions.
+ *
+ * Soft-deleted rows are excluded — a transaction the user deleted must not be silently
+ * resurrected by an update-in-place.
+ */
+export async function findCrossSourceDuplicate(
+  tx: { amount: number; merchant: string | null; timestamp: number },
+  source: TxSource,
+): Promise<TxRecord | null> {
+  const key = normalizeMerchantKey(tx.merchant);
+  if (key.length < MIN_MERCHANT_KEY_LEN) return null;
+
+  const otherSource: TxSource = source === 'sms' ? 'notification' : 'sms';
+  const database = await getDb();
+  const rows = await database.getAllAsync<Record<string, unknown>>(
+    `SELECT * FROM transactions
+     WHERE source = ? AND amount = ? AND deleted_at IS NULL AND ABS(timestamp - ?) <= ?`,
+    otherSource,
+    tx.amount,
+    tx.timestamp,
+    CROSS_SOURCE_WINDOW_MS,
+  );
+
+  const match = rows
+    .map(rowToTxRecord)
+    .find((r) => merchantKeysMatch(normalizeMerchantKey(r.merchant), key));
+  return match ?? null;
+}
+
 export async function insertParsedTx(
   tx: ParsedTransaction,
   source: TxSource = 'sms',
@@ -1122,6 +1215,30 @@ export async function insertParsedTx(
 
   const { categoryId, subcategoryId } = await categorizeParsedTx(tx);
   const autoTags = getAutoTags(tx.merchant);
+
+  // Symmetric cross-source dedup: whichever source arrives second finds the first and
+  // does NOT insert a second row. SMS content wins when both exist (SMS parsing is the
+  // mature path), so an SMS landing on top of an existing notification row overwrites
+  // that row's content in place; a notification landing on top of an SMS row is simply
+  // dropped. The stored timestamp is whichever arrived first.
+  const crossDup = await findCrossSourceDuplicate(
+    { amount: tx.amount, merchant: tx.merchant ?? null, timestamp: tx.timestamp },
+    source,
+  );
+  if (crossDup) {
+    if (source === 'sms') {
+      await updateTx(crossDup.id, {
+        amount: tx.amount,
+        type: tx.type,
+        merchant: tx.merchant ?? crossDup.merchant,
+        timestamp: Math.min(crossDup.timestamp, tx.timestamp),
+        rawSms: tx.smsBody,
+        reference: tx.reference ?? crossDup.reference,
+        ...(categoryId != null ? { categoryId, subcategoryId } : {}),
+      });
+    }
+    return null;
+  }
 
   return insertTx({
     amount: tx.amount,
@@ -1173,6 +1290,29 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
       // Same "hide stops intake" rule as insertParsedTx — checked once against an
       // in-memory Set rather than per-row, to keep this loop's per-iteration DB calls flat.
       if (hiddenKeys.has(`${tx.bankName}|${tx.accountLast4 ?? ''}`)) {
+        continue;
+      }
+      // Same cross-source guard as insertParsedTx — a rescan re-reading the SMS for a
+      // transaction already captured from an app notification must update that row,
+      // not add a second one. This runs inside the open BEGIN; both statements are
+      // plain runAsync on the same connection, so no nested transaction is created.
+      const crossDup = await findCrossSourceDuplicate(
+        { amount: tx.amount, merchant: tx.merchant ?? null, timestamp: tx.timestamp },
+        'sms',
+      );
+      if (crossDup) {
+        await database.runAsync(
+          `UPDATE transactions
+             SET amount = ?, type = ?, merchant = ?, timestamp = ?, raw_sms = ?, reference = ?
+           WHERE id = ?`,
+          tx.amount,
+          tx.type,
+          tx.merchant ?? crossDup.merchant,
+          Math.min(crossDup.timestamp, tx.timestamp),
+          tx.smsBody ?? null,
+          tx.reference ?? crossDup.reference,
+          crossDup.id,
+        );
         continue;
       }
       const { categoryId, subcategoryId } = decisions[i];
