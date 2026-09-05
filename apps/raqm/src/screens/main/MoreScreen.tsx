@@ -189,6 +189,10 @@ export function MoreScreen() {
     setMonthStartDay(day);
     setShowDayPicker(false);
     await setSetting('month_start_day', String(day));
+    // Mirror into native prefs so the Budget/Category widgets honour the same period
+    // boundary (they cannot read app_settings without a second SQLite connection).
+    // Fire-and-forget: a mirror failure must never fail the user's settings change.
+    SmsReader.setMonthStartDay(day).catch(() => {});
   };
 
   const initials = useMemo(() => {

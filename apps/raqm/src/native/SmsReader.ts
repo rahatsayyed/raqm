@@ -52,4 +52,10 @@ export const SmsReader = {
     if (Platform.OS !== 'android') return Promise.resolve([]);
     return SmsReaderModule.getInstalledApps();
   },
+
+  /** Mirrors month_start_day into native SharedPreferences for the home-screen widgets. */
+  setMonthStartDay(day: number): Promise<void> {
+    if (Platform.OS !== 'android') return Promise.resolve();
+    return SmsReaderModule.setMonthStartDay(day);
+  },
 };

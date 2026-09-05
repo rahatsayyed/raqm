@@ -166,6 +166,12 @@ class SmsReaderModule : Module() {
       MonitoredApps.set(context, packages)
     }
 
+    /** Mirrors the JS month_start_day setting into SharedPreferences for the widgets. */
+    AsyncFunction("setMonthStartDay") { day: Int ->
+      val context = appContext.reactContext ?: return@AsyncFunction
+      MonthStartDay.set(context, day)
+    }
+
     // Launchable, user-visible apps only — the picker is a list the user reads, and the
     // full getInstalledApplications() result is mostly system packages with no launcher
     // entry. Requires QUERY_ALL_PACKAGES (declared in the module's AndroidManifest).
