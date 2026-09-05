@@ -20,6 +20,10 @@ export { BaseThailandBankParser } from './core/BaseThailandBankParser';
 // Factory
 export { BankParserFactory } from './BankParserFactory';
 
+// App notification parsers (package-name keyed)
+export { UpiAppNotificationParser, UPI_APP_PARSERS, BUILT_IN_NOTIFICATION_APPS } from './apps';
+export type { UpiAppConfig } from './apps/UpiAppNotificationParser';
+
 // Bank parsers
 export { AccessBankParser } from './banks/AccessBankParser';
 export { ADCBParser } from './banks/ADCBParser';
