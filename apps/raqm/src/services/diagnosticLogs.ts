@@ -2,6 +2,9 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { SmsReader } from '../native/SmsReader';
 import { JS_LOG_FILENAME } from './logger';
+import { cleanupOldExports } from '../utils/cacheCleanup';
+
+const EXPORT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 interface LogLine {
   ts: number;
@@ -79,6 +82,7 @@ async function doShareDiagnosticLogs(rangeHours: number): Promise<void> {
     .map((l) => l.raw)
     .join('\n');
 
+  cleanupOldExports('raqm-diagnostics-', EXPORT_MAX_AGE_MS);
   const outFile = new File(Paths.cache, `raqm-diagnostics-${rangeHours}h-${Date.now()}.txt`);
   outFile.write(combined || 'No log entries in this time range.');
 

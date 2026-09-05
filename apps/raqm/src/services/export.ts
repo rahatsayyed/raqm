@@ -12,6 +12,9 @@ import {
 import { countsTowardTotals } from './txIntelligence';
 import { getMonthBounds } from '../utils/period';
 import { formatAmount } from '../utils/format';
+import { cleanupOldExports } from '../utils/cacheCleanup';
+
+const EXPORT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export interface MonthlySummary {
   from: number;
@@ -133,6 +136,7 @@ export async function exportCsv(): Promise<void> {
 
   const csv = [header, ...rows].join('\n');
 
+  cleanupOldExports('raqm-transactions-', EXPORT_MAX_AGE_MS);
   const file = new File(Paths.cache, `raqm-transactions-${Date.now()}.csv`);
   file.write(csv);
 

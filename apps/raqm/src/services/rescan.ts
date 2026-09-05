@@ -19,9 +19,13 @@ let scanInFlight: Promise<RescanResult> | null = null;
 function serialize(op: () => Promise<RescanResult>): Promise<RescanResult> {
   const run = (scanInFlight ?? Promise.resolve(null)).catch(() => null).then(op);
   scanInFlight = run;
+  // .finally() returns a new derived promise that also rejects when `run` does; it's used
+  // here only for bookkeeping and isn't awaited, so an unhandled rejection would otherwise
+  // fire on every failed scan even though the real rejection is already handled by whoever
+  // awaits the returned `run` below.
   run.finally(() => {
     if (scanInFlight === run) scanInFlight = null;
-  });
+  }).catch(() => {});
   return run;
 }
 
