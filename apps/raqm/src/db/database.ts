@@ -368,6 +368,29 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 12) {
+    await database.runAsync(`BEGIN`);
+    try {
+      // Second ingestion source: bank/UPI app notifications (opt-in). DEFAULT 'sms' means
+      // every pre-existing row is correctly labelled with no backfill pass, and every
+      // insert path that doesn't know about sources keeps producing 'sms' rows.
+      await database.runAsync(
+        `ALTER TABLE transactions ADD COLUMN source TEXT NOT NULL DEFAULT 'sms'`,
+      );
+      // The cross-source duplicate check (findCrossSourceDuplicate) filters by
+      // source + amount inside a ±2 min timestamp window on every single insert —
+      // keep that a range scan, not a full-table scan, at 5k+ rows.
+      await database.runAsync(
+        `CREATE INDEX IF NOT EXISTS idx_transactions_source_amount ON transactions(source, amount)`,
+      );
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (12)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -408,6 +431,9 @@ function rowToTx(row: Record<string, unknown>): ParsedTransaction {
 
 // ── Plan 2: TxRecord types ────────────────────────────────────────────────────
 
+/** Which ingestion pipeline produced a transaction row. Added in migration v12. */
+export type TxSource = 'sms' | 'notification';
+
 export interface TxRecord {
   id: number;
   amount: number;
@@ -438,6 +464,8 @@ export interface TxRecord {
   groupId: number | null;
   /** Type to restore when re-enabling "counts toward totals" (see TxPatch.type). */
   originalType: TransactionType | null;
+  /** Ingestion source. Legacy rows and every SMS/CSV/manual path are 'sms'. */
+  source: TxSource;
 }
 
 export interface NewTxInput {
@@ -460,6 +488,7 @@ export interface NewTxInput {
   lng?: number | null;
   isManual?: boolean;
   linkSettled?: boolean;
+  source?: TxSource;
 }
 
 export interface TxPatch {
@@ -482,6 +511,8 @@ export interface TxPatch {
   lat?: number | null;
   lng?: number | null;
   originalType?: TransactionType | null;
+  rawSms?: string | null;
+  reference?: string | null;
 }
 
 export interface Category {
@@ -539,6 +570,7 @@ function rowToTxRecord(row: Record<string, unknown>): TxRecord {
     splitParentId: (row.split_parent_id as number | null) ?? null,
     groupId: (row.group_id as number | null) ?? null,
     originalType: (row.original_type as TransactionType | null) ?? null,
+    source: (row.source as TxSource | null) ?? 'sms',
   };
 }
 
@@ -765,6 +797,38 @@ export async function dismissMismatchKey(key: string): Promise<void> {
   await setSetting(DISMISSED_MISMATCHES_KEY, JSON.stringify(trimmed));
 }
 
+const NOTIFICATION_SOURCE_ENABLED_KEY = 'notification_source_enabled';
+const MONITORED_PACKAGES_KEY = 'notification_monitored_packages';
+
+/** Master opt-in for reading bank/UPI app notifications as a transaction source. Default off. */
+export async function getNotificationSourceEnabled(): Promise<boolean> {
+  return (await getSetting(NOTIFICATION_SOURCE_ENABLED_KEY)) === '1';
+}
+
+export async function setNotificationSourceEnabled(enabled: boolean): Promise<void> {
+  await setSetting(NOTIFICATION_SOURCE_ENABLED_KEY, enabled ? '1' : '0');
+}
+
+/**
+ * App package names the user has opted into monitoring. Stored as a JSON array in the
+ * string-valued app_settings table (same convention as dismissed_balance_mismatches) and
+ * serialized/deserialized here at the call site.
+ */
+export async function getMonitoredNotificationPackages(): Promise<string[]> {
+  const raw = await getSetting(MONITORED_PACKAGES_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? parsed.filter((p): p is string => typeof p === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function setMonitoredNotificationPackages(packages: string[]): Promise<void> {
+  await setSetting(MONITORED_PACKAGES_KEY, JSON.stringify(Array.from(new Set(packages))));
+}
+
 // ── Plan 2: TxRecord CRUD ─────────────────────────────────────────────────────
 
 // Hidden accounts are excluded here — the single source txStore loads from — rather than
@@ -800,8 +864,8 @@ export async function insertTx(input: NewTxInput): Promise<number> {
   const result = await database.runAsync(
     `INSERT INTO transactions
        (amount, type, merchant, bankName, accountLast4, timestamp, balance, currency, isFromCard,
-        category_id, subcategory_id, notes, tags, raw_sms, reference, lat, lng, is_manual, link_settled)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        category_id, subcategory_id, notes, tags, raw_sms, reference, lat, lng, is_manual, link_settled, source)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     input.amount,
     input.type,
     input.merchant ?? null,
@@ -821,6 +885,7 @@ export async function insertTx(input: NewTxInput): Promise<number> {
     input.lng ?? null,
     input.isManual ? 1 : 0,
     input.linkSettled ? 1 : 0,
+    input.source ?? 'sms',
   );
   if (input.balance != null) {
     await updateAccountBalanceFromTx({
@@ -1039,7 +1104,10 @@ export async function getHiddenAccountKeys(): Promise<Set<string>> {
   return new Set(rows.map((r) => `${r.bank_name}|${r.last4 ?? ''}`));
 }
 
-export async function insertParsedTx(tx: ParsedTransaction): Promise<number | null> {
+export async function insertParsedTx(
+  tx: ParsedTransaction,
+  source: TxSource = 'sms',
+): Promise<number | null> {
   if (tx.reference && (await isReferenceDuplicate(tx.reference, tx.amount, tx.type, tx.timestamp))) {
     return null;
   }
@@ -1071,6 +1139,7 @@ export async function insertParsedTx(tx: ParsedTransaction): Promise<number | nu
     reference: tx.reference ?? null,
     tags: autoTags.length > 0 ? autoTags : undefined,
     isManual: false,
+    source,
   });
 }
 
@@ -1175,6 +1244,8 @@ export async function updateTx(id: number, patch: TxPatch): Promise<void> {
     ['lat', 'lat', (v) => v],
     ['lng', 'lng', (v) => v],
     ['originalType', 'original_type', (v) => v],
+    ['rawSms', 'raw_sms', (v) => v],
+    ['reference', 'reference', (v) => v],
   ];
 
   for (const [key, column, transform] of columnMap) {
