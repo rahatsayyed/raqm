@@ -6,7 +6,9 @@ import { useFocusEffect, useRoute, type RouteProp } from '@react-navigation/nati
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import type { MainStackParamList } from '../../navigation/types';
-import { getCategories, mergeTxs, groupTxs, type Category, type TxRecord } from '../../db/database';
+import { getCategories, getSetting, mergeTxs, groupTxs, type Category, type TxRecord } from '../../db/database';
+import { getMonthBounds } from '../../utils/period';
+import { MonthSwitcher } from '../../components/MonthSwitcher';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { countsTowardTotals } from '../../services/txIntelligence';
 import { formatAmount } from '../../utils/format';
@@ -102,14 +104,20 @@ export function TransactionsScreen() {
   const [modalName, setModalName] = useState('');
   const [modalError, setModalError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [monthStartDay, setMonthStartDay] = useState(1);
+  const [refDate, setRefDate] = useState(() => new Date());
 
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       getCategories().then((cats) => { if (!cancelled) setCategories(cats); }).catch(() => {});
+      getSetting('month_start_day').then((v) => { if (!cancelled) setMonthStartDay(v ? Number(v) : 1); }).catch(() => {});
       return () => { cancelled = true; };
     }, []),
   );
+
+  const bounds = useMemo(() => getMonthBounds(refDate, monthStartDay), [refDate, monthStartDay]);
+  const disableNextMonth = bounds.to >= Date.now();
 
   const categoryNames = useMemo(() => {
     const map = new Map<number, string>();
@@ -148,8 +156,15 @@ export function TransactionsScreen() {
     [realTxs],
   );
 
+  // Month-scoped by default; a search query looks across all months instead — matching
+  // "View Merchant"'s expectation of finding a transaction regardless of which month it's in.
+  const monthScoped = useMemo(
+    () => sorted.filter((t) => t.timestamp >= bounds.from && t.timestamp <= bounds.to),
+    [sorted, bounds],
+  );
+
   const filtered = useMemo(() => {
-    if (!query.trim()) return sorted;
+    if (!query.trim()) return monthScoped;
     const q = query.toLowerCase();
     return sorted.filter(
       tx =>
@@ -157,7 +172,7 @@ export function TransactionsScreen() {
         tx.bankName.toLowerCase().includes(q) ||
         accountLabel(tx.bankName, tx.accountLast4, accountLabels).toLowerCase().includes(q),
     );
-  }, [sorted, query, accountLabels]);
+  }, [sorted, monthScoped, query, accountLabels]);
 
   // Narrative statement: this week (since Monday) vs the same span last week.
   const statement = useMemo(() => {
@@ -182,6 +197,16 @@ export function TransactionsScreen() {
       const day = startOfDay(tx.timestamp);
       dayTotals.set(day, (dayTotals.get(day) ?? 0) + tx.amount);
     }
+    // Bucket group members once up front instead of re-filtering `filtered` for every grouped
+    // tx encountered below — that was an O(n×groups) rescan, recomputed on every screen push.
+    const membersByGroup = new Map<number, TxRecord[]>();
+    for (const tx of filtered) {
+      if (tx.groupId == null) continue;
+      const bucket = membersByGroup.get(tx.groupId);
+      if (bucket) bucket.push(tx);
+      else membersByGroup.set(tx.groupId, [tx]);
+    }
+
     const seenGroups = new Set<number>();
     const out: ListItem[] = [];
     let currentDay = -1;
@@ -198,7 +223,7 @@ export function TransactionsScreen() {
           kind: 'group',
           key: `g${tx.groupId}`,
           groupId: tx.groupId,
-          members: filtered.filter(t => t.groupId === tx.groupId),
+          members: membersByGroup.get(tx.groupId) ?? [],
         });
       } else {
         out.push({ kind: 'single', key: `t${tx.id}`, tx });
@@ -376,6 +401,18 @@ export function TransactionsScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+      {!searchOpen && (
+        <View className="px-[24px] pb-[16px]">
+          <MonthSwitcher
+            bounds={bounds}
+            disableNext={disableNextMonth}
+            onChange={(direction) =>
+              setRefDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + (direction === 'next' ? 1 : -1), prev.getDate()))
+            }
+          />
+        </View>
+      )}
 
       {searchOpen && !selectMode && (
         <View className="px-[24px] pb-[16px]">
