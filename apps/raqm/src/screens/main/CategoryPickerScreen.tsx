@@ -47,6 +47,12 @@ export function CategoryPickerScreen({ route, navigation }: MainStackScreenProps
         { transactionId: transactionId!, pickedCategoryId: categoryId, pickedSubcategoryId: subcategoryId },
         { merge: true }
       );
+    } else if (returnTo === 'QuickAddCash') {
+      navigation.popTo(
+        'QuickAddCash',
+        { pickedCategoryId: categoryId, pickedSubcategoryId: subcategoryId },
+        { merge: true }
+      );
     } else {
       navigation.popTo(
         'AddTransaction',

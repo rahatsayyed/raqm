@@ -35,12 +35,16 @@ export type MainStackParamList = {
   More: undefined;
   TransactionDetail: { transactionId: number };
   AddTransaction: { pickedCategoryId?: number; pickedSubcategoryId?: number } | undefined;
+  // Reached only from the launcher shortcut, the Quick Settings tile, and the
+  // home-screen widgets (see src/navigation/deepLinks.ts). Params are always
+  // undefined on entry; the category round-trip re-enters it via popTo(..., merge).
+  QuickAddCash: { pickedCategoryId?: number; pickedSubcategoryId?: number } | undefined;
   EditTransaction: {
     transactionId: number;
     pickedCategoryId?: number;
     pickedSubcategoryId?: number;
   };
-  CategoryPicker: { returnTo: 'AddTransaction' | 'EditTransaction'; transactionId?: number; direction?: 'expense' | 'income' };
+  CategoryPicker: { returnTo: 'AddTransaction' | 'EditTransaction' | 'QuickAddCash'; transactionId?: number; direction?: 'expense' | 'income' };
   AccountDetail: { bankName: string; last4?: string };
   GroceryListDetail: { listId: number; listName: string };
   Budgets: undefined;
