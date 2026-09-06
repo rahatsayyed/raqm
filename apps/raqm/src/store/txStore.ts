@@ -17,6 +17,7 @@ import {
 import { getCurrentCoords } from '../services/location';
 import { isDuplicateSms } from '../services/txIntelligence';
 import { checkBudgetAlerts } from '../services/budgets';
+import { refreshWidgets } from '../../modules/sms-reader/src/SmsReaderModule';
 
 async function loadAccountLabels(): Promise<Map<string, string>> {
   const accounts = await getAccounts();
@@ -56,6 +57,10 @@ export const useTxStore = create<TxStore>((set, get) => ({
   refresh: async () => {
     const [txs, accountLabels] = await Promise.all([loadTxRecords(), loadAccountLabels()]);
     set({ txs, accountLabels });
+    // Every insert/update/restore path funnels through here, so this one call covers them
+    // all. Fire-and-forget on purpose: widget refresh must never delay or break the caller,
+    // which on the live-SMS path is racing to post a notification.
+    refreshWidgets().catch(() => {});
   },
 
   add: async (input) => {
@@ -140,6 +145,10 @@ export const useTxStore = create<TxStore>((set, get) => ({
   remove: async (id) => {
     await softDeleteTx(id);
     set((s) => ({ txs: s.txs.filter((t) => t.id !== id) }));
+    // remove() prunes in place rather than calling refresh(), so it needs its own nudge —
+    // otherwise a deleted transaction lingers in the Recent Transactions widget for up to
+    // 30 minutes.
+    refreshWidgets().catch(() => {});
   },
 
   restore: async (id) => {

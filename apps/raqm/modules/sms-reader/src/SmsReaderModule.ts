@@ -61,3 +61,10 @@ export function getInstalledApps(): Promise<InstalledApp[]> {
 export function consumeLaunchDeepLink(): LaunchDeepLink | null {
   return native.consumeLaunchDeepLink() ?? null;
 }
+
+/** Nudges every placed home-screen widget to recompose immediately, rather than waiting for
+ * the 30-minute platform tick. Never rejects for widget-side reasons — the native side
+ * swallows its own failures. */
+export function refreshWidgets(): Promise<void> {
+  return native.refreshWidgets();
+}

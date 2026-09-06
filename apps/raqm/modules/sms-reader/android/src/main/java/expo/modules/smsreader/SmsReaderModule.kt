@@ -18,6 +18,7 @@ import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.smsreader.widget.WidgetRefresh
 
 class SmsReaderModule : Module() {
   // ACTION_SCREEN_OFF is a protected broadcast — it can only be observed by registering a
@@ -170,6 +171,11 @@ class SmsReaderModule : Module() {
     AsyncFunction("setMonthStartDay") { day: Int ->
       val context = appContext.reactContext ?: return@AsyncFunction
       MonthStartDay.set(context, day)
+    }
+
+    /** Nudges every placed home-screen widget to recompose. Never throws (see WidgetRefresh). */
+    AsyncFunction("refreshWidgets") {
+      appContext.reactContext?.let { WidgetRefresh.refreshAll(it) }
     }
 
     // Launchable, user-visible apps only — the picker is a list the user reads, and the
