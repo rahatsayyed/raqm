@@ -8,6 +8,7 @@ import java.io.File
 import java.text.NumberFormat
 import java.util.Calendar
 import java.util.Locale
+import kotlin.math.max
 
 data class BudgetStatus(
   val categoryName: String,
@@ -95,6 +96,20 @@ object WidgetData {
       set(Calendar.SECOND, 59); set(Calendar.MILLISECOND, 999)
     }
     return start.timeInMillis to end.timeInMillis
+  }
+
+  /**
+   * Whole days remaining in the current custom month-start-day period, floored at 1.
+   * Uses monthBounds/MonthStartDay so this matches the same period spend/limit are computed
+   * over — a plain calendar-month-end count would silently disagree for any user who set
+   * month_start_day away from 1.
+   */
+  fun daysLeftInPeriod(context: Context): Int {
+    val now = System.currentTimeMillis()
+    val (_, to) = monthBounds(now, MonthStartDay.get(context))
+    val remainingMs = to - now
+    val remainingDays = (remainingMs / (24 * 60 * 60 * 1000)).toInt() + 1
+    return max(1, remainingDays)
   }
 
   /** Port of getWeekBounds(ref): Monday 00:00:00.000 -> Sunday 23:59:59.999. */
