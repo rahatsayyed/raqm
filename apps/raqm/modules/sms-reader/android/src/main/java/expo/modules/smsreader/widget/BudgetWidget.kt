@@ -27,7 +27,6 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import java.util.Calendar
 import kotlin.math.max
 
 /**
@@ -79,15 +78,16 @@ class BudgetWidget : GlanceAppWidget() {
       }
 
       val shown = if (detailed) statuses.take(4) else statuses.take(2)
+      val daysLeft = if (detailed) WidgetData.daysLeftInPeriod(context) else 1
       shown.forEach { status ->
-        BudgetRow(status, detailed)
+        BudgetRow(status, detailed, daysLeft)
         Spacer(modifier = GlanceModifier.height(10.dp))
       }
     }
   }
 
   @Composable
-  private fun BudgetRow(status: BudgetStatus, detailed: Boolean) {
+  private fun BudgetRow(status: BudgetStatus, detailed: Boolean, daysLeft: Int) {
     Column(modifier = GlanceModifier.fillMaxWidth()) {
       Row(
         modifier = GlanceModifier.fillMaxWidth(),
@@ -114,7 +114,7 @@ class BudgetWidget : GlanceAppWidget() {
       if (detailed) {
         Spacer(modifier = GlanceModifier.height(4.dp))
         val remaining = max(0.0, status.limit - status.spent)
-        val perDay = remaining / daysLeftInMonthPeriod()
+        val perDay = remaining / daysLeft
         Text(
           text = "${WidgetData.formatAmount(remaining)} left · ${WidgetData.formatAmount(perDay)}/day",
           style = TextStyle(color = ColorProvider(WidgetTheme.OnSurfaceVariant), fontSize = 10.sp),
@@ -136,15 +136,6 @@ class BudgetWidget : GlanceAppWidget() {
       backgroundColor = ColorProvider(WidgetTheme.SurfaceContainerHigh),
       modifier = GlanceModifier.fillMaxWidth().height(6.dp),
     )
-  }
-
-  /** Whole days remaining in the current custom-month period, floored at 1. */
-  private fun daysLeftInMonthPeriod(): Int {
-    val now = System.currentTimeMillis()
-    val cal = Calendar.getInstance().apply { timeInMillis = now }
-    val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
-    val remaining = daysInMonth - cal.get(Calendar.DAY_OF_MONTH) + 1
-    return max(1, remaining)
   }
 }
 
