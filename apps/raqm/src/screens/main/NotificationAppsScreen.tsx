@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Switch, Alert } from 'react-native';
 import { BUILT_IN_NOTIFICATION_APPS } from '@rahatsayyed/bank-sms-parser';
 import { MainStackScreenProps } from '../../navigation/types';
 import { Colors } from '../../theme';
@@ -8,6 +8,8 @@ import { SmsReader, type InstalledApp } from '../../native/SmsReader';
 import {
   getMonitoredNotificationPackages,
   setMonitoredNotificationPackages,
+  getNotificationSourceEnabled,
+  setNotificationSourceEnabled,
 } from '../../db/database';
 
 const BUILT_IN_PACKAGES = new Set(BUILT_IN_NOTIFICATION_APPS.map((a) => a.packageName));
@@ -60,6 +62,47 @@ export function NotificationAppsScreen({ navigation }: MainStackScreenProps<'Not
   const [apps, setApps] = useState<InstalledApp[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState('');
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    getNotificationSourceEnabled().then(setEnabled);
+  }, []);
+
+  // Turning ON needs Android's notification-listener access (Raqm may already have it — the
+  // same service cancels raw bank-SMS notifications today). Turning OFF clears the native
+  // monitored set immediately, so the listener stops forwarding even before the app is next
+  // opened; the app_settings-backed selection below stays saved for when it's turned back on.
+  const handleToggleEnabled = useCallback(async (value: boolean) => {
+    try {
+      await setNotificationSourceEnabled(value);
+      setEnabled(value);
+    } catch {
+      Alert.alert("Couldn't save setting", 'Please try again.');
+      return;
+    }
+
+    if (!value) {
+      await SmsReader.setMonitoredNotificationPackages([]);
+      return;
+    }
+
+    if (!SmsReader.isNotificationListenerEnabled()) {
+      Alert.alert(
+        'Notification access needed',
+        'Raqm needs notification access to read transaction alerts from your bank and UPI apps. Find Raqm in the list and turn it on.',
+        [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Open settings', onPress: () => SmsReader.openNotificationListenerSettings() },
+        ],
+      );
+      return;
+    }
+
+    // Access already granted — re-push whatever is currently checked so capture resumes
+    // right away.
+    const saved = await getMonitoredNotificationPackages();
+    if (saved.length > 0) await SmsReader.setMonitoredNotificationPackages(saved);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,16 +184,25 @@ export function NotificationAppsScreen({ navigation }: MainStackScreenProps<'Not
           <BackIcon color={Colors.onSurface} size={22} />
         </TouchableOpacity>
         <Text className="font-inter-bold text-headline-sm text-on-surface flex-1 text-center mx-sm" numberOfLines={1}>
-          Apps to read
+          Read Bank Notification
         </Text>
         <View className="w-[22px]" />
       </View>
 
       <Text className="font-inter text-annotation text-on-surface-variant mt-xs">
-        Raqm reads transaction notifications only from the apps you check here. Apps with a
+        Raqm reads transaction notifications only from the apps you check below. Apps with a
         built-in parser are pre-selected; anything else you add gets queued for reporting
         until its format is supported.
       </Text>
+
+      <View className="flex-row items-center justify-between py-md mt-sm border-b border-border-subtle">
+        <Text className="font-inter text-body-standard text-on-surface">Read bank notifications</Text>
+        <Switch
+          value={enabled}
+          onValueChange={handleToggleEnabled}
+          trackColor={{ true: Colors.primary, false: Colors.surfaceVariant }}
+        />
+      </View>
 
       <View className="relative mt-md mb-sm">
         <View className="absolute left-sm top-0 bottom-0 justify-center z-[1]">
