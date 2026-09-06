@@ -17,8 +17,6 @@ import { parseImportCsv } from '../../services/csvImport';
 import {
   syncDiscoveredAccounts, getCategoryRules, getTransactionGroups,
   getSetting, setSetting, insertCsvRows,
-  getNotificationSourceEnabled, setNotificationSourceEnabled, setMonitoredNotificationPackages,
-  getMonitoredNotificationPackages,
 } from '../../db/database';
 import { SmsReader } from '../../native/SmsReader';
 import {
@@ -106,7 +104,6 @@ export function MoreScreen() {
   const [csvImporting, setCsvImporting] = useState(false);
   const [editField, setEditField] = useState<'name' | 'phone' | 'email' | null>(null);
   const [appLock, setAppLock] = useState(false);
-  const [notifSource, setNotifSource] = useState(false);
 
   // These screens stay mounted beneath pushed screens, so counts can go stale
   // without a focus-triggered reload (e.g. deleting a rule, then coming back).
@@ -116,7 +113,6 @@ export function MoreScreen() {
       getTransactionGroups().then((groups) => setGroupCount(groups.length));
       getSetting('month_start_day').then((day) => setMonthStartDay(day ? Number(day) : 1));
       isAppLockEnabled().then(setAppLock);
-      getNotificationSourceEnabled().then(setNotifSource);
     }, []),
   );
 
@@ -145,44 +141,6 @@ export function MoreScreen() {
       // that visibly failed to move.
       Alert.alert("Couldn't save setting", 'Please try again.');
     }
-  };
-
-  // Turning ON needs Android's notification-listener access (Raqm may already have it —
-  // the same service cancels raw bank-SMS notifications today) and at least one chosen
-  // app, so it hands off to the picker. Turning OFF clears the native monitored set
-  // immediately, so the listener stops forwarding even before the app is next opened;
-  // the user's app choices stay saved in app_settings for when they turn it back on.
-  const handleToggleNotifSource = async (value: boolean) => {
-    try {
-      await setNotificationSourceEnabled(value);
-      setNotifSource(value);
-    } catch {
-      Alert.alert("Couldn't save setting", 'Please try again.');
-      return;
-    }
-
-    if (!value) {
-      await SmsReader.setMonitoredNotificationPackages([]);
-      return;
-    }
-
-    if (!SmsReader.isNotificationListenerEnabled()) {
-      Alert.alert(
-        'Notification access needed',
-        'Raqm needs notification access to read transaction alerts from your bank and UPI apps. Find Raqm in the list and turn it on.',
-        [
-          { text: 'Not now', style: 'cancel' },
-          { text: 'Open settings', onPress: () => SmsReader.openNotificationListenerSettings() },
-        ],
-      );
-      return;
-    }
-
-    // Access already granted — re-push whatever was previously chosen so capture resumes
-    // right away, then let the user review the list.
-    const saved = await getMonitoredNotificationPackages();
-    if (saved.length > 0) await SmsReader.setMonitoredNotificationPackages(saved);
-    navigation.navigate('NotificationApps');
   };
 
   const handleSelectMonthStartDay = async (day: number) => {
@@ -375,15 +333,9 @@ export function MoreScreen() {
         { key: 'app-lock', label: 'App Lock', Icon: LockIcon, toggle: { value: appLock, onValueChange: handleToggleAppLock } },
         { key: 'hide-balances', label: 'Hide Balances', Icon: WalletIcon, onPress: () => navigation.navigate('HideBalances') },
         {
-          key: 'notification-source',
-          label: 'Read App Notifications',
-          Icon: NotificationIcon,
-          toggle: { value: notifSource, onValueChange: handleToggleNotifSource },
-        },
-        {
           key: 'notification-apps',
-          label: 'Apps To Read',
-          Icon: LayersIcon,
+          label: 'Read Bank Notification',
+          Icon: NotificationIcon,
           onPress: () => navigation.navigate('NotificationApps'),
         },
       ],
