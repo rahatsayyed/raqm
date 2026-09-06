@@ -8,4 +8,6 @@
     android:widgetCategory="home_screen|keyguard"
     android:updatePeriodMillis="1800000"
     android:description="@string/widget_recent_transactions_description"
+    android:configure="expo.modules.smsreader.widget.WidgetConfigActivity"
+    android:widgetFeatures="configuration_optional"
     android:initialLayout="@layout/glance_default_loading_layout" />

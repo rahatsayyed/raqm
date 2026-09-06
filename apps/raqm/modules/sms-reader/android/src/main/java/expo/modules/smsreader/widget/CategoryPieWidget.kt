@@ -16,6 +16,7 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
@@ -44,15 +45,16 @@ class CategoryPieWidget : GlanceAppWidget() {
 
   override suspend fun provideGlance(context: Context, id: GlanceId) {
     val slices = WidgetData.categoryTotals(context).take(6)
-    provideContent { Content(context, slices) }
+    val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
+    provideContent { Content(context, slices, appWidgetId) }
   }
 
   @Composable
-  private fun Content(context: Context, slices: List<CategorySlice>) {
+  private fun Content(context: Context, slices: List<CategorySlice>, appWidgetId: Int) {
     Column(
       modifier = GlanceModifier
         .fillMaxSize()
-        .background(WidgetTheme.Surface)
+        .background(WidgetAppearance.background(context, appWidgetId))
         .cornerRadius(20.dp)
         .padding(14.dp)
         .clickable(quickAddAction(context)),
@@ -138,4 +140,9 @@ class CategoryPieWidget : GlanceAppWidget() {
 
 class CategoryPieWidgetReceiver : GlanceAppWidgetReceiver() {
   override val glanceAppWidget: GlanceAppWidget = CategoryPieWidget()
+
+  override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+    super.onDeleted(context, appWidgetIds)
+    appWidgetIds.forEach { WidgetPrefs.clear(context, it) }
+  }
 }

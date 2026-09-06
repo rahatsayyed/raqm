@@ -9,6 +9,7 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
@@ -47,15 +48,16 @@ class RecentTransactionsWidget : GlanceAppWidget() {
   override suspend fun provideGlance(context: Context, id: GlanceId) {
     val txs = WidgetData.recentTransactions(context, ROW_LIMIT)
     val total = WidgetData.periodSpendTotal(context)
-    provideContent { Content(context, txs, total) }
+    val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
+    provideContent { Content(context, txs, total, appWidgetId) }
   }
 
   @Composable
-  private fun Content(context: Context, txs: List<RecentTx>, periodTotal: Double) {
+  private fun Content(context: Context, txs: List<RecentTx>, periodTotal: Double, appWidgetId: Int) {
     Column(
       modifier = GlanceModifier
         .fillMaxSize()
-        .background(WidgetTheme.Surface)
+        .background(WidgetAppearance.background(context, appWidgetId))
         .cornerRadius(20.dp)
         .padding(14.dp),
     ) {
@@ -158,4 +160,9 @@ class RecentTransactionsWidget : GlanceAppWidget() {
 
 class RecentTransactionsWidgetReceiver : GlanceAppWidgetReceiver() {
   override val glanceAppWidget: GlanceAppWidget = RecentTransactionsWidget()
+
+  override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+    super.onDeleted(context, appWidgetIds)
+    appWidgetIds.forEach { WidgetPrefs.clear(context, it) }
+  }
 }

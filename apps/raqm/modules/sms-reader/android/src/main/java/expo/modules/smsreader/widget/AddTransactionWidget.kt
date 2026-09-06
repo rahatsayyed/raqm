@@ -9,6 +9,7 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
@@ -31,15 +32,16 @@ import expo.modules.smsreader.QuickAdd
 class AddTransactionWidget : GlanceAppWidget() {
 
   override suspend fun provideGlance(context: Context, id: GlanceId) {
-    provideContent { Content(context) }
+    val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
+    provideContent { Content(context, appWidgetId) }
   }
 
   @Composable
-  private fun Content(context: Context) {
+  private fun Content(context: Context, appWidgetId: Int) {
     Column(
       modifier = GlanceModifier
         .fillMaxSize()
-        .background(WidgetTheme.Surface)
+        .background(WidgetAppearance.background(context, appWidgetId))
         .cornerRadius(20.dp)
         .padding(12.dp)
         .clickable(quickAddAction(context)),
@@ -67,6 +69,11 @@ class AddTransactionWidget : GlanceAppWidget() {
 
 class AddTransactionWidgetReceiver : GlanceAppWidgetReceiver() {
   override val glanceAppWidget: GlanceAppWidget = AddTransactionWidget()
+
+  override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+    super.onDeleted(context, appWidgetIds)
+    appWidgetIds.forEach { WidgetPrefs.clear(context, it) }
+  }
 }
 
 /**
