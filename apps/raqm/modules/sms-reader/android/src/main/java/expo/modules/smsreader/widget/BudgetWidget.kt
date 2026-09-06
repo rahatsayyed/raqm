@@ -9,6 +9,7 @@ import androidx.glance.GlanceModifier
 import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.LinearProgressIndicator
@@ -44,17 +45,18 @@ class BudgetWidget : GlanceAppWidget() {
 
   override suspend fun provideGlance(context: Context, id: GlanceId) {
     val statuses = WidgetData.budgetStatuses(context)
-    provideContent { Content(context, statuses) }
+    val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
+    provideContent { Content(context, statuses, appWidgetId) }
   }
 
   @Composable
-  private fun Content(context: Context, statuses: List<BudgetStatus>) {
+  private fun Content(context: Context, statuses: List<BudgetStatus>, appWidgetId: Int) {
     val detailed = LocalSize.current.height >= 140.dp
 
     Column(
       modifier = GlanceModifier
         .fillMaxSize()
-        .background(WidgetTheme.Surface)
+        .background(WidgetAppearance.background(context, appWidgetId))
         .cornerRadius(20.dp)
         .padding(14.dp)
         .clickable(quickAddAction(context)),
@@ -141,4 +143,9 @@ class BudgetWidget : GlanceAppWidget() {
 
 class BudgetWidgetReceiver : GlanceAppWidgetReceiver() {
   override val glanceAppWidget: GlanceAppWidget = BudgetWidget()
+
+  override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+    super.onDeleted(context, appWidgetIds)
+    appWidgetIds.forEach { WidgetPrefs.clear(context, it) }
+  }
 }

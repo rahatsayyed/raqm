@@ -68,6 +68,19 @@
       </intent-filter>
     </service>
 
+    <!-- Widget appearance settings (opacity, wallpaper-color match). Launched by the system
+         via each widget XML's android:configure — the launcher (a different package) starts
+         it with an explicit component name, so it must be exported. -->
+    <activity
+      android:name=".widget.WidgetConfigActivity"
+      android:theme="@android:style/Theme.Translucent.NoTitleBar"
+      android:excludeFromRecents="true"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+      </intent-filter>
+    </activity>
+
     <!-- Home-screen widgets (Jetpack Glance). All four declare widgetCategory
          home_screen|keyguard: the lock-screen variant is display-only, since Android's
          keyguard widgets cannot take taps. updatePeriodMillis is 30 min (the platform's
