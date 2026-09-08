@@ -2800,6 +2800,15 @@ export async function addSplitWithParticipants(
 
 export async function deleteSplit(id: number): Promise<void> {
   const database = await getDb();
+  // Unlink every participant's matched transaction BEFORE deleting rows — otherwise the
+  // transaction keeps link_type: 'split_payment' pointing at a split that no longer exists,
+  // and the original expense keeps being silently netted against it.
+  const participants = await getSplitParticipants(id);
+  for (const p of participants) {
+    if (p.matchedTxId != null) {
+      await unlinkTxs(p.matchedTxId);
+    }
+  }
   try {
     await database.runAsync('BEGIN');
     await database.runAsync(`DELETE FROM split_participants WHERE split_id = ?`, id);
@@ -2867,7 +2876,7 @@ export async function setSplitParticipantStatus(
     );
     if (row) {
       const remaining = await database.getFirstAsync<{ c: number }>(
-        `SELECT COUNT(*) as c FROM split_participants WHERE split_id = ? AND status != 'settled'`,
+        `SELECT COUNT(*) as c FROM split_participants WHERE split_id = ? AND status != 'settled' AND is_self = 0`,
         row.split_id,
       );
       const newStatus = (remaining?.c ?? 1) === 0 ? 'settled' : 'open';
@@ -2878,6 +2887,20 @@ export async function setSplitParticipantStatus(
     await database.runAsync('ROLLBACK');
     throw e;
   }
+}
+
+export async function updateSplitReminderSettings(
+  id: number,
+  autoRemindEnabled: boolean,
+  remindIntervalDays: number | null,
+): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(
+    `UPDATE splits SET auto_remind_enabled = ?, remind_interval_days = ? WHERE id = ?`,
+    autoRemindEnabled ? 1 : 0,
+    remindIntervalDays,
+    id,
+  );
 }
 
 // ── Accounts ───────────────────────────────────────────────────────────────

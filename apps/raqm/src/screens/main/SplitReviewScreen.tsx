@@ -5,8 +5,10 @@ import { MainStackScreenProps } from '../../navigation/types';
 import { addSplitWithParticipants, getSetting } from '../../db/database';
 import { formatAmount } from '../../utils/format';
 
+// "Every app open" (days: null, no throttle) was removed — it could fire a real
+// SMS on every single app launch with no kill switch. "Every 2 days" is now the
+// fastest cadence.
 const CADENCE_OPTIONS: { label: string; days: number | null }[] = [
-  { label: 'Every app open', days: null },
   { label: 'Every 2 days', days: 2 },
   { label: 'Every 3 days', days: 3 },
   { label: 'Weekly', days: 7 },
