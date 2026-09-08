@@ -3,7 +3,7 @@ import { BankParserFactory } from '@rahatsayyed/bank-sms-parser';
 import type { ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
 import { insertParsedTxs, getScannedIdentitiesSince } from '../db/database';
 import { useTxStore } from '../store/txStore';
-import { runDetectionJobs } from './txIntelligence';
+import { runDetectionJobs, matchSplitPayments } from './txIntelligence';
 import { logEvent } from './logger';
 
 export interface RescanResult {
@@ -57,6 +57,7 @@ async function scanMissing(from: number, to: number = Date.now()): Promise<Resca
     if (parsed.length > 0) {
       await insertParsedTxs(parsed);
       await runDetectionJobs();
+      await matchSplitPayments();
     }
     // Refresh even when nothing new was found so a pull still syncs any external DB changes.
     await useTxStore.getState().refresh();
