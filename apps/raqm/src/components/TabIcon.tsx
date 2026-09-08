@@ -235,6 +235,10 @@ export function GroupWorkIcon({ color, size = 24 }: Props) {
   return <Iconify icon="material-symbols:group-work-outline" size={size} color={color} />;
 }
 
+export function PeopleIcon({ color, size = 24 }: Props) {
+  return <Iconify icon="material-symbols:group-rounded" size={size} color={color} />;
+}
+
 export function AddIcon({ color, size = 24 }: Props) {
   return <Iconify icon="material-symbols:add-rounded" size={size} color={color} />;
 }
