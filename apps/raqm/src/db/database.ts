@@ -2549,8 +2549,15 @@ export async function renameSplitCircle(id: number, name: string): Promise<void>
 
 export async function deleteSplitCircle(id: number): Promise<void> {
   const database = await getDb();
-  await database.runAsync(`DELETE FROM split_circle_members WHERE circle_id = ?`, id);
-  await database.runAsync(`DELETE FROM split_circles WHERE id = ?`, id);
+  try {
+    await database.runAsync('BEGIN');
+    await database.runAsync(`DELETE FROM split_circle_members WHERE circle_id = ?`, id);
+    await database.runAsync(`DELETE FROM split_circles WHERE id = ?`, id);
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
 }
 
 export async function getSplitCircleMembers(circleId: number): Promise<SplitCircleMember[]> {
