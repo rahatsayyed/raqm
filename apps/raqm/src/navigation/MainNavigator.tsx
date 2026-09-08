@@ -31,6 +31,7 @@ import { SmsInboxScreen } from '../screens/main/SmsInboxScreen';
 import { SmsThreadScreen } from '../screens/main/SmsThreadScreen';
 import { CategoryOverviewScreen } from '../screens/main/CategoryOverviewScreen';
 import { SpendDetailScreen } from '../screens/main/SpendDetailScreen';
+import { SplitCirclesScreen } from '../screens/main/SplitCirclesScreen';
 import { HomeIcon, AnalyticsIcon, SplitIcon, ChatIcon } from '../components/TabIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../theme';
@@ -106,6 +107,7 @@ export function MainNavigator() {
       <Stack.Screen name="CategoryPicker" component={CategoryPickerScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="AccountDetail" component={AccountDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="Grocery" component={GroceryScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="SplitCircles" component={SplitCirclesScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="GroceryListDetail" component={GroceryListDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="Budgets" component={BudgetsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ animation: 'slide_from_right' }} />
