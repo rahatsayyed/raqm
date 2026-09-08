@@ -22,10 +22,13 @@ export function AppNavigator() {
   useEffect(() => {
     let cancelled = false;
 
-    // syncAccounts/initNotifications/scheduleSummaries each hit the DB or native APIs on
-    // their own and never read loadTxs's in-memory result, so they run in parallel with it
-    // instead of waiting behind it. Only detectionJobs needs loadTxs's txs, so it still
-    // runs after that one step resolves.
+    // Only loadTxs and detectionJobs affect what the first screen shows, so only those two
+    // gate `ready`. syncAccounts/initNotifications/scheduleSummaries/syncMonthStartDay are
+    // background setup with no bearing on the first render — they used to sit inside the
+    // same awaited Promise.all as loadTxs, which meant a single slow one of them (observed:
+    // scheduleSummaries took 34s on-device, most likely an Android notification-scheduling
+    // hiccup) froze the whole app on the loading spinner even though nothing was actually
+    // broken. They now fire independently and are never awaited by the ready-gating path.
     const runStartup = async () => {
       const timed = async (tag: string, fn: () => Promise<void>) => {
         const t0 = Date.now();
@@ -34,30 +37,37 @@ export function AppNavigator() {
         logEvent(`${tag}.done`, `${Date.now() - t0}ms`);
       };
 
-      // A throw from any step here (detectionJobs/insertParsedTxs/initNotifications can all
-      // throw) must never leave the app stuck on the loading spinner forever — always reach
+      // Never awaited by the critical path below — a slow or failing background task must
+      // never freeze the spinner or crash startup. Each call catches and logs on its own.
+      const detached = (tag: string, fn: () => Promise<void>) => {
+        timed(tag, fn).catch((e) => {
+          logEvent(`${tag}.failed`, e instanceof Error ? e.message : String(e));
+        });
+      };
+
+      // One-time backfill: users who already had a custom month_start_day before the
+      // widgets shipped have no native mirror yet (MoreScreen only writes it going
+      // forward), so every widget would silently use day 1 until they re-opened
+      // Settings. Re-syncing it unconditionally on every cold start is idempotent and
+      // cheap (one setting read + one SharedPreferences write), so no "only if missing"
+      // check is needed.
+      const syncMonthStartDay = async () => {
+        const raw = await getSetting('month_start_day');
+        const day = raw ? Number(raw) : 1;
+        await SmsReader.setMonthStartDay(day).catch(() => {});
+      };
+
+      detached('startup.syncAccounts', syncDiscoveredAccounts);
+      detached('startup.initNotifications', initNotifications);
+      detached('startup.scheduleSummaries', scheduleSummaries);
+      detached('startup.syncMonthStartDay', syncMonthStartDay);
+
+      // A throw from either step here (loadTxs/detectionJobs/insertParsedTxs can all throw)
+      // must never leave the app stuck on the loading spinner forever — always reach
       // setReady, even on failure. The user still gets a working (if incompletely-initialized)
       // app instead of a permanent blank screen.
       try {
-        // One-time backfill: users who already had a custom month_start_day before the
-        // widgets shipped have no native mirror yet (MoreScreen only writes it going
-        // forward), so every widget would silently use day 1 until they re-opened
-        // Settings. Re-syncing it unconditionally on every cold start is idempotent and
-        // cheap (one setting read + one SharedPreferences write), so no "only if missing"
-        // check is needed.
-        const syncMonthStartDay = async () => {
-          const raw = await getSetting('month_start_day');
-          const day = raw ? Number(raw) : 1;
-          await SmsReader.setMonthStartDay(day).catch(() => {});
-        };
-
-        await Promise.all([
-          timed('startup.loadTxs', loadTxs),
-          timed('startup.syncAccounts', syncDiscoveredAccounts),
-          timed('startup.initNotifications', initNotifications),
-          timed('startup.scheduleSummaries', scheduleSummaries),
-          timed('startup.syncMonthStartDay', syncMonthStartDay),
-        ]);
+        await timed('startup.loadTxs', loadTxs);
         if (cancelled) return;
 
         await timed('startup.detectionJobs', () =>
