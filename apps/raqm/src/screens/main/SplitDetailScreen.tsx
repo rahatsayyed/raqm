@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, FlatList, ToastAndroid, Share } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { MainStackScreenProps } from '../../navigation/types';
-import { getSplit, getSplitParticipants, setSplitParticipantStatus, deleteSplit } from '../../db/database';
+import { getSplit, getSplitParticipants, setSplitParticipantStatus, deleteSplit, getSetting } from '../../db/database';
 import type { Split, SplitParticipant } from '../../db/database';
 import { buildUpiLink } from '../../utils/upi';
 import { openExternalLink } from '../../utils/shareLinks';
@@ -19,6 +20,10 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
   const [split, setSplit] = useState<Split | null>(null);
   const [participants, setParticipants] = useState<SplitParticipant[]>([]);
   const [deleteInFlight, setDeleteInFlight] = useState(false);
+  // Read live rather than trusting split.creatorUpiId, which is frozen at creation
+  // time — a split created before the user set their UPI ID would otherwise never
+  // pick it up, even after it's added in Settings.
+  const [liveUpiId, setLiveUpiId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     getSplit(splitId).then(setSplit);
@@ -26,6 +31,12 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
   }, [splitId]);
 
   useEffect(load, [load]);
+
+  useFocusEffect(
+    useCallback(() => {
+      getSetting('upi_id').then((id) => setLiveUpiId(id ?? null));
+    }, []),
+  );
 
   const toggleSettled = async (p: SplitParticipant) => {
     const next = p.status === 'settled' ? 'unpaid' : 'settled';
@@ -82,12 +93,12 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
                 <TouchableOpacity
                   className="flex-1 py-[8px] items-center bg-primary/10 rounded-lg"
                   onPress={async () => {
-                    if (!split.creatorUpiId) {
+                    if (!liveUpiId) {
                       ToastAndroid.show('Add your UPI ID in Settings first', ToastAndroid.LONG);
                       return;
                     }
                     const link = buildUpiLink({
-                      upiId: split.creatorUpiId,
+                      upiId: liveUpiId,
                       payeeName: split.title,
                       amount: item.shareAmount,
                       note: split.title,
@@ -108,9 +119,9 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
                 <TouchableOpacity
                   className="flex-1 py-[8px] items-center bg-surface rounded-lg border border-outline-variant"
                   onPress={() => {
-                    const message = split.creatorUpiId
+                    const message = liveUpiId
                       ? `${split.title}: you owe ${formatAmount(item.shareAmount)}. Pay here: ${buildUpiLink({
-                          upiId: split.creatorUpiId,
+                          upiId: liveUpiId,
                           payeeName: split.title,
                           amount: item.shareAmount,
                           note: split.title,
