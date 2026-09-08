@@ -1,4 +1,3 @@
-import { PermissionsAndroid } from 'react-native';
 import { sendSms } from '../../modules/sms-reader/src/SmsReaderModule';
 import { requestSendSmsPermission } from '../utils/permissions';
 import {
@@ -10,8 +9,7 @@ import {
 import type { SplitParticipant } from '../db/database';
 import { formatAmount } from '../utils/format';
 import { buildUpiLink } from '../utils/upi';
-
-const REMINDER_INTERVAL_MS = 24 * 60 * 60 * 1000; // once every 24h while still unpaid
+import { logEvent } from './logger';
 
 function reminderMessage(input: {
   splitTitle: string;
@@ -35,10 +33,16 @@ export async function sendReminderNow(
   participant: SplitParticipant,
   split: { title: string; description: string | null },
 ): Promise<boolean> {
-  if (!participant.phoneNumber) return false;
+  if (!participant.phoneNumber) {
+    logEvent('splitReminders.noPhone', `participant ${participant.id}`);
+    return false;
+  }
   try {
     const granted = await requestSendSmsPermission();
-    if (!granted) return false;
+    if (!granted) {
+      logEvent('splitReminders.permissionDenied', `participant ${participant.id}`);
+      return false;
+    }
     const upiId = await getSetting('upi_id');
     const message = reminderMessage({
       splitTitle: split.title,
@@ -49,8 +53,10 @@ export async function sendReminderNow(
     });
     await sendSms(participant.phoneNumber, message);
     await setSplitParticipantLastReminded(participant.id, Date.now());
+    logEvent('splitReminders.sms.sent', `participant ${participant.id}`);
     return true;
-  } catch {
+  } catch (e) {
+    logEvent('splitReminders.sms.failed', e instanceof Error ? e.message : String(e));
     return false;
   }
 }
@@ -64,26 +70,31 @@ export async function sendReminderNow(
  */
 export async function checkAndSendReminders(): Promise<void> {
   try {
-    const enabled = await getSetting('auto_sms_reminders');
-    if (enabled !== '1') return;
-
-    // Only CHECK (never request) here — the user already granted SEND_SMS once via the
-    // Settings toggle's own explicit request flow. An unattended app-open auto-check must
-    // never pop a permission dialog on its own.
-    const granted = await PermissionsAndroid.check('android.permission.SEND_SMS');
-    if (!granted) return;
-
     const now = Date.now();
     const splits = await getSplits();
-    for (const split of splits.filter((s) => s.status === 'open')) {
+    const openSplits = splits.filter((s) => s.status === 'open' && s.autoRemindEnabled);
+    logEvent('splitReminders.check', `${openSplits.length} auto-remind splits open`);
+    for (const split of openSplits) {
       const participants = await getSplitParticipants(split.id);
       for (const p of participants) {
-        if (p.status !== 'unpaid' || !p.phoneNumber) continue;
-        if (p.lastRemindedAt && now - p.lastRemindedAt < REMINDER_INTERVAL_MS) continue;
-        await sendReminderNow(p, { title: split.title, description: split.description });
+        if (p.isSelf || p.status !== 'unpaid' || !p.phoneNumber) continue;
+        // remindIntervalDays === null means "every app open" — no throttle.
+        // Otherwise, only send once the configured number of days has passed
+        // since this participant's last reminder (or if never reminded).
+        if (split.remindIntervalDays != null && p.lastRemindedAt != null) {
+          const elapsedMs = now - p.lastRemindedAt;
+          const intervalMs = split.remindIntervalDays * 24 * 60 * 60 * 1000;
+          if (elapsedMs < intervalMs) continue;
+        }
+        const sent = await sendReminderNow(p, { title: split.title, description: split.description });
+        logEvent(
+          sent ? 'splitReminders.sent' : 'splitReminders.failed',
+          `split ${split.id} participant ${p.id}`,
+        );
       }
     }
-  } catch {
-    // Silent — this runs on every app open and must never block startup.
+  } catch (e) {
+    logEvent('splitReminders.checkFailed', e instanceof Error ? e.message : String(e));
+    // Silent to the user — this runs on every app open and must never block startup.
   }
 }
