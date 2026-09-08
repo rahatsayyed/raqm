@@ -5,7 +5,7 @@ import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollVie
 import { MainStackScreenProps } from '../../navigation/types';
 import { pickContact } from '../../utils/contacts';
 import { computeEqualShares } from '../../utils/splitShares';
-import { getSplitCircles, getSplitCircleMembers, addSplit, addSplitParticipant } from '../../db/database';
+import { getSplitCircles, getSplitCircleMembers, addSplit, addSplitParticipant, getSetting } from '../../db/database';
 import type { SplitCircle } from '../../db/database';
 
 type Participant = { name: string; phoneNumber: string | null; shareAmount: number };
@@ -14,16 +14,18 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
   const sourceTxId = route.params?.sourceTxId ?? null;
   const titleRef = useRef<TextInput>(null);
 
-  const [title, setTitle] = useState('');
-  const [amount, setAmount] = useState('');
+  const [title, setTitle] = useState(route.params?.prefillTitle ?? '');
+  const [amount, setAmount] = useState(route.params?.prefillAmount ? String(route.params.prefillAmount) : '');
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [customShares, setCustomShares] = useState(false);
   const [circles, setCircles] = useState<SplitCircle[]>([]);
+  const [creatorUpiId, setCreatorUpiId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => titleRef.current?.focus(), 80);
     getSplitCircles().then(setCircles);
+    getSetting('upi_id').then((id) => setCreatorUpiId(id ?? null));
     return () => clearTimeout(t);
   }, []);
 
@@ -87,7 +89,7 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
         title: title.trim() || 'Split',
         totalAmount,
         sourceTxId,
-        creatorUpiId: null, // wired to the Settings UPI ID by a later plan
+        creatorUpiId,
       });
       for (const p of participants) {
         await addSplitParticipant(splitId, {
