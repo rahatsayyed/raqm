@@ -54,7 +54,13 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
   const totalAmount = parseFloat(amount);
   const validTotal = !Number.isNaN(totalAmount) && totalAmount > 0;
 
-  // Re-derive shares whenever the total, participant count, or mode changes.
+  // Shares mode has no `pinned` map to react to — typing a weight only
+  // touches shareText, so the effect needs its own signal to know a weight
+  // changed. Joining every row's shareText gives it one.
+  const sharesKey = mode === 'shares' ? participants.map((p) => p.shareText).join(',') : '';
+
+  // Re-derive shares whenever the total, participant count, mode, pins, or
+  // (Shares mode only) a typed weight changes.
   useEffect(() => {
     if (!validTotal || participants.length === 0) return;
     if (mode === 'equal') {
@@ -76,7 +82,7 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
       setParticipants((prev) => prev.map((p, i) => ({ ...p, shareAmount: amounts[i] })));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totalAmount, participants.length, mode, pinned]);
+  }, [totalAmount, participants.length, mode, pinned, sharesKey]);
 
   const pinnedOverAllocated =
     (mode === 'exact' || mode === 'percentage') &&
@@ -86,6 +92,10 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
 
   const addFromCircle = async (circle: SplitCircle) => {
     const members = await getSplitCircleMembers(circle.id);
+    // Dropping the old circle's rows and appending new ones reshuffles
+    // indices, which would misattribute or ghost-count any pinned amount —
+    // clear pins entirely rather than try to remap them.
+    setPinned(new Map());
     setParticipants((prev) => {
       // Only one circle can be "active" at a time — selecting a new one drops
       // whichever circle's members were added before (manual/contact entries stay).
@@ -125,6 +135,10 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
   };
 
   const removeParticipant = (index: number) => {
+    // Removing shifts every later index down, which would silently
+    // misattribute or ghost-count any pinned amount (Exact/Percentage) — clear
+    // pins entirely rather than try to remap them.
+    setPinned(new Map());
     setParticipants((prev) => prev.filter((_, i) => i !== index));
   };
 
