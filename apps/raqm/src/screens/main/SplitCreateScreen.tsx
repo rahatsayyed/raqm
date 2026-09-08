@@ -6,7 +6,7 @@ import { MainStackScreenProps } from '../../navigation/types';
 import { pickContact } from '../../utils/contacts';
 import { computeEqualSharesInclusive, computePercentageShares, computeShareWeightAmounts, redistributeUnpinned } from '../../utils/splitShares';
 import { getSplitCircles, getSplitCircleMembers } from '../../db/database';
-import type { SplitCircle } from '../../db/database';
+import type { SplitCircle, SplitCircleMember } from '../../db/database';
 import { formatAmount } from '../../utils/format';
 
 type Participant = {
@@ -49,6 +49,17 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
     return () => clearTimeout(t);
   }, []);
 
+  // Return trip from SplitCirclesScreen's "Use this circle" action (only
+  // reachable via the "+ Create new circle" button below). Consumed once,
+  // then cleared via setParams so re-focusing this screen doesn't re-fire it.
+  useEffect(() => {
+    const pickedCircleId = route.params?.pickedCircleId;
+    if (pickedCircleId == null) return;
+    getSplitCircleMembers(pickedCircleId).then((members) => applyCircleMembers(pickedCircleId, members));
+    navigation.setParams({ pickedCircleId: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.params?.pickedCircleId]);
+
   const totalAmount = parseFloat(amount);
   const validTotal = !Number.isNaN(totalAmount) && totalAmount > 0;
 
@@ -88,22 +99,28 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
   const sharesValid = mode === 'equal' || mode === 'shares' || !pinnedOverAllocated;
   const canSave = validTotal && participants.length > 1 && sharesValid;
 
-  const addFromCircle = async (circle: SplitCircle) => {
-    const members = await getSplitCircleMembers(circle.id);
-    // Dropping the old circle's rows and appending new ones reshuffles
-    // indices, which would misattribute or ghost-count any pinned amount —
-    // clear pins entirely rather than try to remap them.
+  // Shared by "+ Use <circle>" and the SplitCircles return trip. Dropping the
+  // old circle's rows and appending new ones reshuffles indices, which would
+  // misattribute or ghost-count any pinned amount — clear pins entirely
+  // rather than try to remap them. Only one circle can be "active" at a
+  // time — selecting a new one drops whichever circle's members were added
+  // before (manual/contact entries and the "You" row, both fromCircleId:
+  // null, stay).
+  const applyCircleMembers = (circleId: number, members: SplitCircleMember[]) => {
     setPinned(new Map());
     setParticipants((prev) => {
-      // Only one circle can be "active" at a time — selecting a new one drops
-      // whichever circle's members were added before (manual/contact entries stay).
       const withoutOldCircle = prev.filter((p) => p.fromCircleId === null);
       const deduped = members.filter((m) => !withoutOldCircle.some((p) => isSameParticipant(p, m)));
       return [
         ...withoutOldCircle,
-        ...deduped.map((m) => ({ name: m.name, phoneNumber: m.phoneNumber, shareAmount: 0, shareText: '', fromCircleId: circle.id, isSelf: false })),
+        ...deduped.map((m) => ({ name: m.name, phoneNumber: m.phoneNumber, shareAmount: 0, shareText: '', fromCircleId: circleId, isSelf: false })),
       ];
     });
+  };
+
+  const addFromCircle = async (circle: SplitCircle) => {
+    const members = await getSplitCircleMembers(circle.id);
+    applyCircleMembers(circle.id, members);
   };
 
   const addFromContacts = async () => {
@@ -238,6 +255,12 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
         ))}
         <TouchableOpacity className="py-[8px]" onPress={addFromContacts}>
           <Text className="font-inter text-body-sm text-primary">+ Add from contacts</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          className="py-[8px]"
+          onPress={() => navigation.navigate('SplitCircles', { returnTo: 'SplitCreate' })}
+        >
+          <Text className="font-inter text-body-sm text-primary">+ Create new circle</Text>
         </TouchableOpacity>
         <View className="flex-row items-center mt-sm">
           <TextInput
