@@ -2618,6 +2618,37 @@ export async function addSplitCircleMember(
   return result.lastInsertRowId;
 }
 
+export async function addSplitCircleWithMembers(
+  name: string,
+  members: { name: string; phoneNumber: string | null }[],
+): Promise<number> {
+  const database = await getDb();
+  const now = Date.now();
+  try {
+    await database.runAsync('BEGIN');
+    const circleResult = await database.runAsync(
+      `INSERT INTO split_circles (name, created_at) VALUES (?, ?)`,
+      name,
+      now,
+    );
+    const circleId = circleResult.lastInsertRowId;
+    for (const m of members) {
+      await database.runAsync(
+        `INSERT INTO split_circle_members (circle_id, name, phone_number, created_at) VALUES (?, ?, ?, ?)`,
+        circleId,
+        m.name,
+        m.phoneNumber,
+        now,
+      );
+    }
+    await database.runAsync('COMMIT');
+    return circleId;
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+}
+
 export async function deleteSplitCircleMember(id: number): Promise<void> {
   const database = await getDb();
   await database.runAsync(`DELETE FROM split_circle_members WHERE id = ?`, id);
