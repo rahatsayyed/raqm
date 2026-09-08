@@ -5,6 +5,7 @@ import { TopHeader } from '../../components/TopHeader';
 import { MainTabScreenProps, MainStackParamList } from '../../navigation/types';
 import { getSplits, getSplitParticipants } from '../../db/database';
 import type { Split, SplitParticipant } from '../../db/database';
+import { formatAmount } from '../../utils/format';
 
 type Row = { split: Split; participants: SplitParticipant[] };
 
@@ -80,7 +81,7 @@ export function SplitScreen({ navigation }: MainTabScreenProps<'Split'>) {
                 <Text className="font-inter text-body-sm text-on-surface-variant">
                   {settledCount} of {item.participants.length} paid
                 </Text>
-                <Text className="font-mono text-body-sm text-on-surface">₹{item.split.totalAmount.toFixed(2)}</Text>
+                <Text className="font-mono text-body-sm text-on-surface">{formatAmount(item.split.totalAmount)}</Text>
               </View>
             </TouchableOpacity>
           );

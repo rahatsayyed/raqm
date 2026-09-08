@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ToastAndroid } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ToastAndroid, Share } from 'react-native';
 import { MainStackScreenProps } from '../../navigation/types';
 import { getSplit, getSplitParticipants, setSplitParticipantStatus, deleteSplit } from '../../db/database';
 import type { Split, SplitParticipant } from '../../db/database';
 import { buildUpiLink } from '../../utils/upi';
 import { openExternalLink } from '../../utils/shareLinks';
 import { sendReminderNow } from '../../services/splitReminders';
+import { formatAmount } from '../../utils/format';
 
 function statusLabel(status: SplitParticipant['status']): string {
   if (status === 'settled') return 'Settled';
@@ -59,7 +60,7 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
       </View>
 
       <Text className="font-mono-medium text-numeric-lg text-on-surface px-container-margin mb-md">
-        ₹{split.totalAmount.toFixed(2)}
+        {formatAmount(split.totalAmount)}
       </Text>
 
       <FlatList
@@ -73,14 +74,14 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
                 <Text className="font-inter-medium text-body-md text-on-surface">{item.name}</Text>
                 <Text className="font-inter text-body-sm text-on-surface-variant">{statusLabel(item.status)}</Text>
               </View>
-              <Text className="font-mono text-body-md text-on-surface">₹{item.shareAmount.toFixed(2)}</Text>
+              <Text className="font-mono text-body-md text-on-surface">{formatAmount(item.shareAmount)}</Text>
             </TouchableOpacity>
 
             {item.status === 'unpaid' && (
               <View className="flex-row gap-sm mt-sm">
                 <TouchableOpacity
                   className="flex-1 py-[8px] items-center bg-primary/10 rounded-lg"
-                  onPress={() => {
+                  onPress={async () => {
                     if (!split.creatorUpiId) {
                       ToastAndroid.show('Add your UPI ID in Settings first', ToastAndroid.LONG);
                       return;
@@ -91,7 +92,15 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
                       amount: item.shareAmount,
                       note: split.title,
                     });
-                    openExternalLink(link, link);
+                    // Routed through the share sheet, not opened directly — this link pays the
+                    // CREATOR's own VPA, so it must be forwarded to the participant (same intent
+                    // as the WhatsApp button below), not opened on the creator's own device.
+                    // Share.share rejecting/throwing on user-cancellation is normal, not an error.
+                    try {
+                      await Share.share({ message: link });
+                    } catch {
+                      // user dismissed the share sheet — no toast needed
+                    }
                   }}
                 >
                   <Text className="font-inter-medium text-body-sm text-primary">Pay via UPI</Text>
@@ -100,13 +109,13 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
                   className="flex-1 py-[8px] items-center bg-surface rounded-lg border border-outline-variant"
                   onPress={() => {
                     const message = split.creatorUpiId
-                      ? `${split.title}: you owe ₹${item.shareAmount.toFixed(2)}. Pay here: ${buildUpiLink({
+                      ? `${split.title}: you owe ${formatAmount(item.shareAmount)}. Pay here: ${buildUpiLink({
                           upiId: split.creatorUpiId,
                           payeeName: split.title,
                           amount: item.shareAmount,
                           note: split.title,
                         })}`
-                      : `${split.title}: you owe ₹${item.shareAmount.toFixed(2)}.`;
+                      : `${split.title}: you owe ${formatAmount(item.shareAmount)}.`;
                     openExternalLink(`whatsapp://send?text=${encodeURIComponent(message)}`, message);
                   }}
                 >
