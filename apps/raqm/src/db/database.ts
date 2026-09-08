@@ -2779,13 +2779,16 @@ export async function addSplitWithParticipants(
     );
     const splitId = result.lastInsertRowId;
     for (const p of participants) {
+      // The creator's own share is never owed to anyone — insert it already
+      // settled so it never shows as "Unpaid" and can't be nudged/reminded.
       await database.runAsync(
         `INSERT INTO split_participants (split_id, name, phone_number, share_amount, status, is_self, created_at)
-         VALUES (?, ?, ?, ?, 'unpaid', ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         splitId,
         p.name,
         p.phoneNumber,
         p.shareAmount,
+        p.isSelf ? 'settled' : 'unpaid',
         p.isSelf ? 1 : 0,
         Date.now(),
       );
