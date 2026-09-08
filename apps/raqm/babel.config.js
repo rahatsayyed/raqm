@@ -65,6 +65,7 @@ module.exports = function (api) {
             'material-symbols:close-rounded',
             'material-symbols:storefront-outline-rounded',
             'material-symbols:group-work-outline',
+            'material-symbols:group-rounded',
             'material-symbols:add-rounded',
             'material-symbols:rule-rounded',
             'material-symbols:calendar-month-outline-rounded',
