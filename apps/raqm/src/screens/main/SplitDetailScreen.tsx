@@ -35,7 +35,7 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
   const addTx = useTxStore((s) => s.add);
 
   const incomingCandidates = allTxs
-    .filter((t) => isCreditType(t.type))
+    .filter((t) => isCreditType(t.type) && t.linkPartnerId == null)
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, 20);
 
@@ -61,8 +61,10 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
       load();
       return;
     }
-    if (split!.sourceTxId == null) {
-      // Unlinked split: purely informational, no netting, unchanged from v1.
+    if (split!.sourceTxId == null || p.isSelf) {
+      // Unlinked split, or the "You" row: purely informational, no netting —
+      // "You" never owes/pays a settlement, so it must never open the sheet
+      // (which would fabricate a credit netting the user's own share out).
       await setSplitParticipantStatus(p.id, 'settled', null);
       load();
       return;
@@ -201,6 +203,8 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
                 }
                 setSettleSheetParticipant(null);
                 load();
+              } catch {
+                ToastAndroid.show("Couldn't settle", ToastAndroid.SHORT);
               } finally {
                 setSettling(false);
               }
@@ -235,6 +239,8 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
                 }
                 setSettleSheetParticipant(null);
                 load();
+              } catch {
+                ToastAndroid.show("Couldn't settle", ToastAndroid.SHORT);
               } finally {
                 setSettling(false);
               }
