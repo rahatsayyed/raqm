@@ -9,23 +9,45 @@ import {
 } from '../db/database';
 import type { SplitParticipant } from '../db/database';
 import { formatAmount } from '../utils/format';
+import { buildUpiLink } from '../utils/upi';
 
 const REMINDER_INTERVAL_MS = 24 * 60 * 60 * 1000; // once every 24h while still unpaid
 
-function reminderMessage(splitTitle: string, shareAmount: number): string {
-  return `Reminder: you owe ${formatAmount(shareAmount)} for "${splitTitle}" — sent via Raqm.`;
+function reminderMessage(input: {
+  splitTitle: string;
+  description: string | null;
+  participantName: string;
+  shareAmount: number;
+  upiId: string | null;
+}): string {
+  const descLine = input.description ? ` (${input.description})` : '';
+  const upiLine = input.upiId
+    ? ` Pay here: ${buildUpiLink({ upiId: input.upiId, payeeName: input.splitTitle, amount: input.shareAmount, note: input.splitTitle })}`
+    : '';
+  return `Hi ${input.participantName}, for ${input.splitTitle}${descLine} you owe ${formatAmount(input.shareAmount)}.${upiLine}`;
 }
 
 /** Sends one participant a reminder now, requesting SEND_SMS if not yet granted.
  * Returns whether it actually sent (false on missing phone number, denied
  * permission, or a native send failure — all handled the same way: the caller
  * shows a toast, this never throws). */
-export async function sendReminderNow(participant: SplitParticipant, splitTitle: string): Promise<boolean> {
+export async function sendReminderNow(
+  participant: SplitParticipant,
+  split: { title: string; description: string | null },
+): Promise<boolean> {
   if (!participant.phoneNumber) return false;
   try {
     const granted = await requestSendSmsPermission();
     if (!granted) return false;
-    await sendSms(participant.phoneNumber, reminderMessage(splitTitle, participant.shareAmount));
+    const upiId = await getSetting('upi_id');
+    const message = reminderMessage({
+      splitTitle: split.title,
+      description: split.description,
+      participantName: participant.name,
+      shareAmount: participant.shareAmount,
+      upiId: upiId ?? null,
+    });
+    await sendSms(participant.phoneNumber, message);
     await setSplitParticipantLastReminded(participant.id, Date.now());
     return true;
   } catch {
@@ -58,7 +80,7 @@ export async function checkAndSendReminders(): Promise<void> {
       for (const p of participants) {
         if (p.status !== 'unpaid' || !p.phoneNumber) continue;
         if (p.lastRemindedAt && now - p.lastRemindedAt < REMINDER_INTERVAL_MS) continue;
-        await sendReminderNow(p, split.title);
+        await sendReminderNow(p, { title: split.title, description: split.description });
       }
     }
   } catch {
