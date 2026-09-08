@@ -339,7 +339,7 @@ export function MoreScreen() {
           onPress: () => navigation.navigate('Rules'),
         },
         { key: 'dues-reminders', label: 'Bills & Reminders', Icon: FlagIcon, onPress: () => navigation.navigate('DuesReminders') },
-        { key: 'auto-sms-reminders', label: 'Auto-send SMS reminders', Icon: PeopleIcon, toggle: { value: autoSmsReminders, onValueChange: handleToggleAutoSmsReminders } },
+        { key: 'auto-sms-reminders', label: 'Auto-send split reminders', Icon: PeopleIcon, toggle: { value: autoSmsReminders, onValueChange: handleToggleAutoSmsReminders } },
         { key: 'weekly-summary', label: 'Weekly Summary', Icon: TrendingUpIcon, comingSoon: true },
       ],
     },

@@ -34,7 +34,7 @@ import { SpendDetailScreen } from '../screens/main/SpendDetailScreen';
 import { SplitCirclesScreen } from '../screens/main/SplitCirclesScreen';
 import { SplitCreateScreen } from '../screens/main/SplitCreateScreen';
 import { SplitDetailScreen } from '../screens/main/SplitDetailScreen';
-import { HomeIcon, AnalyticsIcon, SplitIcon, ChatIcon } from '../components/TabIcon';
+import { HomeIcon, AnalyticsIcon, PeopleIcon, ChatIcon } from '../components/TabIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../theme';
 
@@ -85,7 +85,7 @@ function TabNavigator() {
       <Tab.Screen
         name="Split"
         component={SplitScreen}
-        options={{ tabBarLabel: 'SPLIT', tabBarIcon: ({ color }) => <SplitIcon color={color} size={22} /> }}
+        options={{ tabBarLabel: 'SPLIT', tabBarIcon: ({ color }) => <PeopleIcon color={color} size={22} /> }}
       />
       <Tab.Screen
         name="Chat"

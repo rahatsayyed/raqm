@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, ToastAndroid } from 'react-native';
-import { Colors } from '../../theme';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ToastAndroid } from 'react-native';
+import { Colors, Spacing } from '../../theme';
+import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollView';
 import { MainStackScreenProps } from '../../navigation/types';
 import { pickContact } from '../../utils/contacts';
 import {
@@ -33,6 +34,7 @@ function CircleRow({
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(circle.name);
   const [savingRename, setSavingRename] = useState(false);
+  const renameRef = useRef<TextInput>(null);
 
   const loadMembers = useCallback(() => {
     getSplitCircleMembers(circle.id).then(setMembers);
@@ -56,6 +58,7 @@ function CircleRow({
   const startRename = () => {
     setRenameValue(circle.name);
     setRenaming(true);
+    setTimeout(() => renameRef.current?.focus(), 80);
   };
 
   const saveRename = async () => {
@@ -103,11 +106,11 @@ function CircleRow({
       {renaming ? (
         <View className="flex-row items-center">
           <TextInput
+            ref={renameRef}
             className="flex-1 font-inter text-body-md text-on-surface bg-surface rounded-lg border border-outline-variant px-sm py-[6px]"
             placeholderTextColor={Colors.outline}
             value={renameValue}
             onChangeText={setRenameValue}
-            autoFocus
           />
           <TouchableOpacity className="ml-sm" onPress={saveRename} disabled={savingRename}>
             <Text className="font-inter-medium text-body-sm text-primary">Save</Text>
@@ -213,33 +216,36 @@ export function SplitCirclesScreen({ navigation }: MainStackScreenProps<'SplitCi
         <View className="w-[60px]" />
       </View>
 
-      <FlatList
+      <KeyboardAwareScrollView
         contentContainerClassName="px-container-margin pb-[48px]"
-        data={circles}
-        keyExtractor={(c) => String(c.id)}
-        renderItem={({ item }) => (
+        showsVerticalScrollIndicator={false}
+        enableOnAndroid
+        extraScrollHeight={Spacing.lg}
+        keyboardShouldPersistTaps="handled"
+      >
+        {circles.map((c) => (
           <CircleRow
-            circle={item}
+            key={c.id}
+            circle={c}
             onDelete={removeCircle}
             onRenamed={load}
-            deletingThis={deletingCircleId === item.id}
+            deletingThis={deletingCircleId === c.id}
           />
-        )}
-        ListFooterComponent={
-          <View className="flex-row items-center mt-md">
-            <TextInput
-              className="flex-1 font-inter text-body-md text-on-surface bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-[12px]"
-              placeholder="New circle name"
-              placeholderTextColor={Colors.outline}
-              value={newName}
-              onChangeText={setNewName}
-            />
-            <TouchableOpacity className="ml-sm px-md py-[12px] bg-primary rounded-xl" onPress={createCircle} disabled={creating}>
-              <Text className="font-inter-medium text-body-md text-on-primary">Create</Text>
-            </TouchableOpacity>
-          </View>
-        }
-      />
+        ))}
+
+        <View className="flex-row items-center mt-md">
+          <TextInput
+            className="flex-1 font-inter text-body-md text-on-surface bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-[12px]"
+            placeholder="New circle name"
+            placeholderTextColor={Colors.outline}
+            value={newName}
+            onChangeText={setNewName}
+          />
+          <TouchableOpacity className="ml-sm px-md py-[12px] bg-primary rounded-xl" onPress={createCircle} disabled={creating}>
+            <Text className="font-inter-medium text-body-md text-on-primary">Create</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

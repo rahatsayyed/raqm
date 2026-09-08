@@ -5,10 +5,11 @@ import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollVie
 import { MainStackScreenProps } from '../../navigation/types';
 import { pickContact } from '../../utils/contacts';
 import { computeEqualShares } from '../../utils/splitShares';
-import { getSplitCircles, getSplitCircleMembers, addSplit, addSplitParticipant, getSetting } from '../../db/database';
+import { getSplitCircles, getSplitCircleMembers, addSplitWithParticipants, getSetting } from '../../db/database';
 import type { SplitCircle } from '../../db/database';
+import { formatAmount } from '../../utils/format';
 
-type Participant = { name: string; phoneNumber: string | null; shareAmount: number };
+type Participant = { name: string; phoneNumber: string | null; shareAmount: number; shareText: string };
 
 export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'SplitCreate'>) {
   const sourceTxId = route.params?.sourceTxId ?? null;
@@ -37,7 +38,7 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
   useEffect(() => {
     if (customShares || !validTotal || participants.length === 0) return;
     const shares = computeEqualShares(totalAmount, participants.length);
-    setParticipants((prev) => prev.map((p, i) => ({ ...p, shareAmount: shares[i] })));
+    setParticipants((prev) => prev.map((p, i) => ({ ...p, shareAmount: shares[i], shareText: String(shares[i]) })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totalAmount, participants.length, customShares]);
 
@@ -49,21 +50,24 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
     const members = await getSplitCircleMembers(circle.id);
     setParticipants((prev) => [
       ...prev,
-      ...members.map((m) => ({ name: m.name, phoneNumber: m.phoneNumber, shareAmount: 0 })),
+      ...members.map((m) => ({ name: m.name, phoneNumber: m.phoneNumber, shareAmount: 0, shareText: '' })),
     ]);
   };
 
   const addFromContacts = async () => {
     const picked = await pickContact();
     if (!picked) return;
-    setParticipants((prev) => [...prev, { name: picked.name, phoneNumber: picked.phoneNumber, shareAmount: 0 }]);
+    setParticipants((prev) => [
+      ...prev,
+      { name: picked.name, phoneNumber: picked.phoneNumber, shareAmount: 0, shareText: '' },
+    ]);
   };
 
   const [manualName, setManualName] = useState('');
   const addManual = () => {
     const name = manualName.trim();
     if (!name) return;
-    setParticipants((prev) => [...prev, { name, phoneNumber: null, shareAmount: 0 }]);
+    setParticipants((prev) => [...prev, { name, phoneNumber: null, shareAmount: 0, shareText: '' }]);
     setManualName('');
   };
 
@@ -71,9 +75,11 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
     setParticipants((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const setShare = (index: number, value: string) => {
-    const shareAmount = parseFloat(value) || 0;
-    setParticipants((prev) => prev.map((p, i) => (i === index ? { ...p, shareAmount } : p)));
+  // Holds the raw text the user typed (not re-derived from the parsed number) so a
+  // trailing decimal point ("12.") isn't clobbered back to "12" on every keystroke.
+  const setShare = (index: number, text: string) => {
+    const shareAmount = parseFloat(text) || 0;
+    setParticipants((prev) => prev.map((p, i) => (i === index ? { ...p, shareAmount, shareText: text } : p)));
   };
 
   const close = () => {
@@ -85,21 +91,14 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
     if (!canSave) return;
     setSaving(true);
     try {
-      const splitId = await addSplit({
-        title: title.trim() || 'Split',
-        totalAmount,
-        sourceTxId,
-        creatorUpiId,
-      });
-      for (const p of participants) {
-        await addSplitParticipant(splitId, {
-          name: p.name,
-          phoneNumber: p.phoneNumber,
-          shareAmount: p.shareAmount,
-        });
-      }
+      const splitId = await addSplitWithParticipants(
+        { title: title.trim() || 'Split', totalAmount, sourceTxId, creatorUpiId },
+        participants.map((p) => ({ name: p.name, phoneNumber: p.phoneNumber, shareAmount: p.shareAmount })),
+      );
       ToastAndroid.show('Split created', ToastAndroid.SHORT);
       navigation.replace('SplitDetail', { splitId });
+    } catch {
+      ToastAndroid.show("Couldn't create split", ToastAndroid.SHORT);
     } finally {
       setSaving(false);
     }
@@ -182,11 +181,11 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
                   <TextInput
                     className="w-[90px] font-mono text-body-sm text-on-surface bg-surface rounded-lg border border-outline-variant px-sm py-[6px] text-right"
                     keyboardType="decimal-pad"
-                    value={p.shareAmount ? String(p.shareAmount) : ''}
+                    value={p.shareText}
                     onChangeText={(v) => setShare(i, v)}
                   />
                 ) : (
-                  <Text className="font-mono text-body-sm text-on-surface-variant">₹{p.shareAmount.toFixed(2)}</Text>
+                  <Text className="font-mono text-body-sm text-on-surface-variant">{formatAmount(p.shareAmount)}</Text>
                 )}
                 <TouchableOpacity className="ml-sm" onPress={() => removeParticipant(i)}>
                   <Text className="font-inter text-body-sm text-error">✕</Text>
