@@ -2490,6 +2490,99 @@ export async function linkTxToList(listId: number, txId: number): Promise<void> 
   await database.runAsync(`UPDATE grocery_lists SET linked_tx_id = ? WHERE id = ?`, txId, listId);
 }
 
+// ── Split Circles ──────────────────────────────────────────────────────────
+
+export type SplitCircle = {
+  id: number;
+  name: string;
+  createdAt: number;
+};
+
+export type SplitCircleMember = {
+  id: number;
+  circleId: number;
+  name: string;
+  phoneNumber: string | null;
+  createdAt: number;
+};
+
+function rowToSplitCircle(row: Record<string, unknown>): SplitCircle {
+  return {
+    id: row.id as number,
+    name: row.name as string,
+    createdAt: row.created_at as number,
+  };
+}
+
+function rowToSplitCircleMember(row: Record<string, unknown>): SplitCircleMember {
+  return {
+    id: row.id as number,
+    circleId: row.circle_id as number,
+    name: row.name as string,
+    phoneNumber: (row.phone_number as string | null) ?? null,
+    createdAt: row.created_at as number,
+  };
+}
+
+export async function getSplitCircles(): Promise<SplitCircle[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<Record<string, unknown>>(
+    `SELECT * FROM split_circles ORDER BY created_at DESC`,
+  );
+  return rows.map(rowToSplitCircle);
+}
+
+export async function addSplitCircle(name: string): Promise<number> {
+  const database = await getDb();
+  const result = await database.runAsync(
+    `INSERT INTO split_circles (name, created_at) VALUES (?, ?)`,
+    name,
+    Date.now(),
+  );
+  return result.lastInsertRowId;
+}
+
+export async function renameSplitCircle(id: number, name: string): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`UPDATE split_circles SET name = ? WHERE id = ?`, name, id);
+}
+
+export async function deleteSplitCircle(id: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`DELETE FROM split_circle_members WHERE circle_id = ?`, id);
+  await database.runAsync(`DELETE FROM split_circles WHERE id = ?`, id);
+}
+
+export async function getSplitCircleMembers(circleId: number): Promise<SplitCircleMember[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<Record<string, unknown>>(
+    `SELECT * FROM split_circle_members WHERE circle_id = ? ORDER BY created_at ASC`,
+    circleId,
+  );
+  return rows.map(rowToSplitCircleMember);
+}
+
+export async function addSplitCircleMember(
+  circleId: number,
+  name: string,
+  phoneNumber: string | null,
+): Promise<number> {
+  const database = await getDb();
+  const result = await database.runAsync(
+    `INSERT INTO split_circle_members (circle_id, name, phone_number, created_at) VALUES (?, ?, ?, ?)`,
+    circleId,
+    name,
+    phoneNumber,
+    Date.now(),
+  );
+  return result.lastInsertRowId;
+}
+
+export async function deleteSplitCircleMember(id: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`DELETE FROM split_circle_members WHERE id = ?`, id);
+}
+
 // ── Accounts ───────────────────────────────────────────────────────────────
 
 export interface Account {
