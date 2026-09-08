@@ -5,7 +5,7 @@ import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollVie
 import { MainStackScreenProps } from '../../navigation/types';
 import { pickContact } from '../../utils/contacts';
 import { computeEqualSharesInclusive, computePercentageShares, computeShareWeightAmounts, redistributeUnpinned } from '../../utils/splitShares';
-import { getSplitCircles, getSplitCircleMembers, addSplitWithParticipants, getSetting } from '../../db/database';
+import { getSplitCircles, getSplitCircleMembers } from '../../db/database';
 import type { SplitCircle } from '../../db/database';
 import { formatAmount } from '../../utils/format';
 
@@ -35,19 +35,17 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
 
   const [title, setTitle] = useState(route.params?.prefillTitle ?? '');
   const [amount, setAmount] = useState(route.params?.prefillAmount ? String(route.params.prefillAmount) : '');
+  const [description, setDescription] = useState('');
   const [participants, setParticipants] = useState<Participant[]>([
     { name: 'You', phoneNumber: null, shareAmount: 0, shareText: '', fromCircleId: null, isSelf: true },
   ]);
   const [mode, setMode] = useState<SplitMode>('equal');
   const [pinned, setPinned] = useState<Map<number, number>>(new Map());
   const [circles, setCircles] = useState<SplitCircle[]>([]);
-  const [creatorUpiId, setCreatorUpiId] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => titleRef.current?.focus(), 80);
     getSplitCircles().then(setCircles);
-    getSetting('upi_id').then((id) => setCreatorUpiId(id ?? null));
     return () => clearTimeout(t);
   }, []);
 
@@ -88,7 +86,7 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
     (mode === 'exact' || mode === 'percentage') &&
     Array.from(pinned.values()).reduce((s, v) => s + v, 0) > (mode === 'percentage' ? 100 : totalAmount) + 0.001;
   const sharesValid = mode === 'equal' || mode === 'shares' || !pinnedOverAllocated;
-  const canSave = validTotal && participants.length > 1 && sharesValid && !saving;
+  const canSave = validTotal && participants.length > 1 && sharesValid;
 
   const addFromCircle = async (circle: SplitCircle) => {
     const members = await getSplitCircleMembers(circle.id);
@@ -165,21 +163,20 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
     else navigation.navigate('Tabs');
   };
 
-  const handleSave = async () => {
+  const goToReview = () => {
     if (!canSave) return;
-    setSaving(true);
-    try {
-      const splitId = await addSplitWithParticipants(
-        { title: title.trim() || 'Split', totalAmount, sourceTxId, creatorUpiId },
-        participants.map((p) => ({ name: p.name, phoneNumber: p.phoneNumber, shareAmount: p.shareAmount })),
-      );
-      ToastAndroid.show('Split created', ToastAndroid.SHORT);
-      navigation.replace('SplitDetail', { splitId });
-    } catch {
-      ToastAndroid.show("Couldn't create split", ToastAndroid.SHORT);
-    } finally {
-      setSaving(false);
-    }
+    navigation.navigate('SplitReview', {
+      title: title.trim() || 'Split',
+      totalAmount,
+      sourceTxId,
+      description: description.trim() || null,
+      participants: participants.map((p) => ({
+        name: p.name,
+        phoneNumber: p.phoneNumber,
+        shareAmount: p.shareAmount,
+        isSelf: p.isSelf,
+      })),
+    });
   };
 
   return (
@@ -217,6 +214,16 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
           value={amount}
           onChangeText={setAmount}
           keyboardType="decimal-pad"
+        />
+
+        <Text className="font-mono text-label-sm text-on-surface-variant mt-lg mb-sm">Description (optional)</Text>
+        <TextInput
+          className="font-inter text-body-md text-on-surface bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-[12px]"
+          placeholder="What's this for?"
+          placeholderTextColor={Colors.outline}
+          value={description}
+          onChangeText={setDescription}
+          multiline
         />
 
         <Text className="font-mono text-label-sm text-on-surface-variant mt-lg mb-sm">Participants</Text>
@@ -305,7 +312,7 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
 
         <TouchableOpacity
           className={`mt-xl py-md items-center bg-primary rounded-xl ${!canSave ? 'opacity-40' : ''}`}
-          onPress={handleSave}
+          onPress={goToReview}
           disabled={!canSave}
         >
           <Text className="font-inter-medium text-body-md text-on-primary">Save split</Text>

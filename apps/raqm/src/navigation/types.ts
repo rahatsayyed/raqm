@@ -59,6 +59,13 @@ export type MainStackParamList = {
   DuesReminders: undefined;
   SplitCircles: undefined;
   SplitCreate: { sourceTxId?: number; prefillTitle?: string; prefillAmount?: number } | undefined;
+  SplitReview: {
+    title: string;
+    totalAmount: number;
+    sourceTxId: number | null;
+    description: string | null;
+    participants: { name: string; phoneNumber: string | null; shareAmount: number; isSelf: boolean }[];
+  };
   SplitDetail: { splitId: number };
   Rules: { section?: 'category' | 'merchant' | 'amount' } | undefined;
   ManageAccounts: undefined;
