@@ -106,7 +106,7 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
                 <TouchableOpacity
                   className="flex-1 py-[8px] items-center bg-surface rounded-lg border border-outline-variant"
                   onPress={async () => {
-                    const sent = await sendReminderNow(item, split.title);
+                    const sent = await sendReminderNow(item, { title: split.title, description: split.description });
                     ToastAndroid.show(sent ? 'Reminder sent' : "Couldn't send reminder", ToastAndroid.SHORT);
                   }}
                 >
