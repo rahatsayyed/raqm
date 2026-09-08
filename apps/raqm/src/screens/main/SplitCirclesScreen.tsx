@@ -20,11 +20,14 @@ function CircleRow({
   onDelete,
   onRenamed,
   deletingThis,
+  onUseCircle,
 }: {
   circle: SplitCircle;
   onDelete: (id: number) => void;
   onRenamed: () => void;
   deletingThis: boolean;
+  // Present only when this screen was opened with returnTo: 'SplitCreate'.
+  onUseCircle?: (circleId: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [members, setMembers] = useState<SplitCircleMember[]>([]);
@@ -103,6 +106,11 @@ function CircleRow({
 
   return (
     <View className="bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-md mb-sm">
+      {onUseCircle && (
+        <TouchableOpacity className="pb-sm" onPress={() => onUseCircle(circle.id)}>
+          <Text className="font-inter-medium text-body-sm text-primary">Use this circle</Text>
+        </TouchableOpacity>
+      )}
       {renaming ? (
         <View className="flex-row items-center">
           <TextInput
@@ -168,7 +176,8 @@ function CircleRow({
   );
 }
 
-export function SplitCirclesScreen({ navigation }: MainStackScreenProps<'SplitCircles'>) {
+export function SplitCirclesScreen({ route, navigation }: MainStackScreenProps<'SplitCircles'>) {
+  const returnTo = route.params?.returnTo;
   const [circles, setCircles] = useState<SplitCircle[]>([]);
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -230,6 +239,11 @@ export function SplitCirclesScreen({ navigation }: MainStackScreenProps<'SplitCi
             onDelete={removeCircle}
             onRenamed={load}
             deletingThis={deletingCircleId === c.id}
+            onUseCircle={
+              returnTo === 'SplitCreate'
+                ? (circleId) => navigation.popTo('SplitCreate', { pickedCircleId: circleId }, { merge: true })
+                : undefined
+            }
           />
         ))}
 

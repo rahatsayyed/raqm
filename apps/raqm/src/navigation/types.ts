@@ -57,8 +57,13 @@ export type MainStackParamList = {
   AxioImport: undefined;
   Grocery: undefined;
   DuesReminders: undefined;
-  SplitCircles: undefined;
-  SplitCreate: { sourceTxId?: number; prefillTitle?: string; prefillAmount?: number } | undefined;
+  // returnTo: set when SplitCreateScreen's "+ Create new circle" button opens
+  // this screen — gates the per-row "Use this circle" affordance that
+  // popTo's back into SplitCreate with pickedCircleId.
+  SplitCircles: { returnTo?: 'SplitCreate' } | undefined;
+  // pickedCircleId: round-trip param from SplitCircles's "Use this circle"
+  // action. SplitCreateScreen consumes it once then clears via setParams.
+  SplitCreate: { sourceTxId?: number; prefillTitle?: string; prefillAmount?: number; pickedCircleId?: number } | undefined;
   SplitReview: {
     title: string;
     totalAmount: number;
