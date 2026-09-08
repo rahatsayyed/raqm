@@ -30,7 +30,6 @@ import {
 } from '../../components/TabIcon';
 import { FEEDBACK_EMAIL } from '../../constants/support';
 import { canUseDeviceAuth, isAppLockEnabled, setAppLockEnabled } from '../../services/auth/appLock';
-import { requestSendSmsPermission } from '../../utils/permissions';
 
 const MONTH_START_DAYS = Array.from({ length: 28 }, (_, i) => i + 1);
 
@@ -106,7 +105,6 @@ export function MoreScreen() {
   const [editField, setEditField] = useState<'name' | 'phone' | 'email' | 'upiId' | null>(null);
   const [upiId, setUpiId] = useState('');
   const [appLock, setAppLock] = useState(false);
-  const [autoSmsReminders, setAutoSmsReminders] = useState(false);
 
   // These screens stay mounted beneath pushed screens, so counts can go stale
   // without a focus-triggered reload (e.g. deleting a rule, then coming back).
@@ -117,7 +115,6 @@ export function MoreScreen() {
       getSetting('month_start_day').then((day) => setMonthStartDay(day ? Number(day) : 1));
       getSetting('upi_id').then((id) => setUpiId(id ?? ''));
       isAppLockEnabled().then(setAppLock);
-      getSetting('auto_sms_reminders').then((v) => setAutoSmsReminders(v === '1'));
     }, []),
   );
 
@@ -148,16 +145,6 @@ export function MoreScreen() {
     }
   };
 
-  // Turning ON requires SEND_SMS permission first — bail out (leaving the switch
-  // off, no silent partial-enable) if the user denies it. Turning OFF is immediate.
-  const handleToggleAutoSmsReminders = async (value: boolean) => {
-    if (value) {
-      const granted = await requestSendSmsPermission();
-      if (!granted) return;
-    }
-    setAutoSmsReminders(value);
-    await setSetting('auto_sms_reminders', value ? '1' : '0');
-  };
 
   const handleSelectMonthStartDay = async (day: number) => {
     setMonthStartDay(day);
@@ -339,7 +326,6 @@ export function MoreScreen() {
           onPress: () => navigation.navigate('Rules'),
         },
         { key: 'dues-reminders', label: 'Bills & Reminders', Icon: FlagIcon, onPress: () => navigation.navigate('DuesReminders') },
-        { key: 'auto-sms-reminders', label: 'Auto-send split reminders', Icon: PeopleIcon, toggle: { value: autoSmsReminders, onValueChange: handleToggleAutoSmsReminders } },
         { key: 'weekly-summary', label: 'Weekly Summary', Icon: TrendingUpIcon, comingSoon: true },
       ],
     },
