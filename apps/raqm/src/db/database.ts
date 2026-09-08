@@ -2632,6 +2632,9 @@ export type Split = {
   sourceTxId: number | null;
   creatorUpiId: string | null;
   status: 'open' | 'settled';
+  description: string | null;
+  autoRemindEnabled: boolean;
+  remindIntervalDays: number | null;
   createdAt: number;
 };
 
@@ -2656,6 +2659,9 @@ function rowToSplit(row: Record<string, unknown>): Split {
     sourceTxId: (row.source_tx_id as number | null) ?? null,
     creatorUpiId: (row.creator_upi_id as string | null) ?? null,
     status: row.status as 'open' | 'settled',
+    description: (row.description as string | null) ?? null,
+    autoRemindEnabled: row.auto_remind_enabled === 1,
+    remindIntervalDays: (row.remind_interval_days as number | null) ?? null,
     createdAt: row.created_at as number,
   };
 }
@@ -2714,30 +2720,42 @@ export async function addSplit(input: {
 /** Inserts a split and all its participants atomically — a failure partway through must not
  * leave an orphaned split with a partial participant set (see SplitCreateScreen.handleSave). */
 export async function addSplitWithParticipants(
-  input: { title: string; totalAmount: number; sourceTxId: number | null; creatorUpiId: string | null },
-  participants: { name: string; phoneNumber: string | null; shareAmount: number }[],
+  input: {
+    title: string;
+    totalAmount: number;
+    sourceTxId: number | null;
+    creatorUpiId: string | null;
+    description: string | null;
+    autoRemindEnabled: boolean;
+    remindIntervalDays: number | null;
+  },
+  participants: { name: string; phoneNumber: string | null; shareAmount: number; isSelf: boolean }[],
 ): Promise<number> {
   const database = await getDb();
   try {
     await database.runAsync('BEGIN');
     const result = await database.runAsync(
-      `INSERT INTO splits (title, total_amount, source_tx_id, creator_upi_id, status, created_at)
-       VALUES (?, ?, ?, ?, 'open', ?)`,
+      `INSERT INTO splits (title, total_amount, source_tx_id, creator_upi_id, status, description, auto_remind_enabled, remind_interval_days, created_at)
+       VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?)`,
       input.title,
       input.totalAmount,
       input.sourceTxId,
       input.creatorUpiId,
+      input.description,
+      input.autoRemindEnabled ? 1 : 0,
+      input.remindIntervalDays,
       Date.now(),
     );
     const splitId = result.lastInsertRowId;
     for (const p of participants) {
       await database.runAsync(
-        `INSERT INTO split_participants (split_id, name, phone_number, share_amount, status, created_at)
-         VALUES (?, ?, ?, ?, 'unpaid', ?)`,
+        `INSERT INTO split_participants (split_id, name, phone_number, share_amount, status, is_self, created_at)
+         VALUES (?, ?, ?, ?, 'unpaid', ?, ?)`,
         splitId,
         p.name,
         p.phoneNumber,
         p.shareAmount,
+        p.isSelf ? 1 : 0,
         Date.now(),
       );
     }
