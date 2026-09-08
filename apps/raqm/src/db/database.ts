@@ -2590,6 +2590,167 @@ export async function deleteSplitCircleMember(id: number): Promise<void> {
   await database.runAsync(`DELETE FROM split_circle_members WHERE id = ?`, id);
 }
 
+// ── Splits ──────────────────────────────────────────────────────────────────
+
+export type Split = {
+  id: number;
+  title: string;
+  totalAmount: number;
+  sourceTxId: number | null;
+  creatorUpiId: string | null;
+  status: 'open' | 'settled';
+  createdAt: number;
+};
+
+export type SplitParticipant = {
+  id: number;
+  splitId: number;
+  name: string;
+  phoneNumber: string | null;
+  shareAmount: number;
+  status: 'unpaid' | 'attention' | 'settled';
+  matchedTxId: number | null;
+  createdAt: number;
+};
+
+function rowToSplit(row: Record<string, unknown>): Split {
+  return {
+    id: row.id as number,
+    title: row.title as string,
+    totalAmount: row.total_amount as number,
+    sourceTxId: (row.source_tx_id as number | null) ?? null,
+    creatorUpiId: (row.creator_upi_id as string | null) ?? null,
+    status: row.status as 'open' | 'settled',
+    createdAt: row.created_at as number,
+  };
+}
+
+function rowToSplitParticipant(row: Record<string, unknown>): SplitParticipant {
+  return {
+    id: row.id as number,
+    splitId: row.split_id as number,
+    name: row.name as string,
+    phoneNumber: (row.phone_number as string | null) ?? null,
+    shareAmount: row.share_amount as number,
+    status: row.status as 'unpaid' | 'attention' | 'settled',
+    matchedTxId: (row.matched_tx_id as number | null) ?? null,
+    createdAt: row.created_at as number,
+  };
+}
+
+export async function getSplits(): Promise<Split[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<Record<string, unknown>>(
+    `SELECT * FROM splits ORDER BY (status = 'settled') ASC, created_at DESC`,
+  );
+  return rows.map(rowToSplit);
+}
+
+export async function getSplit(id: number): Promise<Split | null> {
+  const database = await getDb();
+  const row = await database.getFirstAsync<Record<string, unknown>>(
+    `SELECT * FROM splits WHERE id = ?`,
+    id,
+  );
+  return row ? rowToSplit(row) : null;
+}
+
+export async function addSplit(input: {
+  title: string;
+  totalAmount: number;
+  sourceTxId: number | null;
+  creatorUpiId: string | null;
+}): Promise<number> {
+  const database = await getDb();
+  const result = await database.runAsync(
+    `INSERT INTO splits (title, total_amount, source_tx_id, creator_upi_id, status, created_at)
+     VALUES (?, ?, ?, ?, 'open', ?)`,
+    input.title,
+    input.totalAmount,
+    input.sourceTxId,
+    input.creatorUpiId,
+    Date.now(),
+  );
+  return result.lastInsertRowId;
+}
+
+export async function deleteSplit(id: number): Promise<void> {
+  const database = await getDb();
+  try {
+    await database.runAsync('BEGIN');
+    await database.runAsync(`DELETE FROM split_participants WHERE split_id = ?`, id);
+    await database.runAsync(`DELETE FROM splits WHERE id = ?`, id);
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+}
+
+export async function getSplitParticipants(splitId: number): Promise<SplitParticipant[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<Record<string, unknown>>(
+    `SELECT * FROM split_participants WHERE split_id = ? ORDER BY created_at ASC`,
+    splitId,
+  );
+  return rows.map(rowToSplitParticipant);
+}
+
+export async function addSplitParticipant(
+  splitId: number,
+  input: { name: string; phoneNumber: string | null; shareAmount: number },
+): Promise<number> {
+  const database = await getDb();
+  const result = await database.runAsync(
+    `INSERT INTO split_participants (split_id, name, phone_number, share_amount, status, created_at)
+     VALUES (?, ?, ?, ?, 'unpaid', ?)`,
+    splitId,
+    input.name,
+    input.phoneNumber,
+    input.shareAmount,
+    Date.now(),
+  );
+  return result.lastInsertRowId;
+}
+
+export async function deleteSplitParticipant(id: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`DELETE FROM split_participants WHERE id = ?`, id);
+}
+
+export async function setSplitParticipantStatus(
+  id: number,
+  status: 'unpaid' | 'attention' | 'settled',
+  matchedTxId: number | null,
+): Promise<void> {
+  const database = await getDb();
+  try {
+    await database.runAsync('BEGIN');
+    await database.runAsync(
+      `UPDATE split_participants SET status = ?, matched_tx_id = ? WHERE id = ?`,
+      status,
+      matchedTxId,
+      id,
+    );
+    const row = await database.getFirstAsync<{ split_id: number }>(
+      `SELECT split_id FROM split_participants WHERE id = ?`,
+      id,
+    );
+    if (row) {
+      const remaining = await database.getFirstAsync<{ c: number }>(
+        `SELECT COUNT(*) as c FROM split_participants WHERE split_id = ? AND status != 'settled'`,
+        row.split_id,
+      );
+      const newStatus = (remaining?.c ?? 1) === 0 ? 'settled' : 'open';
+      await database.runAsync(`UPDATE splits SET status = ? WHERE id = ?`, newStatus, row.split_id);
+    }
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+}
+
 // ── Accounts ───────────────────────────────────────────────────────────────
 
 export interface Account {
