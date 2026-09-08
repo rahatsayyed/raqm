@@ -8,6 +8,11 @@
        Play policy restriction on QUERY_ALL_PACKAGES does not apply. -->
   <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 
+  <!-- Outbound reminder SMS for Split with Friends. Runtime-granted, opt-in via the
+       "Auto-send SMS reminders" setting or the per-participant "Send reminder now"
+       button — never sent without the user first granting this permission. -->
+  <uses-permission android:name="android.permission.SEND_SMS" />
+
   <application>
     <receiver
       android:name=".SmsBroadcastReceiver"

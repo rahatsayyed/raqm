@@ -5,7 +5,8 @@ import { OnboardingNavigator } from './OnboardingNavigator';
 import { MainNavigator } from './MainNavigator';
 import { useAppStore } from '../store/appStore';
 import { useTxStore } from '../store/txStore';
-import { runDetectionJobs } from '../services/txIntelligence';
+import { runDetectionJobs, matchSplitPayments } from '../services/txIntelligence';
+import { checkAndSendReminders } from '../services/splitReminders';
 import { navigationRef } from './navigationRef';
 import { syncDiscoveredAccounts, getSetting } from '../db/database';
 import { initNotifications, attachNotificationHandlers, scheduleSummaries } from '../notifications/notifications';
@@ -73,6 +74,11 @@ export function AppNavigator() {
         await timed('startup.detectionJobs', () =>
           runDetectionJobs(useTxStore.getState().txs),
         );
+        await timed('startup.splitMatch', matchSplitPayments);
+        // Fire-and-forget: reminders can send N sequential SMS messages and must never
+        // delay app launch. matchSplitPayments (above) still runs first so reminders see
+        // up-to-date participant statuses.
+        timed('startup.splitReminders', checkAndSendReminders);
         useTxStore.getState().refresh();
       } catch (e) {
         logEvent('startup.failed', e instanceof Error ? e.message : String(e));

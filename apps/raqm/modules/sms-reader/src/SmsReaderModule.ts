@@ -68,3 +68,10 @@ export function consumeLaunchDeepLink(): LaunchDeepLink | null {
 export function refreshWidgets(): Promise<void> {
   return native.refreshWidgets();
 }
+
+/** Sends a single SMS. Throws if SEND_SMS isn't granted — callers must request the
+ * permission first (see src/utils/permissions.ts's requestSendSmsPermission) and
+ * catch this to degrade gracefully rather than crash on a revoked permission. */
+export function sendSms(phoneNumber: string, message: string): Promise<void> {
+  return native.sendSms(phoneNumber, message);
+}
