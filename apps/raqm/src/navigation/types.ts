@@ -58,6 +58,7 @@ export type MainStackParamList = {
   Grocery: undefined;
   DuesReminders: undefined;
   SplitCircles: undefined;
+  SplitCreate: { sourceTxId?: number } | undefined;
   Rules: { section?: 'category' | 'merchant' | 'amount' } | undefined;
   ManageAccounts: undefined;
   SmsInbox: undefined;
