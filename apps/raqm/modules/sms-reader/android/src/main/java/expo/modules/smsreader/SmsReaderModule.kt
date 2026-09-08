@@ -11,6 +11,7 @@ import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
 import android.os.Build
 import android.provider.Telephony
+import android.telephony.SmsManager
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.pm.ShortcutInfoCompat
@@ -176,6 +177,19 @@ class SmsReaderModule : Module() {
     /** Nudges every placed home-screen widget to recompose. Never throws (see WidgetRefresh). */
     AsyncFunction("refreshWidgets") {
       appContext.reactContext?.let { WidgetRefresh.refreshAll(it) }
+    }
+
+    /** Sends a single SMS via the platform SmsManager. Requires SEND_SMS, requested at
+     * runtime from JS before this is ever called — throws if the permission isn't granted,
+     * so callers (checkAndSendReminders / sendReminderNow) must catch and surface that. */
+    AsyncFunction("sendSms") { phoneNumber: String, message: String ->
+      val context = appContext.reactContext ?: throw Exception("No context available")
+      if (context.checkSelfPermission(android.Manifest.permission.SEND_SMS) !=
+          android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        throw Exception("SEND_SMS permission not granted")
+      }
+      val smsManager = context.getSystemService(SmsManager::class.java)
+      smsManager.sendTextMessage(phoneNumber, null, message, null, null)
     }
 
     // Launchable, user-visible apps only — the picker is a list the user reads, and the
