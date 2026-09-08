@@ -15,7 +15,7 @@ import { OnboardingScreenProps } from '../../navigation/types';
 import { Colors } from '../../theme';
 import { SmsReader } from '../../native/SmsReader';
 import { useOnboardingStore, dateRangeToTimestamps } from '../../store/onboardingStore';
-import { runDetectionJobs } from '../../services/txIntelligence';
+import { runDetectionJobs, matchSplitPayments } from '../../services/txIntelligence';
 import { logEvent } from '../../services/logger';
 
 const RADIUS = 90;
@@ -96,6 +96,7 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
         await setTransactions(parsed);
         setStatus(`Found ${parsed.length} transactions`);
         await runDetectionJobs();
+        await matchSplitPayments();
 
         setTimeout(() => navigation.replace('AccountSelection'), 1200);
       } catch (e) {

@@ -1,6 +1,13 @@
-import { loadTxRecords, linkTxs, updateTx } from '../db/database';
+import {
+  loadTxRecords,
+  linkTxs,
+  updateTx,
+  getSplits,
+  getSplitParticipants,
+  setSplitParticipantStatus,
+} from '../db/database';
 import type { TxRecord } from '../db/database';
-import { pairSelfTransfers, pairRefunds, computeRecurringIds } from './txIntelligenceCore';
+import { pairSelfTransfers, pairRefunds, computeRecurringIds, isCreditType } from './txIntelligenceCore';
 import { logEvent } from './logger';
 
 export {
@@ -48,6 +55,46 @@ export async function detectSubscriptions(txs?: TxRecord[]): Promise<number> {
     updated++;
   }
   return updated;
+}
+
+/**
+ * Looks for an incoming credit transaction matching an open participant's share —
+ * a friend paying the user via UPI shows up as a credit SMS on the user's own
+ * phone. A match only ever sets status to 'attention', never 'settled': two
+ * participants owing the same amount, or an unrelated credit of the same size,
+ * are real collision risks the user must confirm or reject (see SplitDetailScreen).
+ * Amount-bucketed (a Map, not a nested scan) to stay ~O(n), matching
+ * pairSelfTransfers' documented performance requirement. Catches its own errors —
+ * runDetectionJobs re-throws on failure, and this must never abort the rest of
+ * app startup or a rescan because of a Split-specific bug.
+ */
+export async function matchSplitPayments(): Promise<void> {
+  try {
+    const txs = await loadTxRecords();
+    const credits = txs.filter((t) => isCreditType(t.type) && t.deletedAt == null);
+
+    const creditsByAmount = new Map<number, TxRecord[]>();
+    for (const credit of credits) {
+      const bucket = creditsByAmount.get(credit.amount);
+      if (bucket) bucket.push(credit);
+      else creditsByAmount.set(credit.amount, [credit]);
+    }
+
+    const splits = await getSplits();
+    for (const split of splits.filter((s) => s.status === 'open')) {
+      const participants = await getSplitParticipants(split.id);
+      for (const participant of participants) {
+        if (participant.status !== 'unpaid') continue;
+        const bucket = creditsByAmount.get(participant.shareAmount);
+        if (!bucket) continue;
+        const candidate = bucket.find((c) => c.timestamp >= split.createdAt);
+        if (!candidate) continue;
+        await setSplitParticipantStatus(participant.id, 'attention', candidate.id);
+      }
+    }
+  } catch (e) {
+    logEvent('splitMatch.failed', e instanceof Error ? e.message : String(e));
+  }
 }
 
 /**
