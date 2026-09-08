@@ -9,7 +9,22 @@ import { getSplitCircles, getSplitCircleMembers, addSplitWithParticipants, getSe
 import type { SplitCircle } from '../../db/database';
 import { formatAmount } from '../../utils/format';
 
-type Participant = { name: string; phoneNumber: string | null; shareAmount: number; shareText: string };
+type Participant = {
+  name: string;
+  phoneNumber: string | null;
+  shareAmount: number;
+  shareText: string;
+  // Which circle this row came from, if any — lets selecting a different circle
+  // replace only that circle's contribution instead of piling on top of it.
+  fromCircleId: number | null;
+};
+
+// Same person, regardless of source (circle / contacts / manual): match by phone
+// number when both have one, else fall back to a case-insensitive name match.
+function isSameParticipant(a: { name: string; phoneNumber: string | null }, b: { name: string; phoneNumber: string | null }): boolean {
+  if (a.phoneNumber && b.phoneNumber) return a.phoneNumber === b.phoneNumber;
+  return a.name.trim().toLowerCase() === b.name.trim().toLowerCase();
+}
 
 export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'SplitCreate'>) {
   const sourceTxId = route.params?.sourceTxId ?? null;
@@ -48,26 +63,41 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
 
   const addFromCircle = async (circle: SplitCircle) => {
     const members = await getSplitCircleMembers(circle.id);
-    setParticipants((prev) => [
-      ...prev,
-      ...members.map((m) => ({ name: m.name, phoneNumber: m.phoneNumber, shareAmount: 0, shareText: '' })),
-    ]);
+    setParticipants((prev) => {
+      // Only one circle can be "active" at a time — selecting a new one drops
+      // whichever circle's members were added before (manual/contact entries stay).
+      const withoutOldCircle = prev.filter((p) => p.fromCircleId === null);
+      const deduped = members.filter((m) => !withoutOldCircle.some((p) => isSameParticipant(p, m)));
+      return [
+        ...withoutOldCircle,
+        ...deduped.map((m) => ({ name: m.name, phoneNumber: m.phoneNumber, shareAmount: 0, shareText: '', fromCircleId: circle.id })),
+      ];
+    });
   };
 
   const addFromContacts = async () => {
     const picked = await pickContact();
     if (!picked) return;
-    setParticipants((prev) => [
-      ...prev,
-      { name: picked.name, phoneNumber: picked.phoneNumber, shareAmount: 0, shareText: '' },
-    ]);
+    setParticipants((prev) => {
+      if (prev.some((p) => isSameParticipant(p, picked))) {
+        ToastAndroid.show(`${picked.name} is already in this split`, ToastAndroid.SHORT);
+        return prev;
+      }
+      return [...prev, { name: picked.name, phoneNumber: picked.phoneNumber, shareAmount: 0, shareText: '', fromCircleId: null }];
+    });
   };
 
   const [manualName, setManualName] = useState('');
   const addManual = () => {
     const name = manualName.trim();
     if (!name) return;
-    setParticipants((prev) => [...prev, { name, phoneNumber: null, shareAmount: 0, shareText: '' }]);
+    setParticipants((prev) => {
+      if (prev.some((p) => isSameParticipant(p, { name, phoneNumber: null }))) {
+        ToastAndroid.show(`${name} is already in this split`, ToastAndroid.SHORT);
+        return prev;
+      }
+      return [...prev, { name, phoneNumber: null, shareAmount: 0, shareText: '', fromCircleId: null }];
+    });
     setManualName('');
   };
 
