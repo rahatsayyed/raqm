@@ -313,10 +313,14 @@ export function SplitCirclesScreen({ route, navigation }: MainStackScreenProps<'
               if (creatingCircle) return;
               setCreatingCircle(true);
               try {
-                await addSplitCircleWithMembers(draftCircleName.trim(), draftMembers);
+                const newCircleId = await addSplitCircleWithMembers(draftCircleName.trim(), draftMembers);
                 ToastAndroid.show('Circle created', ToastAndroid.SHORT);
-                setCreateStep('closed');
-                load();
+                if (returnTo === 'SplitCreate') {
+                  navigation.popTo('SplitCreate', { pickedCircleId: newCircleId }, { merge: true });
+                } else {
+                  setCreateStep('closed');
+                  load();
+                }
               } finally {
                 setCreatingCircle(false);
               }

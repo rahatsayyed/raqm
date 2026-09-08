@@ -93,10 +93,20 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totalAmount, participants.length, mode, pinned, sharesKey]);
 
-  const pinnedOverAllocated =
-    (mode === 'exact' || mode === 'percentage') &&
-    Array.from(pinned.values()).reduce((s, v) => s + v, 0) > (mode === 'percentage' ? 100 : totalAmount) + 0.001;
-  const sharesValid = mode === 'equal' || mode === 'shares' || !pinnedOverAllocated;
+  const pinnedSum = Array.from(pinned.values()).reduce((s, v) => s + v, 0);
+  const pinnedTarget = mode === 'percentage' ? 100 : totalAmount;
+  const pinnedOverAllocated = (mode === 'exact' || mode === 'percentage') && pinnedSum > pinnedTarget + 0.001;
+  // Under-allocation: only possible when EVERY row is pinned (no unpinned row
+  // left for redistributeUnpinned to dump the remainder into) and the pinned
+  // sum falls short of the target. NOTE: this can't be detected by comparing
+  // the final `shareAmount` sum to totalAmount — computePercentageShares (and,
+  // when at least one row is unpinned, redistributeUnpinned itself) always
+  // force that sum to equal the total by dumping any remainder onto the last
+  // row, which is exactly how the bug hides itself (money isn't "missing",
+  // it's misallocated onto one participant). Must check the pinned INPUTS.
+  const allPinned = (mode === 'exact' || mode === 'percentage') && pinned.size === participants.length && participants.length > 0;
+  const sharesMismatched = allPinned && Math.abs(pinnedSum - pinnedTarget) > 0.01;
+  const sharesValid = mode === 'equal' || mode === 'shares' || (!pinnedOverAllocated && !sharesMismatched);
   const canSave = validTotal && participants.length > 1 && sharesValid;
 
   // Shared by "+ Use <circle>" and the SplitCircles return trip. Dropping the
@@ -162,6 +172,17 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
   // still-unpinned row. Percentage values are capped at 2 decimal places.
   const setShare = (index: number, text: string) => {
     if (mode === 'shares') {
+      setParticipants((prev) => prev.map((p, i) => (i === index ? { ...p, shareText: text } : p)));
+      return;
+    }
+    if (text.trim() === '') {
+      // Emptied input un-pins the row so redistributeUnpinned includes it
+      // in the next equal split of the remainder, instead of pinning at 0.
+      setPinned((prev) => {
+        const next = new Map(prev);
+        next.delete(index);
+        return next;
+      });
       setParticipants((prev) => prev.map((p, i) => (i === index ? { ...p, shareText: text } : p)));
       return;
     }
@@ -285,6 +306,7 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
                   onPress={() => {
                     setMode(m);
                     setPinned(new Map());
+                    setParticipants((prev) => prev.map((p) => ({ ...p, shareText: '' })));
                   }}
                 >
                   <Text className={`font-inter-medium text-body-sm ${mode === m ? 'text-on-primary' : 'text-on-surface-variant'}`}>
@@ -327,7 +349,7 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
             ))}
             {!sharesValid && (
               <Text className="font-inter text-body-sm text-error mt-sm">
-                {mode === 'percentage' ? "Percentages can't add up to more than 100%." : "Shares can't add up to more than the total."}
+                {mode === 'percentage' ? 'Percentages must add up to exactly 100%.' : 'Shares must add up to the total.'}
               </Text>
             )}
           </View>

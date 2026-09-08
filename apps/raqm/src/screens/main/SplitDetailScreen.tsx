@@ -1,9 +1,19 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, FlatList, ToastAndroid } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { MainStackScreenProps } from '../../navigation/types';
-import { getSplit, getSplitParticipants, setSplitParticipantStatus, deleteSplit, getSetting, linkTxs } from '../../db/database';
+import {
+  getSplit,
+  getSplitParticipants,
+  setSplitParticipantStatus,
+  deleteSplit,
+  getSetting,
+  linkTxs,
+  unlinkTxs,
+  getTxById,
+  updateSplitReminderSettings,
+} from '../../db/database';
 import type { Split, SplitParticipant } from '../../db/database';
 import { buildUpiLink } from '../../utils/upi';
 import { openExternalLink } from '../../utils/shareLinks';
@@ -12,6 +22,32 @@ import { formatAmount } from '../../utils/format';
 import { useTxStore } from '../../store/txStore';
 import { isCreditType } from '../../services/txIntelligenceCore';
 import { BottomSheet } from './TransactionDetailScreen';
+import { logEvent } from '../../services/logger';
+
+const CADENCE_OPTIONS: { label: string; days: number | null }[] = [
+  { label: 'Every 2 days', days: 2 },
+  { label: 'Every 3 days', days: 3 },
+  { label: 'Weekly', days: 7 },
+];
+
+/**
+ * `linkTxs` supports only ONE partner per transaction (single link_type/link_partner_id
+ * columns) — so on a split with 2+ non-self participants, settling a second participant's
+ * payment would silently clobber the first participant's already-established link. This is
+ * the documented safety valve (not a fix for the underlying single-partner limitation): skip
+ * linking, but let the caller still record the participant's own status.
+ */
+async function linkSplitPaymentIfSafe(sourceTxId: number, targetTxId: number): Promise<void> {
+  const source = await getTxById(sourceTxId);
+  if (source?.linkPartnerId != null && source.linkPartnerId !== targetTxId) {
+    ToastAndroid.show(
+      "Marked as paid. Only one payment per split can be netted against the original expense right now.",
+      ToastAndroid.LONG,
+    );
+    return;
+  }
+  await linkTxs(sourceTxId, targetTxId, 'split_payment');
+}
 
 function statusLabel(status: SplitParticipant['status']): string {
   if (status === 'settled') return 'Settled';
@@ -33,11 +69,16 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
   const [settling, setSettling] = useState(false);
   const allTxs = useTxStore((s) => s.txs);
   const addTx = useTxStore((s) => s.add);
+  const [reminderSaving, setReminderSaving] = useState(false);
 
-  const incomingCandidates = allTxs
-    .filter((t) => isCreditType(t.type) && t.linkPartnerId == null)
-    .sort((a, b) => b.timestamp - a.timestamp)
-    .slice(0, 20);
+  const incomingCandidates = useMemo(
+    () =>
+      allTxs
+        .filter((t) => isCreditType(t.type) && t.linkPartnerId == null)
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 20),
+    [allTxs],
+  );
 
   const load = useCallback(() => {
     getSplit(splitId).then(setSplit);
@@ -54,10 +95,14 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
 
   const toggleSettled = async (p: SplitParticipant) => {
     if (p.status === 'settled') {
-      // Unmarking stays instant in both linked and unlinked splits — netting
-      // reversal (unlinking the transaction pair) is out of scope for this
-      // plan; the transaction-level link, if any, simply stays as-is.
+      // Unmarking reverses the netting: if this participant's payment was linked
+      // to the original expense, unlink it too — otherwise the expense keeps
+      // being silently netted against a credit the user just said "isn't settled".
+      const matchedTxId = p.matchedTxId;
       await setSplitParticipantStatus(p.id, 'unpaid', null);
+      if (matchedTxId != null) {
+        await unlinkTxs(matchedTxId);
+      }
       load();
       return;
     }
@@ -71,6 +116,35 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
     }
     setSelectedTxId(null);
     setSettleSheetParticipant(p);
+  };
+
+  const setReminderEnabled = async (enabled: boolean) => {
+    if (!split || reminderSaving) return;
+    setReminderSaving(true);
+    try {
+      const days = enabled ? (split.remindIntervalDays ?? 2) : split.remindIntervalDays;
+      await updateSplitReminderSettings(split.id, enabled, days);
+      setSplit({ ...split, autoRemindEnabled: enabled, remindIntervalDays: days });
+    } catch (e) {
+      logEvent('splitDetail.reminderSettingsFailed', e instanceof Error ? e.message : String(e));
+      ToastAndroid.show("Couldn't update reminder settings", ToastAndroid.SHORT);
+    } finally {
+      setReminderSaving(false);
+    }
+  };
+
+  const setReminderCadence = async (days: number) => {
+    if (!split || reminderSaving) return;
+    setReminderSaving(true);
+    try {
+      await updateSplitReminderSettings(split.id, true, days);
+      setSplit({ ...split, autoRemindEnabled: true, remindIntervalDays: days });
+    } catch (e) {
+      logEvent('splitDetail.reminderSettingsFailed', e instanceof Error ? e.message : String(e));
+      ToastAndroid.show("Couldn't update reminder settings", ToastAndroid.SHORT);
+    } finally {
+      setReminderSaving(false);
+    }
   };
 
   const removeSplit = async () => {
@@ -102,6 +176,36 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
       <Text className="font-mono-medium text-numeric-lg text-on-surface px-container-margin mb-md">
         {formatAmount(split.totalAmount)}
       </Text>
+
+      <View className="flex-row items-center justify-between px-container-margin mb-sm">
+        <Text className="font-inter text-body-sm text-on-surface">Auto-remind participants</Text>
+        <TouchableOpacity
+          className={`px-md py-[6px] rounded-lg ${split.autoRemindEnabled ? 'bg-primary' : 'bg-surface-container-lowest border border-outline-variant'} ${reminderSaving ? 'opacity-40' : ''}`}
+          disabled={reminderSaving}
+          onPress={() => setReminderEnabled(!split.autoRemindEnabled)}
+        >
+          <Text className={`font-inter-medium text-body-sm ${split.autoRemindEnabled ? 'text-on-primary' : 'text-on-surface'}`}>
+            {split.autoRemindEnabled ? 'On' : 'Off'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {split.autoRemindEnabled && (
+        <View className="flex-row flex-wrap gap-sm px-container-margin mb-md">
+          {CADENCE_OPTIONS.map((opt) => (
+            <TouchableOpacity
+              key={opt.label}
+              className={`px-md py-[6px] rounded-lg ${split.remindIntervalDays === opt.days ? 'bg-primary' : 'bg-surface-container-lowest border border-outline-variant'} ${reminderSaving ? 'opacity-40' : ''}`}
+              disabled={reminderSaving}
+              onPress={() => opt.days != null && setReminderCadence(opt.days)}
+            >
+              <Text className={`font-inter-medium text-body-sm ${split.remindIntervalDays === opt.days ? 'text-on-primary' : 'text-on-surface'}`}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       <FlatList
         contentContainerClassName="px-container-margin pb-[48px]"
@@ -151,7 +255,7 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
                   onPress={async () => {
                     await setSplitParticipantStatus(item.id, 'settled', item.matchedTxId);
                     if (split.sourceTxId != null && item.matchedTxId != null) {
-                      await linkTxs(split.sourceTxId, item.matchedTxId, 'split_payment');
+                      await linkSplitPaymentIfSafe(split.sourceTxId, item.matchedTxId);
                     }
                     load();
                   }}
@@ -199,11 +303,12 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
               try {
                 await setSplitParticipantStatus(settleSheetParticipant.id, 'settled', selectedTxId);
                 if (split!.sourceTxId != null) {
-                  await linkTxs(split!.sourceTxId, selectedTxId, 'split_payment');
+                  await linkSplitPaymentIfSafe(split!.sourceTxId, selectedTxId);
                 }
                 setSettleSheetParticipant(null);
                 load();
-              } catch {
+              } catch (e) {
+                logEvent('splitDetail.settleFailed', e instanceof Error ? e.message : String(e));
                 ToastAndroid.show("Couldn't settle", ToastAndroid.SHORT);
               } finally {
                 setSettling(false);
@@ -235,11 +340,12 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
                 });
                 await setSplitParticipantStatus(settleSheetParticipant.id, 'settled', cashTxId);
                 if (split!.sourceTxId != null) {
-                  await linkTxs(split!.sourceTxId, cashTxId, 'split_payment');
+                  await linkSplitPaymentIfSafe(split!.sourceTxId, cashTxId);
                 }
                 setSettleSheetParticipant(null);
                 load();
-              } catch {
+              } catch (e) {
+                logEvent('splitDetail.settleFailed', e instanceof Error ? e.message : String(e));
                 ToastAndroid.show("Couldn't settle", ToastAndroid.SHORT);
               } finally {
                 setSettling(false);

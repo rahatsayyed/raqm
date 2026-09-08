@@ -31,7 +31,7 @@ export function SplitScreen({ navigation }: MainTabScreenProps<'Split'>) {
   }, [navigation, load]);
 
   const attentionCount = rows.reduce(
-    (n, r) => n + r.participants.filter((p) => p.status === 'attention').length,
+    (n, r) => n + r.participants.filter((p) => p.status === 'attention' && !p.isSelf).length,
     0,
   );
 
@@ -66,7 +66,8 @@ export function SplitScreen({ navigation }: MainTabScreenProps<'Split'>) {
         data={rows}
         keyExtractor={(r) => String(r.split.id)}
         renderItem={({ item }) => {
-          const settledCount = item.participants.filter((p) => p.status === 'settled').length;
+          const realParticipants = item.participants.filter((p) => !p.isSelf);
+          const settledCount = realParticipants.filter((p) => p.status === 'settled').length;
           return (
             <TouchableOpacity
               className="bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-md mb-sm"
@@ -79,7 +80,7 @@ export function SplitScreen({ navigation }: MainTabScreenProps<'Split'>) {
               <Text className="font-inter-medium text-body-md text-on-surface">{item.split.title}</Text>
               <View className="flex-row items-center justify-between mt-[4px]">
                 <Text className="font-inter text-body-sm text-on-surface-variant">
-                  {settledCount} of {item.participants.length} paid
+                  {settledCount} of {realParticipants.length} paid
                 </Text>
                 <Text className="font-mono text-body-sm text-on-surface">{formatAmount(item.split.totalAmount)}</Text>
               </View>
