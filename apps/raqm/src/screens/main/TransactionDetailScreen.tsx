@@ -49,6 +49,7 @@ import {
   SplitIcon,
   LinkIcon,
   GroupWorkIcon,
+  PeopleIcon,
   TrashIcon,
   ChevronRightIcon,
   StorefrontIcon,
@@ -872,6 +873,7 @@ export function TransactionDetailScreen({
         canSplit={!tx.isSplitChild}
         canLink={!tx.linkType}
         canGroup={tx.groupId == null}
+        canSplitWithFriends={!tx.isSplitChild}
         recurring={tx.recurring}
         onSplit={() => {
           setActionsVisible(false);
@@ -884,6 +886,14 @@ export function TransactionDetailScreen({
         onGroup={() => {
           setActionsVisible(false);
           setGroupVisible(true);
+        }}
+        onSplitWithFriends={() => {
+          setActionsVisible(false);
+          navigation.navigate('SplitCreate', {
+            sourceTxId: tx.id,
+            prefillTitle: tx.merchant ?? undefined,
+            prefillAmount: tx.amount,
+          });
         }}
         onToggleRecurring={toggleRecurring}
         onDelete={handleDelete}
@@ -1067,10 +1077,12 @@ function ActionsSheet({
   canSplit,
   canLink,
   canGroup,
+  canSplitWithFriends,
   recurring,
   onSplit,
   onLink,
   onGroup,
+  onSplitWithFriends,
   onToggleRecurring,
   onDelete,
 }: {
@@ -1079,10 +1091,12 @@ function ActionsSheet({
   canSplit: boolean;
   canLink: boolean;
   canGroup: boolean;
+  canSplitWithFriends: boolean;
   recurring: boolean;
   onSplit: () => void;
   onLink: () => void;
   onGroup: () => void;
+  onSplitWithFriends: () => void;
   onToggleRecurring: () => void;
   onDelete: () => void;
 }) {
@@ -1119,6 +1133,17 @@ function ActionsSheet({
             <GroupWorkIcon color={Colors.onSurfaceVariant} size={24} />
             <Text className="font-inter-medium text-insight-reading text-on-surface">
               Group with...
+            </Text>
+          </TouchableOpacity>
+        )}
+        {canSplitWithFriends && (
+          <TouchableOpacity
+            className="flex-row items-center gap-md py-md border-b border-[#24312880]"
+            onPress={onSplitWithFriends}
+          >
+            <PeopleIcon color={Colors.onSurfaceVariant} size={24} />
+            <Text className="font-inter-medium text-insight-reading text-on-surface">
+              Split with Friends
             </Text>
           </TouchableOpacity>
         )}

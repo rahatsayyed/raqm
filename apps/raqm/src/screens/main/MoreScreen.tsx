@@ -26,10 +26,11 @@ import {
   PaletteIcon, SupportAgentIcon, ImportIcon, CalendarMonthIcon, FlagIcon,
   LayersIcon, PinIcon, WalletIcon, MergeIcon, TrendingUpIcon,
   CircleHelpIcon, PhoneIcon, GroupWorkIcon, BackIcon, NotificationIcon,
-  PencilIcon, MailIcon, DiagnosticLogIcon,
+  PencilIcon, MailIcon, DiagnosticLogIcon, PeopleIcon,
 } from '../../components/TabIcon';
 import { FEEDBACK_EMAIL } from '../../constants/support';
 import { canUseDeviceAuth, isAppLockEnabled, setAppLockEnabled } from '../../services/auth/appLock';
+import { requestSendSmsPermission } from '../../utils/permissions';
 
 const MONTH_START_DAYS = Array.from({ length: 28 }, (_, i) => i + 1);
 
@@ -102,8 +103,10 @@ export function MoreScreen() {
   const [monthStartDay, setMonthStartDay] = useState(1);
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [csvImporting, setCsvImporting] = useState(false);
-  const [editField, setEditField] = useState<'name' | 'phone' | 'email' | null>(null);
+  const [editField, setEditField] = useState<'name' | 'phone' | 'email' | 'upiId' | null>(null);
+  const [upiId, setUpiId] = useState('');
   const [appLock, setAppLock] = useState(false);
+  const [autoSmsReminders, setAutoSmsReminders] = useState(false);
 
   // These screens stay mounted beneath pushed screens, so counts can go stale
   // without a focus-triggered reload (e.g. deleting a rule, then coming back).
@@ -112,7 +115,9 @@ export function MoreScreen() {
       getCategoryRules().then((rules) => setRuleCount(rules.length));
       getTransactionGroups().then((groups) => setGroupCount(groups.length));
       getSetting('month_start_day').then((day) => setMonthStartDay(day ? Number(day) : 1));
+      getSetting('upi_id').then((id) => setUpiId(id ?? ''));
       isAppLockEnabled().then(setAppLock);
+      getSetting('auto_sms_reminders').then((v) => setAutoSmsReminders(v === '1'));
     }, []),
   );
 
@@ -141,6 +146,17 @@ export function MoreScreen() {
       // that visibly failed to move.
       Alert.alert("Couldn't save setting", 'Please try again.');
     }
+  };
+
+  // Turning ON requires SEND_SMS permission first — bail out (leaving the switch
+  // off, no silent partial-enable) if the user denies it. Turning OFF is immediate.
+  const handleToggleAutoSmsReminders = async (value: boolean) => {
+    if (value) {
+      const granted = await requestSendSmsPermission();
+      if (!granted) return;
+    }
+    setAutoSmsReminders(value);
+    await setSetting('auto_sms_reminders', value ? '1' : '0');
   };
 
   const handleSelectMonthStartDay = async (day: number) => {
@@ -323,6 +339,7 @@ export function MoreScreen() {
           onPress: () => navigation.navigate('Rules'),
         },
         { key: 'dues-reminders', label: 'Bills & Reminders', Icon: FlagIcon, onPress: () => navigation.navigate('DuesReminders') },
+        { key: 'auto-sms-reminders', label: 'Auto-send split reminders', Icon: PeopleIcon, toggle: { value: autoSmsReminders, onValueChange: handleToggleAutoSmsReminders } },
         { key: 'weekly-summary', label: 'Weekly Summary', Icon: TrendingUpIcon, comingSoon: true },
       ],
     },
@@ -422,6 +439,9 @@ export function MoreScreen() {
           <MailIcon color={Colors.inkLabel} size={14} />
           <Text className="font-inter text-annotation text-ink-label">{userEmail || 'Add Email'}</Text>
         </TouchableOpacity>
+        <TouchableOpacity className="flex-row items-center gap-sm mt-xs" activeOpacity={0.6} onPress={() => setEditField('upiId')}>
+          <Text className="font-inter text-annotation text-ink-label">{upiId || 'Add your UPI ID (for Split with Friends)'}</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerClassName="px-container-margin pt-lg pb-[40px]" showsVerticalScrollIndicator={false}>
@@ -479,6 +499,18 @@ export function MoreScreen() {
         initialValue={userEmail}
         onConfirm={(value) => {
           setUserEmail(value);
+          setEditField(null);
+        }}
+      />
+      <EditFieldSheet
+        visible={editField === 'upiId'}
+        onClose={() => setEditField(null)}
+        title="Your UPI ID"
+        placeholder="name@bank"
+        initialValue={upiId}
+        onConfirm={async (value) => {
+          setUpiId(value);
+          await setSetting('upi_id', value);
           setEditField(null);
         }}
       />
