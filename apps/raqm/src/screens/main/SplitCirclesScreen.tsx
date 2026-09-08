@@ -6,6 +6,7 @@ import { pickContact } from '../../utils/contacts';
 import {
   getSplitCircles,
   addSplitCircle,
+  renameSplitCircle,
   deleteSplitCircle,
   getSplitCircleMembers,
   addSplitCircleMember,
@@ -16,14 +17,22 @@ import type { SplitCircle, SplitCircleMember } from '../../db/database';
 function CircleRow({
   circle,
   onDelete,
+  onRenamed,
+  deletingThis,
 }: {
   circle: SplitCircle;
   onDelete: (id: number) => void;
+  onRenamed: () => void;
+  deletingThis: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [members, setMembers] = useState<SplitCircleMember[]>([]);
   const [adding, setAdding] = useState(false);
   const [manualName, setManualName] = useState('');
+  const [removingMemberId, setRemovingMemberId] = useState<number | null>(null);
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(circle.name);
+  const [savingRename, setSavingRename] = useState(false);
 
   const loadMembers = useCallback(() => {
     getSplitCircleMembers(circle.id).then(setMembers);
@@ -32,6 +41,36 @@ function CircleRow({
   useEffect(() => {
     if (expanded) loadMembers();
   }, [expanded, loadMembers]);
+
+  const removeMember = async (memberId: number) => {
+    if (removingMemberId !== null) return;
+    setRemovingMemberId(memberId);
+    try {
+      await deleteSplitCircleMember(memberId);
+      loadMembers();
+    } finally {
+      setRemovingMemberId(null);
+    }
+  };
+
+  const startRename = () => {
+    setRenameValue(circle.name);
+    setRenaming(true);
+  };
+
+  const saveRename = async () => {
+    const name = renameValue.trim();
+    if (!name || savingRename) return;
+    setSavingRename(true);
+    try {
+      await renameSplitCircle(circle.id, name);
+      setRenaming(false);
+      onRenamed();
+    } finally {
+      setSavingRename(false);
+    }
+  };
+
 
   const addFromContacts = async () => {
     if (adding) return;
@@ -61,15 +100,35 @@ function CircleRow({
 
   return (
     <View className="bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-md mb-sm">
-      <TouchableOpacity
-        className="flex-row items-center justify-between"
-        onPress={() => setExpanded((v) => !v)}
-      >
-        <Text className="font-inter-medium text-body-md text-on-surface">{circle.name}</Text>
-        <TouchableOpacity onPress={() => onDelete(circle.id)}>
-          <Text className="font-inter text-body-sm text-error">Delete</Text>
-        </TouchableOpacity>
-      </TouchableOpacity>
+      {renaming ? (
+        <View className="flex-row items-center">
+          <TextInput
+            className="flex-1 font-inter text-body-md text-on-surface bg-surface rounded-lg border border-outline-variant px-sm py-[6px]"
+            placeholderTextColor={Colors.outline}
+            value={renameValue}
+            onChangeText={setRenameValue}
+            autoFocus
+          />
+          <TouchableOpacity className="ml-sm" onPress={saveRename} disabled={savingRename}>
+            <Text className="font-inter-medium text-body-sm text-primary">Save</Text>
+          </TouchableOpacity>
+          <TouchableOpacity className="ml-sm" onPress={() => setRenaming(false)} disabled={savingRename}>
+            <Text className="font-inter text-body-sm text-on-surface-variant">Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View className="flex-row items-center justify-between">
+          <TouchableOpacity className="flex-1" onPress={() => setExpanded((v) => !v)}>
+            <Text className="font-inter-medium text-body-md text-on-surface">{circle.name}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={startRename}>
+            <Text className="font-inter text-body-sm text-primary">Rename</Text>
+          </TouchableOpacity>
+          <TouchableOpacity className="ml-md" onPress={() => onDelete(circle.id)} disabled={deletingThis}>
+            <Text className="font-inter text-body-sm text-error">Delete</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {expanded && (
         <View className="mt-sm">
@@ -78,7 +137,7 @@ function CircleRow({
               <Text className="font-inter text-body-sm text-on-surface-variant">
                 {m.name}{m.phoneNumber ? ` · ${m.phoneNumber}` : ''}
               </Text>
-              <TouchableOpacity onPress={() => deleteSplitCircleMember(m.id).then(loadMembers)}>
+              <TouchableOpacity onPress={() => removeMember(m.id)} disabled={removingMemberId !== null}>
                 <Text className="font-inter text-body-sm text-error">Remove</Text>
               </TouchableOpacity>
             </View>
@@ -130,10 +189,18 @@ export function SplitCirclesScreen({ navigation }: MainStackScreenProps<'SplitCi
     }
   };
 
+  const [deletingCircleId, setDeletingCircleId] = useState<number | null>(null);
+
   const removeCircle = async (id: number) => {
-    await deleteSplitCircle(id);
-    load();
-    ToastAndroid.show('Circle deleted', ToastAndroid.SHORT);
+    if (deletingCircleId !== null) return;
+    setDeletingCircleId(id);
+    try {
+      await deleteSplitCircle(id);
+      load();
+      ToastAndroid.show('Circle deleted', ToastAndroid.SHORT);
+    } finally {
+      setDeletingCircleId(null);
+    }
   };
 
   return (
@@ -150,7 +217,14 @@ export function SplitCirclesScreen({ navigation }: MainStackScreenProps<'SplitCi
         contentContainerClassName="px-container-margin pb-[48px]"
         data={circles}
         keyExtractor={(c) => String(c.id)}
-        renderItem={({ item }) => <CircleRow circle={item} onDelete={removeCircle} />}
+        renderItem={({ item }) => (
+          <CircleRow
+            circle={item}
+            onDelete={removeCircle}
+            onRenamed={load}
+            deletingThis={deletingCircleId === item.id}
+          />
+        )}
         ListFooterComponent={
           <View className="flex-row items-center mt-md">
             <TextInput
