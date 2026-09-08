@@ -188,8 +188,19 @@ class SmsReaderModule : Module() {
           android.content.pm.PackageManager.PERMISSION_GRANTED) {
         throw Exception("SEND_SMS permission not granted")
       }
-      val smsManager = context.getSystemService(SmsManager::class.java)
-      smsManager.sendTextMessage(phoneNumber, null, message, null, null)
+      // getSystemService(SmsManager::class.java) is API 31+ only; minSdk here is 24, so it
+      // must fall back to the deprecated static getter on older devices.
+      val smsManager = if (Build.VERSION.SDK_INT >= 31) {
+        context.getSystemService(SmsManager::class.java)
+      } else {
+        @Suppress("DEPRECATION")
+        SmsManager.getDefault()
+      }
+      // A message over one GSM-7 segment (160 chars, or 70 if it has non-GSM-7 characters
+      // like ₹ or —) truncates/fails silently with sendTextMessage — divide + multipart send
+      // instead so the full reminder text always goes out.
+      val parts = smsManager.divideMessage(message)
+      smsManager.sendMultipartTextMessage(phoneNumber, null, parts, null, null)
     }
 
     // Launchable, user-visible apps only — the picker is a list the user reads, and the

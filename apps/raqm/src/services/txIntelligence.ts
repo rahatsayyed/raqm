@@ -81,14 +81,33 @@ export async function matchSplitPayments(): Promise<void> {
     }
 
     const splits = await getSplits();
-    for (const split of splits.filter((s) => s.status === 'open')) {
-      const participants = await getSplitParticipants(split.id);
+    const openSplits = splits.filter((s) => s.status === 'open');
+    const participantsBySplit = new Map<number, Awaited<ReturnType<typeof getSplitParticipants>>>();
+    for (const split of splits) {
+      participantsBySplit.set(split.id, await getSplitParticipants(split.id));
+    }
+
+    // A credit already claimed as some OTHER participant's matchedTxId (from a prior run)
+    // must not be handed out again this run, same as one claimed earlier in this same loop —
+    // both are tracked in one Set so a single credit is never matched to two participants.
+    const claimedTxIds = new Set<number>();
+    for (const split of splits) {
+      for (const participant of participantsBySplit.get(split.id) ?? []) {
+        if ((participant.status === 'attention' || participant.status === 'settled') && participant.matchedTxId != null) {
+          claimedTxIds.add(participant.matchedTxId);
+        }
+      }
+    }
+
+    for (const split of openSplits) {
+      const participants = participantsBySplit.get(split.id) ?? [];
       for (const participant of participants) {
         if (participant.status !== 'unpaid') continue;
         const bucket = creditsByAmount.get(participant.shareAmount);
         if (!bucket) continue;
-        const candidate = bucket.find((c) => c.timestamp >= split.createdAt);
+        const candidate = bucket.find((c) => c.timestamp >= split.createdAt && !claimedTxIds.has(c.id));
         if (!candidate) continue;
+        claimedTxIds.add(candidate.id);
         await setSplitParticipantStatus(participant.id, 'attention', candidate.id);
       }
     }

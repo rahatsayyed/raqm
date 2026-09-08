@@ -65,7 +65,10 @@ export function AppNavigator() {
           runDetectionJobs(useTxStore.getState().txs),
         );
         await timed('startup.splitMatch', matchSplitPayments);
-        await timed('startup.splitReminders', checkAndSendReminders);
+        // Fire-and-forget: reminders can send N sequential SMS messages and must never
+        // delay app launch. matchSplitPayments (above) still runs first so reminders see
+        // up-to-date participant statuses.
+        timed('startup.splitReminders', checkAndSendReminders);
         useTxStore.getState().refresh();
       } catch (e) {
         logEvent('startup.failed', e instanceof Error ? e.message : String(e));
