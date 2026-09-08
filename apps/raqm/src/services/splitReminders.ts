@@ -1,3 +1,4 @@
+import { PermissionsAndroid } from 'react-native';
 import { sendSms } from '../../modules/sms-reader/src/SmsReaderModule';
 import { requestSendSmsPermission } from '../utils/permissions';
 import {
@@ -7,11 +8,12 @@ import {
   setSplitParticipantLastReminded,
 } from '../db/database';
 import type { SplitParticipant } from '../db/database';
+import { formatAmount } from '../utils/format';
 
 const REMINDER_INTERVAL_MS = 24 * 60 * 60 * 1000; // once every 24h while still unpaid
 
 function reminderMessage(splitTitle: string, shareAmount: number): string {
-  return `Reminder: you owe ₹${shareAmount.toFixed(2)} for "${splitTitle}" — sent via Raqm.`;
+  return `Reminder: you owe ${formatAmount(shareAmount)} for "${splitTitle}" — sent via Raqm.`;
 }
 
 /** Sends one participant a reminder now, requesting SEND_SMS if not yet granted.
@@ -42,6 +44,12 @@ export async function checkAndSendReminders(): Promise<void> {
   try {
     const enabled = await getSetting('auto_sms_reminders');
     if (enabled !== '1') return;
+
+    // Only CHECK (never request) here — the user already granted SEND_SMS once via the
+    // Settings toggle's own explicit request flow. An unattended app-open auto-check must
+    // never pop a permission dialog on its own.
+    const granted = await PermissionsAndroid.check('android.permission.SEND_SMS');
+    if (!granted) return;
 
     const now = Date.now();
     const splits = await getSplits();

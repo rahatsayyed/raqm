@@ -2690,6 +2690,44 @@ export async function addSplit(input: {
   return result.lastInsertRowId;
 }
 
+/** Inserts a split and all its participants atomically — a failure partway through must not
+ * leave an orphaned split with a partial participant set (see SplitCreateScreen.handleSave). */
+export async function addSplitWithParticipants(
+  input: { title: string; totalAmount: number; sourceTxId: number | null; creatorUpiId: string | null },
+  participants: { name: string; phoneNumber: string | null; shareAmount: number }[],
+): Promise<number> {
+  const database = await getDb();
+  try {
+    await database.runAsync('BEGIN');
+    const result = await database.runAsync(
+      `INSERT INTO splits (title, total_amount, source_tx_id, creator_upi_id, status, created_at)
+       VALUES (?, ?, ?, ?, 'open', ?)`,
+      input.title,
+      input.totalAmount,
+      input.sourceTxId,
+      input.creatorUpiId,
+      Date.now(),
+    );
+    const splitId = result.lastInsertRowId;
+    for (const p of participants) {
+      await database.runAsync(
+        `INSERT INTO split_participants (split_id, name, phone_number, share_amount, status, created_at)
+         VALUES (?, ?, ?, ?, 'unpaid', ?)`,
+        splitId,
+        p.name,
+        p.phoneNumber,
+        p.shareAmount,
+        Date.now(),
+      );
+    }
+    await database.runAsync('COMMIT');
+    return splitId;
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+}
+
 export async function deleteSplit(id: number): Promise<void> {
   const database = await getDb();
   try {
