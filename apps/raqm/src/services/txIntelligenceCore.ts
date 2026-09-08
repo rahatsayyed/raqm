@@ -3,7 +3,7 @@ import type { TxRecord } from '../db/database';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-function isDebitType(t: TransactionType): boolean {
+export function isDebitType(t: TransactionType): boolean {
   return t === TransactionType.EXPENSE || t === TransactionType.TRANSFER || t === TransactionType.INVESTMENT;
 }
 

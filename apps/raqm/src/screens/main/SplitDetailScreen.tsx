@@ -213,7 +213,11 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
         keyExtractor={(p) => String(p.id)}
         renderItem={({ item }) => (
           <View className="bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-md mb-sm">
-            <TouchableOpacity className="flex-row items-center justify-between" onPress={() => toggleSettled(item)}>
+            <TouchableOpacity
+              className="flex-row items-center justify-between"
+              onPress={() => !item.isSelf && toggleSettled(item)}
+              disabled={item.isSelf}
+            >
               <View>
                 <Text className="font-inter-medium text-body-md text-on-surface">{item.isSelf ? 'You' : item.name}</Text>
                 <Text className="font-inter text-body-sm text-on-surface-variant">{statusLabel(item.status)}</Text>

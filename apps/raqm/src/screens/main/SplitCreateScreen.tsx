@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ToastAndroid } from 'react-native';
 import { Colors, Spacing } from '../../theme';
 import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollView';
@@ -8,6 +8,9 @@ import { computeEqualSharesInclusive, computePercentageShares, computeShareWeigh
 import { getSplitCircles, getSplitCircleMembers } from '../../db/database';
 import type { SplitCircle, SplitCircleMember } from '../../db/database';
 import { formatAmount } from '../../utils/format';
+import { useTxStore } from '../../store/txStore';
+import { isDebitType } from '../../services/txIntelligenceCore';
+import { BottomSheet } from './TransactionDetailScreen';
 
 type Participant = {
   name: string;
@@ -30,12 +33,25 @@ function isSameParticipant(a: { name: string; phoneNumber: string | null }, b: {
 }
 
 export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'SplitCreate'>) {
-  const sourceTxId = route.params?.sourceTxId ?? null;
   const titleRef = useRef<TextInput>(null);
+  const allTxs = useTxStore((s) => s.txs);
 
   const [title, setTitle] = useState(route.params?.prefillTitle ?? '');
   const [amount, setAmount] = useState(route.params?.prefillAmount ? String(route.params.prefillAmount) : '');
   const [description, setDescription] = useState('');
+  // Pre-filled when this screen is reached from a transaction's "Split" action;
+  // otherwise the user can pick one below (or leave it unlinked).
+  const [sourceTxId, setSourceTxId] = useState<number | null>(route.params?.sourceTxId ?? null);
+  const [linkSheetVisible, setLinkSheetVisible] = useState(false);
+  const linkedTx = useMemo(() => allTxs.find((t) => t.id === sourceTxId) ?? null, [allTxs, sourceTxId]);
+  const expenseCandidates = useMemo(
+    () =>
+      allTxs
+        .filter((t) => isDebitType(t.type))
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 20),
+    [allTxs],
+  );
   const [participants, setParticipants] = useState<Participant[]>([
     { name: 'You', phoneNumber: null, shareAmount: 0, shareText: '', fromCircleId: null, isSelf: true },
   ]);
@@ -264,6 +280,23 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
           multiline
         />
 
+        <Text className="font-mono text-label-sm text-on-surface-variant mt-lg mb-sm">Link a transaction (optional)</Text>
+        {linkedTx ? (
+          <View className="flex-row items-center justify-between bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-[12px]">
+            <View className="flex-1">
+              <Text className="font-inter text-body-sm text-on-surface" numberOfLines={1}>{linkedTx.merchant ?? linkedTx.bankName}</Text>
+              <Text className="font-mono text-body-sm text-on-surface-variant">{formatAmount(linkedTx.amount)}</Text>
+            </View>
+            <TouchableOpacity className="ml-sm" onPress={() => setSourceTxId(null)}>
+              <Text className="font-inter text-body-sm text-error">Remove</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity className="py-[8px]" onPress={() => setLinkSheetVisible(true)}>
+            <Text className="font-inter text-body-sm text-primary">+ Link a transaction</Text>
+          </TouchableOpacity>
+        )}
+
         <Text className="font-mono text-label-sm text-on-surface-variant mt-lg mb-sm">Participants</Text>
         {circles.map((c) => (
           <TouchableOpacity
@@ -339,7 +372,6 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
                     onChangeText={(v) => setShare(i, v)}
                   />
                 )}
-                {mode !== 'shares' && <Text className="font-mono text-body-sm text-on-surface-variant ml-sm">{formatAmount(p.shareAmount)}</Text>}
                 {!p.isSelf && (
                   <TouchableOpacity className="ml-sm" onPress={() => removeParticipant(i)}>
                     <Text className="font-inter text-body-sm text-error">✕</Text>
@@ -363,6 +395,31 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
           <Text className="font-inter-medium text-body-md text-on-primary">Save split</Text>
         </TouchableOpacity>
       </KeyboardAwareScrollView>
+
+      <BottomSheet visible={linkSheetVisible} onClose={() => setLinkSheetVisible(false)}>
+        <View className="px-container-margin pb-lg">
+          <Text className="font-inter-bold text-title-md text-on-surface mb-md">Link a transaction</Text>
+          {expenseCandidates.length === 0 && (
+            <Text className="font-inter text-body-sm text-on-surface-variant">No expense transactions found.</Text>
+          )}
+          {expenseCandidates.map((t) => (
+            <TouchableOpacity
+              key={t.id}
+              className="flex-row items-center justify-between py-[10px] px-sm rounded-lg"
+              onPress={() => {
+                setSourceTxId(t.id);
+                setLinkSheetVisible(false);
+              }}
+            >
+              <View>
+                <Text className="font-inter text-body-sm text-on-surface">{t.merchant ?? t.bankName}</Text>
+                <Text className="font-inter text-body-sm text-on-surface-variant">{new Date(t.timestamp).toLocaleDateString()}</Text>
+              </View>
+              <Text className="font-mono text-body-sm text-on-surface">{formatAmount(t.amount)}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </BottomSheet>
     </View>
   );
 }
