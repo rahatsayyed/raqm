@@ -4,7 +4,7 @@ import { Colors, Spacing } from '../../theme';
 import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollView';
 import { MainStackScreenProps } from '../../navigation/types';
 import { pickContact } from '../../utils/contacts';
-import { computeEqualShares } from '../../utils/splitShares';
+import { computeEqualSharesInclusive, computePercentageShares, computeShareWeightAmounts, redistributeUnpinned } from '../../utils/splitShares';
 import { getSplitCircles, getSplitCircleMembers, addSplitWithParticipants, getSetting } from '../../db/database';
 import type { SplitCircle } from '../../db/database';
 import { formatAmount } from '../../utils/format';
@@ -17,7 +17,10 @@ type Participant = {
   // Which circle this row came from, if any — lets selecting a different circle
   // replace only that circle's contribution instead of piling on top of it.
   fromCircleId: number | null;
+  isSelf: boolean;
 };
+
+type SplitMode = 'equal' | 'exact' | 'percentage' | 'shares';
 
 // Same person, regardless of source (circle / contacts / manual): match by phone
 // number when both have one, else fall back to a case-insensitive name match.
@@ -32,8 +35,11 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
 
   const [title, setTitle] = useState(route.params?.prefillTitle ?? '');
   const [amount, setAmount] = useState(route.params?.prefillAmount ? String(route.params.prefillAmount) : '');
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [customShares, setCustomShares] = useState(false);
+  const [participants, setParticipants] = useState<Participant[]>([
+    { name: 'You', phoneNumber: null, shareAmount: 0, shareText: '', fromCircleId: null, isSelf: true },
+  ]);
+  const [mode, setMode] = useState<SplitMode>('equal');
+  const [pinned, setPinned] = useState<Map<number, number>>(new Map());
   const [circles, setCircles] = useState<SplitCircle[]>([]);
   const [creatorUpiId, setCreatorUpiId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -48,18 +54,35 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
   const totalAmount = parseFloat(amount);
   const validTotal = !Number.isNaN(totalAmount) && totalAmount > 0;
 
-  // Re-derive equal shares whenever the total or the participant count changes,
-  // unless the user has switched to custom shares (their edits then own the array).
+  // Re-derive shares whenever the total, participant count, or mode changes.
   useEffect(() => {
-    if (customShares || !validTotal || participants.length === 0) return;
-    const shares = computeEqualShares(totalAmount, participants.length);
-    setParticipants((prev) => prev.map((p, i) => ({ ...p, shareAmount: shares[i], shareText: String(shares[i]) })));
+    if (!validTotal || participants.length === 0) return;
+    if (mode === 'equal') {
+      const shares = computeEqualSharesInclusive(totalAmount, participants.length);
+      setParticipants((prev) => prev.map((p, i) => ({ ...p, shareAmount: shares[i], shareText: String(shares[i]) })));
+    } else if (mode === 'shares') {
+      // Shares mode never pins — every row's weight lives in shareText (typed
+      // as a plain number, default weight 1 for a not-yet-typed row), and
+      // amounts are always fully re-derived from the ratio of all weights.
+      const weights = participants.map((p) => parseFloat(p.shareText) || 1);
+      const amounts = computeShareWeightAmounts(totalAmount, weights);
+      setParticipants((prev) => prev.map((p, i) => ({ ...p, shareAmount: amounts[i] })));
+    } else if (mode === 'exact') {
+      const amounts = redistributeUnpinned(totalAmount, pinned, participants.length);
+      setParticipants((prev) => prev.map((p, i) => ({ ...p, shareAmount: amounts[i] })));
+    } else if (mode === 'percentage') {
+      const pctAmounts = redistributeUnpinned(100, pinned, participants.length);
+      const amounts = computePercentageShares(totalAmount, pctAmounts);
+      setParticipants((prev) => prev.map((p, i) => ({ ...p, shareAmount: amounts[i] })));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totalAmount, participants.length, customShares]);
+  }, [totalAmount, participants.length, mode, pinned]);
 
-  const shareSum = participants.reduce((s, p) => s + p.shareAmount, 0);
-  const sharesValid = !customShares || (validTotal && shareSum <= totalAmount + 0.001);
-  const canSave = validTotal && participants.length > 0 && sharesValid && !saving;
+  const pinnedOverAllocated =
+    (mode === 'exact' || mode === 'percentage') &&
+    Array.from(pinned.values()).reduce((s, v) => s + v, 0) > (mode === 'percentage' ? 100 : totalAmount) + 0.001;
+  const sharesValid = mode === 'equal' || mode === 'shares' || !pinnedOverAllocated;
+  const canSave = validTotal && participants.length > 1 && sharesValid && !saving;
 
   const addFromCircle = async (circle: SplitCircle) => {
     const members = await getSplitCircleMembers(circle.id);
@@ -70,7 +93,7 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
       const deduped = members.filter((m) => !withoutOldCircle.some((p) => isSameParticipant(p, m)));
       return [
         ...withoutOldCircle,
-        ...deduped.map((m) => ({ name: m.name, phoneNumber: m.phoneNumber, shareAmount: 0, shareText: '', fromCircleId: circle.id })),
+        ...deduped.map((m) => ({ name: m.name, phoneNumber: m.phoneNumber, shareAmount: 0, shareText: '', fromCircleId: circle.id, isSelf: false })),
       ];
     });
   };
@@ -83,7 +106,7 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
         ToastAndroid.show(`${picked.name} is already in this split`, ToastAndroid.SHORT);
         return prev;
       }
-      return [...prev, { name: picked.name, phoneNumber: picked.phoneNumber, shareAmount: 0, shareText: '', fromCircleId: null }];
+      return [...prev, { name: picked.name, phoneNumber: picked.phoneNumber, shareAmount: 0, shareText: '', fromCircleId: null, isSelf: false }];
     });
   };
 
@@ -96,7 +119,7 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
         ToastAndroid.show(`${name} is already in this split`, ToastAndroid.SHORT);
         return prev;
       }
-      return [...prev, { name, phoneNumber: null, shareAmount: 0, shareText: '', fromCircleId: null }];
+      return [...prev, { name, phoneNumber: null, shareAmount: 0, shareText: '', fromCircleId: null, isSelf: false }];
     });
     setManualName('');
   };
@@ -105,11 +128,22 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
     setParticipants((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Holds the raw text the user typed (not re-derived from the parsed number) so a
-  // trailing decimal point ("12.") isn't clobbered back to "12" on every keystroke.
+  // All rows start blank in Exact/Percentage mode — typing into a row pins it
+  // at that value and redistributes the remainder across every other
+  // still-unpinned row. Percentage values are capped at 2 decimal places.
   const setShare = (index: number, text: string) => {
-    const shareAmount = parseFloat(text) || 0;
-    setParticipants((prev) => prev.map((p, i) => (i === index ? { ...p, shareAmount, shareText: text } : p)));
+    if (mode === 'shares') {
+      setParticipants((prev) => prev.map((p, i) => (i === index ? { ...p, shareText: text } : p)));
+      return;
+    }
+    const raw = parseFloat(text) || 0;
+    const value = mode === 'percentage' ? Math.round(raw * 100) / 100 : raw;
+    setPinned((prev) => {
+      const next = new Map(prev);
+      next.set(index, value);
+      return next;
+    });
+    setParticipants((prev) => prev.map((p, i) => (i === index ? { ...p, shareText: text } : p)));
   };
 
   const close = () => {
@@ -199,32 +233,57 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
 
         {participants.length > 0 && (
           <View className="mt-md">
-            <TouchableOpacity onPress={() => setCustomShares((v) => !v)}>
-              <Text className="font-inter text-body-sm text-primary mb-sm">
-                {customShares ? 'Switch to equal split' : 'Switch to custom amounts'}
-              </Text>
-            </TouchableOpacity>
+            <View className="flex-row bg-surface-container-lowest rounded-xl border border-outline-variant mt-md p-[4px]">
+              {(['equal', 'exact', 'percentage', 'shares'] as SplitMode[]).map((m) => (
+                <TouchableOpacity
+                  key={m}
+                  className={`flex-1 py-[8px] items-center rounded-lg ${mode === m ? 'bg-primary' : ''}`}
+                  onPress={() => {
+                    setMode(m);
+                    setPinned(new Map());
+                  }}
+                >
+                  <Text className={`font-inter-medium text-body-sm ${mode === m ? 'text-on-primary' : 'text-on-surface-variant'}`}>
+                    {m === 'equal' ? 'Equal' : m === 'exact' ? 'Exact' : m === 'percentage' ? 'Percentage' : 'Shares'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             {participants.map((p, i) => (
-              <View key={`${p.name}-${i}`} className="flex-row items-center justify-between py-[6px]">
-                <Text className="font-inter text-body-sm text-on-surface flex-1">{p.name}</Text>
-                {customShares ? (
+              <View key={p.isSelf ? 'self' : `${p.name}-${i}`} className="flex-row items-center justify-between py-[6px]">
+                <Text className="font-inter text-body-sm text-on-surface flex-1">{p.isSelf ? 'You' : p.name}</Text>
+                {mode === 'equal' ? (
+                  <Text className="font-mono text-body-sm text-on-surface-variant">{formatAmount(p.shareAmount)}</Text>
+                ) : mode === 'shares' ? (
                   <TextInput
-                    className="w-[90px] font-mono text-body-sm text-on-surface bg-surface rounded-lg border border-outline-variant px-sm py-[6px] text-right"
+                    className="w-[70px] font-mono text-body-sm text-on-surface bg-surface rounded-lg border border-outline-variant px-sm py-[6px] text-right"
                     keyboardType="decimal-pad"
+                    placeholder="1"
+                    placeholderTextColor={Colors.outline}
                     value={p.shareText}
                     onChangeText={(v) => setShare(i, v)}
                   />
                 ) : (
-                  <Text className="font-mono text-body-sm text-on-surface-variant">{formatAmount(p.shareAmount)}</Text>
+                  <TextInput
+                    className="w-[90px] font-mono text-body-sm text-on-surface bg-surface rounded-lg border border-outline-variant px-sm py-[6px] text-right"
+                    keyboardType="decimal-pad"
+                    placeholder={mode === 'percentage' ? '0%' : '0'}
+                    placeholderTextColor={Colors.outline}
+                    value={p.shareText}
+                    onChangeText={(v) => setShare(i, v)}
+                  />
                 )}
-                <TouchableOpacity className="ml-sm" onPress={() => removeParticipant(i)}>
-                  <Text className="font-inter text-body-sm text-error">✕</Text>
-                </TouchableOpacity>
+                {mode !== 'shares' && <Text className="font-mono text-body-sm text-on-surface-variant ml-sm">{formatAmount(p.shareAmount)}</Text>}
+                {!p.isSelf && (
+                  <TouchableOpacity className="ml-sm" onPress={() => removeParticipant(i)}>
+                    <Text className="font-inter text-body-sm text-error">✕</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ))}
-            {customShares && !sharesValid && (
+            {!sharesValid && (
               <Text className="font-inter text-body-sm text-error mt-sm">
-                Shares can't add up to more than the total.
+                {mode === 'percentage' ? "Percentages can't add up to more than 100%." : "Shares can't add up to more than the total."}
               </Text>
             )}
           </View>
