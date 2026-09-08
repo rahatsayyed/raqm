@@ -82,13 +82,13 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
           <View className="bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-md mb-sm">
             <TouchableOpacity className="flex-row items-center justify-between" onPress={() => toggleSettled(item)}>
               <View>
-                <Text className="font-inter-medium text-body-md text-on-surface">{item.name}</Text>
+                <Text className="font-inter-medium text-body-md text-on-surface">{item.isSelf ? 'You' : item.name}</Text>
                 <Text className="font-inter text-body-sm text-on-surface-variant">{statusLabel(item.status)}</Text>
               </View>
               <Text className="font-mono text-body-md text-on-surface">{formatAmount(item.shareAmount)}</Text>
             </TouchableOpacity>
 
-            {item.status === 'unpaid' && (
+            {item.status === 'unpaid' && !item.isSelf && (
               <View className="flex-row gap-sm mt-sm">
                 <TouchableOpacity
                   className="flex-1 py-[8px] items-center bg-primary/10 rounded-lg"
@@ -144,7 +144,7 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
               </View>
             )}
 
-            {item.status === 'attention' && (
+            {item.status === 'attention' && !item.isSelf && (
               <View className="flex-row gap-sm mt-sm">
                 <TouchableOpacity
                   className="flex-1 py-[8px] items-center bg-primary rounded-lg"

@@ -2645,6 +2645,7 @@ export type SplitParticipant = {
   matchedTxId: number | null;
   createdAt: number;
   lastRemindedAt: number | null;
+  isSelf: boolean;
 };
 
 function rowToSplit(row: Record<string, unknown>): Split {
@@ -2670,6 +2671,7 @@ function rowToSplitParticipant(row: Record<string, unknown>): SplitParticipant {
     matchedTxId: (row.matched_tx_id as number | null) ?? null,
     createdAt: row.created_at as number,
     lastRemindedAt: (row.last_reminded_at as number | null) ?? null,
+    isSelf: (row.is_self as number | null) ? true : false,
   };
 }
 
