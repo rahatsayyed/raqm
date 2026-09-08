@@ -53,7 +53,10 @@ function isExpense(tx: TxRecord): boolean {
 }
 
 function isRefundCredit(tx: TxRecord): boolean {
-  return (tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT) && tx.linkType === 'refund';
+  return (
+    (tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT) &&
+    (tx.linkType === 'refund' || tx.linkType === 'split_payment')
+  );
 }
 
 // Nets refund credits against the original expense they're linked to (via linkPartnerId),

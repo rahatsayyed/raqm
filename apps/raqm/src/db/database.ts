@@ -565,7 +565,7 @@ export interface TxRecord {
   deletedAt: number | null;
   recurring: boolean;
   isManual: boolean;
-  linkType: 'manual' | 'self_transfer' | 'refund' | null;
+  linkType: 'manual' | 'self_transfer' | 'refund' | 'split_payment' | null;
   linkPartnerId: number | null;
   linkSettled: boolean;
   isSplitChild: boolean;
@@ -2227,7 +2227,7 @@ export async function deleteTransactionGroup(id: number): Promise<void> {
 export async function linkTxs(
   aId: number,
   bId: number,
-  type: 'manual' | 'self_transfer' | 'refund',
+  type: 'manual' | 'self_transfer' | 'refund' | 'split_payment',
 ): Promise<void> {
   if (aId === bId) throw new Error(`linkTxs: cannot link transaction to itself (id=${aId})`);
 

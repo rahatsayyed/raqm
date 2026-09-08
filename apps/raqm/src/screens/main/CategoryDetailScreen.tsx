@@ -79,7 +79,7 @@ export function CategoryDetailScreen({ route, navigation }: MainStackScreenProps
       if (tx.timestamp < bounds.from || tx.timestamp > bounds.to) continue;
       if (!countsTowardTotals(tx)) continue;
       const credit = tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
-      if (!credit || tx.linkType !== 'refund') continue;
+      if (!credit || (tx.linkType !== 'refund' && tx.linkType !== 'split_payment')) continue;
       const partner = tx.linkPartnerId != null ? byId.get(tx.linkPartnerId) : undefined;
       if ((partner?.categoryId ?? tx.categoryId) === categoryId) net += tx.amount;
     }
