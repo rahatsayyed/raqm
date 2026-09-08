@@ -57,6 +57,7 @@ export type MainStackParamList = {
   AxioImport: undefined;
   Grocery: undefined;
   DuesReminders: undefined;
+  SplitCircles: undefined;
   Rules: { section?: 'category' | 'merchant' | 'amount' } | undefined;
   ManageAccounts: undefined;
   SmsInbox: undefined;
