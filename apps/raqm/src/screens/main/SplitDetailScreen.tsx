@@ -75,7 +75,7 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
               <Text className="font-mono text-body-md text-on-surface">₹{item.shareAmount.toFixed(2)}</Text>
             </TouchableOpacity>
 
-            {item.status !== 'settled' && (
+            {item.status === 'unpaid' && (
               <View className="flex-row gap-sm mt-sm">
                 <TouchableOpacity
                   className="flex-1 py-[8px] items-center bg-primary/10 rounded-lg"
@@ -110,6 +110,29 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
                   }}
                 >
                   <Text className="font-inter-medium text-body-sm text-on-surface">Share on WhatsApp</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {item.status === 'attention' && (
+              <View className="flex-row gap-sm mt-sm">
+                <TouchableOpacity
+                  className="flex-1 py-[8px] items-center bg-primary rounded-lg"
+                  onPress={async () => {
+                    await setSplitParticipantStatus(item.id, 'settled', item.matchedTxId);
+                    load();
+                  }}
+                >
+                  <Text className="font-inter-medium text-body-sm text-on-primary">Confirm paid</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className="flex-1 py-[8px] items-center bg-surface rounded-lg border border-outline-variant"
+                  onPress={async () => {
+                    await setSplitParticipantStatus(item.id, 'unpaid', null);
+                    load();
+                  }}
+                >
+                  <Text className="font-inter-medium text-body-sm text-on-surface">Not this one</Text>
                 </TouchableOpacity>
               </View>
             )}
