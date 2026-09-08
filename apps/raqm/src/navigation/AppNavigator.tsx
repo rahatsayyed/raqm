@@ -6,6 +6,7 @@ import { MainNavigator } from './MainNavigator';
 import { useAppStore } from '../store/appStore';
 import { useTxStore } from '../store/txStore';
 import { runDetectionJobs, matchSplitPayments } from '../services/txIntelligence';
+import { checkAndSendReminders } from '../services/splitReminders';
 import { navigationRef } from './navigationRef';
 import { syncDiscoveredAccounts, getSetting } from '../db/database';
 import { initNotifications, attachNotificationHandlers, scheduleSummaries } from '../notifications/notifications';
@@ -64,6 +65,7 @@ export function AppNavigator() {
           runDetectionJobs(useTxStore.getState().txs),
         );
         await timed('startup.splitMatch', matchSplitPayments);
+        await timed('startup.splitReminders', checkAndSendReminders);
         useTxStore.getState().refresh();
       } catch (e) {
         logEvent('startup.failed', e instanceof Error ? e.message : String(e));

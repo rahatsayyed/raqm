@@ -467,6 +467,20 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 14) {
+    await database.runAsync(`BEGIN`);
+    try {
+      await database.runAsync(
+        `ALTER TABLE split_participants ADD COLUMN last_reminded_at INTEGER`,
+      );
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (14)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -2611,6 +2625,7 @@ export type SplitParticipant = {
   status: 'unpaid' | 'attention' | 'settled';
   matchedTxId: number | null;
   createdAt: number;
+  lastRemindedAt: number | null;
 };
 
 function rowToSplit(row: Record<string, unknown>): Split {
@@ -2635,6 +2650,7 @@ function rowToSplitParticipant(row: Record<string, unknown>): SplitParticipant {
     status: row.status as 'unpaid' | 'attention' | 'settled',
     matchedTxId: (row.matched_tx_id as number | null) ?? null,
     createdAt: row.created_at as number,
+    lastRemindedAt: (row.last_reminded_at as number | null) ?? null,
   };
 }
 
@@ -2716,6 +2732,11 @@ export async function addSplitParticipant(
 export async function deleteSplitParticipant(id: number): Promise<void> {
   const database = await getDb();
   await database.runAsync(`DELETE FROM split_participants WHERE id = ?`, id);
+}
+
+export async function setSplitParticipantLastReminded(id: number, timestamp: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`UPDATE split_participants SET last_reminded_at = ? WHERE id = ?`, timestamp, id);
 }
 
 export async function setSplitParticipantStatus(

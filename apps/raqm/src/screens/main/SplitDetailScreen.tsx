@@ -5,6 +5,7 @@ import { getSplit, getSplitParticipants, setSplitParticipantStatus, deleteSplit 
 import type { Split, SplitParticipant } from '../../db/database';
 import { buildUpiLink } from '../../utils/upi';
 import { openExternalLink } from '../../utils/shareLinks';
+import { sendReminderNow } from '../../services/splitReminders';
 
 function statusLabel(status: SplitParticipant['status']): string {
   if (status === 'settled') return 'Settled';
@@ -110,6 +111,15 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
                   }}
                 >
                   <Text className="font-inter-medium text-body-sm text-on-surface">Share on WhatsApp</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className="flex-1 py-[8px] items-center bg-surface rounded-lg border border-outline-variant"
+                  onPress={async () => {
+                    const sent = await sendReminderNow(item, split.title);
+                    ToastAndroid.show(sent ? 'Reminder sent' : "Couldn't send reminder", ToastAndroid.SHORT);
+                  }}
+                >
+                  <Text className="font-inter-medium text-body-sm text-on-surface">Remind now</Text>
                 </TouchableOpacity>
               </View>
             )}
