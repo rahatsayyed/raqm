@@ -391,6 +391,82 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 13) {
+    await database.runAsync(`BEGIN`);
+    try {
+      // Split with Friends: circles (saved friend lists), splits, and participants.
+      // No deleted_at here — this codebase's soft-delete convention is specific to
+      // `transactions`; every other entity table (grocery_lists, grocery_items,
+      // budgets, reminders) hard-deletes, and these follow that closer precedent.
+      await database.runAsync(
+        `CREATE TABLE IF NOT EXISTS split_circles (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          created_at INTEGER NOT NULL
+        )`,
+      );
+      await database.runAsync(
+        `CREATE TABLE IF NOT EXISTS split_circle_members (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          circle_id INTEGER NOT NULL REFERENCES split_circles(id),
+          name TEXT NOT NULL,
+          phone_number TEXT,
+          created_at INTEGER NOT NULL
+        )`,
+      );
+      await database.runAsync(
+        `CREATE INDEX IF NOT EXISTS idx_split_circle_members_circle_id
+         ON split_circle_members(circle_id)`,
+      );
+      // status: 'open' | 'settled'. source_tx_id is set when a split is created via
+      // the "Split with Friends" action on an existing transaction (added in a later
+      // plan); creator_upi_id is a snapshot of the user's Settings UPI ID at creation
+      // time, so a later change to that setting doesn't rewrite links already shared.
+      await database.runAsync(
+        `CREATE TABLE IF NOT EXISTS splits (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          total_amount REAL NOT NULL,
+          source_tx_id INTEGER REFERENCES transactions(id),
+          creator_upi_id TEXT,
+          status TEXT NOT NULL DEFAULT 'open',
+          created_at INTEGER NOT NULL
+        )`,
+      );
+      // status: 'unpaid' | 'attention' | 'settled'. 'attention' means the payment-match
+      // detection job (a later plan) found a plausible matching incoming transaction
+      // that needs the user's confirmation — it is never set to 'settled' automatically.
+      await database.runAsync(
+        `CREATE TABLE IF NOT EXISTS split_participants (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          split_id INTEGER NOT NULL REFERENCES splits(id),
+          name TEXT NOT NULL,
+          phone_number TEXT,
+          share_amount REAL NOT NULL,
+          status TEXT NOT NULL DEFAULT 'unpaid',
+          matched_tx_id INTEGER REFERENCES transactions(id),
+          created_at INTEGER NOT NULL
+        )`,
+      );
+      await database.runAsync(
+        `CREATE INDEX IF NOT EXISTS idx_split_participants_split_id
+         ON split_participants(split_id)`,
+      );
+      // The payment-match job (a later plan) scans unpaid participants by status —
+      // keep that an index lookup, not a full-table scan, matching CLAUDE.md's
+      // amount-bucketed / ~O(n) requirement for detection jobs.
+      await database.runAsync(
+        `CREATE INDEX IF NOT EXISTS idx_split_participants_status
+         ON split_participants(status)`,
+      );
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (13)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
