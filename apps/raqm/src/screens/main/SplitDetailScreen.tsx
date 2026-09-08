@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ToastAndroid, Share } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ToastAndroid } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { MainStackScreenProps } from '../../navigation/types';
 import { getSplit, getSplitParticipants, setSplitParticipantStatus, deleteSplit, getSetting } from '../../db/database';
@@ -91,42 +91,13 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
             {item.status === 'unpaid' && !item.isSelf && (
               <View className="flex-row gap-sm mt-sm">
                 <TouchableOpacity
-                  className="flex-1 py-[8px] items-center bg-primary/10 rounded-lg"
-                  onPress={async () => {
-                    if (!liveUpiId) {
-                      ToastAndroid.show('Add your UPI ID in Settings first', ToastAndroid.LONG);
-                      return;
-                    }
-                    const link = buildUpiLink({
-                      upiId: liveUpiId,
-                      payeeName: split.title,
-                      amount: item.shareAmount,
-                      note: split.title,
-                    });
-                    // Routed through the share sheet, not opened directly — this link pays the
-                    // CREATOR's own VPA, so it must be forwarded to the participant (same intent
-                    // as the WhatsApp button below), not opened on the creator's own device.
-                    // Share.share rejecting/throwing on user-cancellation is normal, not an error.
-                    try {
-                      await Share.share({ message: link });
-                    } catch {
-                      // user dismissed the share sheet — no toast needed
-                    }
-                  }}
-                >
-                  <Text className="font-inter-medium text-body-sm text-primary">Pay via UPI</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
                   className="flex-1 py-[8px] items-center bg-surface rounded-lg border border-outline-variant"
                   onPress={() => {
-                    const message = liveUpiId
-                      ? `${split.title}: you owe ${formatAmount(item.shareAmount)}. Pay here: ${buildUpiLink({
-                          upiId: liveUpiId,
-                          payeeName: split.title,
-                          amount: item.shareAmount,
-                          note: split.title,
-                        })}`
-                      : `${split.title}: you owe ${formatAmount(item.shareAmount)}.`;
+                    const upiLine = liveUpiId
+                      ? ` Pay here: ${buildUpiLink({ upiId: liveUpiId, payeeName: split.title, amount: item.shareAmount, note: split.title })}`
+                      : '';
+                    const descLine = split.description ? ` (${split.description})` : '';
+                    const message = `Hi ${item.name}, for ${split.title}${descLine} you owe ${formatAmount(item.shareAmount)}.${upiLine}`;
                     openExternalLink(`whatsapp://send?text=${encodeURIComponent(message)}`, message);
                   }}
                 >
