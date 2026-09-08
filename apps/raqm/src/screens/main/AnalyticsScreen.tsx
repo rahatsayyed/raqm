@@ -98,7 +98,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
       for (const tx of list) {
         const isCredit = tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
         const name = tx.merchant || accountLabel(tx.bankName, tx.accountLast4, accountLabels);
-        if (isCredit && tx.linkType === 'refund') {
+        if (isCredit && (tx.linkType === 'refund' || tx.linkType === 'split_payment')) {
           map.set(name, (map.get(name) ?? 0) - tx.amount);
         } else if (tx.type === TransactionType.EXPENSE) {
           map.set(name, (map.get(name) ?? 0) + tx.amount);

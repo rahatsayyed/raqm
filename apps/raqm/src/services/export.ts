@@ -48,7 +48,7 @@ export async function buildMonthlySummary(ref: Date): Promise<MonthlySummary> {
     if (tx.timestamp < from || tx.timestamp > to) continue;
     if (!countsTowardTotals(tx)) continue;
 
-    if (isCredit(tx) && tx.linkType === 'refund') {
+    if (isCredit(tx) && (tx.linkType === 'refund' || tx.linkType === 'split_payment')) {
       // Refund credits net against the refunded expense's category/total, consistent with
       // DashboardScreen (overall) and budgets.ts (per-category) — not counted as income.
       expense -= tx.amount;

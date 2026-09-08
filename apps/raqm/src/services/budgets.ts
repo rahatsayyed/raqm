@@ -37,7 +37,7 @@ async function sumSpend(
   for (const tx of txs) {
     if (tx.timestamp < bounds.from || tx.timestamp > bounds.to) continue;
     if (!countsTowardTotals(tx)) continue;
-    if (isCredit(tx) && tx.linkType === 'refund') {
+    if (isCredit(tx) && (tx.linkType === 'refund' || tx.linkType === 'split_payment')) {
       const partner = tx.linkPartnerId != null ? byId.get(tx.linkPartnerId) : undefined;
       const cat = partner?.categoryId ?? tx.categoryId;
       if (cat === categoryId) total -= tx.amount;
