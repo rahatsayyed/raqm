@@ -1,4 +1,4 @@
-import type { TxRecord, Reminder } from '../db/database';
+import type { TxRecord, Reminder, Split, SplitParticipant } from '../db/database';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -14,8 +14,9 @@ export interface DueItem {
   amount: number;
   dueTs: number;
   currency?: string | null;
-  source: 'detected' | 'manual';
+  source: 'detected' | 'manual' | 'split';
   reminderId?: number;
+  splitId?: number;
 }
 
 /** Recurring merchants' next expected charge, stale ones excluded, within [now - grace, now + futureWindowMs]. */
@@ -48,8 +49,33 @@ export function detectRecurringDues(txs: TxRecord[], futureWindowMs: number): Du
   return items;
 }
 
-/** Merges detected recurring dues with manually-added reminders, soonest first. */
-export function mergeDues(detected: DueItem[], reminders: Reminder[]): DueItem[] {
+/**
+ * One DueItem per open split that still has unpaid/attention participants,
+ * summing only the outstanding (non-self, non-settled) shares. dueTs uses
+ * the split's createdAt — splits have no separate due date concept.
+ */
+export function splitDues(splits: Split[], participantsBySplit: Map<number, SplitParticipant[]>): DueItem[] {
+  const items: DueItem[] = [];
+  for (const split of splits) {
+    if (split.status !== 'open') continue;
+    const participants = participantsBySplit.get(split.id) ?? [];
+    const outstanding = participants.filter((p) => !p.isSelf && p.status !== 'settled');
+    if (outstanding.length === 0) continue;
+    const amount = outstanding.reduce((s, p) => s + p.shareAmount, 0);
+    items.push({
+      key: `split|${split.id}`,
+      name: split.title,
+      amount,
+      dueTs: split.createdAt,
+      source: 'split',
+      splitId: split.id,
+    });
+  }
+  return items;
+}
+
+/** Merges detected recurring dues, manually-added reminders, and open split dues, soonest first. */
+export function mergeDues(detected: DueItem[], reminders: Reminder[], splitItems: DueItem[] = []): DueItem[] {
   const manual: DueItem[] = reminders.map((r) => ({
     key: `manual|${r.id}`,
     name: r.name,
@@ -59,5 +85,5 @@ export function mergeDues(detected: DueItem[], reminders: Reminder[]): DueItem[]
     source: 'manual',
     reminderId: r.id,
   }));
-  return [...detected, ...manual].sort((a, b) => a.dueTs - b.dueTs);
+  return [...detected, ...manual, ...splitItems].sort((a, b) => a.dueTs - b.dueTs);
 }

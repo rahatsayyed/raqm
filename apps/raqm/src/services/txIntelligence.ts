@@ -102,7 +102,7 @@ export async function matchSplitPayments(): Promise<void> {
     for (const split of openSplits) {
       const participants = participantsBySplit.get(split.id) ?? [];
       for (const participant of participants) {
-        if (participant.status !== 'unpaid') continue;
+        if (participant.status !== 'unpaid' || participant.isSelf) continue;
         const bucket = creditsByAmount.get(participant.shareAmount);
         if (!bucket) continue;
         const candidate = bucket.find((c) => c.timestamp >= split.createdAt && !claimedTxIds.has(c.id));

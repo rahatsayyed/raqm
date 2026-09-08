@@ -139,7 +139,7 @@ function spentIn(txs: TxRecord[], from: number, to: number): number {
     if (tx.timestamp < from || tx.timestamp > to) continue;
     if (tx.deletedAt) continue;
     if (!countsTowardTotals(tx)) continue;
-    if (isCredit(tx.type) && tx.linkType === "refund") spent -= tx.amount;
+    if (isCredit(tx.type) && (tx.linkType === "refund" || tx.linkType === "split_payment")) spent -= tx.amount;
     else if (isDebit(tx.type)) spent += tx.amount;
   }
   return spent;
@@ -341,7 +341,7 @@ export function DashboardScreen() {
         if (tx.timestamp < from || tx.timestamp > to) continue;
         if (tx.deletedAt) continue;
         if (!countsTowardTotals(tx)) continue;
-        if (isCredit(tx.type) && tx.linkType !== "refund") income += tx.amount;
+        if (isCredit(tx.type) && tx.linkType !== "refund" && tx.linkType !== "split_payment") income += tx.amount;
         if (tx.type === TransactionType.EXPENSE && tx.categoryId != null) {
           catSpend.set(
             tx.categoryId,

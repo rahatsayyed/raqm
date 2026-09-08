@@ -6,7 +6,7 @@ import { MainStackScreenProps } from '../../navigation/types';
 import { pickContact } from '../../utils/contacts';
 import {
   getSplitCircles,
-  addSplitCircle,
+  addSplitCircleWithMembers,
   renameSplitCircle,
   deleteSplitCircle,
   getSplitCircleMembers,
@@ -15,16 +15,29 @@ import {
 } from '../../db/database';
 import type { SplitCircle, SplitCircleMember } from '../../db/database';
 
+type CreateStep = 'closed' | 'pick-members' | 'name';
+
+// Same person, regardless of source (contacts / manual): match by phone number
+// when both have one, else fall back to a case-insensitive name match.
+// (Duplicated from SplitCreateScreen.tsx's isSameParticipant — two lines, not worth extracting.)
+function isSameParticipant(a: { name: string; phoneNumber: string | null }, b: { name: string; phoneNumber: string | null }): boolean {
+  if (a.phoneNumber && b.phoneNumber) return a.phoneNumber === b.phoneNumber;
+  return a.name.trim().toLowerCase() === b.name.trim().toLowerCase();
+}
+
 function CircleRow({
   circle,
   onDelete,
   onRenamed,
   deletingThis,
+  onUseCircle,
 }: {
   circle: SplitCircle;
   onDelete: (id: number) => void;
   onRenamed: () => void;
   deletingThis: boolean;
+  // Present only when this screen was opened with returnTo: 'SplitCreate'.
+  onUseCircle?: (circleId: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [members, setMembers] = useState<SplitCircleMember[]>([]);
@@ -103,6 +116,11 @@ function CircleRow({
 
   return (
     <View className="bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-md mb-sm">
+      {onUseCircle && (
+        <TouchableOpacity className="pb-sm" onPress={() => onUseCircle(circle.id)}>
+          <Text className="font-inter-medium text-body-sm text-primary">Use this circle</Text>
+        </TouchableOpacity>
+      )}
       {renaming ? (
         <View className="flex-row items-center">
           <TextInput
@@ -168,29 +186,21 @@ function CircleRow({
   );
 }
 
-export function SplitCirclesScreen({ navigation }: MainStackScreenProps<'SplitCircles'>) {
+export function SplitCirclesScreen({ route, navigation }: MainStackScreenProps<'SplitCircles'>) {
+  const returnTo = route.params?.returnTo;
   const [circles, setCircles] = useState<SplitCircle[]>([]);
-  const [newName, setNewName] = useState('');
-  const [creating, setCreating] = useState(false);
+
+  const [createStep, setCreateStep] = useState<CreateStep>('closed');
+  const [draftMembers, setDraftMembers] = useState<{ name: string; phoneNumber: string | null }[]>([]);
+  const [draftManualName, setDraftManualName] = useState('');
+  const [draftCircleName, setDraftCircleName] = useState('');
+  const [creatingCircle, setCreatingCircle] = useState(false);
 
   const load = useCallback(() => {
     getSplitCircles().then(setCircles);
   }, []);
 
   useEffect(load, [load]);
-
-  const createCircle = async () => {
-    const name = newName.trim();
-    if (!name || creating) return;
-    setCreating(true);
-    try {
-      await addSplitCircle(name);
-      setNewName('');
-      load();
-    } finally {
-      setCreating(false);
-    }
-  };
 
   const [deletingCircleId, setDeletingCircleId] = useState<number | null>(null);
 
@@ -205,6 +215,123 @@ export function SplitCirclesScreen({ navigation }: MainStackScreenProps<'SplitCi
       setDeletingCircleId(null);
     }
   };
+
+  if (createStep === 'pick-members') {
+    return (
+      <View className="flex-1 bg-background">
+        <View className="flex-row items-center justify-between px-container-margin pt-sm pb-md">
+          <TouchableOpacity onPress={() => setCreateStep('closed')}>
+            <Text className="font-inter text-body-md text-primary w-[70px]">✕ Cancel</Text>
+          </TouchableOpacity>
+          <Text className="font-inter-bold text-title-lg text-on-surface">Add members</Text>
+          <View className="w-[60px]" />
+        </View>
+        <KeyboardAwareScrollView contentContainerClassName="px-container-margin pb-[48px]" enableOnAndroid keyboardShouldPersistTaps="handled">
+          <TouchableOpacity
+            className="py-[8px]"
+            onPress={async () => {
+              const picked = await pickContact();
+              if (!picked) return;
+              if (draftMembers.some((m) => isSameParticipant(m, picked))) {
+                ToastAndroid.show(`${picked.name} is already added`, ToastAndroid.SHORT);
+                return;
+              }
+              setDraftMembers((prev) => [...prev, picked]);
+            }}
+          >
+            <Text className="font-inter text-body-sm text-primary">+ Add from contacts</Text>
+          </TouchableOpacity>
+          <View className="flex-row items-center mt-sm">
+            <TextInput
+              className="flex-1 font-inter text-body-sm text-on-surface bg-surface-container-lowest rounded-lg border border-outline-variant px-sm py-[8px]"
+              placeholder="Or type a name…"
+              placeholderTextColor={Colors.outline}
+              value={draftManualName}
+              onChangeText={setDraftManualName}
+            />
+            <TouchableOpacity
+              className="ml-sm px-md py-[8px] bg-primary rounded-lg"
+              onPress={() => {
+                const name = draftManualName.trim();
+                if (!name) return;
+                if (draftMembers.some((m) => isSameParticipant(m, { name, phoneNumber: null }))) {
+                  ToastAndroid.show(`${name} is already added`, ToastAndroid.SHORT);
+                  return;
+                }
+                setDraftMembers((prev) => [...prev, { name, phoneNumber: null }]);
+                setDraftManualName('');
+              }}
+            >
+              <Text className="font-inter-medium text-body-sm text-on-primary">Add</Text>
+            </TouchableOpacity>
+          </View>
+
+          {draftMembers.map((m, i) => (
+            <View key={`${m.name}-${i}`} className="flex-row items-center justify-between py-[6px]">
+              <Text className="font-inter text-body-sm text-on-surface flex-1">{m.name}</Text>
+              <TouchableOpacity onPress={() => setDraftMembers((prev) => prev.filter((_, idx) => idx !== i))}>
+                <Text className="font-inter text-body-sm text-error">✕</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+
+          <TouchableOpacity
+            className={`mt-xl py-md items-center bg-primary rounded-xl ${draftMembers.length === 0 ? 'opacity-40' : ''}`}
+            disabled={draftMembers.length === 0}
+            onPress={() => setCreateStep('name')}
+          >
+            <Text className="font-inter-medium text-body-md text-on-primary">Next</Text>
+          </TouchableOpacity>
+        </KeyboardAwareScrollView>
+      </View>
+    );
+  }
+
+  if (createStep === 'name') {
+    return (
+      <View className="flex-1 bg-background">
+        <View className="flex-row items-center justify-between px-container-margin pt-sm pb-md">
+          <TouchableOpacity onPress={() => setCreateStep('pick-members')}>
+            <Text className="font-inter text-body-md text-primary w-[70px]">‹ Back</Text>
+          </TouchableOpacity>
+          <Text className="font-inter-bold text-title-lg text-on-surface">Name circle</Text>
+          <View className="w-[60px]" />
+        </View>
+        <KeyboardAwareScrollView contentContainerClassName="px-container-margin pb-[48px]" enableOnAndroid keyboardShouldPersistTaps="handled">
+          <TextInput
+            className="font-inter text-body-md text-on-surface bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-[12px]"
+            placeholder="e.g. Goa Trip"
+            placeholderTextColor={Colors.outline}
+            value={draftCircleName}
+            onChangeText={setDraftCircleName}
+          />
+          <Text className="font-mono text-label-sm text-on-surface-variant mt-lg mb-sm">{draftMembers.length} members</Text>
+          <TouchableOpacity
+            className={`mt-xl py-md items-center bg-primary rounded-xl ${!draftCircleName.trim() || creatingCircle ? 'opacity-40' : ''}`}
+            disabled={!draftCircleName.trim() || creatingCircle}
+            onPress={async () => {
+              if (creatingCircle) return;
+              setCreatingCircle(true);
+              try {
+                const newCircleId = await addSplitCircleWithMembers(draftCircleName.trim(), draftMembers);
+                ToastAndroid.show('Circle created', ToastAndroid.SHORT);
+                if (returnTo === 'SplitCreate') {
+                  navigation.popTo('SplitCreate', { pickedCircleId: newCircleId }, { merge: true });
+                } else {
+                  setCreateStep('closed');
+                  load();
+                }
+              } finally {
+                setCreatingCircle(false);
+              }
+            }}
+          >
+            <Text className="font-inter-medium text-body-md text-on-primary">Save circle</Text>
+          </TouchableOpacity>
+        </KeyboardAwareScrollView>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-background">
@@ -230,21 +357,25 @@ export function SplitCirclesScreen({ navigation }: MainStackScreenProps<'SplitCi
             onDelete={removeCircle}
             onRenamed={load}
             deletingThis={deletingCircleId === c.id}
+            onUseCircle={
+              returnTo === 'SplitCreate'
+                ? (circleId) => navigation.popTo('SplitCreate', { pickedCircleId: circleId }, { merge: true })
+                : undefined
+            }
           />
         ))}
 
-        <View className="flex-row items-center mt-md">
-          <TextInput
-            className="flex-1 font-inter text-body-md text-on-surface bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-[12px]"
-            placeholder="New circle name"
-            placeholderTextColor={Colors.outline}
-            value={newName}
-            onChangeText={setNewName}
-          />
-          <TouchableOpacity className="ml-sm px-md py-[12px] bg-primary rounded-xl" onPress={createCircle} disabled={creating}>
-            <Text className="font-inter-medium text-body-md text-on-primary">Create</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          className="mt-lg py-md items-center bg-primary rounded-xl"
+          onPress={() => {
+            setDraftMembers([]);
+            setDraftManualName('');
+            setDraftCircleName('');
+            setCreateStep('pick-members');
+          }}
+        >
+          <Text className="font-inter-medium text-body-md text-on-primary">+ Create circle</Text>
+        </TouchableOpacity>
       </KeyboardAwareScrollView>
     </View>
   );

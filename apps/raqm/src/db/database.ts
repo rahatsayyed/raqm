@@ -481,6 +481,25 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 15) {
+    await database.runAsync(`BEGIN`);
+    try {
+      await database.runAsync(`ALTER TABLE splits ADD COLUMN description TEXT`);
+      await database.runAsync(
+        `ALTER TABLE splits ADD COLUMN auto_remind_enabled INTEGER NOT NULL DEFAULT 0`,
+      );
+      await database.runAsync(`ALTER TABLE splits ADD COLUMN remind_interval_days INTEGER`);
+      await database.runAsync(
+        `ALTER TABLE split_participants ADD COLUMN is_self INTEGER NOT NULL DEFAULT 0`,
+      );
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (15)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -546,7 +565,7 @@ export interface TxRecord {
   deletedAt: number | null;
   recurring: boolean;
   isManual: boolean;
-  linkType: 'manual' | 'self_transfer' | 'refund' | null;
+  linkType: 'manual' | 'self_transfer' | 'refund' | 'split_payment' | null;
   linkPartnerId: number | null;
   linkSettled: boolean;
   isSplitChild: boolean;
@@ -2208,7 +2227,7 @@ export async function deleteTransactionGroup(id: number): Promise<void> {
 export async function linkTxs(
   aId: number,
   bId: number,
-  type: 'manual' | 'self_transfer' | 'refund',
+  type: 'manual' | 'self_transfer' | 'refund' | 'split_payment',
 ): Promise<void> {
   if (aId === bId) throw new Error(`linkTxs: cannot link transaction to itself (id=${aId})`);
 
@@ -2599,6 +2618,37 @@ export async function addSplitCircleMember(
   return result.lastInsertRowId;
 }
 
+export async function addSplitCircleWithMembers(
+  name: string,
+  members: { name: string; phoneNumber: string | null }[],
+): Promise<number> {
+  const database = await getDb();
+  const now = Date.now();
+  try {
+    await database.runAsync('BEGIN');
+    const circleResult = await database.runAsync(
+      `INSERT INTO split_circles (name, created_at) VALUES (?, ?)`,
+      name,
+      now,
+    );
+    const circleId = circleResult.lastInsertRowId;
+    for (const m of members) {
+      await database.runAsync(
+        `INSERT INTO split_circle_members (circle_id, name, phone_number, created_at) VALUES (?, ?, ?, ?)`,
+        circleId,
+        m.name,
+        m.phoneNumber,
+        now,
+      );
+    }
+    await database.runAsync('COMMIT');
+    return circleId;
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+}
+
 export async function deleteSplitCircleMember(id: number): Promise<void> {
   const database = await getDb();
   await database.runAsync(`DELETE FROM split_circle_members WHERE id = ?`, id);
@@ -2613,6 +2663,9 @@ export type Split = {
   sourceTxId: number | null;
   creatorUpiId: string | null;
   status: 'open' | 'settled';
+  description: string | null;
+  autoRemindEnabled: boolean;
+  remindIntervalDays: number | null;
   createdAt: number;
 };
 
@@ -2626,6 +2679,7 @@ export type SplitParticipant = {
   matchedTxId: number | null;
   createdAt: number;
   lastRemindedAt: number | null;
+  isSelf: boolean;
 };
 
 function rowToSplit(row: Record<string, unknown>): Split {
@@ -2636,6 +2690,9 @@ function rowToSplit(row: Record<string, unknown>): Split {
     sourceTxId: (row.source_tx_id as number | null) ?? null,
     creatorUpiId: (row.creator_upi_id as string | null) ?? null,
     status: row.status as 'open' | 'settled',
+    description: (row.description as string | null) ?? null,
+    autoRemindEnabled: row.auto_remind_enabled === 1,
+    remindIntervalDays: (row.remind_interval_days as number | null) ?? null,
     createdAt: row.created_at as number,
   };
 }
@@ -2651,6 +2708,7 @@ function rowToSplitParticipant(row: Record<string, unknown>): SplitParticipant {
     matchedTxId: (row.matched_tx_id as number | null) ?? null,
     createdAt: row.created_at as number,
     lastRemindedAt: (row.last_reminded_at as number | null) ?? null,
+    isSelf: (row.is_self as number | null) ? true : false,
   };
 }
 
@@ -2693,30 +2751,42 @@ export async function addSplit(input: {
 /** Inserts a split and all its participants atomically — a failure partway through must not
  * leave an orphaned split with a partial participant set (see SplitCreateScreen.handleSave). */
 export async function addSplitWithParticipants(
-  input: { title: string; totalAmount: number; sourceTxId: number | null; creatorUpiId: string | null },
-  participants: { name: string; phoneNumber: string | null; shareAmount: number }[],
+  input: {
+    title: string;
+    totalAmount: number;
+    sourceTxId: number | null;
+    creatorUpiId: string | null;
+    description: string | null;
+    autoRemindEnabled: boolean;
+    remindIntervalDays: number | null;
+  },
+  participants: { name: string; phoneNumber: string | null; shareAmount: number; isSelf: boolean }[],
 ): Promise<number> {
   const database = await getDb();
   try {
     await database.runAsync('BEGIN');
     const result = await database.runAsync(
-      `INSERT INTO splits (title, total_amount, source_tx_id, creator_upi_id, status, created_at)
-       VALUES (?, ?, ?, ?, 'open', ?)`,
+      `INSERT INTO splits (title, total_amount, source_tx_id, creator_upi_id, status, description, auto_remind_enabled, remind_interval_days, created_at)
+       VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?)`,
       input.title,
       input.totalAmount,
       input.sourceTxId,
       input.creatorUpiId,
+      input.description,
+      input.autoRemindEnabled ? 1 : 0,
+      input.remindIntervalDays,
       Date.now(),
     );
     const splitId = result.lastInsertRowId;
     for (const p of participants) {
       await database.runAsync(
-        `INSERT INTO split_participants (split_id, name, phone_number, share_amount, status, created_at)
-         VALUES (?, ?, ?, ?, 'unpaid', ?)`,
+        `INSERT INTO split_participants (split_id, name, phone_number, share_amount, status, is_self, created_at)
+         VALUES (?, ?, ?, ?, 'unpaid', ?, ?)`,
         splitId,
         p.name,
         p.phoneNumber,
         p.shareAmount,
+        p.isSelf ? 1 : 0,
         Date.now(),
       );
     }
@@ -2730,6 +2800,15 @@ export async function addSplitWithParticipants(
 
 export async function deleteSplit(id: number): Promise<void> {
   const database = await getDb();
+  // Unlink every participant's matched transaction BEFORE deleting rows — otherwise the
+  // transaction keeps link_type: 'split_payment' pointing at a split that no longer exists,
+  // and the original expense keeps being silently netted against it.
+  const participants = await getSplitParticipants(id);
+  for (const p of participants) {
+    if (p.matchedTxId != null) {
+      await unlinkTxs(p.matchedTxId);
+    }
+  }
   try {
     await database.runAsync('BEGIN');
     await database.runAsync(`DELETE FROM split_participants WHERE split_id = ?`, id);
@@ -2797,7 +2876,7 @@ export async function setSplitParticipantStatus(
     );
     if (row) {
       const remaining = await database.getFirstAsync<{ c: number }>(
-        `SELECT COUNT(*) as c FROM split_participants WHERE split_id = ? AND status != 'settled'`,
+        `SELECT COUNT(*) as c FROM split_participants WHERE split_id = ? AND status != 'settled' AND is_self = 0`,
         row.split_id,
       );
       const newStatus = (remaining?.c ?? 1) === 0 ? 'settled' : 'open';
@@ -2808,6 +2887,20 @@ export async function setSplitParticipantStatus(
     await database.runAsync('ROLLBACK');
     throw e;
   }
+}
+
+export async function updateSplitReminderSettings(
+  id: number,
+  autoRemindEnabled: boolean,
+  remindIntervalDays: number | null,
+): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(
+    `UPDATE splits SET auto_remind_enabled = ?, remind_interval_days = ? WHERE id = ?`,
+    autoRemindEnabled ? 1 : 0,
+    remindIntervalDays,
+    id,
+  );
 }
 
 // ── Accounts ───────────────────────────────────────────────────────────────

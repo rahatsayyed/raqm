@@ -6,10 +6,10 @@ import { Colors, Spacing } from '../../theme';
 import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollView';
 import { MainStackScreenProps } from '../../navigation/types';
 import { useTxStore } from '../../store/txStore';
-import { getReminders, addReminder, deleteReminder, type Reminder } from '../../db/database';
-import { detectRecurringDues, mergeDues, type DueItem } from '../../services/dues';
+import { getReminders, addReminder, deleteReminder, getSplits, getSplitParticipants, type Reminder, type Split, type SplitParticipant } from '../../db/database';
+import { detectRecurringDues, mergeDues, splitDues, type DueItem } from '../../services/dues';
 import { formatAmount } from '../../utils/format';
-import { TrashIcon } from '../../components/TabIcon';
+import { TrashIcon, PeopleIcon } from '../../components/TabIcon';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const FUTURE_WINDOW_MS = 90 * DAY_MS;
@@ -26,6 +26,8 @@ export function DuesRemindersScreen({ navigation }: MainStackScreenProps<'DuesRe
   const txs = useTxStore((s) => s.txs);
   const currency = txs[0]?.currency ?? '₹';
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [splits, setSplits] = useState<Split[]>([]);
+  const [participantsBySplit, setParticipantsBySplit] = useState<Map<number, SplitParticipant[]>>(new Map());
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
@@ -37,18 +39,28 @@ export function DuesRemindersScreen({ navigation }: MainStackScreenProps<'DuesRe
     getReminders().then(setReminders);
   }, []);
 
+  const loadSplits = useCallback(async () => {
+    const openSplits = await getSplits();
+    setSplits(openSplits);
+    const entries = await Promise.all(openSplits.map(async (s) => [s.id, await getSplitParticipants(s.id)] as const));
+    setParticipantsBySplit(new Map(entries));
+  }, []);
+
   useEffect(() => {
     loadReminders();
-  }, [loadReminders]);
+    loadSplits();
+  }, [loadReminders, loadSplits]);
 
   useFocusEffect(
     useCallback(() => {
       loadReminders();
-    }, [loadReminders]),
+      loadSplits();
+    }, [loadReminders, loadSplits]),
   );
 
   const detected = useMemo(() => detectRecurringDues(txs, FUTURE_WINDOW_MS), [txs]);
-  const dues: DueItem[] = useMemo(() => mergeDues(detected, reminders), [detected, reminders]);
+  const splitItems = useMemo(() => splitDues(splits, participantsBySplit), [splits, participantsBySplit]);
+  const dues: DueItem[] = useMemo(() => mergeDues(detected, reminders, splitItems), [detected, reminders, splitItems]);
 
   const handleAdd = async () => {
     const parsedAmount = Number(amount);
@@ -99,9 +111,22 @@ export function DuesRemindersScreen({ navigation }: MainStackScreenProps<'DuesRe
           </Text>
         )}
         {dues.map((d) => (
-          <View key={d.key} className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md flex-row items-center gap-sm">
+          <TouchableOpacity
+            key={d.key}
+            activeOpacity={d.source === 'split' ? 0.7 : 1}
+            disabled={d.source !== 'split'}
+            onPress={() => {
+              if (d.source === 'split' && d.splitId != null) {
+                navigation.navigate('SplitDetail', { splitId: d.splitId });
+              }
+            }}
+            className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md flex-row items-center gap-sm"
+          >
             <View className="flex-1 gap-[4px]">
-              <Text className="font-inter-medium text-body-sm text-on-surface" numberOfLines={1}>{d.name}</Text>
+              <View className="flex-row items-center gap-[4px]">
+                {d.source === 'split' && <PeopleIcon color={Colors.onSurfaceVariant} size={14} />}
+                <Text className="font-inter-medium text-body-sm text-on-surface" numberOfLines={1}>{d.name}</Text>
+              </View>
               <Text className="font-mono text-label-sm text-on-surface-variant">{dueLabel(d.dueTs)}</Text>
             </View>
             <Text className="font-mono-medium text-body-sm text-on-surface">{formatAmount(d.amount, d.currency ?? currency)}</Text>
@@ -110,7 +135,7 @@ export function DuesRemindersScreen({ navigation }: MainStackScreenProps<'DuesRe
                 <TrashIcon color={Colors.onSurfaceVariant} size={18} />
               </TouchableOpacity>
             )}
-          </View>
+          </TouchableOpacity>
         ))}
       </View>
 
