@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, FlatList, ToastAndroid } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { MainStackScreenProps } from '../../navigation/types';
-import { getSplit, getSplitParticipants, setSplitParticipantStatus, deleteSplit, getSetting } from '../../db/database';
+import { getSplit, getSplitParticipants, setSplitParticipantStatus, deleteSplit, getSetting, linkTxs } from '../../db/database';
 import type { Split, SplitParticipant } from '../../db/database';
 import { buildUpiLink } from '../../utils/upi';
 import { openExternalLink } from '../../utils/shareLinks';
@@ -121,6 +121,9 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
                   className="flex-1 py-[8px] items-center bg-primary rounded-lg"
                   onPress={async () => {
                     await setSplitParticipantStatus(item.id, 'settled', item.matchedTxId);
+                    if (split.sourceTxId != null && item.matchedTxId != null) {
+                      await linkTxs(split.sourceTxId, item.matchedTxId, 'split_payment');
+                    }
                     load();
                   }}
                 >
