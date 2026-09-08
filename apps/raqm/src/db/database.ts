@@ -481,6 +481,25 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 15) {
+    await database.runAsync(`BEGIN`);
+    try {
+      await database.runAsync(`ALTER TABLE splits ADD COLUMN description TEXT`);
+      await database.runAsync(
+        `ALTER TABLE splits ADD COLUMN auto_remind_enabled INTEGER NOT NULL DEFAULT 0`,
+      );
+      await database.runAsync(`ALTER TABLE splits ADD COLUMN remind_interval_days INTEGER`);
+      await database.runAsync(
+        `ALTER TABLE split_participants ADD COLUMN is_self INTEGER NOT NULL DEFAULT 0`,
+      );
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (15)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
