@@ -102,7 +102,8 @@ export function MoreScreen() {
   const [monthStartDay, setMonthStartDay] = useState(1);
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [csvImporting, setCsvImporting] = useState(false);
-  const [editField, setEditField] = useState<'name' | 'phone' | 'email' | null>(null);
+  const [editField, setEditField] = useState<'name' | 'phone' | 'email' | 'upiId' | null>(null);
+  const [upiId, setUpiId] = useState('');
   const [appLock, setAppLock] = useState(false);
 
   // These screens stay mounted beneath pushed screens, so counts can go stale
@@ -112,6 +113,7 @@ export function MoreScreen() {
       getCategoryRules().then((rules) => setRuleCount(rules.length));
       getTransactionGroups().then((groups) => setGroupCount(groups.length));
       getSetting('month_start_day').then((day) => setMonthStartDay(day ? Number(day) : 1));
+      getSetting('upi_id').then((id) => setUpiId(id ?? ''));
       isAppLockEnabled().then(setAppLock);
     }, []),
   );
@@ -422,6 +424,9 @@ export function MoreScreen() {
           <MailIcon color={Colors.inkLabel} size={14} />
           <Text className="font-inter text-annotation text-ink-label">{userEmail || 'Add Email'}</Text>
         </TouchableOpacity>
+        <TouchableOpacity className="flex-row items-center gap-sm mt-xs" activeOpacity={0.6} onPress={() => setEditField('upiId')}>
+          <Text className="font-inter text-annotation text-ink-label">{upiId || 'Add your UPI ID (for Split with Friends)'}</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerClassName="px-container-margin pt-lg pb-[40px]" showsVerticalScrollIndicator={false}>
@@ -479,6 +484,18 @@ export function MoreScreen() {
         initialValue={userEmail}
         onConfirm={(value) => {
           setUserEmail(value);
+          setEditField(null);
+        }}
+      />
+      <EditFieldSheet
+        visible={editField === 'upiId'}
+        onClose={() => setEditField(null)}
+        title="Your UPI ID"
+        placeholder="name@bank"
+        initialValue={upiId}
+        onConfirm={async (value) => {
+          setUpiId(value);
+          await setSetting('upi_id', value);
           setEditField(null);
         }}
       />
