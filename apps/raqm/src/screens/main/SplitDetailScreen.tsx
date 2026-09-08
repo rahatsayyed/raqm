@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, FlatList, ToastAndroid } from 'react-nati
 import { MainStackScreenProps } from '../../navigation/types';
 import { getSplit, getSplitParticipants, setSplitParticipantStatus, deleteSplit } from '../../db/database';
 import type { Split, SplitParticipant } from '../../db/database';
+import { buildUpiLink } from '../../utils/upi';
+import { openExternalLink } from '../../utils/shareLinks';
 
 function statusLabel(status: SplitParticipant['status']): string {
   if (status === 'settled') return 'Settled';
@@ -64,16 +66,54 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
         data={participants}
         keyExtractor={(p) => String(p.id)}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            className="flex-row items-center justify-between bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-md mb-sm"
-            onPress={() => toggleSettled(item)}
-          >
-            <View>
-              <Text className="font-inter-medium text-body-md text-on-surface">{item.name}</Text>
-              <Text className="font-inter text-body-sm text-on-surface-variant">{statusLabel(item.status)}</Text>
-            </View>
-            <Text className="font-mono text-body-md text-on-surface">₹{item.shareAmount.toFixed(2)}</Text>
-          </TouchableOpacity>
+          <View className="bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-md mb-sm">
+            <TouchableOpacity className="flex-row items-center justify-between" onPress={() => toggleSettled(item)}>
+              <View>
+                <Text className="font-inter-medium text-body-md text-on-surface">{item.name}</Text>
+                <Text className="font-inter text-body-sm text-on-surface-variant">{statusLabel(item.status)}</Text>
+              </View>
+              <Text className="font-mono text-body-md text-on-surface">₹{item.shareAmount.toFixed(2)}</Text>
+            </TouchableOpacity>
+
+            {item.status !== 'settled' && (
+              <View className="flex-row gap-sm mt-sm">
+                <TouchableOpacity
+                  className="flex-1 py-[8px] items-center bg-primary/10 rounded-lg"
+                  onPress={() => {
+                    if (!split.creatorUpiId) {
+                      ToastAndroid.show('Add your UPI ID in Settings first', ToastAndroid.LONG);
+                      return;
+                    }
+                    const link = buildUpiLink({
+                      upiId: split.creatorUpiId,
+                      payeeName: split.title,
+                      amount: item.shareAmount,
+                      note: split.title,
+                    });
+                    openExternalLink(link, link);
+                  }}
+                >
+                  <Text className="font-inter-medium text-body-sm text-primary">Pay via UPI</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className="flex-1 py-[8px] items-center bg-surface rounded-lg border border-outline-variant"
+                  onPress={() => {
+                    const message = split.creatorUpiId
+                      ? `${split.title}: you owe ₹${item.shareAmount.toFixed(2)}. Pay here: ${buildUpiLink({
+                          upiId: split.creatorUpiId,
+                          payeeName: split.title,
+                          amount: item.shareAmount,
+                          note: split.title,
+                        })}`
+                      : `${split.title}: you owe ₹${item.shareAmount.toFixed(2)}.`;
+                    openExternalLink(`whatsapp://send?text=${encodeURIComponent(message)}`, message);
+                  }}
+                >
+                  <Text className="font-inter-medium text-body-sm text-on-surface">Share on WhatsApp</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         )}
       />
     </View>
