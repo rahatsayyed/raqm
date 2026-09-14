@@ -543,7 +543,8 @@ export function RulesScreen({ navigation, route }: MainStackScreenProps<'Rules'>
           <Text className="font-inter-semibold text-section-header text-on-surface mb-sm">Amount → Transfer</Text>
           <Text className="font-inter text-supporting-text text-on-surface-variant mb-md">
             Automatically treat any transaction above this amount as a transfer, excluded from
-            income/expense totals.
+            Analytics and budget totals (Dashboard's spend total counts transfers separately,
+            per its existing behavior).
           </Text>
           {addingTransfer ? (
             <View className="gap-sm mb-md">
