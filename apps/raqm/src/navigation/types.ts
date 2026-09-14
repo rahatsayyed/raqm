@@ -72,7 +72,7 @@ export type MainStackParamList = {
     participants: { name: string; phoneNumber: string | null; shareAmount: number; isSelf: boolean }[];
   };
   SplitDetail: { splitId: number };
-  Rules: { section?: 'category' | 'merchant' | 'amount' } | undefined;
+  Rules: { section?: 'category' | 'merchant' | 'amount' | 'word_match' | 'privacy' } | undefined;
   ManageAccounts: undefined;
   SmsInbox: undefined;
   SmsThread: { key: string };

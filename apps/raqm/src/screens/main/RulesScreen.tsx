@@ -1,22 +1,27 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { MainStackScreenProps } from '../../navigation/types';
 import {
   getCategoryRules, deleteCategoryRule, type CategoryRule,
   getTransactionGroups, deleteTransactionGroup, type TransactionGroupSummary,
+  getWordMatchRules, upsertWordMatchRule, deleteWordMatchRule, reorderWordMatchRules, type WordMatchRule,
+  getCategories, type Category,
 } from '../../db/database';
+import { reapplyWordMatchRule } from '../../services/rulesReapply';
 import { useTxStore } from '../../store/txStore';
 import { formatAmount } from '../../utils/format';
 import { Colors } from '../../theme';
 import { TrashIcon } from '../../components/TabIcon';
 
-type Section = 'category' | 'merchant' | 'amount';
+type Section = 'category' | 'word_match' | 'merchant' | 'amount' | 'privacy';
 
 const SECTIONS: { key: Section; label: string }[] = [
   { key: 'category', label: 'Category' },
+  { key: 'word_match', label: 'Word Match' },
   { key: 'merchant', label: 'Merchant' },
   { key: 'amount', label: 'Amount' },
+  { key: 'privacy', label: 'Privacy' },
 ];
 
 function renderSeparator() {
@@ -31,14 +36,26 @@ export function RulesScreen({ navigation, route }: MainStackScreenProps<'Rules'>
 
   const [categoryRules, setCategoryRules] = useState<CategoryRule[]>([]);
   const [merchantGroups, setMerchantGroups] = useState<TransactionGroupSummary[]>([]);
+  const [wordMatchRules, setWordMatchRules] = useState<WordMatchRule[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [addingWordMatch, setAddingWordMatch] = useState(false);
+  const [newPattern, setNewPattern] = useState('');
+  const [newCategoryId, setNewCategoryId] = useState<number | null>(null);
   const [loaded, setLoaded] = useState(false);
   const currency = useTxStore((s) => s.txs[0]?.currency);
   const refreshTxs = useTxStore((s) => s.refresh);
 
   const load = useCallback(async () => {
-    const [rules, groups] = await Promise.all([getCategoryRules(), getTransactionGroups()]);
+    const [rules, groups, wordRules, cats] = await Promise.all([
+      getCategoryRules(),
+      getTransactionGroups(),
+      getWordMatchRules(),
+      getCategories(),
+    ]);
     setCategoryRules(rules);
     setMerchantGroups(groups);
+    setWordMatchRules(wordRules);
+    setCategories(cats);
     setLoaded(true);
   }, []);
 
@@ -89,6 +106,59 @@ export function RulesScreen({ navigation, route }: MainStackScreenProps<'Rules'>
       );
     },
     [load, refreshTxs],
+  );
+
+  const handleSaveWordMatch = useCallback(async () => {
+    const trimmed = newPattern.trim();
+    if (!trimmed || newCategoryId == null) return;
+    await upsertWordMatchRule(null, trimmed, newCategoryId, null);
+    setAddingWordMatch(false);
+    setNewPattern('');
+    setNewCategoryId(null);
+    await load();
+    Alert.alert(
+      'Apply to past transactions?',
+      `Re-categorize existing transactions matching "${trimmed}" as well, or only new ones from now on?`,
+      [
+        { text: 'From now on only', style: 'cancel' },
+        {
+          text: 'Apply to past too',
+          onPress: async () => {
+            const count = await reapplyWordMatchRule(trimmed, newCategoryId, null);
+            Alert.alert('Done', `${count} transaction${count === 1 ? '' : 's'} updated.`);
+          },
+        },
+      ],
+    );
+  }, [newPattern, newCategoryId, load]);
+
+  const handleDeleteWordMatch = useCallback(
+    (rule: WordMatchRule) => {
+      Alert.alert('Remove Word Match rule', `"${rule.pattern}" will no longer auto-categorize matching merchants.`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            await deleteWordMatchRule(rule.id);
+            await load();
+          },
+        },
+      ]);
+    },
+    [load],
+  );
+
+  const handleMoveWordMatch = useCallback(
+    async (index: number, direction: -1 | 1) => {
+      const newOrder = [...wordMatchRules];
+      const target = index + direction;
+      if (target < 0 || target >= newOrder.length) return;
+      [newOrder[index], newOrder[target]] = [newOrder[target], newOrder[index]];
+      setWordMatchRules(newOrder);
+      await reorderWordMatchRules(newOrder.map((r) => r.id));
+    },
+    [wordMatchRules],
   );
 
   return (
@@ -185,6 +255,86 @@ export function RulesScreen({ navigation, route }: MainStackScreenProps<'Rules'>
                   </Text>
                 </View>
                 <TouchableOpacity hitSlop={8} onPress={() => handleUngroup(item)}>
+                  <TrashIcon color={Colors.errorMuted} size={18} />
+                </TouchableOpacity>
+              </View>
+            )}
+          />
+        </>
+      )}
+
+      {section === 'word_match' && (
+        <>
+          <Text className="font-inter text-supporting-text text-on-surface-variant mb-md">
+            Match any part of a merchant name (e.g. "kirana") to a category. Checked only when no
+            exact merchant rule already applies.
+          </Text>
+          {addingWordMatch ? (
+            <View className="gap-sm mb-md">
+              <TextInput
+                value={newPattern}
+                onChangeText={setNewPattern}
+                placeholder="e.g. kirana"
+                placeholderTextColor={Colors.onSurfaceVariant}
+                className="border border-outline-variant rounded-sm px-md py-sm font-inter text-on-surface"
+              />
+              <View className="flex-row flex-wrap gap-xs">
+                {categories.map((c) => (
+                  <TouchableOpacity
+                    key={c.id}
+                    onPress={() => setNewCategoryId(c.id)}
+                    className={`px-md py-[6px] rounded-full ${newCategoryId === c.id ? 'bg-primary' : 'bg-surface-variant'}`}
+                  >
+                    <Text className={`font-inter text-annotation ${newCategoryId === c.id ? 'text-on-primary' : 'text-on-surface-variant'}`}>
+                      {c.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View className="flex-row gap-sm">
+                <TouchableOpacity onPress={() => setAddingWordMatch(false)} className="flex-1 py-sm items-center rounded-sm bg-surface-variant">
+                  <Text className="font-inter-medium text-on-surface-variant">Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleSaveWordMatch} className="flex-1 py-sm items-center rounded-sm bg-primary">
+                  <Text className="font-inter-medium text-on-primary">Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => setAddingWordMatch(true)} className="py-sm mb-md items-center rounded-sm bg-surface-variant">
+              <Text className="font-inter-medium text-on-surface-variant">+ Add Word Match rule</Text>
+            </TouchableOpacity>
+          )}
+          <FlatList
+            data={wordMatchRules}
+            keyExtractor={(rule) => String(rule.id)}
+            contentContainerClassName="pb-[32px]"
+            showsVerticalScrollIndicator={false}
+            ItemSeparatorComponent={renderSeparator}
+            ListEmptyComponent={
+              loaded ? (
+                <View className="pt-[60px] items-center">
+                  <Text className="font-inter text-body-md text-on-surface-variant">No Word Match rules yet.</Text>
+                </View>
+              ) : null
+            }
+            renderItem={({ item, index }) => (
+              <View className="flex-row items-center justify-between py-md gap-sm">
+                <View className="flex-1">
+                  <Text className="font-inter-medium text-body-standard text-on-surface" numberOfLines={1}>
+                    {item.pattern}
+                  </Text>
+                  <Text className="font-inter text-annotation text-on-surface-variant mt-[2px]" numberOfLines={1}>
+                    → {item.categoryName}
+                  </Text>
+                </View>
+                <TouchableOpacity hitSlop={8} onPress={() => handleMoveWordMatch(index, -1)} disabled={index === 0}>
+                  <Text className={index === 0 ? 'text-outline-variant' : 'text-on-surface-variant'}>↑</Text>
+                </TouchableOpacity>
+                <TouchableOpacity hitSlop={8} onPress={() => handleMoveWordMatch(index, 1)} disabled={index === wordMatchRules.length - 1}>
+                  <Text className={index === wordMatchRules.length - 1 ? 'text-outline-variant' : 'text-on-surface-variant'}>↓</Text>
+                </TouchableOpacity>
+                <TouchableOpacity hitSlop={8} onPress={() => handleDeleteWordMatch(item)}>
                   <TrashIcon color={Colors.errorMuted} size={18} />
                 </TouchableOpacity>
               </View>
