@@ -55,6 +55,7 @@ export type MainStackParamList = {
   DeletedTransactions: undefined;
   Import: undefined;
   AxioImport: undefined;
+  GPayPdfImport: undefined;
   Grocery: undefined;
   DuesReminders: undefined;
   // returnTo: set when SplitCreateScreen's "+ Create new circle" button opens
