@@ -1383,6 +1383,13 @@ export async function insertParsedTx(
     return null;
   }
 
+  // Hide Merchant rule: drops matching SMS entirely, same mechanism as the hidden-account
+  // check above — a deliberate "stop tracking this merchant" the user set from Rules.
+  const privacyRules = await getMerchantPrivacyRules();
+  if (isMerchantHidden(tx.merchant ?? null, privacyRules)) {
+    return null;
+  }
+
   // Amount → Transfer rule: large transactions the user has flagged should be excluded
   // from totals the same way a detected self-transfer is, without attempting to pair
   // them with an opposite transaction (see spec's Non-goals).
