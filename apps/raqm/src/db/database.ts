@@ -1150,6 +1150,7 @@ async function categorizeParsedTx(
   tx: ParsedTransaction,
   ruleCache?: Map<string, { categoryId: number; subcategoryId: number | null } | null>,
   majorityCache?: Map<string, { categoryId: number; subcategoryId: number | null } | null>,
+  wordMatchCache?: Map<string, { categoryId: number; subcategoryId: number | null } | null>,
 ): Promise<{ categoryId: number | null; subcategoryId: number | null }> {
   let categoryId: number | null = null;
   let subcategoryId: number | null = null;
@@ -1172,6 +1173,24 @@ async function categorizeParsedTx(
     }
   }
 
+  // Word Match rules: substring rules the user has defined (Rules screen). Per spec,
+  // this runs between the exact merchant rule above and the majority-vote fallback
+  // below — a Word Match rule beats majority-vote history but loses to an exact rule.
+  if (categoryId === null && tx.merchant) {
+    const merchantKey = tx.merchant.toLowerCase();
+    let wordMatch: { categoryId: number; subcategoryId: number | null } | null | undefined;
+    if (wordMatchCache && wordMatchCache.has(merchantKey)) {
+      wordMatch = wordMatchCache.get(merchantKey);
+    } else {
+      wordMatch = await getWordMatchCategoryForMerchant(tx.merchant);
+      wordMatchCache?.set(merchantKey, wordMatch ?? null);
+    }
+    if (wordMatch) {
+      categoryId = wordMatch.categoryId;
+      subcategoryId = wordMatch.subcategoryId;
+    }
+  }
+
   // Fallback: majority category used historically for this merchant (recency tiebreak).
   if (categoryId === null && tx.merchant) {
     const merchantKey = tx.merchant.toLowerCase();
@@ -1185,17 +1204,6 @@ async function categorizeParsedTx(
     if (majority) {
       categoryId = majority.categoryId;
       subcategoryId = majority.subcategoryId;
-    }
-  }
-
-  // Word Match rules: substring rules the user has defined (Rules screen). Only
-  // consulted when neither the exact merchant rule nor majority-vote history matched —
-  // both of those represent stronger, merchant-specific evidence than a substring rule.
-  if (categoryId === null && tx.merchant) {
-    const wordMatch = await getWordMatchCategoryForMerchant(tx.merchant);
-    if (wordMatch) {
-      categoryId = wordMatch.categoryId;
-      subcategoryId = wordMatch.subcategoryId;
     }
   }
 
@@ -1464,6 +1472,7 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
   // on large scans. Sequential, the cache limits DB reads to one per unique merchant.
   const ruleCache = new Map<string, { categoryId: number; subcategoryId: number | null } | null>();
   const majorityCache = new Map<string, { categoryId: number; subcategoryId: number | null } | null>();
+  const wordMatchCache = new Map<string, { categoryId: number; subcategoryId: number | null } | null>();
 
   // Same Amount → Transfer rule as insertParsedTx: force type=TRANSFER on matching rows
   // before categorization, so categorization (and its Transfer-category fallback) sees
@@ -1475,7 +1484,7 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
     const forcedTransfer = getTransferRuleMatch(tx.amount, transferRules);
     forcedTransfers.push(forcedTransfer);
     const effectiveTx = forcedTransfer ? { ...tx, type: TransactionType.TRANSFER } : tx;
-    const decision = await categorizeParsedTx(effectiveTx, ruleCache, majorityCache);
+    const decision = await categorizeParsedTx(effectiveTx, ruleCache, majorityCache, wordMatchCache);
     if (forcedTransfer && decision.categoryId === null) {
       decision.categoryId = await getCategoryIdByName('Transfer');
     }
