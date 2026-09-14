@@ -1988,6 +1988,90 @@ export async function getWordMatchCategoryForMerchant(
   return hit ? { categoryId: hit.categoryId, subcategoryId: hit.subcategoryId } : null;
 }
 
+export type AmountRuleKind = 'mask' | 'transfer';
+export type AmountRuleDirection = 'above' | 'below';
+export type AmountRuleScope = 'everywhere' | 'list_widgets';
+
+export interface AmountRule {
+  id: number;
+  kind: AmountRuleKind;
+  threshold: number;
+  direction: AmountRuleDirection | null;
+  scope: AmountRuleScope | null;
+}
+
+export function amountMatchesThreshold(
+  amount: number,
+  threshold: number,
+  direction: AmountRuleDirection,
+): boolean {
+  return direction === 'above' ? amount > threshold : amount < threshold;
+}
+
+export function getMaskRuleForAmount(amount: number, rules: AmountRule[]): AmountRule | null {
+  return (
+    rules.find(
+      (r) => r.kind === 'mask' && r.direction != null && amountMatchesThreshold(amount, r.threshold, r.direction),
+    ) ?? null
+  );
+}
+
+export function getTransferRuleMatch(amount: number, rules: AmountRule[]): boolean {
+  return rules.some(
+    (r) => r.kind === 'transfer' && amountMatchesThreshold(amount, r.threshold, r.direction ?? 'above'),
+  );
+}
+
+export async function getAmountRules(kind?: AmountRuleKind): Promise<AmountRule[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    id: number;
+    kind: AmountRuleKind;
+    threshold: number;
+    direction: AmountRuleDirection | null;
+    scope: AmountRuleScope | null;
+  }>(
+    kind
+      ? `SELECT id, kind, threshold, direction, scope FROM amount_rules WHERE kind = ? ORDER BY id ASC`
+      : `SELECT id, kind, threshold, direction, scope FROM amount_rules ORDER BY id ASC`,
+    ...(kind ? [kind] : []),
+  );
+  return rows;
+}
+
+export async function upsertAmountRule(
+  id: number | null,
+  kind: AmountRuleKind,
+  threshold: number,
+  direction: AmountRuleDirection | null,
+  scope: AmountRuleScope | null,
+): Promise<void> {
+  const database = await getDb();
+  if (id != null) {
+    await database.runAsync(
+      `UPDATE amount_rules SET kind = ?, threshold = ?, direction = ?, scope = ? WHERE id = ?`,
+      kind,
+      threshold,
+      direction,
+      scope,
+      id,
+    );
+    return;
+  }
+  await database.runAsync(
+    `INSERT INTO amount_rules (kind, threshold, direction, scope) VALUES (?, ?, ?, ?)`,
+    kind,
+    threshold,
+    direction,
+    scope,
+  );
+}
+
+export async function deleteAmountRule(id: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`DELETE FROM amount_rules WHERE id = ?`, id);
+}
+
 export interface CsvImportRow {
   amount: number;
   type: TransactionType;
