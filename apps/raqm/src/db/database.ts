@@ -500,6 +500,43 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 16) {
+    await database.runAsync(`BEGIN`);
+    try {
+      await database.runAsync(`
+        CREATE TABLE IF NOT EXISTS word_match_rules (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          pattern TEXT NOT NULL,
+          category_id INTEGER NOT NULL REFERENCES categories(id),
+          subcategory_id INTEGER,
+          priority INTEGER NOT NULL
+        )
+      `);
+      await database.runAsync(`
+        CREATE TABLE IF NOT EXISTS amount_rules (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          kind TEXT NOT NULL CHECK (kind IN ('mask', 'transfer')),
+          threshold REAL NOT NULL,
+          direction TEXT CHECK (direction IN ('above', 'below')),
+          scope TEXT CHECK (scope IN ('everywhere', 'list_widgets'))
+        )
+      `);
+      await database.runAsync(`
+        CREATE TABLE IF NOT EXISTS merchant_privacy_rules (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          merchant_pattern TEXT NOT NULL,
+          hide INTEGER NOT NULL DEFAULT 0,
+          exclude_from_budget INTEGER NOT NULL DEFAULT 0
+        )
+      `);
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (16)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -1806,6 +1843,22 @@ export interface CategoryRule {
   subcategoryName: string | null;
 }
 
+export interface WordMatchRule {
+  id: number;
+  pattern: string;
+  categoryId: number;
+  categoryName: string;
+  subcategoryId: number | null;
+  subcategoryName: string | null;
+  priority: number;
+}
+
+/** Case-insensitive substring match — the same rule used for every "pattern" field in this feature. */
+export function matchesPattern(pattern: string, merchant: string | null): boolean {
+  if (!merchant) return false;
+  return merchant.toLowerCase().includes(pattern.toLowerCase());
+}
+
 export async function getCategoryRules(): Promise<CategoryRule[]> {
   const database = await getDb();
   const rows = await database.getAllAsync<{
@@ -1836,6 +1889,92 @@ export async function getCategoryRules(): Promise<CategoryRule[]> {
 export async function deleteCategoryRule(id: number): Promise<void> {
   const database = await getDb();
   await database.runAsync(`DELETE FROM category_rules WHERE id = ?`, id);
+}
+
+export async function getWordMatchRules(): Promise<WordMatchRule[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    id: number;
+    pattern: string;
+    category_id: number;
+    category_name: string;
+    subcategory_id: number | null;
+    subcategory_name: string | null;
+    priority: number;
+  }>(
+    `SELECT wr.id, wr.pattern, wr.category_id, c.name AS category_name,
+            wr.subcategory_id, s.name AS subcategory_name, wr.priority
+     FROM word_match_rules wr
+     JOIN categories c ON c.id = wr.category_id
+     LEFT JOIN subcategories s ON s.id = wr.subcategory_id
+     ORDER BY wr.priority ASC`,
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    pattern: row.pattern,
+    categoryId: row.category_id,
+    categoryName: row.category_name,
+    subcategoryId: row.subcategory_id,
+    subcategoryName: row.subcategory_name,
+    priority: row.priority,
+  }));
+}
+
+export async function upsertWordMatchRule(
+  id: number | null,
+  pattern: string,
+  categoryId: number,
+  subcategoryId: number | null,
+): Promise<void> {
+  const database = await getDb();
+  if (id != null) {
+    await database.runAsync(
+      `UPDATE word_match_rules SET pattern = ?, category_id = ?, subcategory_id = ? WHERE id = ?`,
+      pattern,
+      categoryId,
+      subcategoryId,
+      id,
+    );
+    return;
+  }
+  const maxRow = await database.getFirstAsync<{ maxPriority: number | null }>(
+    `SELECT MAX(priority) AS maxPriority FROM word_match_rules`,
+  );
+  const nextPriority = (maxRow?.maxPriority ?? -1) + 1;
+  await database.runAsync(
+    `INSERT INTO word_match_rules (pattern, category_id, subcategory_id, priority) VALUES (?, ?, ?, ?)`,
+    pattern,
+    categoryId,
+    subcategoryId,
+    nextPriority,
+  );
+}
+
+export async function deleteWordMatchRule(id: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`DELETE FROM word_match_rules WHERE id = ?`, id);
+}
+
+export async function reorderWordMatchRules(orderedIds: number[]): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`BEGIN`);
+  try {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await database.runAsync(`UPDATE word_match_rules SET priority = ? WHERE id = ?`, i, orderedIds[i]);
+    }
+    await database.runAsync(`COMMIT`);
+  } catch (e) {
+    await database.runAsync(`ROLLBACK`);
+    throw e;
+  }
+}
+
+export async function getWordMatchCategoryForMerchant(
+  merchant: string,
+): Promise<{ categoryId: number; subcategoryId: number | null } | null> {
+  const rules = await getWordMatchRules();
+  const hit = rules.find((r) => matchesPattern(r.pattern, merchant));
+  return hit ? { categoryId: hit.categoryId, subcategoryId: hit.subcategoryId } : null;
 }
 
 export interface CsvImportRow {
