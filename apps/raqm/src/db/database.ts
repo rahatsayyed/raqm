@@ -1383,7 +1383,17 @@ export async function insertParsedTx(
     return null;
   }
 
-  const { categoryId, subcategoryId } = await categorizeParsedTx(tx);
+  // Amount → Transfer rule: large transactions the user has flagged should be excluded
+  // from totals the same way a detected self-transfer is, without attempting to pair
+  // them with an opposite transaction (see spec's Non-goals).
+  const transferRules = await getAmountRules('transfer');
+  const forcedTransfer = getTransferRuleMatch(tx.amount, transferRules);
+  const effectiveTx = forcedTransfer ? { ...tx, type: TransactionType.TRANSFER } : tx;
+
+  let { categoryId, subcategoryId } = await categorizeParsedTx(effectiveTx);
+  if (forcedTransfer && categoryId === null) {
+    categoryId = await getCategoryIdByName('Transfer');
+  }
   const autoTags = getAutoTags(tx.merchant);
 
   // Symmetric cross-source dedup: whichever source arrives second finds the first and
@@ -1399,7 +1409,7 @@ export async function insertParsedTx(
     if (source === 'sms') {
       await updateTx(crossDup.id, {
         amount: tx.amount,
-        type: tx.type,
+        type: effectiveTx.type,
         merchant: tx.merchant ?? crossDup.merchant,
         timestamp: Math.min(crossDup.timestamp, tx.timestamp),
         rawSms: tx.smsBody,
@@ -1419,7 +1429,7 @@ export async function insertParsedTx(
 
   const newId = await insertTx({
     amount: tx.amount,
-    type: tx.type,
+    type: effectiveTx.type,
     merchant: tx.merchant ?? null,
     bankName: tx.bankName,
     accountLast4: tx.accountLast4 ?? null,
