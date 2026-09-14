@@ -1188,6 +1188,17 @@ async function categorizeParsedTx(
     }
   }
 
+  // Word Match rules: substring rules the user has defined (Rules screen). Only
+  // consulted when neither the exact merchant rule nor majority-vote history matched —
+  // both of those represent stronger, merchant-specific evidence than a substring rule.
+  if (categoryId === null && tx.merchant) {
+    const wordMatch = await getWordMatchCategoryForMerchant(tx.merchant);
+    if (wordMatch) {
+      categoryId = wordMatch.categoryId;
+      subcategoryId = wordMatch.subcategoryId;
+    }
+  }
+
   // C2: salary auto-detection — only if no rule already matched.
   if (categoryId === null) {
     const isCredit = tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
