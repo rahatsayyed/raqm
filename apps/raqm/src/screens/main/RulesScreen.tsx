@@ -12,7 +12,7 @@ import {
 } from '../../db/database';
 import {
   reapplyWordMatchRule, reapplyAmountMaskRule, reapplyAmountTransferRule,
-  reapplyHideMerchantRule, reapplyExcludeFromBudgetRule,
+  reapplyHideMerchantRule, reapplyExcludeFromBudgetRule, countAmountTransferMatches,
 } from '../../services/rulesReapply';
 import { invalidateAmountRulesCache } from '../../store/amountRulesStore';
 import { useTxStore } from '../../store/txStore';
@@ -220,9 +220,14 @@ export function RulesScreen({ navigation, route }: MainStackScreenProps<'Rules'>
     setAddingTransfer(false);
     setTransferThreshold('');
     await load();
+    // This permanently rewrites the `type` column with no undo (unlike mask/budget-exclude,
+    // which are no-ops, or Hide Merchant, which soft-deletes) — show the affected count
+    // up front so the user isn't confirming an irreversible action blind.
+    const matchCount = await countAmountTransferMatches(threshold);
     Alert.alert(
       'Apply to past transactions?',
-      'Mark existing transactions above this amount as transfers too, or only new ones from now on?',
+      `This will mark ${matchCount} existing transaction${matchCount === 1 ? '' : 's'} above ` +
+        `${formatAmount(threshold, '₹')} as transfers. This cannot be undone. Also apply going forward?`,
       [
         { text: 'From now on only', style: 'cancel' },
         {

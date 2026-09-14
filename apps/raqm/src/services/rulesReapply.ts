@@ -56,6 +56,23 @@ export function reapplyAmountMaskRule(): Promise<void> {
   });
 }
 
+/**
+ * Read-only count of how many non-deleted, non-already-TRANSFER transactions currently
+ * match the Amount → Transfer rule's filter — used to show the user how many rows will
+ * be permanently rewritten before they confirm the (irreversible) past-transactions
+ * reapply. Must stay in lockstep with reapplyAmountTransferRule's filter.
+ */
+export async function countAmountTransferMatches(threshold: number): Promise<number> {
+  const txs = await loadTxRecords();
+  let count = 0;
+  for (const tx of txs) {
+    if (tx.deletedAt || tx.type === TransactionType.TRANSFER) continue;
+    if (!amountMatchesThreshold(tx.amount, threshold, 'above')) continue;
+    count++;
+  }
+  return count;
+}
+
 export function reapplyAmountTransferRule(threshold: number): Promise<number> {
   return serialize(async () => {
     const txs = await loadTxRecords();
