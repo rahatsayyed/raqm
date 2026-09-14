@@ -7,8 +7,10 @@ import {
   getTransactionGroups, deleteTransactionGroup, type TransactionGroupSummary,
   getWordMatchRules, upsertWordMatchRule, deleteWordMatchRule, reorderWordMatchRules, type WordMatchRule,
   getCategories, type Category,
+  getAmountRules, upsertAmountRule, deleteAmountRule, type AmountRule,
 } from '../../db/database';
-import { reapplyWordMatchRule } from '../../services/rulesReapply';
+import { reapplyWordMatchRule, reapplyAmountMaskRule, reapplyAmountTransferRule } from '../../services/rulesReapply';
+import { invalidateAmountRulesCache } from '../../store/amountRulesStore';
 import { useTxStore } from '../../store/txStore';
 import { formatAmount } from '../../utils/format';
 import { Colors } from '../../theme';
@@ -41,21 +43,33 @@ export function RulesScreen({ navigation, route }: MainStackScreenProps<'Rules'>
   const [addingWordMatch, setAddingWordMatch] = useState(false);
   const [newPattern, setNewPattern] = useState('');
   const [newCategoryId, setNewCategoryId] = useState<number | null>(null);
+  const [maskRules, setMaskRules] = useState<AmountRule[]>([]);
+  const [transferRules, setTransferRules] = useState<AmountRule[]>([]);
+  const [addingMask, setAddingMask] = useState(false);
+  const [maskThreshold, setMaskThreshold] = useState('');
+  const [maskDirection, setMaskDirection] = useState<'above' | 'below'>('above');
+  const [maskScope, setMaskScope] = useState<'everywhere' | 'list_widgets'>('everywhere');
+  const [addingTransfer, setAddingTransfer] = useState(false);
+  const [transferThreshold, setTransferThreshold] = useState('');
   const [loaded, setLoaded] = useState(false);
   const currency = useTxStore((s) => s.txs[0]?.currency);
   const refreshTxs = useTxStore((s) => s.refresh);
 
   const load = useCallback(async () => {
-    const [rules, groups, wordRules, cats] = await Promise.all([
+    const [rules, groups, wordRules, cats, maskR, transferR] = await Promise.all([
       getCategoryRules(),
       getTransactionGroups(),
       getWordMatchRules(),
       getCategories(),
+      getAmountRules('mask'),
+      getAmountRules('transfer'),
     ]);
     setCategoryRules(rules);
     setMerchantGroups(groups);
     setWordMatchRules(wordRules);
     setCategories(cats);
+    setMaskRules(maskR);
+    setTransferRules(transferR);
     setLoaded(true);
   }, []);
 
@@ -159,6 +173,64 @@ export function RulesScreen({ navigation, route }: MainStackScreenProps<'Rules'>
       await reorderWordMatchRules(newOrder.map((r) => r.id));
     },
     [wordMatchRules],
+  );
+
+  const handleSaveMask = useCallback(async () => {
+    const threshold = Number(maskThreshold);
+    if (!Number.isFinite(threshold) || threshold <= 0) return;
+    await upsertAmountRule(null, 'mask', threshold, maskDirection, maskScope);
+    setAddingMask(false);
+    setMaskThreshold('');
+    invalidateAmountRulesCache();
+    await load();
+    Alert.alert(
+      'Apply to past transactions?',
+      'Mask matching amounts already on your ledger too, or only new ones from now on?',
+      [
+        { text: 'From now on only', style: 'cancel' },
+        { text: 'Apply to past too', onPress: () => reapplyAmountMaskRule() },
+      ],
+    );
+  }, [maskThreshold, maskDirection, maskScope, load]);
+
+  const handleDeleteMask = useCallback(
+    async (rule: AmountRule) => {
+      await deleteAmountRule(rule.id);
+      invalidateAmountRulesCache();
+      await load();
+    },
+    [load],
+  );
+
+  const handleSaveTransfer = useCallback(async () => {
+    const threshold = Number(transferThreshold);
+    if (!Number.isFinite(threshold) || threshold <= 0) return;
+    await upsertAmountRule(null, 'transfer', threshold, 'above', null);
+    setAddingTransfer(false);
+    setTransferThreshold('');
+    await load();
+    Alert.alert(
+      'Apply to past transactions?',
+      'Mark existing transactions above this amount as transfers too, or only new ones from now on?',
+      [
+        { text: 'From now on only', style: 'cancel' },
+        {
+          text: 'Apply to past too',
+          onPress: async () => {
+            const count = await reapplyAmountTransferRule(threshold);
+            Alert.alert('Done', `${count} transaction${count === 1 ? '' : 's'} marked as transfers.`);
+          },
+        },
+      ],
+    );
+  }, [transferThreshold, load]);
+
+  const handleDeleteTransfer = useCallback(
+    async (rule: AmountRule) => {
+      await deleteAmountRule(rule.id);
+      await load();
+    },
+    [load],
   );
 
   return (
@@ -345,13 +417,114 @@ export function RulesScreen({ navigation, route }: MainStackScreenProps<'Rules'>
 
       {section === 'amount' && (
         <>
+          <Text className="font-inter-semibold text-section-header text-on-surface mb-sm">Mask Amount</Text>
           <Text className="font-inter text-supporting-text text-on-surface-variant mb-md">
-            Automatically tag or categorize transactions based on their amount — e.g. "spends over
-            ₹10,000 mark as internal transfer." Not built yet.
+            Hide the amount for transactions above or below a threshold, everywhere or just in
+            lists and widgets. Tap a masked amount to reveal it.
           </Text>
-          <View className="pt-[60px] items-center">
-            <Text className="font-inter text-body-md text-on-surface-variant">Coming soon.</Text>
-          </View>
+          {addingMask ? (
+            <View className="gap-sm mb-md">
+              <TextInput
+                value={maskThreshold}
+                onChangeText={setMaskThreshold}
+                placeholder="e.g. 10000"
+                keyboardType="numeric"
+                placeholderTextColor={Colors.onSurfaceVariant}
+                className="border border-outline-variant rounded-sm px-md py-sm font-inter text-on-surface"
+              />
+              <View className="flex-row gap-xs">
+                {(['above', 'below'] as const).map((d) => (
+                  <TouchableOpacity
+                    key={d}
+                    onPress={() => setMaskDirection(d)}
+                    className={`flex-1 py-sm items-center rounded-full ${maskDirection === d ? 'bg-primary' : 'bg-surface-variant'}`}
+                  >
+                    <Text className={`font-inter-medium text-annotation ${maskDirection === d ? 'text-on-primary' : 'text-on-surface-variant'}`}>
+                      {d === 'above' ? 'Above' : 'Below'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View className="flex-row gap-xs">
+                {(['everywhere', 'list_widgets'] as const).map((s) => (
+                  <TouchableOpacity
+                    key={s}
+                    onPress={() => setMaskScope(s)}
+                    className={`flex-1 py-sm items-center rounded-full ${maskScope === s ? 'bg-primary' : 'bg-surface-variant'}`}
+                  >
+                    <Text className={`font-inter-medium text-annotation ${maskScope === s ? 'text-on-primary' : 'text-on-surface-variant'}`}>
+                      {s === 'everywhere' ? 'Everywhere' : 'List & widgets only'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View className="flex-row gap-sm">
+                <TouchableOpacity onPress={() => setAddingMask(false)} className="flex-1 py-sm items-center rounded-sm bg-surface-variant">
+                  <Text className="font-inter-medium text-on-surface-variant">Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleSaveMask} className="flex-1 py-sm items-center rounded-sm bg-primary">
+                  <Text className="font-inter-medium text-on-primary">Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => setAddingMask(true)} className="py-sm mb-md items-center rounded-sm bg-surface-variant">
+              <Text className="font-inter-medium text-on-surface-variant">+ Add mask rule</Text>
+            </TouchableOpacity>
+          )}
+          {maskRules.map((rule) => (
+            <View key={rule.id} className="flex-row items-center justify-between py-sm">
+              <Text className="font-inter text-body-standard text-on-surface">
+                {rule.direction === 'above' ? 'Above' : 'Below'} {formatAmount(rule.threshold, currency)} ·{' '}
+                {rule.scope === 'everywhere' ? 'Everywhere' : 'List & widgets'}
+              </Text>
+              <TouchableOpacity hitSlop={8} onPress={() => handleDeleteMask(rule)}>
+                <TrashIcon color={Colors.errorMuted} size={18} />
+              </TouchableOpacity>
+            </View>
+          ))}
+
+          <View className="h-[1px] bg-outline-variant my-lg" />
+
+          <Text className="font-inter-semibold text-section-header text-on-surface mb-sm">Amount → Transfer</Text>
+          <Text className="font-inter text-supporting-text text-on-surface-variant mb-md">
+            Automatically treat any transaction above this amount as a transfer, excluded from
+            income/expense totals.
+          </Text>
+          {addingTransfer ? (
+            <View className="gap-sm mb-md">
+              <TextInput
+                value={transferThreshold}
+                onChangeText={setTransferThreshold}
+                placeholder="e.g. 50000"
+                keyboardType="numeric"
+                placeholderTextColor={Colors.onSurfaceVariant}
+                className="border border-outline-variant rounded-sm px-md py-sm font-inter text-on-surface"
+              />
+              <View className="flex-row gap-sm">
+                <TouchableOpacity onPress={() => setAddingTransfer(false)} className="flex-1 py-sm items-center rounded-sm bg-surface-variant">
+                  <Text className="font-inter-medium text-on-surface-variant">Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleSaveTransfer} className="flex-1 py-sm items-center rounded-sm bg-primary">
+                  <Text className="font-inter-medium text-on-primary">Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => setAddingTransfer(true)} className="py-sm items-center rounded-sm bg-surface-variant">
+              <Text className="font-inter-medium text-on-surface-variant">+ Add transfer rule</Text>
+            </TouchableOpacity>
+          )}
+          {transferRules.map((rule) => (
+            <View key={rule.id} className="flex-row items-center justify-between py-sm">
+              <Text className="font-inter text-body-standard text-on-surface">
+                Above {formatAmount(rule.threshold, currency)}
+              </Text>
+              <TouchableOpacity hitSlop={8} onPress={() => handleDeleteTransfer(rule)}>
+                <TrashIcon color={Colors.errorMuted} size={18} />
+              </TouchableOpacity>
+            </View>
+          ))}
         </>
       )}
     </View>
