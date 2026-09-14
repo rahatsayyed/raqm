@@ -1243,7 +1243,7 @@ function matchDefaultKeywordCategory(merchant: string): string | null {
 
 const categoryIdByNameCache = new Map<string, number | null>();
 
-async function getCategoryIdByName(name: string): Promise<number | null> {
+export async function getCategoryIdByName(name: string): Promise<number | null> {
   if (categoryIdByNameCache.has(name)) return categoryIdByNameCache.get(name)!;
   const database = await getDb();
   const row = await database.getFirstAsync<{ id: number }>(
