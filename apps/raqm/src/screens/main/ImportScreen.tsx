@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { MainStackScreenProps } from '../../navigation/types';
 
 interface SourceOption {
-  key: 'axio' | 'pennywise' | 'bank-pdf' | 'upi-pdf';
+  key: 'axio' | 'pennywise' | 'bank-pdf' | 'gpay-pdf';
   title: string;
   subtitle: string;
   enabled: boolean;
@@ -11,9 +11,9 @@ interface SourceOption {
 
 const SOURCES: SourceOption[] = [
   { key: 'axio', title: 'Axio CSV', subtitle: 'Import categories, notes, and tags from an Axio expense report', enabled: true },
+  { key: 'gpay-pdf', title: 'Google Pay (PDF)', subtitle: 'Import transactions and full merchant names from a Google Pay statement', enabled: true },
   { key: 'pennywise', title: 'Pennywise', subtitle: 'Coming soon', enabled: false },
   { key: 'bank-pdf', title: 'Bank statement (PDF)', subtitle: 'Coming soon', enabled: false },
-  { key: 'upi-pdf', title: 'GPay / PhonePe (PDF)', subtitle: 'Coming soon', enabled: false },
 ];
 
 export function ImportScreen({ navigation }: MainStackScreenProps<'Import'>) {
@@ -32,7 +32,13 @@ export function ImportScreen({ navigation }: MainStackScreenProps<'Import'>) {
           <TouchableOpacity
             key={source.key}
             disabled={!source.enabled}
-            onPress={source.key === 'axio' ? () => navigation.navigate('AxioImport') : undefined}
+            onPress={
+              source.key === 'axio'
+                ? () => navigation.navigate('AxioImport')
+                : source.key === 'gpay-pdf'
+                  ? () => navigation.navigate('GPayPdfImport')
+                  : undefined
+            }
             className={`mb-3 rounded-2xl border border-outline-variant bg-surface-container-high p-4 ${
               source.enabled ? '' : 'opacity-50'
             }`}

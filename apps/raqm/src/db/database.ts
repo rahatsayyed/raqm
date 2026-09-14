@@ -2,6 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import type { ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
 import type { ReconciliationCandidate, PlannedUpdate, PlannedInsert } from '../services/imports/reconcile';
+import type { GpayPdfRow } from '../services/imports/gpayPdf';
 
 
 async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
@@ -540,8 +541,9 @@ function rowToTx(row: Record<string, unknown>): ParsedTransaction {
 
 // ── Plan 2: TxRecord types ────────────────────────────────────────────────────
 
-/** Which ingestion pipeline produced a transaction row. Added in migration v12. */
-export type TxSource = 'sms' | 'notification';
+/** Which ingestion pipeline produced a transaction row. Added in migration v12.
+ * 'pdf_import' added for the Google Pay statement PDF importer — see applyGpayPdfImport. */
+export type TxSource = 'sms' | 'notification' | 'pdf_import';
 
 export interface TxRecord {
   id: number;
@@ -1223,15 +1225,17 @@ const REFERENCE_DUP_WINDOW_MS = 48 * 60 * 60 * 1000;
  * wrongly drop the second leg as a "duplicate" of the first, when it's a distinct real
  * transaction `pairSelfTransfers` is meant to link, not delete.
  */
-async function isReferenceDuplicate(
+/** Shared by isReferenceDuplicate and applyGpayPdfImport — the latter needs the matched
+ * row's id/merchant (to upgrade the name), not just a yes/no. */
+async function findTxByReference(
   reference: string,
   amount: number,
   type: TransactionType,
   timestamp: number,
-): Promise<boolean> {
+): Promise<{ id: number; merchant: string | null } | null> {
   const database = await getDb();
-  const row = await database.getFirstAsync<{ id: number }>(
-    `SELECT id FROM transactions
+  const row = await database.getFirstAsync<{ id: number; merchant: string | null }>(
+    `SELECT id, merchant FROM transactions
      WHERE reference = ? AND amount = ? AND type = ? AND deleted_at IS NULL AND ABS(timestamp - ?) <= ?
      LIMIT 1`,
     reference,
@@ -1240,7 +1244,16 @@ async function isReferenceDuplicate(
     timestamp,
     REFERENCE_DUP_WINDOW_MS,
   );
-  return row != null;
+  return row ?? null;
+}
+
+async function isReferenceDuplicate(
+  reference: string,
+  amount: number,
+  type: TransactionType,
+  timestamp: number,
+): Promise<boolean> {
+  return (await findTxByReference(reference, amount, type, timestamp)) != null;
 }
 
 /** Keys (`bankName|last4`, last4 normalized to '') of accounts hidden via the manage-accounts screen. */
@@ -1498,6 +1511,100 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
       isFromCard: tx.isFromCard ?? false,
     });
   }
+}
+
+export interface GpayPdfImportResult {
+  inserted: number;
+  merchantsUpdated: number;
+  unchanged: number;
+}
+
+/**
+ * Applies parsed Google Pay statement rows (see services/imports/gpayPdf.ts). Dedup is
+ * reference-first, not fuzzy: the PDF's "UPI Transaction ID" is the same NPCI RRN the bank
+ * SMS parser already extracts into ParsedTransaction.reference (see UPI_REF in
+ * CompiledPatterns.ts), so an exact reference+amount+type match is a reliable identity check —
+ * no amount/day fuzzy-matching (unlike the Axio CSV importer, which has no reference number
+ * to key on).
+ *
+ * On a match, the existing row's merchant is overwritten with the PDF's fuller name (the PDF
+ * always has the complete payee name; SMS text is often truncated) — category/notes/tags are
+ * left untouched. Once a transaction's merchant comes from a PDF import, it stays that way:
+ * a later SMS for the same reference just hits isReferenceDuplicate's plain skip and never
+ * touches merchant, so the PDF's name wins for good, including for SMS ingested after this
+ * import runs.
+ */
+export async function applyGpayPdfImport(rows: GpayPdfRow[]): Promise<GpayPdfImportResult> {
+  if (rows.length === 0) return { inserted: 0, merchantsUpdated: 0, unchanged: 0 };
+
+  const hiddenKeys = await getHiddenAccountKeys();
+
+  // Sequential, not Promise.all — same rationale as insertParsedTxs: concurrent expo-sqlite
+  // reads/writes crash on large batches and defeat these caches.
+  const ruleCache = new Map<string, { categoryId: number; subcategoryId: number | null } | null>();
+  const majorityCache = new Map<string, { categoryId: number; subcategoryId: number | null } | null>();
+
+  const database = await getDb();
+  let inserted = 0;
+  let merchantsUpdated = 0;
+  let unchanged = 0;
+
+  await database.runAsync('BEGIN');
+  try {
+    for (const row of rows) {
+      if (hiddenKeys.has(`${row.bankName}|${row.accountLast4 ?? ''}`)) continue;
+
+      const match = await findTxByReference(row.reference, row.amount, row.type, row.timestamp);
+      if (match) {
+        if (match.merchant !== row.merchant) {
+          await database.runAsync(`UPDATE transactions SET merchant = ? WHERE id = ?`, row.merchant, match.id);
+          merchantsUpdated++;
+        } else {
+          unchanged++;
+        }
+        continue;
+      }
+
+      const parsedTx: ParsedTransaction = {
+        amount: row.amount,
+        type: row.type,
+        merchant: row.merchant,
+        reference: row.reference,
+        accountLast4: row.accountLast4,
+        balance: null,
+        smsBody: '',
+        sender: 'Google Pay statement import',
+        timestamp: row.timestamp,
+        bankName: row.bankName,
+      };
+      const { categoryId, subcategoryId } = await categorizeParsedTx(parsedTx, ruleCache, majorityCache);
+      const autoTags = getAutoTags(row.merchant);
+
+      await database.runAsync(
+        `INSERT INTO transactions
+           (amount, type, merchant, bankName, accountLast4, timestamp, balance, currency, isFromCard,
+            category_id, subcategory_id, tags, reference, is_manual, source)
+         VALUES (?, ?, ?, ?, ?, ?, NULL, '₹', 0, ?, ?, ?, ?, 0, 'pdf_import')`,
+        row.amount,
+        row.type,
+        row.merchant,
+        row.bankName,
+        row.accountLast4,
+        row.timestamp,
+        categoryId,
+        subcategoryId,
+        autoTags.length > 0 ? JSON.stringify(autoTags) : null,
+        row.reference,
+      );
+      inserted++;
+    }
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+
+  return { inserted, merchantsUpdated, unchanged };
 }
 
 export async function updateTx(id: number, patch: TxPatch): Promise<void> {
