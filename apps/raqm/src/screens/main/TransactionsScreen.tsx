@@ -48,7 +48,7 @@ function isDebit(type: TransactionType): boolean {
   return type === TransactionType.EXPENSE || type === TransactionType.TRANSFER || type === TransactionType.INVESTMENT;
 }
 
-function txTypeLabel(type: TransactionType): string {
+export function txTypeLabel(type: TransactionType): string {
   switch (type) {
     case TransactionType.INCOME: return 'Income';
     case TransactionType.CREDIT: return 'Credit';
