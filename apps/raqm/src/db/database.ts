@@ -1464,10 +1464,27 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
   // on large scans. Sequential, the cache limits DB reads to one per unique merchant.
   const ruleCache = new Map<string, { categoryId: number; subcategoryId: number | null } | null>();
   const majorityCache = new Map<string, { categoryId: number; subcategoryId: number | null } | null>();
+
+  // Same Amount → Transfer rule as insertParsedTx: force type=TRANSFER on matching rows
+  // before categorization, so categorization (and its Transfer-category fallback) sees
+  // the forced type — mirrors insertParsedTx's effectiveTx approach exactly.
+  const transferRules = await getAmountRules('transfer');
+  const forcedTransfers: boolean[] = [];
   const decisions: Array<{ categoryId: number | null; subcategoryId: number | null }> = [];
   for (const tx of txs) {
-    decisions.push(await categorizeParsedTx(tx, ruleCache, majorityCache));
+    const forcedTransfer = getTransferRuleMatch(tx.amount, transferRules);
+    forcedTransfers.push(forcedTransfer);
+    const effectiveTx = forcedTransfer ? { ...tx, type: TransactionType.TRANSFER } : tx;
+    const decision = await categorizeParsedTx(effectiveTx, ruleCache, majorityCache);
+    if (forcedTransfer && decision.categoryId === null) {
+      decision.categoryId = await getCategoryIdByName('Transfer');
+    }
+    decisions.push(decision);
   }
+
+  // Hide Merchant rule: same as insertParsedTx — drops matching rows entirely, checked
+  // once up-front (like hiddenKeys below) rather than per-row.
+  const privacyRules = await getMerchantPrivacyRules();
 
   const hiddenKeys = await getHiddenAccountKeys();
 
@@ -1485,6 +1502,10 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
       // Same "hide stops intake" rule as insertParsedTx — checked once against an
       // in-memory Set rather than per-row, to keep this loop's per-iteration DB calls flat.
       if (hiddenKeys.has(`${tx.bankName}|${tx.accountLast4 ?? ''}`)) {
+        continue;
+      }
+      // Hide Merchant rule: same drop-entirely behavior as insertParsedTx.
+      if (isMerchantHidden(tx.merchant ?? null, privacyRules)) {
         continue;
       }
       // Same cross-source guard as insertParsedTx — a rescan re-reading the SMS for a
@@ -1511,7 +1532,7 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
              SET amount = ?, type = ?, merchant = ?, timestamp = ?, raw_sms = ?, reference = ?, bankName = ?, accountLast4 = ?
            WHERE id = ?`,
           tx.amount,
-          tx.type,
+          forcedTransfers[i] ? TransactionType.TRANSFER : tx.type,
           tx.merchant ?? crossDup.merchant,
           Math.min(crossDup.timestamp, tx.timestamp),
           tx.smsBody ?? null,
@@ -1530,7 +1551,7 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
             category_id, subcategory_id, tags, raw_sms, reference, is_manual)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
         tx.amount,
-        tx.type,
+        forcedTransfers[i] ? TransactionType.TRANSFER : tx.type,
         tx.merchant ?? null,
         tx.bankName,
         tx.accountLast4 ?? null,
