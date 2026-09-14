@@ -8,8 +8,12 @@ import {
   getWordMatchRules, upsertWordMatchRule, deleteWordMatchRule, reorderWordMatchRules, type WordMatchRule,
   getCategories, type Category,
   getAmountRules, upsertAmountRule, deleteAmountRule, type AmountRule,
+  getMerchantPrivacyRules, upsertMerchantPrivacyRule, deleteMerchantPrivacyRule, type MerchantPrivacyRule,
 } from '../../db/database';
-import { reapplyWordMatchRule, reapplyAmountMaskRule, reapplyAmountTransferRule } from '../../services/rulesReapply';
+import {
+  reapplyWordMatchRule, reapplyAmountMaskRule, reapplyAmountTransferRule,
+  reapplyHideMerchantRule, reapplyExcludeFromBudgetRule,
+} from '../../services/rulesReapply';
 import { invalidateAmountRulesCache } from '../../store/amountRulesStore';
 import { useTxStore } from '../../store/txStore';
 import { formatAmount } from '../../utils/format';
@@ -51,18 +55,24 @@ export function RulesScreen({ navigation, route }: MainStackScreenProps<'Rules'>
   const [maskScope, setMaskScope] = useState<'everywhere' | 'list_widgets'>('everywhere');
   const [addingTransfer, setAddingTransfer] = useState(false);
   const [transferThreshold, setTransferThreshold] = useState('');
+  const [privacyRules, setPrivacyRules] = useState<MerchantPrivacyRule[]>([]);
+  const [addingPrivacy, setAddingPrivacy] = useState(false);
+  const [privacyPattern, setPrivacyPattern] = useState('');
+  const [privacyHide, setPrivacyHide] = useState(false);
+  const [privacyExclude, setPrivacyExclude] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const currency = useTxStore((s) => s.txs[0]?.currency);
   const refreshTxs = useTxStore((s) => s.refresh);
 
   const load = useCallback(async () => {
-    const [rules, groups, wordRules, cats, maskR, transferR] = await Promise.all([
+    const [rules, groups, wordRules, cats, maskR, transferR, privacyR] = await Promise.all([
       getCategoryRules(),
       getTransactionGroups(),
       getWordMatchRules(),
       getCategories(),
       getAmountRules('mask'),
       getAmountRules('transfer'),
+      getMerchantPrivacyRules(),
     ]);
     setCategoryRules(rules);
     setMerchantGroups(groups);
@@ -70,6 +80,7 @@ export function RulesScreen({ navigation, route }: MainStackScreenProps<'Rules'>
     setCategories(cats);
     setMaskRules(maskR);
     setTransferRules(transferR);
+    setPrivacyRules(privacyR);
     setLoaded(true);
   }, []);
 
@@ -228,6 +239,49 @@ export function RulesScreen({ navigation, route }: MainStackScreenProps<'Rules'>
   const handleDeleteTransfer = useCallback(
     async (rule: AmountRule) => {
       await deleteAmountRule(rule.id);
+      await load();
+    },
+    [load],
+  );
+
+  const handleSavePrivacy = useCallback(async () => {
+    const trimmed = privacyPattern.trim();
+    if (!trimmed || (!privacyHide && !privacyExclude)) return;
+    await upsertMerchantPrivacyRule(null, trimmed, privacyHide, privacyExclude);
+    setAddingPrivacy(false);
+    const pattern = trimmed;
+    const hide = privacyHide;
+    const exclude = privacyExclude;
+    setPrivacyPattern('');
+    setPrivacyHide(false);
+    setPrivacyExclude(false);
+    await load();
+
+    if (hide) {
+      Alert.alert(
+        'Remove past transactions too?',
+        `New SMS from merchants matching "${pattern}" will always be dropped from now on. Also move existing matching transactions to Deleted?`,
+        [
+          { text: 'Keep past transactions', style: 'cancel' },
+          {
+            text: 'Move to Deleted',
+            style: 'destructive',
+            onPress: async () => {
+              const count = await reapplyHideMerchantRule(pattern);
+              Alert.alert('Done', `${count} transaction${count === 1 ? '' : 's'} moved to Deleted.`);
+            },
+          },
+        ],
+      );
+    }
+    if (exclude) {
+      await reapplyExcludeFromBudgetRule();
+    }
+  }, [privacyPattern, privacyHide, privacyExclude, load]);
+
+  const handleDeletePrivacy = useCallback(
+    async (rule: MerchantPrivacyRule) => {
+      await deleteMerchantPrivacyRule(rule.id);
       await load();
     },
     [load],
@@ -525,6 +579,84 @@ export function RulesScreen({ navigation, route }: MainStackScreenProps<'Rules'>
               </TouchableOpacity>
             </View>
           ))}
+        </>
+      )}
+
+      {section === 'privacy' && (
+        <>
+          <Text className="font-inter text-supporting-text text-on-surface-variant mb-md">
+            Hide a merchant's SMS entirely, or keep tracking it everywhere except your budgets.
+          </Text>
+          {addingPrivacy ? (
+            <View className="gap-sm mb-md">
+              <TextInput
+                value={privacyPattern}
+                onChangeText={setPrivacyPattern}
+                placeholder="e.g. some spam sender"
+                placeholderTextColor={Colors.onSurfaceVariant}
+                className="border border-outline-variant rounded-sm px-md py-sm font-inter text-on-surface"
+              />
+              <TouchableOpacity
+                onPress={() => setPrivacyHide((v) => !v)}
+                className="flex-row items-center gap-sm py-sm"
+              >
+                <View className={`w-[20px] h-[20px] rounded-sm border-2 items-center justify-center ${privacyHide ? 'bg-primary border-primary' : 'border-outline-variant'}`}>
+                  {privacyHide && <Text className="text-on-primary text-[12px]">✓</Text>}
+                </View>
+                <Text className="font-inter text-body-standard text-on-surface">Hide entirely (never saved)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setPrivacyExclude((v) => !v)}
+                className="flex-row items-center gap-sm py-sm"
+              >
+                <View className={`w-[20px] h-[20px] rounded-sm border-2 items-center justify-center ${privacyExclude ? 'bg-primary border-primary' : 'border-outline-variant'}`}>
+                  {privacyExclude && <Text className="text-on-primary text-[12px]">✓</Text>}
+                </View>
+                <Text className="font-inter text-body-standard text-on-surface">Exclude from budgeting only</Text>
+              </TouchableOpacity>
+              <View className="flex-row gap-sm">
+                <TouchableOpacity onPress={() => setAddingPrivacy(false)} className="flex-1 py-sm items-center rounded-sm bg-surface-variant">
+                  <Text className="font-inter-medium text-on-surface-variant">Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleSavePrivacy} className="flex-1 py-sm items-center rounded-sm bg-primary">
+                  <Text className="font-inter-medium text-on-primary">Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => setAddingPrivacy(true)} className="py-sm mb-md items-center rounded-sm bg-surface-variant">
+              <Text className="font-inter-medium text-on-surface-variant">+ Add privacy rule</Text>
+            </TouchableOpacity>
+          )}
+          <FlatList
+            data={privacyRules}
+            keyExtractor={(rule) => String(rule.id)}
+            contentContainerClassName="pb-[32px]"
+            showsVerticalScrollIndicator={false}
+            ItemSeparatorComponent={renderSeparator}
+            ListEmptyComponent={
+              loaded ? (
+                <View className="pt-[60px] items-center">
+                  <Text className="font-inter text-body-md text-on-surface-variant">No privacy rules yet.</Text>
+                </View>
+              ) : null
+            }
+            renderItem={({ item }) => (
+              <View className="flex-row items-center justify-between py-md gap-sm">
+                <View className="flex-1">
+                  <Text className="font-inter-medium text-body-standard text-on-surface" numberOfLines={1}>
+                    {item.merchantPattern}
+                  </Text>
+                  <Text className="font-inter text-annotation text-on-surface-variant mt-[2px]" numberOfLines={1}>
+                    {[item.hide && 'Hidden', item.excludeFromBudget && 'Excluded from budget'].filter(Boolean).join(' · ')}
+                  </Text>
+                </View>
+                <TouchableOpacity hitSlop={8} onPress={() => handleDeletePrivacy(item)}>
+                  <TrashIcon color={Colors.errorMuted} size={18} />
+                </TouchableOpacity>
+              </View>
+            )}
+          />
         </>
       )}
     </View>
