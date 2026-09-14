@@ -38,6 +38,7 @@ import { TransactionType } from "@rahatsayyed/bank-sms-parser";
 import { countsTowardTotals } from "../../services/txIntelligence";
 import { txTypeLabel } from "./TransactionsScreen";
 import { formatAmount } from "../../utils/format";
+import { MaskedTxAmount } from "../../components/MaskedTxAmount";
 import { accountLabel } from "../../utils/accountLabel";
 import {
   iconForCategoryName,
@@ -565,11 +566,12 @@ export function TransactionDetailScreen({
           onPress={() => setAmountSheetVisible(true)}
           activeOpacity={0.7}
         >
-          <Text
+          <MaskedTxAmount
+            amount={tx.amount}
+            currency={tx.currency}
+            scope="detail"
             className={`font-mono-medium text-metric-hero ${credit ? "text-primary" : "text-on-surface"}`}
-          >
-            {formatAmount(tx.amount, tx.currency)}
-          </Text>
+          />
         </TouchableOpacity>
         <View className="flex-row items-center gap-sm flex-wrap">
           <TouchableOpacity

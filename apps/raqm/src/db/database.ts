@@ -501,6 +501,43 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 16) {
+    await database.runAsync(`BEGIN`);
+    try {
+      await database.runAsync(`
+        CREATE TABLE IF NOT EXISTS word_match_rules (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          pattern TEXT NOT NULL,
+          category_id INTEGER NOT NULL REFERENCES categories(id),
+          subcategory_id INTEGER,
+          priority INTEGER NOT NULL
+        )
+      `);
+      await database.runAsync(`
+        CREATE TABLE IF NOT EXISTS amount_rules (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          kind TEXT NOT NULL CHECK (kind IN ('mask', 'transfer')),
+          threshold REAL NOT NULL,
+          direction TEXT CHECK (direction IN ('above', 'below')),
+          scope TEXT CHECK (scope IN ('everywhere', 'list_widgets'))
+        )
+      `);
+      await database.runAsync(`
+        CREATE TABLE IF NOT EXISTS merchant_privacy_rules (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          merchant_pattern TEXT NOT NULL,
+          hide INTEGER NOT NULL DEFAULT 0,
+          exclude_from_budget INTEGER NOT NULL DEFAULT 0
+        )
+      `);
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (16)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -1115,6 +1152,7 @@ async function categorizeParsedTx(
   tx: ParsedTransaction,
   ruleCache?: Map<string, { categoryId: number; subcategoryId: number | null } | null>,
   majorityCache?: Map<string, { categoryId: number; subcategoryId: number | null } | null>,
+  wordMatchCache?: Map<string, { categoryId: number; subcategoryId: number | null } | null>,
 ): Promise<{ categoryId: number | null; subcategoryId: number | null }> {
   let categoryId: number | null = null;
   let subcategoryId: number | null = null;
@@ -1134,6 +1172,24 @@ async function categorizeParsedTx(
     if (rule) {
       categoryId = rule.categoryId;
       subcategoryId = rule.subcategoryId;
+    }
+  }
+
+  // Word Match rules: substring rules the user has defined (Rules screen). Per spec,
+  // this runs between the exact merchant rule above and the majority-vote fallback
+  // below — a Word Match rule beats majority-vote history but loses to an exact rule.
+  if (categoryId === null && tx.merchant) {
+    const merchantKey = tx.merchant.toLowerCase();
+    let wordMatch: { categoryId: number; subcategoryId: number | null } | null | undefined;
+    if (wordMatchCache && wordMatchCache.has(merchantKey)) {
+      wordMatch = wordMatchCache.get(merchantKey);
+    } else {
+      wordMatch = await getWordMatchCategoryForMerchant(tx.merchant);
+      wordMatchCache?.set(merchantKey, wordMatch ?? null);
+    }
+    if (wordMatch) {
+      categoryId = wordMatch.categoryId;
+      subcategoryId = wordMatch.subcategoryId;
     }
   }
 
@@ -1197,7 +1253,7 @@ function matchDefaultKeywordCategory(merchant: string): string | null {
 
 const categoryIdByNameCache = new Map<string, number | null>();
 
-async function getCategoryIdByName(name: string): Promise<number | null> {
+export async function getCategoryIdByName(name: string): Promise<number | null> {
   if (categoryIdByNameCache.has(name)) return categoryIdByNameCache.get(name)!;
   const database = await getDb();
   const row = await database.getFirstAsync<{ id: number }>(
@@ -1348,7 +1404,24 @@ export async function insertParsedTx(
     return null;
   }
 
-  const { categoryId, subcategoryId } = await categorizeParsedTx(tx);
+  // Hide Merchant rule: drops matching SMS entirely, same mechanism as the hidden-account
+  // check above — a deliberate "stop tracking this merchant" the user set from Rules.
+  const privacyRules = await getMerchantPrivacyRules();
+  if (isMerchantHidden(tx.merchant ?? null, privacyRules)) {
+    return null;
+  }
+
+  // Amount → Transfer rule: large transactions the user has flagged should be excluded
+  // from totals the same way a detected self-transfer is, without attempting to pair
+  // them with an opposite transaction (see spec's Non-goals).
+  const transferRules = await getAmountRules('transfer');
+  const forcedTransfer = getTransferRuleMatch(tx.amount, transferRules);
+  const effectiveTx = forcedTransfer ? { ...tx, type: TransactionType.TRANSFER } : tx;
+
+  let { categoryId, subcategoryId } = await categorizeParsedTx(effectiveTx);
+  if (forcedTransfer && categoryId === null) {
+    categoryId = await getCategoryIdByName('Transfer');
+  }
   const autoTags = getAutoTags(tx.merchant);
 
   // Symmetric cross-source dedup: whichever source arrives second finds the first and
@@ -1364,7 +1437,7 @@ export async function insertParsedTx(
     if (source === 'sms') {
       await updateTx(crossDup.id, {
         amount: tx.amount,
-        type: tx.type,
+        type: effectiveTx.type,
         merchant: tx.merchant ?? crossDup.merchant,
         timestamp: Math.min(crossDup.timestamp, tx.timestamp),
         rawSms: tx.smsBody,
@@ -1384,7 +1457,7 @@ export async function insertParsedTx(
 
   const newId = await insertTx({
     amount: tx.amount,
-    type: tx.type,
+    type: effectiveTx.type,
     merchant: tx.merchant ?? null,
     bankName: tx.bankName,
     accountLast4: tx.accountLast4 ?? null,
@@ -1412,10 +1485,28 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
   // on large scans. Sequential, the cache limits DB reads to one per unique merchant.
   const ruleCache = new Map<string, { categoryId: number; subcategoryId: number | null } | null>();
   const majorityCache = new Map<string, { categoryId: number; subcategoryId: number | null } | null>();
+  const wordMatchCache = new Map<string, { categoryId: number; subcategoryId: number | null } | null>();
+
+  // Same Amount → Transfer rule as insertParsedTx: force type=TRANSFER on matching rows
+  // before categorization, so categorization (and its Transfer-category fallback) sees
+  // the forced type — mirrors insertParsedTx's effectiveTx approach exactly.
+  const transferRules = await getAmountRules('transfer');
+  const forcedTransfers: boolean[] = [];
   const decisions: Array<{ categoryId: number | null; subcategoryId: number | null }> = [];
   for (const tx of txs) {
-    decisions.push(await categorizeParsedTx(tx, ruleCache, majorityCache));
+    const forcedTransfer = getTransferRuleMatch(tx.amount, transferRules);
+    forcedTransfers.push(forcedTransfer);
+    const effectiveTx = forcedTransfer ? { ...tx, type: TransactionType.TRANSFER } : tx;
+    const decision = await categorizeParsedTx(effectiveTx, ruleCache, majorityCache, wordMatchCache);
+    if (forcedTransfer && decision.categoryId === null) {
+      decision.categoryId = await getCategoryIdByName('Transfer');
+    }
+    decisions.push(decision);
   }
+
+  // Hide Merchant rule: same as insertParsedTx — drops matching rows entirely, checked
+  // once up-front (like hiddenKeys below) rather than per-row.
+  const privacyRules = await getMerchantPrivacyRules();
 
   const hiddenKeys = await getHiddenAccountKeys();
 
@@ -1433,6 +1524,10 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
       // Same "hide stops intake" rule as insertParsedTx — checked once against an
       // in-memory Set rather than per-row, to keep this loop's per-iteration DB calls flat.
       if (hiddenKeys.has(`${tx.bankName}|${tx.accountLast4 ?? ''}`)) {
+        continue;
+      }
+      // Hide Merchant rule: same drop-entirely behavior as insertParsedTx.
+      if (isMerchantHidden(tx.merchant ?? null, privacyRules)) {
         continue;
       }
       // Same cross-source guard as insertParsedTx — a rescan re-reading the SMS for a
@@ -1459,7 +1554,7 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
              SET amount = ?, type = ?, merchant = ?, timestamp = ?, raw_sms = ?, reference = ?, bankName = ?, accountLast4 = ?
            WHERE id = ?`,
           tx.amount,
-          tx.type,
+          forcedTransfers[i] ? TransactionType.TRANSFER : tx.type,
           tx.merchant ?? crossDup.merchant,
           Math.min(crossDup.timestamp, tx.timestamp),
           tx.smsBody ?? null,
@@ -1478,7 +1573,7 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
             category_id, subcategory_id, tags, raw_sms, reference, is_manual)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
         tx.amount,
-        tx.type,
+        forcedTransfers[i] ? TransactionType.TRANSFER : tx.type,
         tx.merchant ?? null,
         tx.bankName,
         tx.accountLast4 ?? null,
@@ -1913,6 +2008,22 @@ export interface CategoryRule {
   subcategoryName: string | null;
 }
 
+export interface WordMatchRule {
+  id: number;
+  pattern: string;
+  categoryId: number;
+  categoryName: string;
+  subcategoryId: number | null;
+  subcategoryName: string | null;
+  priority: number;
+}
+
+/** Case-insensitive substring match — the same rule used for every "pattern" field in this feature. */
+export function matchesPattern(pattern: string, merchant: string | null): boolean {
+  if (!merchant) return false;
+  return merchant.toLowerCase().includes(pattern.toLowerCase());
+}
+
 export async function getCategoryRules(): Promise<CategoryRule[]> {
   const database = await getDb();
   const rows = await database.getAllAsync<{
@@ -1943,6 +2054,237 @@ export async function getCategoryRules(): Promise<CategoryRule[]> {
 export async function deleteCategoryRule(id: number): Promise<void> {
   const database = await getDb();
   await database.runAsync(`DELETE FROM category_rules WHERE id = ?`, id);
+}
+
+export async function getWordMatchRules(): Promise<WordMatchRule[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    id: number;
+    pattern: string;
+    category_id: number;
+    category_name: string;
+    subcategory_id: number | null;
+    subcategory_name: string | null;
+    priority: number;
+  }>(
+    `SELECT wr.id, wr.pattern, wr.category_id, c.name AS category_name,
+            wr.subcategory_id, s.name AS subcategory_name, wr.priority
+     FROM word_match_rules wr
+     JOIN categories c ON c.id = wr.category_id
+     LEFT JOIN subcategories s ON s.id = wr.subcategory_id
+     ORDER BY wr.priority ASC`,
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    pattern: row.pattern,
+    categoryId: row.category_id,
+    categoryName: row.category_name,
+    subcategoryId: row.subcategory_id,
+    subcategoryName: row.subcategory_name,
+    priority: row.priority,
+  }));
+}
+
+export async function upsertWordMatchRule(
+  id: number | null,
+  pattern: string,
+  categoryId: number,
+  subcategoryId: number | null,
+): Promise<void> {
+  const database = await getDb();
+  if (id != null) {
+    await database.runAsync(
+      `UPDATE word_match_rules SET pattern = ?, category_id = ?, subcategory_id = ? WHERE id = ?`,
+      pattern,
+      categoryId,
+      subcategoryId,
+      id,
+    );
+    return;
+  }
+  const maxRow = await database.getFirstAsync<{ maxPriority: number | null }>(
+    `SELECT MAX(priority) AS maxPriority FROM word_match_rules`,
+  );
+  const nextPriority = (maxRow?.maxPriority ?? -1) + 1;
+  await database.runAsync(
+    `INSERT INTO word_match_rules (pattern, category_id, subcategory_id, priority) VALUES (?, ?, ?, ?)`,
+    pattern,
+    categoryId,
+    subcategoryId,
+    nextPriority,
+  );
+}
+
+export async function deleteWordMatchRule(id: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`DELETE FROM word_match_rules WHERE id = ?`, id);
+}
+
+export async function reorderWordMatchRules(orderedIds: number[]): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`BEGIN`);
+  try {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await database.runAsync(`UPDATE word_match_rules SET priority = ? WHERE id = ?`, i, orderedIds[i]);
+    }
+    await database.runAsync(`COMMIT`);
+  } catch (e) {
+    await database.runAsync(`ROLLBACK`);
+    throw e;
+  }
+}
+
+export async function getWordMatchCategoryForMerchant(
+  merchant: string,
+): Promise<{ categoryId: number; subcategoryId: number | null } | null> {
+  const rules = await getWordMatchRules();
+  const hit = rules.find((r) => matchesPattern(r.pattern, merchant));
+  return hit ? { categoryId: hit.categoryId, subcategoryId: hit.subcategoryId } : null;
+}
+
+export interface MerchantPrivacyRule {
+  id: number;
+  merchantPattern: string;
+  hide: boolean;
+  excludeFromBudget: boolean;
+}
+
+export function isMerchantHidden(merchant: string | null, rules: MerchantPrivacyRule[]): boolean {
+  return rules.some((r) => r.hide && matchesPattern(r.merchantPattern, merchant));
+}
+
+export function isMerchantExcludedFromBudget(merchant: string | null, rules: MerchantPrivacyRule[]): boolean {
+  return rules.some((r) => r.excludeFromBudget && matchesPattern(r.merchantPattern, merchant));
+}
+
+export async function getMerchantPrivacyRules(): Promise<MerchantPrivacyRule[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    id: number;
+    merchant_pattern: string;
+    hide: number;
+    exclude_from_budget: number;
+  }>(`SELECT id, merchant_pattern, hide, exclude_from_budget FROM merchant_privacy_rules ORDER BY id DESC`);
+  return rows.map((r) => ({
+    id: r.id,
+    merchantPattern: r.merchant_pattern,
+    hide: r.hide === 1,
+    excludeFromBudget: r.exclude_from_budget === 1,
+  }));
+}
+
+export async function upsertMerchantPrivacyRule(
+  id: number | null,
+  merchantPattern: string,
+  hide: boolean,
+  excludeFromBudget: boolean,
+): Promise<void> {
+  const database = await getDb();
+  if (id != null) {
+    await database.runAsync(
+      `UPDATE merchant_privacy_rules SET merchant_pattern = ?, hide = ?, exclude_from_budget = ? WHERE id = ?`,
+      merchantPattern,
+      hide ? 1 : 0,
+      excludeFromBudget ? 1 : 0,
+      id,
+    );
+    return;
+  }
+  await database.runAsync(
+    `INSERT INTO merchant_privacy_rules (merchant_pattern, hide, exclude_from_budget) VALUES (?, ?, ?)`,
+    merchantPattern,
+    hide ? 1 : 0,
+    excludeFromBudget ? 1 : 0,
+  );
+}
+
+export async function deleteMerchantPrivacyRule(id: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`DELETE FROM merchant_privacy_rules WHERE id = ?`, id);
+}
+
+export type AmountRuleKind = 'mask' | 'transfer';
+export type AmountRuleDirection = 'above' | 'below';
+export type AmountRuleScope = 'everywhere' | 'list_widgets';
+
+export interface AmountRule {
+  id: number;
+  kind: AmountRuleKind;
+  threshold: number;
+  direction: AmountRuleDirection | null;
+  scope: AmountRuleScope | null;
+}
+
+export function amountMatchesThreshold(
+  amount: number,
+  threshold: number,
+  direction: AmountRuleDirection,
+): boolean {
+  return direction === 'above' ? amount > threshold : amount < threshold;
+}
+
+export function getMaskRuleForAmount(amount: number, rules: AmountRule[]): AmountRule | null {
+  return (
+    rules.find(
+      (r) => r.kind === 'mask' && r.direction != null && amountMatchesThreshold(amount, r.threshold, r.direction),
+    ) ?? null
+  );
+}
+
+export function getTransferRuleMatch(amount: number, rules: AmountRule[]): boolean {
+  return rules.some(
+    (r) => r.kind === 'transfer' && amountMatchesThreshold(amount, r.threshold, r.direction ?? 'above'),
+  );
+}
+
+export async function getAmountRules(kind?: AmountRuleKind): Promise<AmountRule[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    id: number;
+    kind: AmountRuleKind;
+    threshold: number;
+    direction: AmountRuleDirection | null;
+    scope: AmountRuleScope | null;
+  }>(
+    kind
+      ? `SELECT id, kind, threshold, direction, scope FROM amount_rules WHERE kind = ? ORDER BY id ASC`
+      : `SELECT id, kind, threshold, direction, scope FROM amount_rules ORDER BY id ASC`,
+    ...(kind ? [kind] : []),
+  );
+  return rows;
+}
+
+export async function upsertAmountRule(
+  id: number | null,
+  kind: AmountRuleKind,
+  threshold: number,
+  direction: AmountRuleDirection | null,
+  scope: AmountRuleScope | null,
+): Promise<void> {
+  const database = await getDb();
+  if (id != null) {
+    await database.runAsync(
+      `UPDATE amount_rules SET kind = ?, threshold = ?, direction = ?, scope = ? WHERE id = ?`,
+      kind,
+      threshold,
+      direction,
+      scope,
+      id,
+    );
+    return;
+  }
+  await database.runAsync(
+    `INSERT INTO amount_rules (kind, threshold, direction, scope) VALUES (?, ?, ?, ?)`,
+    kind,
+    threshold,
+    direction,
+    scope,
+  );
+}
+
+export async function deleteAmountRule(id: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`DELETE FROM amount_rules WHERE id = ?`, id);
 }
 
 export interface CsvImportRow {

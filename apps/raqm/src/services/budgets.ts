@@ -1,5 +1,8 @@
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
-import { getBudgets, loadTxRecords, getSetting, setSetting, type Budget, type TxRecord } from '../db/database';
+import {
+  getBudgets, loadTxRecords, getSetting, setSetting, getMerchantPrivacyRules,
+  isMerchantExcludedFromBudget, type Budget, type TxRecord, type MerchantPrivacyRule,
+} from '../db/database';
 import { countsTowardTotals } from './txIntelligence';
 import { getMonthBounds, getWeekBounds, type PeriodBounds } from '../utils/period';
 import { postBudgetAlert } from '../notifications/notifications';
@@ -26,6 +29,7 @@ async function sumSpend(
   categoryId: number,
   bounds: PeriodBounds,
   byId: Map<number, TxRecord>,
+  privacyRules: MerchantPrivacyRule[],
 ): Promise<number> {
   // Refund credits net against the refunded expense's category (resolved via the link
   // partner, since the credit itself usually carries no categoryId) — otherwise a
@@ -37,6 +41,7 @@ async function sumSpend(
   for (const tx of txs) {
     if (tx.timestamp < bounds.from || tx.timestamp > bounds.to) continue;
     if (!countsTowardTotals(tx)) continue;
+    if (isMerchantExcludedFromBudget(tx.merchant, privacyRules)) continue;
     if (isCredit(tx) && (tx.linkType === 'refund' || tx.linkType === 'split_payment')) {
       const partner = tx.linkPartnerId != null ? byId.get(tx.linkPartnerId) : undefined;
       const cat = partner?.categoryId ?? tx.categoryId;
@@ -69,18 +74,22 @@ function previousWeekRef(now: Date): Date {
 // long that scan took. Standalone callers (screens) that
 // have no fresh array on hand keep loading it themselves by simply not passing one.
 export async function getBudgetStatuses(now: Date = new Date(), txs?: TxRecord[]): Promise<BudgetStatus[]> {
-  const [budgets, resolvedTxs] = await Promise.all([getBudgets(), txs ?? loadTxRecords()]);
+  const [budgets, resolvedTxs, privacyRules] = await Promise.all([
+    getBudgets(),
+    txs ?? loadTxRecords(),
+    getMerchantPrivacyRules(),
+  ]);
   const byId = new Map(resolvedTxs.map((t) => [t.id, t]));
   const statuses: BudgetStatus[] = [];
 
   for (const budget of budgets) {
     const bounds = await currentBounds(budget, now);
-    const spent = await sumSpend(resolvedTxs, budget.categoryId, bounds, byId);
+    const spent = await sumSpend(resolvedTxs, budget.categoryId, bounds, byId, privacyRules);
 
     let limit = budget.amount;
     if (budget.periodType === 'weekly' && budget.rollover) {
       const lastWeekBounds = getWeekBounds(previousWeekRef(now));
-      const lastWeekSpent = await sumSpend(resolvedTxs, budget.categoryId, lastWeekBounds, byId);
+      const lastWeekSpent = await sumSpend(resolvedTxs, budget.categoryId, lastWeekBounds, byId, privacyRules);
       const carry = Math.max(0, budget.amount - lastWeekSpent);
       limit = budget.amount + carry;
     }
