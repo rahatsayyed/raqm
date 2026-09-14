@@ -4,6 +4,7 @@ import type { NavigationContainerRef } from '@react-navigation/native';
 import { getSetting } from '../db/database';
 import type { MainStackParamList } from '../navigation/types';
 import { useAppStore } from '../store/appStore';
+import { SmsReader } from '../native/SmsReader';
 
 const TX_CHANNEL_ID = 'raqm-tx';
 
@@ -14,13 +15,15 @@ const MONTHLY_SUMMARY_ID = 'raqm-monthly-summary';
 /**
  * Sets the foreground notification handler, requests POST_NOTIFICATIONS permission, and
  * creates the Android notification channel used by every notification this app posts.
- * The Category/Add note/Not An Expense actions are NOT registered here — they're appended
- * natively per-notification (see SmsReaderModule.attachTxActions, called from
- * smsProcessing.ts right after posting) so they're handled entirely by native code
+ * The Category/Add note/Not An Expense actions are NOT registered here — the tx notification
+ * itself is built and posted entirely natively, actions included (see
+ * SmsReader.postTxNotification / TxNotifier.kt), so they're handled entirely by native code
  * (CategoryPickerActivity / NotificationActionReceiver) and never need to boot the JS/RN
  * engine — the previous expo-task-manager based path for Add note/Not An Expense was
  * unreliable specifically because that boot is exactly what aggressive OEM battery managers
- * (MIUI, ColorOS, etc.) are most likely to kill when the app process is fully dead.
+ * (MIUI, ColorOS, etc.) are most likely to kill when the app process is fully dead. This
+ * function still matters: it creates the 'raqm-tx' channel the native post posts into, and
+ * still owns budget-alert/summary notifications, which do go through expo-notifications.
  * Safe to call multiple times (idempotent on the native side).
  */
 export async function initNotifications(): Promise<void> {
@@ -47,34 +50,28 @@ export async function initNotifications(): Promise<void> {
 }
 
 /**
- * Posts the styled transaction notification (T17, T23's JS-side half). Uses trigger: null
- * (immediate) so it lands on the app's default channel, which app.json's expo-notifications
- * plugin config points at 'raqm-tx'. Carries `data: { txId }` so attachNotificationHandlers
- * can deep-link on tap. No action category here — smsProcessing.ts calls
- * SmsReader.attachTxActions right after this resolves to append Category/Add note/Not An
- * Expense natively.
+ * Posts the styled transaction notification (T17, T23) with the Category/Add note/Not An
+ * Expense-Income actions already attached — built and posted in a single native call (see
+ * SmsReader.postTxNotification / TxNotifier.kt) rather than through expo-notifications, whose
+ * async post used to leave a window where the buttons were briefly missing. Tapping the
+ * notification body deep-links via the native intent-extra channel (see deepLinks.ts), not
+ * expo-notifications' response listener — this notification is never posted through
+ * expo-notifications for it to recognize.
  */
 export async function postTxNotification(
   txId: number,
   title: string,
   body: string,
+  notExpenseLabel: string,
   color?: string,
 ): Promise<string> {
-  return Notifications.scheduleNotificationAsync({
-    content: {
-      title,
-      body,
-      data: { txId },
-      color,
-    },
-    trigger: null,
-  });
+  return SmsReader.postTxNotification(title, body, color, txId, notExpenseLabel);
 }
 
 /** Cancels/removes an already-posted notification by identifier — used when a self-transfer's
  * second leg arrives and its two individual notifications need to collapse into one. */
 export async function cancelTxNotification(notificationId: string): Promise<void> {
-  await Notifications.dismissNotificationAsync(notificationId);
+  await SmsReader.cancelTxNotification(notificationId);
 }
 
 /**
@@ -94,12 +91,14 @@ export async function postBudgetAlert(title: string, body: string): Promise<void
 }
 
 /**
- * Wires up the single global notification-response listener.
- * - Tap with a txId in data (T17): navigate to TransactionDetail.
- * - Tap with no txId (summary notifications): navigate to the tab root (Dashboard is the
- *   first tab, so this lands the user there).
+ * Wires up the single global notification-response listener — for the notifications actually
+ * still posted through expo-notifications (budget alerts, daily/weekly/monthly summaries; see
+ * postBudgetAlert/scheduleSummaries below). Tx notifications no longer come through here at
+ * all: they're posted entirely natively (see SmsReader.postTxNotification / TxNotifier.kt) and
+ * their tap deep-links via the native intent-extra channel in deepLinks.ts instead — so `data`
+ * on every response this listener sees is always `{}`, and it always navigates to the tab root.
  * - Category/Add note/Not An Expense actions: NOT handled here at all — they're natively
- *   added (see SmsReaderModule.attachTxActions) and handled entirely by
+ *   added (see TxNotifier.kt) and handled entirely by
  *   CategoryPickerActivity/NotificationActionReceiver, so they never reach this JS listener.
  * Also handles the cold-start case: if the app was launched by tapping a notification,
  * addNotificationResponseReceivedListener never fires for that response, so we fetch it

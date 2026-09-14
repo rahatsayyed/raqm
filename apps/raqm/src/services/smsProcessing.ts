@@ -1,7 +1,6 @@
 import { BankParserFactory, TransactionType, type ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
 import { useTxStore } from '../store/txStore';
 import { postTxNotification, cancelTxNotification } from '../notifications/notifications';
-import { SmsReader } from '../native/SmsReader';
 import { accountLabel } from '../utils/accountLabel';
 import { getCategories, linkTxs } from '../db/database';
 import { findSelfTransferPartner } from './txIntelligence';
@@ -74,9 +73,14 @@ export async function postParsedTxNotification(
     categoryName = categories.find((c) => c.id === insertedTx.categoryId)?.name ?? 'Uncategorized';
   }
   const notifBody = `${bankLabel} • ${categoryName}`;
-  const notificationId = await postTxNotification(id, notifTitle, notifBody, notificationColorFor(debit));
+  const notificationId = await postTxNotification(
+    id,
+    notifTitle,
+    notifBody,
+    debit ? 'Not An Expense' : 'Not An Income',
+    notificationColorFor(debit),
+  );
   logEvent('notif.posted', `txId=${id}`);
-  SmsReader.attachTxActions(notificationId, id, debit ? 'Not An Expense' : 'Not An Income');
   return notificationId;
 }
 
@@ -130,14 +134,14 @@ export async function processIncomingSms(data: { body: string; sender: string; t
       const fromLabel = accountLabel(debitTx.bankName, debitTx.accountLast4, labels);
       const toLabel = accountLabel(creditTx.bankName, creditTx.accountLast4, labels);
       const amount = `₹${debitTx.amount.toLocaleString('en-IN')}`;
-      const selfTransferNotificationId = await postTxNotification(
+      await postTxNotification(
         debitId,
         'Self-transfer',
         `${amount} transferred from ${fromLabel} to ${toLabel}`,
+        'Not An Expense',
         SELF_TRANSFER_COLOR,
       );
       logEvent('notif.posted', `txId=${debitId}`);
-      SmsReader.attachTxActions(selfTransferNotificationId, debitId, 'Not An Expense');
     }
 
     return { id, merchant: tx.merchant ?? null, bankLabel, amount: tx.amount, isDebit: debit };

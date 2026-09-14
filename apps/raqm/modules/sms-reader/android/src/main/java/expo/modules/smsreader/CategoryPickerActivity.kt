@@ -20,7 +20,7 @@ import java.io.File
  * A translucent, no-history Activity that lets the user pick a category straight from the
  * "Category" notification action, without ever bringing Raqm's real UI to the foreground —
  * see AndroidManifest.xml's taskAffinity="" + excludeFromRecents on this entry, and
- * SmsReaderModule.attachTxActions which points the action's PendingIntent here directly.
+ * TxNotifier, which points the action's PendingIntent here directly when it builds the notification.
  * Reads/writes SQLite directly rather than going through the JS layer so this keeps working
  * even when the app process is fully killed — see NotificationActionReceiver for the same
  * reasoning applied to the other two tx notification actions.

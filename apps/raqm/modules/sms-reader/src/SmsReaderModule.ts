@@ -16,10 +16,23 @@ export function openNotificationListenerSettings(): void {
   native.openNotificationListenerSettings();
 }
 
-/** Appends the Category, Add note, and Not An Expense/Income actions to an already-posted tx
- * notification, all handled natively (no JS/RN engine boot required) — see the native module. */
-export function attachTxActions(notificationId: string, txId: number, notExpenseLabel: string): void {
-  native.attachTxActions(notificationId, txId, notExpenseLabel);
+/** Builds and posts the tx notification with the Category, Add note, and Not An Expense/Income
+ * actions attached from the very first post — all handled natively (no JS/RN engine boot
+ * required), no separate patch-on-afterward step. Returns the notification's id. */
+export function postTxNotification(
+  title: string,
+  body: string,
+  color: string | undefined,
+  txId: number,
+  notExpenseLabel: string,
+): Promise<string> {
+  return native.postTxNotification(title, body, color ?? null, txId, notExpenseLabel);
+}
+
+/** Cancels/removes an already-posted tx notification by id — used when a self-transfer's
+ * second leg arrives and its two individual notifications need to collapse into one. */
+export function cancelTxNotification(notificationId: string): Promise<void> {
+  return native.cancelTxNotification(notificationId);
 }
 
 /** Returns the absolute filesystem path to the native diagnostic log file (native.log). */

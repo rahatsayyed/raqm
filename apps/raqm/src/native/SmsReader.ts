@@ -20,9 +20,22 @@ export const SmsReader = {
     SmsReaderModule.openNotificationListenerSettings();
   },
 
-  attachTxActions(notificationId: string, txId: number, notExpenseLabel: string): void {
-    if (Platform.OS !== 'android') return;
-    SmsReaderModule.attachTxActions(notificationId, txId, notExpenseLabel);
+  /** Builds and posts the tx notification with all three actions attached from the first
+   * post — see SmsReaderModule.postTxNotification. Returns the notification's id. */
+  postTxNotification(
+    title: string,
+    body: string,
+    color: string | undefined,
+    txId: number,
+    notExpenseLabel: string,
+  ): Promise<string> {
+    if (Platform.OS !== 'android') return Promise.resolve('');
+    return SmsReaderModule.postTxNotification(title, body, color, txId, notExpenseLabel);
+  },
+
+  cancelTxNotification(notificationId: string): Promise<void> {
+    if (Platform.OS !== 'android') return Promise.resolve();
+    return SmsReaderModule.cancelTxNotification(notificationId);
   },
 
   /** Absolute filesystem path to the native diagnostic log file (native.log). */
