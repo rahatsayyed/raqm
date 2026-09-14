@@ -12,6 +12,7 @@ import { MonthSwitcher } from '../../components/MonthSwitcher';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { countsTowardTotals } from '../../services/txIntelligence';
 import { formatAmount } from '../../utils/format';
+import { MaskedTxAmount } from '../../components/MaskedTxAmount';
 import { accountLabel } from '../../utils/accountLabel';
 import { MaskedValue } from '../../components/MaskedValue';
 import {
@@ -542,9 +543,12 @@ const TxRow = memo(function TxRow({
         </Text>
       </View>
       <View className="items-end">
-        <Text className={`font-mono text-numeric-sm ${credit ? 'text-primary' : 'text-on-surface'}`}>
-          {formatAmount(tx.amount, currency)}
-        </Text>
+        <MaskedTxAmount
+          amount={tx.amount}
+          currency={currency}
+          scope="list_widgets"
+          className={`font-mono text-numeric-sm ${credit ? 'text-primary' : 'text-on-surface'}`}
+        />
         <Text className="font-inter text-annotation text-ink-label mt-[2px]">{timeLabel(tx.timestamp)}</Text>
       </View>
     </TouchableOpacity>
