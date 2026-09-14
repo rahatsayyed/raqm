@@ -35,6 +35,8 @@ import {
 } from "../../db/database";
 import type { Category, Subcategory, TxRecord } from "../../db/database";
 import { TransactionType } from "@rahatsayyed/bank-sms-parser";
+import { countsTowardTotals } from "../../services/txIntelligence";
+import { txTypeLabel } from "./TransactionsScreen";
 import { formatAmount } from "../../utils/format";
 import { accountLabel } from "../../utils/accountLabel";
 import {
@@ -415,7 +417,9 @@ export function TransactionDetailScreen({
   }
 
   const credit = isCredit(tx.type);
-  const countsToward = !tx.linkSettled;
+  // Use the shared canonical check (also excludes self-transfers), not just
+  // linkSettled, so this matches the list screen's graying-out logic exactly.
+  const countsToward = countsTowardTotals(tx);
 
   const saveNotes = () => {
     if (notesDraft !== (tx.notes ?? "")) {
@@ -575,7 +579,10 @@ export function TransactionDetailScreen({
           >
             <CategoryIcon color={Colors.onSurfaceVariant} size={16} />
             <Text className="font-inter text-supporting-text text-on-surface-variant">
-              {category?.name ?? "Uncategorized"}
+              {category?.name ??
+                (tx.type === TransactionType.EXPENSE
+                  ? "Uncategorized"
+                  : txTypeLabel(tx.type))}
             </Text>
           </TouchableOpacity>
           {/* <View className="w-[4px] h-[4px] rounded-sm bg-outline-variant" /> */}
@@ -642,6 +649,7 @@ export function TransactionDetailScreen({
             <Switch
               value={countsToward}
               onValueChange={toggleCountsToward}
+              disabled={tx.linkType === "self_transfer"}
               trackColor={{ false: Colors.surfaceBright, true: Colors.primary }}
               thumbColor={Colors.inkHeadline}
             />
