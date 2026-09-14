@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { MainStackScreenProps } from '../../navigation/types';
 import {
@@ -17,8 +17,9 @@ import {
 import { invalidateAmountRulesCache } from '../../store/amountRulesStore';
 import { useTxStore } from '../../store/txStore';
 import { formatAmount } from '../../utils/format';
-import { Colors } from '../../theme';
+import { Colors, Spacing } from '../../theme';
 import { TrashIcon } from '../../components/TabIcon';
+import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollView';
 
 type Section = 'category' | 'word_match' | 'merchant' | 'amount' | 'privacy';
 
@@ -293,7 +294,13 @@ export function RulesScreen({ navigation, route }: MainStackScreenProps<'Rules'>
   );
 
   return (
-    <View className="flex-1 bg-background p-container-margin">
+    <KeyboardAwareScrollView
+      className="flex-1 bg-background"
+      contentContainerClassName="p-container-margin"
+      enableOnAndroid
+      extraScrollHeight={Spacing.lg}
+      keyboardShouldPersistTaps="handled"
+    >
       <TouchableOpacity onPress={() => navigation.goBack()} className="mt-sm">
         <Text className="font-inter text-body-md text-primary">← Back</Text>
       </TouchableOpacity>
@@ -319,37 +326,33 @@ export function RulesScreen({ navigation, route }: MainStackScreenProps<'Rules'>
             Whenever you edit a transaction's category, the merchant is remembered here and applied
             automatically to future SMS from the same sender.
           </Text>
-          <FlatList
-            data={categoryRules}
-            keyExtractor={(rule) => String(rule.id)}
-            contentContainerClassName="pb-[32px]"
-            showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={renderSeparator}
-            ListEmptyComponent={
-              loaded ? (
-                <View className="pt-[60px] items-center">
-                  <Text className="font-inter text-body-md text-on-surface-variant">
-                    No rules yet — editing a transaction's category creates one automatically.
-                  </Text>
-                </View>
-              ) : null
-            }
-            renderItem={({ item }) => (
-              <View className="flex-row items-center justify-between py-md gap-sm">
-                <View className="flex-1">
-                  <Text className="font-inter-medium text-body-standard text-on-surface" numberOfLines={1}>
-                    {item.merchantPattern}
-                  </Text>
-                  <Text className="font-inter text-annotation text-on-surface-variant mt-[2px]" numberOfLines={1}>
-                    → {item.categoryName}{item.subcategoryName ? ` / ${item.subcategoryName}` : ''}
-                  </Text>
-                </View>
-                <TouchableOpacity hitSlop={8} onPress={() => handleDeleteCategoryRule(item)}>
-                  <TrashIcon color={Colors.errorMuted} size={18} />
-                </TouchableOpacity>
+          <View className="pb-[32px]">
+            {categoryRules.length === 0 && loaded && (
+              <View className="pt-[60px] items-center">
+                <Text className="font-inter text-body-md text-on-surface-variant">
+                  No rules yet — editing a transaction's category creates one automatically.
+                </Text>
               </View>
             )}
-          />
+            {categoryRules.map((item, index) => (
+              <React.Fragment key={item.id}>
+                {index > 0 && renderSeparator()}
+                <View className="flex-row items-center justify-between py-md gap-sm">
+                  <View className="flex-1">
+                    <Text className="font-inter-medium text-body-standard text-on-surface" numberOfLines={1}>
+                      {item.merchantPattern}
+                    </Text>
+                    <Text className="font-inter text-annotation text-on-surface-variant mt-[2px]" numberOfLines={1}>
+                      → {item.categoryName}{item.subcategoryName ? ` / ${item.subcategoryName}` : ''}
+                    </Text>
+                  </View>
+                  <TouchableOpacity hitSlop={8} onPress={() => handleDeleteCategoryRule(item)}>
+                    <TrashIcon color={Colors.errorMuted} size={18} />
+                  </TouchableOpacity>
+                </View>
+              </React.Fragment>
+            ))}
+          </View>
         </>
       )}
 
@@ -360,37 +363,33 @@ export function RulesScreen({ navigation, route }: MainStackScreenProps<'Rules'>
             merchant or trip) show up here. Ungrouping keeps every transaction — it just splits them
             apart again.
           </Text>
-          <FlatList
-            data={merchantGroups}
-            keyExtractor={(group) => String(group.id)}
-            contentContainerClassName="pb-[32px]"
-            showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={renderSeparator}
-            ListEmptyComponent={
-              loaded ? (
-                <View className="pt-[60px] items-center">
-                  <Text className="font-inter text-body-md text-on-surface-variant">
-                    No grouped merchants yet.
-                  </Text>
-                </View>
-              ) : null
-            }
-            renderItem={({ item }) => (
-              <View className="flex-row items-center justify-between py-md gap-sm">
-                <View className="flex-1">
-                  <Text className="font-inter-medium text-body-standard text-on-surface" numberOfLines={1}>
-                    {item.name || 'Unnamed group'}
-                  </Text>
-                  <Text className="font-inter text-annotation text-on-surface-variant mt-[2px]">
-                    {item.txCount} transaction{item.txCount === 1 ? '' : 's'} · {formatAmount(item.totalAmount, currency)}
-                  </Text>
-                </View>
-                <TouchableOpacity hitSlop={8} onPress={() => handleUngroup(item)}>
-                  <TrashIcon color={Colors.errorMuted} size={18} />
-                </TouchableOpacity>
+          <View className="pb-[32px]">
+            {merchantGroups.length === 0 && loaded && (
+              <View className="pt-[60px] items-center">
+                <Text className="font-inter text-body-md text-on-surface-variant">
+                  No grouped merchants yet.
+                </Text>
               </View>
             )}
-          />
+            {merchantGroups.map((item, index) => (
+              <React.Fragment key={item.id}>
+                {index > 0 && renderSeparator()}
+                <View className="flex-row items-center justify-between py-md gap-sm">
+                  <View className="flex-1">
+                    <Text className="font-inter-medium text-body-standard text-on-surface" numberOfLines={1}>
+                      {item.name || 'Unnamed group'}
+                    </Text>
+                    <Text className="font-inter text-annotation text-on-surface-variant mt-[2px]">
+                      {item.txCount} transaction{item.txCount === 1 ? '' : 's'} · {formatAmount(item.totalAmount, currency)}
+                    </Text>
+                  </View>
+                  <TouchableOpacity hitSlop={8} onPress={() => handleUngroup(item)}>
+                    <TrashIcon color={Colors.errorMuted} size={18} />
+                  </TouchableOpacity>
+                </View>
+              </React.Fragment>
+            ))}
+          </View>
         </>
       )}
 
@@ -436,41 +435,37 @@ export function RulesScreen({ navigation, route }: MainStackScreenProps<'Rules'>
               <Text className="font-inter-medium text-on-surface-variant">+ Add Word Match rule</Text>
             </TouchableOpacity>
           )}
-          <FlatList
-            data={wordMatchRules}
-            keyExtractor={(rule) => String(rule.id)}
-            contentContainerClassName="pb-[32px]"
-            showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={renderSeparator}
-            ListEmptyComponent={
-              loaded ? (
-                <View className="pt-[60px] items-center">
-                  <Text className="font-inter text-body-md text-on-surface-variant">No Word Match rules yet.</Text>
-                </View>
-              ) : null
-            }
-            renderItem={({ item, index }) => (
-              <View className="flex-row items-center justify-between py-md gap-sm">
-                <View className="flex-1">
-                  <Text className="font-inter-medium text-body-standard text-on-surface" numberOfLines={1}>
-                    {item.pattern}
-                  </Text>
-                  <Text className="font-inter text-annotation text-on-surface-variant mt-[2px]" numberOfLines={1}>
-                    → {item.categoryName}
-                  </Text>
-                </View>
-                <TouchableOpacity hitSlop={8} onPress={() => handleMoveWordMatch(index, -1)} disabled={index === 0}>
-                  <Text className={index === 0 ? 'text-outline-variant' : 'text-on-surface-variant'}>↑</Text>
-                </TouchableOpacity>
-                <TouchableOpacity hitSlop={8} onPress={() => handleMoveWordMatch(index, 1)} disabled={index === wordMatchRules.length - 1}>
-                  <Text className={index === wordMatchRules.length - 1 ? 'text-outline-variant' : 'text-on-surface-variant'}>↓</Text>
-                </TouchableOpacity>
-                <TouchableOpacity hitSlop={8} onPress={() => handleDeleteWordMatch(item)}>
-                  <TrashIcon color={Colors.errorMuted} size={18} />
-                </TouchableOpacity>
+          <View className="pb-[32px]">
+            {wordMatchRules.length === 0 && loaded && (
+              <View className="pt-[60px] items-center">
+                <Text className="font-inter text-body-md text-on-surface-variant">No Word Match rules yet.</Text>
               </View>
             )}
-          />
+            {wordMatchRules.map((item, index) => (
+              <React.Fragment key={item.id}>
+                {index > 0 && renderSeparator()}
+                <View className="flex-row items-center justify-between py-md gap-sm">
+                  <View className="flex-1">
+                    <Text className="font-inter-medium text-body-standard text-on-surface" numberOfLines={1}>
+                      {item.pattern}
+                    </Text>
+                    <Text className="font-inter text-annotation text-on-surface-variant mt-[2px]" numberOfLines={1}>
+                      → {item.categoryName}
+                    </Text>
+                  </View>
+                  <TouchableOpacity hitSlop={8} onPress={() => handleMoveWordMatch(index, -1)} disabled={index === 0}>
+                    <Text className={index === 0 ? 'text-outline-variant' : 'text-on-surface-variant'}>↑</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity hitSlop={8} onPress={() => handleMoveWordMatch(index, 1)} disabled={index === wordMatchRules.length - 1}>
+                    <Text className={index === wordMatchRules.length - 1 ? 'text-outline-variant' : 'text-on-surface-variant'}>↓</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity hitSlop={8} onPress={() => handleDeleteWordMatch(item)}>
+                    <TrashIcon color={Colors.errorMuted} size={18} />
+                  </TouchableOpacity>
+                </View>
+              </React.Fragment>
+            ))}
+          </View>
         </>
       )}
 
@@ -634,37 +629,33 @@ export function RulesScreen({ navigation, route }: MainStackScreenProps<'Rules'>
               <Text className="font-inter-medium text-on-surface-variant">+ Add privacy rule</Text>
             </TouchableOpacity>
           )}
-          <FlatList
-            data={privacyRules}
-            keyExtractor={(rule) => String(rule.id)}
-            contentContainerClassName="pb-[32px]"
-            showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={renderSeparator}
-            ListEmptyComponent={
-              loaded ? (
-                <View className="pt-[60px] items-center">
-                  <Text className="font-inter text-body-md text-on-surface-variant">No privacy rules yet.</Text>
-                </View>
-              ) : null
-            }
-            renderItem={({ item }) => (
-              <View className="flex-row items-center justify-between py-md gap-sm">
-                <View className="flex-1">
-                  <Text className="font-inter-medium text-body-standard text-on-surface" numberOfLines={1}>
-                    {item.merchantPattern}
-                  </Text>
-                  <Text className="font-inter text-annotation text-on-surface-variant mt-[2px]" numberOfLines={1}>
-                    {[item.hide && 'Hidden', item.excludeFromBudget && 'Excluded from budget'].filter(Boolean).join(' · ')}
-                  </Text>
-                </View>
-                <TouchableOpacity hitSlop={8} onPress={() => handleDeletePrivacy(item)}>
-                  <TrashIcon color={Colors.errorMuted} size={18} />
-                </TouchableOpacity>
+          <View className="pb-[32px]">
+            {privacyRules.length === 0 && loaded && (
+              <View className="pt-[60px] items-center">
+                <Text className="font-inter text-body-md text-on-surface-variant">No privacy rules yet.</Text>
               </View>
             )}
-          />
+            {privacyRules.map((item, index) => (
+              <React.Fragment key={item.id}>
+                {index > 0 && renderSeparator()}
+                <View className="flex-row items-center justify-between py-md gap-sm">
+                  <View className="flex-1">
+                    <Text className="font-inter-medium text-body-standard text-on-surface" numberOfLines={1}>
+                      {item.merchantPattern}
+                    </Text>
+                    <Text className="font-inter text-annotation text-on-surface-variant mt-[2px]" numberOfLines={1}>
+                      {[item.hide && 'Hidden', item.excludeFromBudget && 'Excluded from budget'].filter(Boolean).join(' · ')}
+                    </Text>
+                  </View>
+                  <TouchableOpacity hitSlop={8} onPress={() => handleDeletePrivacy(item)}>
+                    <TrashIcon color={Colors.errorMuted} size={18} />
+                  </TouchableOpacity>
+                </View>
+              </React.Fragment>
+            ))}
+          </View>
         </>
       )}
-    </View>
+    </KeyboardAwareScrollView>
   );
 }
