@@ -1998,6 +1998,67 @@ export async function getWordMatchCategoryForMerchant(
   return hit ? { categoryId: hit.categoryId, subcategoryId: hit.subcategoryId } : null;
 }
 
+export interface MerchantPrivacyRule {
+  id: number;
+  merchantPattern: string;
+  hide: boolean;
+  excludeFromBudget: boolean;
+}
+
+export function isMerchantHidden(merchant: string | null, rules: MerchantPrivacyRule[]): boolean {
+  return rules.some((r) => r.hide && matchesPattern(r.merchantPattern, merchant));
+}
+
+export function isMerchantExcludedFromBudget(merchant: string | null, rules: MerchantPrivacyRule[]): boolean {
+  return rules.some((r) => r.excludeFromBudget && matchesPattern(r.merchantPattern, merchant));
+}
+
+export async function getMerchantPrivacyRules(): Promise<MerchantPrivacyRule[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    id: number;
+    merchant_pattern: string;
+    hide: number;
+    exclude_from_budget: number;
+  }>(`SELECT id, merchant_pattern, hide, exclude_from_budget FROM merchant_privacy_rules ORDER BY id DESC`);
+  return rows.map((r) => ({
+    id: r.id,
+    merchantPattern: r.merchant_pattern,
+    hide: r.hide === 1,
+    excludeFromBudget: r.exclude_from_budget === 1,
+  }));
+}
+
+export async function upsertMerchantPrivacyRule(
+  id: number | null,
+  merchantPattern: string,
+  hide: boolean,
+  excludeFromBudget: boolean,
+): Promise<void> {
+  const database = await getDb();
+  if (id != null) {
+    await database.runAsync(
+      `UPDATE merchant_privacy_rules SET merchant_pattern = ?, hide = ?, exclude_from_budget = ? WHERE id = ?`,
+      merchantPattern,
+      hide ? 1 : 0,
+      excludeFromBudget ? 1 : 0,
+      id,
+    );
+    return;
+  }
+  await database.runAsync(
+    `INSERT INTO merchant_privacy_rules (merchant_pattern, hide, exclude_from_budget) VALUES (?, ?, ?)`,
+    merchantPattern,
+    hide ? 1 : 0,
+    excludeFromBudget ? 1 : 0,
+  );
+}
+
+export async function deleteMerchantPrivacyRule(id: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`DELETE FROM merchant_privacy_rules WHERE id = ?`, id);
+}
+
 export type AmountRuleKind = 'mask' | 'transfer';
 export type AmountRuleDirection = 'above' | 'below';
 export type AmountRuleScope = 'everywhere' | 'list_widgets';
