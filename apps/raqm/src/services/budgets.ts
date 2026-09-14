@@ -65,8 +65,8 @@ function previousWeekRef(now: Date): Date {
 // insert path (txStore's addParsedWithLocation/add/update) already has a just-refreshed array
 // in memory, and re-querying it here was a second full-table scan on every single insert,
 // competing with the notification-posting path's own DB read on expo-sqlite's one serialized
-// connection and delaying when the OS notification actually posts (see attachTxActions' poll
-// in SmsReaderModule.kt) by however long that scan took. Standalone callers (screens) that
+// connection and delaying when the notification actually posts (see TxNotifier.kt) by however
+// long that scan took. Standalone callers (screens) that
 // have no fresh array on hand keep loading it themselves by simply not passing one.
 export async function getBudgetStatuses(now: Date = new Date(), txs?: TxRecord[]): Promise<BudgetStatus[]> {
   const [budgets, resolvedTxs] = await Promise.all([getBudgets(), txs ?? loadTxRecords()]);

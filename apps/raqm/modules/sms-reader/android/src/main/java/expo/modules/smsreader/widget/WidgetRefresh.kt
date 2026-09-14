@@ -16,7 +16,7 @@ import android.content.Intent
  * synchronous native function.
  *
  * Never throws — a widget refresh failure must never disrupt the calling JS flow (same
- * invariant as attachTxActions).
+ * invariant as TxNotifier.post).
  */
 object WidgetRefresh {
 
