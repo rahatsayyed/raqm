@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ToastAndroid } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ToastAndroid, Share } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { MainStackScreenProps } from '../../navigation/types';
@@ -16,7 +16,6 @@ import {
 } from '../../db/database';
 import type { Split, SplitParticipant } from '../../db/database';
 import { buildUpiLink } from '../../utils/upi';
-import { openExternalLink } from '../../utils/shareLinks';
 import { sendReminderNow } from '../../services/splitReminders';
 import { formatAmount } from '../../utils/format';
 import { useTxStore } from '../../store/txStore';
@@ -235,10 +234,13 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
                       : '';
                     const descLine = split.description ? ` (${split.description})` : '';
                     const message = `Hi ${item.name}, for ${split.title}${descLine} you owe ${formatAmount(item.shareAmount)}.${upiLine}`;
-                    openExternalLink(`whatsapp://send?text=${encodeURIComponent(message)}`, message);
+                    // The system share sheet, not a whatsapp:// deep link — lets the user pick
+                    // WhatsApp, Telegram, SMS, or anything else installed, and needs no Android
+                    // package-visibility <queries> declaration (unlike a scheme-specific link).
+                    Share.share({ message }).catch(() => {});
                   }}
                 >
-                  <Text className="font-inter-medium text-body-sm text-on-surface">Share on WhatsApp</Text>
+                  <Text className="font-inter-medium text-body-sm text-on-surface">Share</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   className="flex-1 py-[8px] items-center bg-surface rounded-lg border border-outline-variant"
