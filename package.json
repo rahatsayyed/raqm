@@ -6,6 +6,7 @@
     "packages/*"
   ],
   "scripts": {
+    "postinstall": "patch-package",
     "install:apps": "for dir in apps/*/; do npm install --prefix \"$dir\"; done",
     "raqm": "npm run raqm:start",
     "raqm:start": "npm run start --workspace=apps/raqm",
@@ -16,5 +17,8 @@
     "web:start": "npm run start --workspace=apps/web",
     "web:build": "npm run build --workspace=apps/web",
     "web:dev": "npm run dev --workspace=apps/web"
+  },
+  "devDependencies": {
+    "patch-package": "^8.0.1"
   }
 }
