@@ -6,7 +6,7 @@ import { Colors, Spacing } from '../../theme';
 import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollView';
 import { MainStackScreenProps } from '../../navigation/types';
 import { useTxStore } from '../../store/txStore';
-import { getReminders, addReminder, deleteReminder, getSplits, getSplitParticipants, type Reminder, type Split, type SplitParticipant } from '../../db/database';
+import { getReminders, addReminder, deleteReminder, getSplits, getSplitParticipants, upsertMerchantPrivacyRule, type Reminder, type Split, type SplitParticipant } from '../../db/database';
 import { detectRecurringDues, mergeDues, splitDues, type DueItem } from '../../services/dues';
 import { formatAmount } from '../../utils/format';
 import { TrashIcon, PeopleIcon } from '../../components/TabIcon';
@@ -89,6 +89,27 @@ export function DuesRemindersScreen({ navigation }: MainStackScreenProps<'DuesRe
     ]);
   };
 
+  // "Cancelled" only stops future charges from this merchant counting toward budgets —
+  // it doesn't touch past transactions or the recurring-detection flag itself, which
+  // will naturally stop resurfacing this merchant once ~90 days pass with no new charge.
+  const handleMarkCancelled = (merchant: string) => {
+    Alert.alert(
+      'Still using this?',
+      `Mark "${merchant}" as cancelled? Future charges from this merchant will stop counting toward your budgets.`,
+      [
+        { text: 'Still using it', style: 'cancel' },
+        {
+          text: 'Mark cancelled',
+          style: 'destructive',
+          onPress: async () => {
+            await upsertMerchantPrivacyRule(null, merchant, false, true);
+            Alert.alert('Done', `${merchant} won't count toward budgets anymore.`);
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <KeyboardAwareScrollView
       className="flex-1 bg-background"
@@ -130,6 +151,11 @@ export function DuesRemindersScreen({ navigation }: MainStackScreenProps<'DuesRe
               <Text className="font-mono text-label-sm text-on-surface-variant">{dueLabel(d.dueTs)}</Text>
             </View>
             <Text className="font-mono-medium text-body-sm text-on-surface">{formatAmount(d.amount, d.currency ?? currency)}</Text>
+            {d.source === 'detected' && (
+              <TouchableOpacity hitSlop={8} onPress={() => handleMarkCancelled(d.name)}>
+                <Text className="font-inter-medium text-label-sm text-primary">Cancel?</Text>
+              </TouchableOpacity>
+            )}
             {d.source === 'manual' && d.reminderId != null && (
               <TouchableOpacity hitSlop={8} onPress={() => handleDelete(d.reminderId!)}>
                 <TrashIcon color={Colors.onSurfaceVariant} size={18} />
