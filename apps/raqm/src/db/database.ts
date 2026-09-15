@@ -538,6 +538,22 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 17) {
+    await database.runAsync(`BEGIN`);
+    try {
+      try {
+        await database.runAsync(`ALTER TABLE budgets ADD COLUMN custom_days INTEGER`);
+      } catch {
+        // column already exists — safe to ignore
+      }
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (17)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -2764,8 +2780,10 @@ export interface Budget {
   id: number;
   categoryId: number;
   amount: number;
-  periodType: 'monthly' | 'weekly';
+  periodType: 'monthly' | 'weekly' | 'custom';
+  customDays: number | null;
   rollover: boolean;
+  createdAt: number;
 }
 
 function rowToBudget(row: Record<string, unknown>): Budget {
@@ -2773,8 +2791,10 @@ function rowToBudget(row: Record<string, unknown>): Budget {
     id: row.id as number,
     categoryId: row.category_id as number,
     amount: row.amount as number,
-    periodType: row.period_type as 'monthly' | 'weekly',
+    periodType: row.period_type as 'monthly' | 'weekly' | 'custom',
+    customDays: (row.custom_days as number | null) ?? null,
     rollover: (row.rollover as number) === 1,
+    createdAt: row.created_at as number,
   };
 }
 
@@ -2789,8 +2809,9 @@ export async function getBudgets(): Promise<Budget[]> {
 export async function upsertBudget(
   categoryId: number,
   amount: number,
-  periodType: 'monthly' | 'weekly',
+  periodType: 'monthly' | 'weekly' | 'custom',
   rollover: boolean,
+  customDays: number | null = null,
 ): Promise<void> {
   const database = await getDb();
   const existing = await database.getFirstAsync<{ id: number }>(
@@ -2799,19 +2820,21 @@ export async function upsertBudget(
   );
   if (existing) {
     await database.runAsync(
-      `UPDATE budgets SET amount = ?, period_type = ?, rollover = ? WHERE id = ?`,
+      `UPDATE budgets SET amount = ?, period_type = ?, rollover = ?, custom_days = ? WHERE id = ?`,
       amount,
       periodType,
       rollover ? 1 : 0,
+      customDays,
       existing.id,
     );
   } else {
     await database.runAsync(
-      `INSERT INTO budgets (category_id, amount, period_type, rollover) VALUES (?, ?, ?, ?)`,
+      `INSERT INTO budgets (category_id, amount, period_type, rollover, custom_days) VALUES (?, ?, ?, ?, ?)`,
       categoryId,
       amount,
       periodType,
       rollover ? 1 : 0,
+      customDays,
     );
   }
 }
