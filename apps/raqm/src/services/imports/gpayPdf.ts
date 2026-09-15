@@ -1,5 +1,13 @@
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { WorkerMessageHandler } from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
+
+// pdf.js has no real Worker/window in Hermes, so it falls back to an in-process "fake worker".
+// Registering the handler here avoids pdf.js's own dynamic `import()` fallback, which Hermes
+// cannot compile (see patches/pdfjs-dist+4.10.38.patch).
+(globalThis as unknown as { pdfjsWorker?: { WorkerMessageHandler: unknown } }).pdfjsWorker = {
+  WorkerMessageHandler,
+};
 
 export interface GpayPdfRow {
   timestamp: number;
