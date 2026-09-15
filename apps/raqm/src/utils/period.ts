@@ -60,3 +60,19 @@ export function getMonthBounds(ref: Date, startDay: number): PeriodBounds {
   const to = new Date(endY, endM, clampedStart - 1, 23, 59, 59, 999).getTime();
   return { from, to };
 }
+
+/**
+ * N-day period containing `ref`, counted in fixed `days`-long blocks starting at
+ * `anchorDate`'s local midnight. `days` is clamped to >= 1.
+ */
+export function getCustomBounds(ref: Date, days: number, anchorDate: Date): PeriodBounds {
+  const clampedDays = Math.max(1, Math.trunc(days));
+  const anchor = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate(), 0, 0, 0, 0);
+  const refMidnight = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate(), 0, 0, 0, 0);
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const dayOffset = Math.round((refMidnight.getTime() - anchor.getTime()) / msPerDay);
+  const periodIndex = Math.floor(dayOffset / clampedDays);
+  const start = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() + periodIndex * clampedDays, 0, 0, 0, 0);
+  const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + clampedDays - 1, 23, 59, 59, 999);
+  return { from: start.getTime(), to: end.getTime() };
+}
