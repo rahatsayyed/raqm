@@ -14,6 +14,7 @@ import {
   Pressable,
   TouchableOpacity,
   PermissionsAndroid,
+  Alert,
 } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -39,6 +40,7 @@ import {
 import { countsTowardTotals } from "../../services/txIntelligence";
 import { detectBalanceMismatches, type BalanceMismatch } from "../../services/balanceIntegrity";
 import { detectRecurringDues, mergeDues } from "../../services/dues";
+import { getBudgetStatuses } from "../../services/budgets";
 import { getMonthBounds, getDayBounds } from "../../utils/period";
 import type { MainStackParamList } from "../../navigation/types";
 import { formatAmount } from "../../utils/format";
@@ -119,6 +121,10 @@ interface HomeMetrics {
   forecast: number | null; // projected month-end spend
   vsLastMonthPct: number | null; // month-to-date vs same span last month, +ve = higher
   topCategoryName: string | null;
+  // null when no budgets are set — the safe-to-spend card hides itself rather than show 0
+  safeToSpend: number | null;
+  budgetRemaining: number;
+  upcomingBillsSum: number;
 }
 
 const EMPTY_METRICS: HomeMetrics = {
@@ -130,6 +136,9 @@ const EMPTY_METRICS: HomeMetrics = {
   forecast: null,
   vsLastMonthPct: null,
   topCategoryName: null,
+  safeToSpend: null,
+  budgetRemaining: 0,
+  upcomingBillsSum: 0,
 };
 
 /** Refund-netted expense sum over a window (same math as the rest of the app). */
@@ -391,6 +400,22 @@ export function DashboardScreen() {
         }
       }
 
+      // Safe to spend = what's left across active budgets, minus bills due in the next 7
+      // days — traceable on tap (see the alert below) rather than PocketGuard's black-box
+      // number, which was this case study's most-cited source of user distrust.
+      const statuses = await getBudgetStatuses(now, txs);
+      const budgetRemaining = statuses.reduce(
+        (sum, s) => sum + Math.max(0, s.limit - s.spent),
+        0,
+      );
+      const bills7d = mergeDues(
+        detectRecurringDues(txs, 7 * DAY_MS),
+        reminders,
+      ).filter((d) => d.dueTs >= now.getTime());
+      const upcomingBillsSum = bills7d.reduce((sum, d) => sum + d.amount, 0);
+      const safeToSpend =
+        statuses.length > 0 ? budgetRemaining - upcomingBillsSum : null;
+
       if (!cancelled) {
         setMetrics({
           net,
@@ -401,13 +426,16 @@ export function DashboardScreen() {
           forecast,
           vsLastMonthPct,
           topCategoryName,
+          safeToSpend,
+          budgetRemaining,
+          upcomingBillsSum,
         });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [txs, categories]);
+  }, [txs, categories, reminders]);
 
   // Recompute when txs change.
   useEffect(() => {
@@ -463,6 +491,11 @@ export function DashboardScreen() {
     }
     return Array.from(map.values()).sort((a, b) => b.monthSpend - a.monthSpend);
   }, [txs, monthBounds]);
+
+  const netWorth = useMemo(
+    () => accounts.reduce((sum, a) => sum + a.balance, 0),
+    [accounts],
+  );
 
   // BALANCE_UPDATE rows are ₹0 internal bookkeeping markers (manual balance corrections /
   // balance-inquiry SMS) — real for balanceIntegrity.ts's mismatch math, but not activity
@@ -674,6 +707,36 @@ export function DashboardScreen() {
           }
         />
 
+        {/* Safe to spend — budget remaining minus bills due in the next 7 days. Hidden
+          when no budgets exist, since 0 would misleadingly read as "nothing left". Tap
+          shows what it netted against, so it never becomes an untraceable black-box number. */}
+        {metrics.safeToSpend !== null && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            className="mx-[24px] mb-[32px] items-center bg-surface-container-lowest rounded-xl border border-outline-variant py-[24px]"
+            onPress={() =>
+              Alert.alert(
+                "Safe to spend",
+                `Budget remaining: ${formatAmount(metrics.budgetRemaining, currency)}\n` +
+                  `Bills due in 7 days: ${formatAmount(metrics.upcomingBillsSum, currency)}`,
+              )
+            }
+          >
+            <Text className="font-inter-semibold text-label-caps text-ink-label mb-[4px]">
+              SAFE TO SPEND
+            </Text>
+            <MaskedValue
+              kind="net"
+              value={metrics.safeToSpend}
+              currency={currency}
+              prefix={metrics.safeToSpend < 0 ? "−" : ""}
+              className={`font-mono-medium text-metric-hero ${
+                metrics.safeToSpend < 0 ? "text-error-muted" : "text-ink-headline"
+              }`}
+            />
+          </TouchableOpacity>
+        )}
+
         {/* Recent activity */}
         <View className="mx-[24px] mb-[32px]">
           <SectionHeader
@@ -757,6 +820,17 @@ export function DashboardScreen() {
           <View className="mb-[32px]">
             <View className="mx-[24px]">
               <SectionHeader title="ACCOUNTS" onPress={() => navigation.navigate("ManageAccounts")} />
+              <View className="flex-row items-center gap-[8px] -mt-[8px] mb-[16px]">
+                <Text className="font-inter text-annotation text-on-surface-variant">
+                  Net worth
+                </Text>
+                <MaskedValue
+                  kind="bank_balance"
+                  value={netWorth}
+                  currency={currency}
+                  className="font-mono-medium text-body-standard text-on-surface"
+                />
+              </View>
             </View>
             <ScrollView
               horizontal
