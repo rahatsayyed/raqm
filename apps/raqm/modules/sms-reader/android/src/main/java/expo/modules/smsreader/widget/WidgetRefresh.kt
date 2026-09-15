@@ -25,6 +25,8 @@ object WidgetRefresh {
     BudgetWidgetReceiver::class.java,
     CategoryPieWidgetReceiver::class.java,
     RecentTransactionsWidgetReceiver::class.java,
+    SafeToSpendWidgetReceiver::class.java,
+    SingleBudgetWidgetReceiver::class.java,
   )
 
   fun refreshAll(context: Context) {

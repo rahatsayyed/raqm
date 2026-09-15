@@ -15,6 +15,7 @@ object WidgetTheme {
   val OnSurfaceVariant = Color(0xFFBDCAC0)
   val Primary = Color(0xFF75DAA8)
   val OnPrimary = Color(0xFF0E1512)
+  val ErrorMuted = Color(0xFFC1666B)
 
   /** The donut/pie slice ramp — the primary green plus tints of it, so the palette stays
    *  inside the existing brand colors rather than inventing new ones. */
