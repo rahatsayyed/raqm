@@ -4,7 +4,7 @@ import {
   isMerchantExcludedFromBudget, type Budget, type TxRecord, type MerchantPrivacyRule,
 } from '../db/database';
 import { countsTowardTotals } from './txIntelligence';
-import { getMonthBounds, getWeekBounds, type PeriodBounds } from '../utils/period';
+import { getMonthBounds, getWeekBounds, getCustomBounds, type PeriodBounds } from '../utils/period';
 import { postBudgetAlert } from '../notifications/notifications';
 import { formatAmount } from '../utils/format';
 import { logEvent } from './logger';
@@ -57,6 +57,9 @@ async function sumSpend(
 
 async function currentBounds(budget: Budget, now: Date): Promise<PeriodBounds> {
   if (budget.periodType === 'weekly') return getWeekBounds(now);
+  if (budget.periodType === 'custom') {
+    return getCustomBounds(now, budget.customDays ?? 1, new Date(budget.createdAt));
+  }
   const startDayStr = await getSetting('month_start_day');
   const startDay = startDayStr ? Number(startDayStr) : 1;
   return getMonthBounds(now, startDay);
@@ -64,6 +67,16 @@ async function currentBounds(budget: Budget, now: Date): Promise<PeriodBounds> {
 
 function previousWeekRef(now: Date): Date {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+}
+
+// Previous period's bounds for rollover — for 'custom', periods are fixed anchor-aligned
+// blocks, so the previous one is found by re-deriving getCustomBounds one millisecond
+// before the current period started, rather than a fixed day offset like weekly uses.
+function previousPeriodBounds(budget: Budget, bounds: PeriodBounds, now: Date): PeriodBounds {
+  if (budget.periodType === 'custom') {
+    return getCustomBounds(new Date(bounds.from - 1), budget.customDays ?? 1, new Date(budget.createdAt));
+  }
+  return getWeekBounds(previousWeekRef(now));
 }
 
 // `txs`, when passed, is used as-is instead of re-scanning the transactions table — the hot
@@ -87,10 +100,10 @@ export async function getBudgetStatuses(now: Date = new Date(), txs?: TxRecord[]
     const spent = await sumSpend(resolvedTxs, budget.categoryId, bounds, byId, privacyRules);
 
     let limit = budget.amount;
-    if (budget.periodType === 'weekly' && budget.rollover) {
-      const lastWeekBounds = getWeekBounds(previousWeekRef(now));
-      const lastWeekSpent = await sumSpend(resolvedTxs, budget.categoryId, lastWeekBounds, byId, privacyRules);
-      const carry = Math.max(0, budget.amount - lastWeekSpent);
+    if ((budget.periodType === 'weekly' || budget.periodType === 'custom') && budget.rollover) {
+      const lastBounds = previousPeriodBounds(budget, bounds, now);
+      const lastSpent = await sumSpend(resolvedTxs, budget.categoryId, lastBounds, byId, privacyRules);
+      const carry = Math.max(0, budget.amount - lastSpent);
       limit = budget.amount + carry;
     }
 
