@@ -30,6 +30,10 @@ import android.widget.TextView
  */
 class WidgetConfigActivity : Activity() {
   private var appWidgetId: Int = AppWidgetManager.INVALID_APPWIDGET_ID
+  private var isSingleBudgetWidget: Boolean = false
+  private var categoryStatuses: List<BudgetStatus> = emptyList()
+  private var selectedCategoryId: Int? = null
+  private val categoryRowViews = mutableListOf<Pair<Int, TextView>>()
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -41,6 +45,13 @@ class WidgetConfigActivity : Activity() {
       return
     }
 
+    val providerName = try {
+      AppWidgetManager.getInstance(this).getAppWidgetInfo(appWidgetId)?.provider?.className
+    } catch (e: Exception) {
+      null
+    }
+    isSingleBudgetWidget = providerName == SingleBudgetWidgetReceiver::class.java.name
+
     window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
     window.setGravity(Gravity.BOTTOM)
     window.setDimAmount(0f)
@@ -48,6 +59,70 @@ class WidgetConfigActivity : Activity() {
   }
 
   private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+  private fun rowBackground(selected: Boolean): GradientDrawable = GradientDrawable().apply {
+    cornerRadius = dp(12).toFloat()
+    if (selected) {
+      setColor(Color.parseColor(COLOR_PRIMARY_MUTED))
+      setStroke(dp(1), Color.parseColor(COLOR_PRIMARY))
+    } else {
+      setColor(Color.parseColor(COLOR_SURFACE_VARIANT))
+    }
+  }
+
+  private fun buildCategoryPicker(): View {
+    categoryStatuses = WidgetData.budgetStatuses(this)
+    val savedId = WidgetPrefs.getCategoryId(this, appWidgetId)
+    selectedCategoryId = categoryStatuses.firstOrNull { it.categoryId == savedId }?.categoryId
+      ?: categoryStatuses.firstOrNull()?.categoryId
+
+    val section = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+    section.addView(
+      TextView(this).apply {
+        text = "Choose a budget"
+        setTextColor(Color.parseColor(COLOR_ON_SURFACE))
+        textSize = 18f
+      },
+    )
+
+    if (categoryStatuses.isEmpty()) {
+      section.addView(
+        TextView(this).apply {
+          text = "No budgets set up yet — add one in the app first."
+          setTextColor(Color.parseColor(COLOR_ON_SURFACE_VARIANT))
+          setPadding(0, dp(8), 0, 0)
+        },
+      )
+      return section
+    }
+
+    categoryRowViews.clear()
+    val list = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      setPadding(0, dp(8), 0, 0)
+    }
+    categoryStatuses.forEach { status ->
+      val row = TextView(this).apply {
+        text = "${status.categoryEmoji}  ${status.categoryName}"
+        setTextColor(Color.parseColor(COLOR_ON_SURFACE))
+        setPadding(dp(12), dp(10), dp(12), dp(10))
+        background = rowBackground(status.categoryId == selectedCategoryId)
+        setOnClickListener {
+          selectedCategoryId = status.categoryId
+          categoryRowViews.forEach { (id, view) -> view.background = rowBackground(id == selectedCategoryId) }
+        }
+      }
+      categoryRowViews.add(status.categoryId to row)
+      list.addView(
+        row,
+        LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+          topMargin = dp(6)
+        },
+      )
+    }
+    section.addView(list)
+    return section
+  }
 
   private fun buildContent(): View {
     val scrim = FrameLayout(this).apply {
@@ -70,6 +145,19 @@ class WidgetConfigActivity : Activity() {
         )
       }
       setPadding(dp(20), dp(20), dp(20), dp(28))
+    }
+
+    if (isSingleBudgetWidget) {
+      card.addView(buildCategoryPicker())
+      card.addView(
+        View(this).apply {
+          layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply {
+            topMargin = dp(4)
+            bottomMargin = dp(16)
+          }
+          setBackgroundColor(Color.parseColor(COLOR_DIVIDER))
+        },
+      )
     }
 
     card.addView(
@@ -135,6 +223,9 @@ class WidgetConfigActivity : Activity() {
         val opacity = seekBar.progress + MIN_OPACITY
         WidgetPrefs.setOpacity(this@WidgetConfigActivity, appWidgetId, opacity)
         WidgetPrefs.setUseWallpaperColor(this@WidgetConfigActivity, appWidgetId, wallpaperSwitch.isChecked)
+        if (isSingleBudgetWidget) {
+          selectedCategoryId?.let { WidgetPrefs.setCategoryId(this@WidgetConfigActivity, appWidgetId, it) }
+        }
         WidgetRefresh.refreshOne(this@WidgetConfigActivity, appWidgetId)
 
         val resultValue = Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
@@ -163,5 +254,8 @@ class WidgetConfigActivity : Activity() {
     private const val COLOR_ON_SURFACE_VARIANT = "#bdcac0"
     private const val COLOR_PRIMARY = "#75daa8"
     private const val COLOR_ON_PRIMARY = "#0e1512"
+    private const val COLOR_SURFACE_VARIANT = "#152019"
+    private const val COLOR_PRIMARY_MUTED = "#2675daa8"
+    private const val COLOR_DIVIDER = "#22bdcac0"
   }
 }

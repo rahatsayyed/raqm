@@ -31,7 +31,19 @@ object WidgetPrefs {
     prefs(context).edit().putBoolean("wallpaper_$appWidgetId", value).apply()
   }
 
+  /** The budget category chosen for a single-budget widget instance. -1 = unset. */
+  fun getCategoryId(context: Context, appWidgetId: Int): Int =
+    prefs(context).getInt("category_$appWidgetId", -1)
+
+  fun setCategoryId(context: Context, appWidgetId: Int, value: Int) {
+    prefs(context).edit().putInt("category_$appWidgetId", value).apply()
+  }
+
   fun clear(context: Context, appWidgetId: Int) {
-    prefs(context).edit().remove("opacity_$appWidgetId").remove("wallpaper_$appWidgetId").apply()
+    prefs(context).edit()
+      .remove("opacity_$appWidgetId")
+      .remove("wallpaper_$appWidgetId")
+      .remove("category_$appWidgetId")
+      .apply()
   }
 }

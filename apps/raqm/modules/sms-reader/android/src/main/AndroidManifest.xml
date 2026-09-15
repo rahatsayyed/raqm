@@ -114,6 +114,17 @@
     </receiver>
 
     <receiver
+      android:name=".widget.SafeToSpendWidgetReceiver"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/widget_safe_to_spend_info" />
+    </receiver>
+
+    <receiver
       android:name=".widget.CategoryPieWidgetReceiver"
       android:exported="false">
       <intent-filter>
@@ -133,6 +144,17 @@
       <meta-data
         android:name="android.appwidget.provider"
         android:resource="@xml/widget_recent_transactions_info" />
+    </receiver>
+
+    <receiver
+      android:name=".widget.SingleBudgetWidgetReceiver"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/widget_single_budget_info" />
     </receiver>
   </application>
 </manifest>

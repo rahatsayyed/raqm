@@ -11,6 +11,7 @@ import java.util.Locale
 import kotlin.math.max
 
 data class BudgetStatus(
+  val categoryId: Int,
   val categoryName: String,
   val categoryEmoji: String,
   val spent: Double,
@@ -267,6 +268,7 @@ object WidgetData {
 
         statuses.add(
           BudgetStatus(
+            categoryId = categoryId,
             categoryName = name,
             categoryEmoji = emoji,
             spent = spent,
@@ -323,6 +325,27 @@ object WidgetData {
   /** Total spend for the current custom month — the Recent Transactions header summary. */
   fun periodSpendTotal(context: Context): Double =
     categoryTotals(context).sumOf { it.total }
+
+  /**
+   * Port of DashboardScreen.tsx's safeToSpend: remaining budget across every active budget,
+   * traceable the same way the Dashboard card is (see safeToSpendBreakdown).
+   *
+   * ponytail: DashboardScreen also nets upcoming-week bills via detectRecurringDues, which
+   * has no Kotlin port and is a non-trivial pattern-detection algorithm — porting it just for
+   * the widget is out of scope here. This number can read higher than the Dashboard's until
+   * that's ported; upgrade path is a WidgetData port of detectRecurringDues/mergeDues, same
+   * hand-maintained-mirror approach as budgetStatuses.
+   */
+  fun safeToSpend(context: Context): Double? {
+    val statuses = budgetStatuses(context)
+    if (statuses.isEmpty()) return null
+    return statuses.sumOf { max(0.0, it.limit - it.spent) }
+  }
+
+  /** One budget's status, for the single-budget widget — filters budgetStatuses(), no
+   *  separate query. Null if the category has no budget configured. */
+  fun singleBudgetStatus(context: Context, categoryId: Int): BudgetStatus? =
+    budgetStatuses(context).find { it.categoryId == categoryId }
 
   /** The `limit` most recent non-deleted transactions, newest first. */
   fun recentTransactions(context: Context, limit: Int): List<RecentTx> =

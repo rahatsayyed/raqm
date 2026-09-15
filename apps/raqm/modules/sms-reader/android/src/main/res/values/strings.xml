@@ -4,4 +4,6 @@
     <string name="widget_budget_description">This period\'s spend against your budgets.</string>
     <string name="widget_category_pie_description">Where this period\'s money went.</string>
     <string name="widget_recent_transactions_description">Your latest transactions, tap one to open it.</string>
+    <string name="widget_safe_to_spend_description">What\'s left to spend across your budgets.</string>
+    <string name="widget_single_budget_description">Spend against one budget you choose.</string>
 </resources>
