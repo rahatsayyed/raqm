@@ -60,7 +60,15 @@ export function findSelfTransferPartner(txs: TxRecord[], newTx: TxRecord): [numb
   const newIsCredit = isCreditType(newTx.type);
   if (!newIsDebit && !newIsCredit) return null;
 
+  // txs is always loaded `ORDER BY timestamp DESC` (loadTxRecords in database.ts) and
+  // refreshed via useTxStore.refresh() right before this runs, so timestamps only decrease
+  // as the loop advances. Once a candidate is more than DAY_MS older than newTx, every later
+  // entry is even older and can never match — safe to stop there instead of walking the
+  // user's entire transaction history (thousands of rows on a real device) on every incoming
+  // SMS. The matching rule itself stays 24h (DAY_MS), unchanged — only the scan is bounded.
+  const lowerBound = newTx.timestamp - DAY_MS;
   for (const t of txs) {
+    if (t.timestamp < lowerBound) break;
     if (t.id === newTx.id) continue;
     if (t.amount !== newTx.amount) continue;
     if (isLinked(t) || t.isSplitChild) continue;

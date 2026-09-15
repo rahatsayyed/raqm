@@ -2126,6 +2126,7 @@ export async function upsertWordMatchRule(
       id,
     );
     wordMatchRulesCache = null;
+    wordMatchLowerCache = null;
     return;
   }
   const maxRow = await database.getFirstAsync<{ maxPriority: number | null }>(
@@ -2140,12 +2141,14 @@ export async function upsertWordMatchRule(
     nextPriority,
   );
   wordMatchRulesCache = null;
+  wordMatchLowerCache = null;
 }
 
 export async function deleteWordMatchRule(id: number): Promise<void> {
   const database = await getDb();
   await database.runAsync(`DELETE FROM word_match_rules WHERE id = ?`, id);
   wordMatchRulesCache = null;
+  wordMatchLowerCache = null;
 }
 
 export async function reorderWordMatchRules(orderedIds: number[]): Promise<void> {
@@ -2161,13 +2164,33 @@ export async function reorderWordMatchRules(orderedIds: number[]): Promise<void>
     throw e;
   }
   wordMatchRulesCache = null;
+  wordMatchLowerCache = null;
 }
+
+// Precomputed lowercase index for the word-match hot path (called on every categorized
+// transaction). Without this, matching against N rules re-lowercased both the merchant
+// string AND every rule's pattern on every single comparison — wasted allocations that grow
+// directly with N. Built once from wordMatchRulesCache and invalidated in lockstep with it.
+// ponytail: still an O(N) substring scan per merchant (N = rule count), not O(1) — fine while
+// N stays in the low hundreds. If the rule set grows into the thousands (e.g. an
+// auto-learning categorizer keeps adding rules), replace this with an Aho-Corasick/trie
+// multi-pattern automaton, which matches in time proportional to the merchant string length
+// regardless of N.
+let wordMatchLowerCache: { patternLower: string; categoryId: number; subcategoryId: number | null }[] | null = null;
 
 export async function getWordMatchCategoryForMerchant(
   merchant: string,
 ): Promise<{ categoryId: number; subcategoryId: number | null } | null> {
-  const rules = await getWordMatchRules();
-  const hit = rules.find((r) => matchesPattern(r.pattern, merchant));
+  if (!wordMatchLowerCache) {
+    const rules = await getWordMatchRules();
+    wordMatchLowerCache = rules.map((r) => ({
+      patternLower: r.pattern.toLowerCase(),
+      categoryId: r.categoryId,
+      subcategoryId: r.subcategoryId,
+    }));
+  }
+  const merchantLower = merchant.toLowerCase();
+  const hit = wordMatchLowerCache.find((r) => merchantLower.includes(r.patternLower));
   return hit ? { categoryId: hit.categoryId, subcategoryId: hit.subcategoryId } : null;
 }
 

@@ -2,7 +2,7 @@ import { BankParserFactory, TransactionType, type ParsedTransaction } from '@rah
 import { useTxStore } from '../store/txStore';
 import { postTxNotification, cancelTxNotification } from '../notifications/notifications';
 import { accountLabel } from '../utils/accountLabel';
-import { getCategories, linkTxs } from '../db/database';
+import { getCategories, linkTxs, getTxById } from '../db/database';
 import { findSelfTransferPartner } from './txIntelligence';
 import { Colors } from '../theme';
 import { logEvent } from './logger';
@@ -66,7 +66,10 @@ export async function postParsedTxNotification(
       : `${amountStr} ${tx.merchant} ${action}`
     : `${amountStr} ${action}`;
 
-  const insertedTx = useTxStore.getState().txs.find((t) => t.id === id);
+  // Primary-key lookup (getTxById) instead of scanning the whole in-memory txs array — this
+  // runs on every live-SMS notification, and that array can hold thousands of rows on a real
+  // device (see CLAUDE.md's list-performance invariant).
+  const insertedTx = await getTxById(id);
   let categoryName = 'Uncategorized';
   if (insertedTx?.categoryId != null) {
     const categories = await getCategories();
@@ -111,7 +114,10 @@ export async function processIncomingSms(data: { body: string; sender: string; t
   // the same UPI transfer usually arrive seconds apart). If so, link them now rather than waiting
   // for the next rescan, and collapse both notifications into one.
   const txs = useTxStore.getState().txs;
-  const newTx = txs.find(t => t.id === id);
+  // getTxById (primary-key lookup) instead of scanning txs for the just-inserted row — txs
+  // itself is still passed to findSelfTransferPartner below, which needs the full list to
+  // search, but locating this one known row by id doesn't need a scan.
+  const newTx = await getTxById(id);
   const pair = newTx ? findSelfTransferPartner(txs, newTx) : null;
 
   if (pair) {
@@ -127,9 +133,7 @@ export async function processIncomingSms(data: { body: string; sender: string; t
     }
     pendingLegNotifications.delete(id);
 
-    const refreshedTxs = useTxStore.getState().txs;
-    const debitTx = refreshedTxs.find(t => t.id === debitId);
-    const creditTx = refreshedTxs.find(t => t.id === creditId);
+    const [debitTx, creditTx] = await Promise.all([getTxById(debitId), getTxById(creditId)]);
     if (debitTx && creditTx) {
       const fromLabel = accountLabel(debitTx.bankName, debitTx.accountLast4, labels);
       const toLabel = accountLabel(creditTx.bankName, creditTx.accountLast4, labels);
