@@ -2072,7 +2072,15 @@ export async function deleteCategoryRule(id: number): Promise<void> {
   await database.runAsync(`DELETE FROM category_rules WHERE id = ?`, id);
 }
 
+// Rules only change via the Rules screen (upsert/delete/reorder below), so this cache
+// mirrors categoryIdByNameCache/cachedSalaryCategoryId's pattern: read once, invalidate on
+// write. Without it, getWordMatchCategoryForMerchant (called on every categorized
+// transaction, including the live-SMS-notification path) re-queried word_match_rules on
+// every single insert even though the rules almost never change.
+let wordMatchRulesCache: WordMatchRule[] | null = null;
+
 export async function getWordMatchRules(): Promise<WordMatchRule[]> {
+  if (wordMatchRulesCache) return wordMatchRulesCache;
   const database = await getDb();
   const rows = await database.getAllAsync<{
     id: number;
@@ -2090,7 +2098,7 @@ export async function getWordMatchRules(): Promise<WordMatchRule[]> {
      LEFT JOIN subcategories s ON s.id = wr.subcategory_id
      ORDER BY wr.priority ASC`,
   );
-  return rows.map((row) => ({
+  wordMatchRulesCache = rows.map((row) => ({
     id: row.id,
     pattern: row.pattern,
     categoryId: row.category_id,
@@ -2099,6 +2107,7 @@ export async function getWordMatchRules(): Promise<WordMatchRule[]> {
     subcategoryName: row.subcategory_name,
     priority: row.priority,
   }));
+  return wordMatchRulesCache;
 }
 
 export async function upsertWordMatchRule(
@@ -2116,6 +2125,7 @@ export async function upsertWordMatchRule(
       subcategoryId,
       id,
     );
+    wordMatchRulesCache = null;
     return;
   }
   const maxRow = await database.getFirstAsync<{ maxPriority: number | null }>(
@@ -2129,11 +2139,13 @@ export async function upsertWordMatchRule(
     subcategoryId,
     nextPriority,
   );
+  wordMatchRulesCache = null;
 }
 
 export async function deleteWordMatchRule(id: number): Promise<void> {
   const database = await getDb();
   await database.runAsync(`DELETE FROM word_match_rules WHERE id = ?`, id);
+  wordMatchRulesCache = null;
 }
 
 export async function reorderWordMatchRules(orderedIds: number[]): Promise<void> {
@@ -2148,6 +2160,7 @@ export async function reorderWordMatchRules(orderedIds: number[]): Promise<void>
     await database.runAsync(`ROLLBACK`);
     throw e;
   }
+  wordMatchRulesCache = null;
 }
 
 export async function getWordMatchCategoryForMerchant(
