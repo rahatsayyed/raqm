@@ -21,7 +21,7 @@ export function BudgetSetupScreen({ navigation }: OnboardingScreenProps<'BudgetS
 
   const handleContinue = async () => {
     for (const [category, value] of Object.entries(amounts)) {
-      if (value.trim().length > 0) {
+      if (value.trim().length > 0 && Number(value) > 0) {
         // ponytail: category names here are hardcoded defaults, not
         // user-picked ones, so a missing categoryId (name not in the
         // categories table) just skips saving that row rather than throwing.
