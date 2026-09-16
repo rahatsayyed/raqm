@@ -75,7 +75,10 @@ entire app, and it exists nowhere else.
 | accent-primary | `#3EBD7E` | Trust / confidence | Primary actions, positive metrics, brand mark — the ONE accent, used sparingly |
 | accent-deep | `#173325` | Structure | Selected states, secondary containers |
 | notice | `#C68B4D` | Awareness (not danger) | Flag something worth attention — never alarm-red |
-| error | `#C4707A` | Honesty | Failed transactions, hard errors only |
+| error-muted | `#C4707A` | Honesty | Failed transactions, hard errors only |
+
+Note: `error` (`#ffb4ab`) is the legacy MD3 token, still in code for
+back-compat — `error-muted` is the correct v2.0 token name for new work.
 
 Rules:
 
@@ -93,7 +96,7 @@ Typography carries the design — treat it as the primary visual element, not de
 
 - **Inter** — every role. Titles, body copy, statements, section headers, labels, buttons. No serif anywhere.
 - **JetBrains Mono** — every number and amount. Balances, transaction amounts, counters, OTP, stats. Mono guarantees column alignment; no tabular-figure workaround needed.
-- **Material Symbols Outlined**, implemented via `@expo/vector-icons`'s Material Symbols set directly — not hand-drawn SVGs (see §8).
+- **Material Symbols Outlined**, implemented via `@expo/vector-icons`'s `MaterialCommunityIcons` — not hand-drawn SVGs (see §8).
 
 **v1.1 used Fraunces (a serif) for headline "Statement" copy — retired in v2.0.**
 Studying Raqm's own named references (Apple, Stripe) showed neither uses a
@@ -133,7 +136,12 @@ use to signal precision instead of a serif:
 | Label | `labelCaps` | Inter | 11px uppercase · 600 | Form field labels, badges, step counters |
 | Mono label | `labelLg` / `labelSm` | JetBrains Mono | 14/12px | Data-adjacent labels: codes, tickers |
 
-Legacy tokens (`displayLg`, `headlineMd/Sm`, `titleLg`, `bodyLg/Md/Sm`, `font-fraunces`) are retired in v2.0. Screens still using them should migrate to the roles above when next touched — no silent fallback resolution.
+Legacy tokens (`displayLg`, `headlineMd/Sm`, `titleLg`, `bodyLg/Md/Sm`) remain
+in active use by several reskinned screens (DateRange, AccountSelection,
+ScanComplete, SignUp, OTPVerification, NameEntry) — prefer the RDL roles
+above for new work, but this is not a "retired, do not use" list. `Fraunces`
+(`font-fraunces`) is the one genuinely retired piece: it's fully removed
+from the dependency tree and used nowhere in code.
 
 ## 4. Layout & Grid
 
@@ -146,13 +154,18 @@ Legacy tokens (`displayLg`, `headlineMd/Sm`, `titleLg`, `bodyLg/Md/Sm`, `font-fr
 
 A precise numeric scale, not an arbitrary pair of values — the Apple/Stripe pattern is a real scale from sharp to pill, with pill reserved exclusively for the most "transactional" elements (CTAs, chips):
 
+Values below mirror `tailwind.config.js`'s actual `borderRadius` scale —
+this table describes the real scale in code, not an aspirational one:
+
 | Token | Radius | Use |
 |---|---|---|
-| `radius-xs` | 4px | Inline chips, small tags |
-| `radius-sm` | 8px | Buttons, inputs |
-| `radius-md` | 12px | Cards |
-| `radius-lg` | 18px | Sheets, modals |
-| `radius-pill` | 9999px | Primary CTA buttons only — never cards, never containers |
+| `radius-sm` | 4px | Inline chips, small tags |
+| `radius-md` | 8px | Buttons, inputs |
+| `radius-lg` | 12px | Cards |
+| `radius-xl` | 16px | Sheets, modals |
+| `radius-2xl` | 24px | Larger sheets |
+| `radius-3xl` | 32px | Rare, full-bleed containers |
+| `radius-pill` (9999px, via `rounded-full`) | — | Primary CTA buttons only — never cards, never containers |
 
 Circles reserved exclusively for: avatars, profile images, chart nodes. Never for buttons or containers. Radius should read as engineered precision, not friendly/bubbly.
 
@@ -172,7 +185,7 @@ Circles reserved exclusively for: avatars, profile images, chart nodes. Never fo
 ## 8. Iconography (rebuilt)
 
 - Reference set: **Material Symbols Outlined** — rounded outline, ~2px stroke weight.
-- **In-app implementation: `@expo/vector-icons`'s Material Symbols set, used directly.** v1.1 asked engineers to hand-draw SVGs matching Material Symbols geometry — high friction, and the direct cause of every onboarding screen falling back to emoji instead. A real, maintained icon library removes that friction entirely.
+- **In-app implementation: `MaterialCommunityIcons` via `@expo/vector-icons`, standing in for Material Symbols Outlined** (see `src/components/Icon.tsx`'s Task 2 note for why). v1.1 asked engineers to hand-draw SVGs matching Material Symbols geometry — high friction, and the direct cause of every onboarding screen falling back to emoji instead. A real, maintained icon library removes that friction entirely.
 - Filled variant reserved for active/selected states only.
 - No emoji-style icons, anywhere, ever. No multi-color icons. Icons support text labels — never replace them on primary actions.
 
