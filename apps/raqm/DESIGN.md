@@ -1,16 +1,36 @@
 # DESIGN.md — Raqm Design Language (RDL)
 
-Version 1.1 · Living document · Last updated July 2026
+Version 2.0 · Living document · Rebuilt 2026-09-16
 Optimized for AI-agent consumption — every screen must comply with these rules without re-explanation.
 In code, all values below come from `src/theme` tokens (`Colors.*`, `Typography.*`, `Spacing.*`, `Radius.*`) — never hardcoded.
 
+**v2.0 note:** v1.1's visual system (color, typography, shape, motion) was written
+quickly and never checked against real reference systems. v2.0 rebuilds those
+sections from studying 15 finance apps praised for onboarding/UI (Copilot
+Money, Monarch, YNAB, Cleo, Revolut, N26, Wise, Apple Card/Wallet, and others)
+and the actual concrete design systems Apple and Stripe publish, plus general
+anti-slop UI critique. Nothing here was carried over by default — every value
+below is a deliberate, re-justified choice, not inertia from v1.1. Product/UX
+principles that were never in question (§0, §1, §11–§16) are unchanged.
+
 ## 0. Product Context
 
-Raqm is an SMS-based personal finance app for the Indian market (Android). It reads bank SMS, extracts transactions automatically, and presents financial understanding — not transaction lists. It is positioned as a Personal CFO, not an expense tracker.
+Raqm is an SMS-based personal finance app for the Indian market, expanding to
+iPhone (manual entry / PDF import, since iOS cannot read SMS). It reads bank
+SMS, extracts transactions automatically, and presents financial
+understanding — not transaction lists. It is positioned as a Personal CFO,
+not an expense tracker.
 
-Target user: earns money, rarely reviews finances, doesn't enjoy budgeting, wants clarity without effort, values privacy.
+Target user: earns money, rarely reviews finances, doesn't enjoy budgeting,
+wants clarity without effort, values privacy.
 
-Reference feel: Apple Health (calm presentation of personal data) + Stripe (precision) + Mercury (editorial whitespace) + a premium leather financial journal — never a fintech dashboard, never a budgeting spreadsheet.
+Reference feel: Copilot Money's typography-led editorial precision (the
+closest real-world match — dark canvas, no illustration/mascot, tight
+tracking) + Apple's restraint (one accent, one shadow, no decoration) +
+Stripe's numeric precision (tabular figures, negative tracking as a
+"financial DNA" signal) — never a fintech dashboard, never a budgeting
+spreadsheet, never a bubbly consumer app (Monarch's gamified/celebratory
+style is the explicit anti-reference).
 
 ## 1. Non-Negotiable Principles
 
@@ -22,97 +42,139 @@ Apply these to every screen, in priority order:
 4. **Never shame, never guilt, never celebrate overspending.** Neutral, advisor-toned observations only.
 5. **Density: minimal by default.** When in doubt, remove an element rather than add one.
 
-## 2. Color System
+## 2. Color System (rebuilt)
 
-Dark mode is primary (the app is dark-only). Neutral surfaces dominate; color carries meaning, never decoration.
+Dark mode is the only mode. The palette is "Forest, refined" — deep green
+structure with one precise accent, chosen deliberately because it already
+matches a legitimate non-generic premium-consumer family (deep green + bone +
+amber, as opposed to the AI-default beige/brass/oxblood palette common to
+"premium" briefs) — not because it's what the app already had. Every value
+below is freshly derived, not copied from v1.1.
 
-### Core palette (dark theme — default)
+Discipline borrowed directly from Apple and Stripe: **one accent color, used
+sparingly, never decoratively.** No gradients anywhere except one radial glow
+behind the Home hero number — this is the single sanctioned exception in the
+entire app, and it exists nowhere else.
+
+### Core palette
 
 | Token | Hex | Use |
 |---|---|---|
-| bg-base | `#0B120F` | App background |
-| bg-surface | `#121A17` | Cards, sheets |
-| bg-surface-raised | `#182420` | Nested cards, modals |
-| border-subtle | `#243128` | Card borders, dividers (borders replace shadows) |
-| text-primary (ink-headline) | `#F4F1EA` | Headings, key numbers |
-| text-secondary (ink-body) | `#A9B3AC` | Body copy |
-| text-tertiary (ink-label) | `#5C665F` | Timestamps, annotations |
+| bg-base | `#0A0E0C` | App background — warm near-black, never pure `#000000` |
+| bg-surface | `#10140F` | Cards, sheets |
+| bg-surface-raised | `#161C15` | Nested cards, modals |
+| border-subtle | `#232B22` | Card borders, dividers (borders replace shadows) |
+| ink-headline | `#F2F0E9` | Headings, key numbers — warm off-white, never pure `#FFFFFF` |
+| ink-body | `#9FA89C` | Body copy |
+| ink-label | `#5B635A` | Timestamps, annotations |
 
 ### Accent / semantic roles
 
 | Token | Hex | Emotion | Use |
 |---|---|---|---|
-| accent-primary (Spring Green) | `#52B788` | Trust / confidence | Primary actions, positive metrics, brand mark |
-| accent-deep (Deep Evergreen) | `#1B4332` | Structure | Selected states, secondary containers |
-| notice (Oxidized Copper) | `#B08159` | Awareness (not danger) | Flag something worth attention — never alarm-red |
-| error (desaturated) | `#C1666B` | Honesty | Failed transactions, hard errors only |
-| moss | `#7C9885` | Secondary structure | Tags, muted badges |
+| accent-primary | `#3EBD7E` | Trust / confidence | Primary actions, positive metrics, brand mark — the ONE accent, used sparingly |
+| accent-deep | `#173325` | Structure | Selected states, secondary containers |
+| notice | `#C68B4D` | Awareness (not danger) | Flag something worth attention — never alarm-red |
+| error | `#C4707A` | Honesty | Failed transactions, hard errors only |
 
 Rules:
 
+- One accent color per screen, used identically everywhere it appears (the same green in a button is the same green in a positive metric — no per-screen accent drift).
 - Green is never used for excitement or celebration — only confidence/positive-direction.
-- notice (copper), not red, is the default "pay attention" color. Red is reserved for actual failures (declined payment, parsing error), not "you spent more than usual."
-- No gradients except a single subtle radial glow behind hero numbers on Home — nothing else.
+- notice (amber), not red, is the default "pay attention" color. Red is reserved for actual failures (declined payment, parsing error), not "you spent more than usual."
+- No gradients except the single radial glow behind the Home hero number — nowhere else, no exceptions.
+- The secondary "moss" tier from v1.1 is retired — fewer color tokens means fewer places accent discipline can leak.
 
-## 3. Typography
+## 3. Typography (rebuilt)
 
 Typography carries the design — treat it as the primary visual element, not decoration around it.
 
-**Font stack (FINAL — locked in):**
+**Font stack:**
 
-- **Inter** — the workhorse. Titles, body copy, section headers, labels, buttons: everything not listed below.
-- **Fraunces** — headlines only. The editorial serif voice for Statement roles ("You spent more on dining this month.") and the wordmark.
+- **Inter** — every role. Titles, body copy, statements, section headers, labels, buttons. No serif anywhere.
 - **JetBrains Mono** — every number and amount. Balances, transaction amounts, counters, OTP, stats. Mono guarantees column alignment; no tabular-figure workaround needed.
-- **Material Symbols Outlined** — the icon reference set (see §8). In-app, icons are implemented as equivalent rounded-outline SVGs (`react-native-svg`), matching Material Symbols Outlined geometry.
+- **Material Symbols Outlined**, implemented via `@expo/vector-icons`'s Material Symbols set directly — not hand-drawn SVGs (see §8).
+
+**v1.1 used Fraunces (a serif) for headline "Statement" copy — retired in v2.0.**
+Studying Raqm's own named references (Apple, Stripe) showed neither uses a
+serif anywhere; both build "editorial premium" through negative tracking and
+weight choice on a sans font alone. A display serif for a "creative/editorial"
+brief is also a specifically flagged default pattern in UI-taste critique —
+reaching for it here was inertia, not a considered choice. Dropped.
+
+**Weight discipline:** Inter 300 / 400 / 600 / 700 only. Weight 500 is
+deliberately omitted, the same way Apple's system omits an equivalent
+mid-weight — a small precision device that keeps the type scale from feeling
+generic.
+
+**Tracking discipline (new):** large text gets negative letter-spacing,
+tightening as size increases — the concrete mechanism Apple and Stripe both
+use to signal precision instead of a serif:
+
+| Size | Tracking |
+|---|---|
+| 44px+ (Metric hero) | -1.0px to -1.2px |
+| 32px (Statement) | -0.6px to -0.8px |
+| 20-24px | -0.3px |
+| Below 20px | 0 (no tracking adjustment) |
 
 **Type roles** (not H1/H2/Body — every style has a job). Token names are the `Typography.*` keys in `src/theme/typography.ts`:
 
-| Role | Token | Font | Size / weight | Example |
+| Role | Token | Font | Size / weight / tracking | Example |
 |---|---|---|---|---|
-| Statement | `statementLg` / `statementMobile` | Fraunces | 32/28px · 500 | "You spent more on dining this month." |
-| Metric | `metricHero` | JetBrains Mono | 44px · 500 | "₹28,430" (Home hero) |
+| Statement | `statementLg` / `statementMobile` | Inter | 32/28px · 300 · -0.6px | "You spent more on dining this month." |
+| Metric | `metricHero` | JetBrains Mono | 44px · 500 · -1.0px | "₹28,430" (Home hero) |
 | Numeric | `numericXl/Lg/Md/Sm` | JetBrains Mono | 48/32/20/14px | All other amounts and stats |
 | Section | `sectionHeader` | Inter | 13px uppercase · 600 · +letterspacing | "RECENT ACTIVITY" |
-| Insight | `insightReading` | Inter | 17px · 500 | "Weekend dining increased 28%." |
+| Insight | `insightReading` | Inter | 17px · 600 | "Weekend dining increased 28%." |
 | Reading | `bodyStandard` | Inter | 15px · 400 | Body copy |
 | Supporting | `supportingText` | Inter | 13px · 400 | Secondary line under a Reading block |
 | Annotation | `annotation` | Inter | 12px · 400, ink-label | "Updated 2 hours ago" |
-| Label | `labelCaps` | Inter | 11px uppercase · 600 | Form field labels, badges |
+| Label | `labelCaps` | Inter | 11px uppercase · 600 | Form field labels, badges, step counters |
 | Mono label | `labelLg` / `labelSm` | JetBrains Mono | 14/12px | Data-adjacent labels: codes, tickers |
 
-Legacy tokens (`displayLg`, `headlineMd/Sm`, `titleLg`, `bodyLg/Md/Sm`) remain for older screens and now resolve to Inter; prefer the RDL roles above for new work.
+Legacy tokens (`displayLg`, `headlineMd/Sm`, `titleLg`, `bodyLg/Md/Sm`, `font-fraunces`) are retired in v2.0. Screens still using them should migrate to the roles above when next touched — no silent fallback resolution.
 
 ## 4. Layout & Grid
 
-- 8pt base grid. Minimum screen margin: 20px (mobile).
+- 8pt base grid. Minimum screen margin: 20px (mobile). Re-confirmed, not inherited by default — Apple and Stripe both use an 8px base independently, so this is correct baseline practice, not v1.1 residue.
 - Whitespace should exceed the minimum comfortable amount — model after Apple, not Material Design density.
 - Every screen has exactly one focal point above the fold.
 - Cards summarize; they never contain everything. Design for "tap to expand," not "cram it in."
 
-## 5. Shape
+## 5. Shape (rebuilt)
 
-- Rounded rectangles only. Radius: 12px (cards), 8px (buttons/inputs), 20px (sheets/modals).
-- Circles reserved exclusively for: avatars, profile images, chart nodes. Never for buttons or containers.
-- Radius should read as engineered precision, not friendly/bubbly.
+A precise numeric scale, not an arbitrary pair of values — the Apple/Stripe pattern is a real scale from sharp to pill, with pill reserved exclusively for the most "transactional" elements (CTAs, chips):
 
-## 6. Elevation
+| Token | Radius | Use |
+|---|---|---|
+| `radius-xs` | 4px | Inline chips, small tags |
+| `radius-sm` | 8px | Buttons, inputs |
+| `radius-md` | 12px | Cards |
+| `radius-lg` | 18px | Sheets, modals |
+| `radius-pill` | 9999px | Primary CTA buttons only — never cards, never containers |
 
-- No drop shadows as the default elevation method. Layer hierarchy through spacing, border-subtle, and contrast between bg-surface levels instead.
-- If a shadow is unavoidable (modals over content), keep it a soft, architectural, low-opacity shadow (`0 8px 24px rgba(0,0,0,0.24)`) — never a "floating card" look.
+Circles reserved exclusively for: avatars, profile images, chart nodes. Never for buttons or containers. Radius should read as engineered precision, not friendly/bubbly.
+
+## 6. Elevation (rebuilt: one shadow token, not several)
+
+- No drop shadows as the default elevation method. Layer hierarchy through spacing, border-subtle, and contrast between bg-surface levels instead — matches Apple's "no shadows on cards/buttons/text/chrome" rule exactly.
+- **Exactly one shadow value exists in this system:** `0 8px 24px rgba(0,0,0,0.28)`, used only where elevation is unavoidable (modals over content, the one exception image/hero treatment). No screen may define its own shadow color, opacity, or radius — if a screen currently has a custom shadow object, it is a bug to fix, not a variant to keep.
 
 ## 7. Motion
 
 - Durations: 150–250ms for micro-interactions, 300–400ms for screen transitions.
-- Easing: ease-out for entrances, ease-in for exits. No spring/elastic/bounce curves — ever.
+- Easing: ease-out for entrances, ease-in for exits. No spring/elastic/bounce curves — ever. (Apple's own system documents exactly one motion device system-wide — a 0.95 press-scale — reinforcing that restraint, not variety, reads as premium.)
 - Motion vocabulary: Appear, Fade, Reveal, Lift, Focus, Transition, Collapse. Don't invent new motion patterns outside this set without updating this doc.
-- Motion exists only to explain a state change (a number updating, a card expanding). Never decorative.
+- Motion exists only to explain a state change (a number updating, a card expanding). Never decorative. Every animation must be justifiable in one sentence (hierarchy, storytelling, feedback, or state transition) — "it looked nice" is not a reason.
+- Implementation: `react-native-reanimated` v4, per the `creating-reanimated-animations` skill in `.claude/skills/` — see that skill's "Project notes (Raqm)" section for the exact mapping from this vocabulary to Reanimated APIs.
 
-## 8. Iconography
+## 8. Iconography (rebuilt)
 
 - Reference set: **Material Symbols Outlined** — rounded outline, ~2px stroke weight.
-- In-app implementation: SVG equivalents in `src/components/TabIcon.tsx` (`react-native-svg`), drawn to match Material Symbols Outlined geometry. No icon font is bundled.
+- **In-app implementation: `@expo/vector-icons`'s Material Symbols set, used directly.** v1.1 asked engineers to hand-draw SVGs matching Material Symbols geometry — high friction, and the direct cause of every onboarding screen falling back to emoji instead. A real, maintained icon library removes that friction entirely.
 - Filled variant reserved for active/selected states only.
-- No emoji-style icons. No multi-color icons. Icons support text labels — never replace them on primary actions.
+- No emoji-style icons, anywhere, ever. No multi-color icons. Icons support text labels — never replace them on primary actions.
 
 ## 9. Charts & Data Visualization
 
@@ -127,7 +189,7 @@ Priority order when representing data: Insight → Comparison → Narrative → 
 State each component's job, not just its appearance:
 
 - **Cards** — summarize and invite exploration. Never the full data dump.
-- **Buttons** — commit an action.
+- **Buttons** — commit an action. Primary CTAs use `radius-pill`; nothing else does.
 - **Links** — navigate.
 - **Badges** — classify (never used for CTAs).
 - **Inputs** — ask for one thing at a time.
@@ -143,7 +205,7 @@ Write like a calm private wealth advisor. Never like marketing.
 | "Analytics" | "What changed" |
 | "No data" | "We're still learning your financial patterns" |
 
-Rules: never shame, never celebrate overspending, never manufacture urgency. Prefer simple language over technically precise language when both communicate equally.
+Rules: never shame, never celebrate overspending, never manufacture urgency. Prefer simple language over technically precise language when both communicate equally. Avoid filler verbs ("Elevate", "Unleash", "Revolutionize") — use concrete verbs.
 
 ## 12. AI Presentation Rules
 
@@ -176,6 +238,7 @@ Never "No data." Always frame as early-stage learning:
 - Red/alarm styling for routine spending patterns
 - Chatbot-first AI interface
 - Bouncy/springy/playful motion
+- Emoji icons, hand-rolled decorative SVGs, gradients outside the one sanctioned Home glow, per-screen custom shadows
 
 ## 16. Screen → Question Map
 
