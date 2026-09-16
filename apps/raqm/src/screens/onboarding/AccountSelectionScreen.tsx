@@ -50,7 +50,7 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
     return (
       <View className="flex-1 bg-background items-center justify-center px-container-margin gap-md">
         <Icon name="magnify" size={56} color="currentColor" />
-        <Text className="font-inter-semibold text-headline-md text-on-surface text-center">No accounts detected</Text>
+        <Text className="font-inter-semibold text-headline-md text-ink-headline text-center">No accounts detected</Text>
         <Text className="font-inter text-body-md text-ink-body text-center">
           We couldn't find any bank transactions in your SMS. Make sure Read SMS permission was granted and try scanning again.
         </Text>
@@ -68,7 +68,7 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
       <ScrollView contentContainerClassName="px-container-margin pt-[48px] pb-xl" showsVerticalScrollIndicator={false}>
         <StepCounter step={5} totalSteps={9} />
 
-        <Text className="font-inter-bold text-display-lg text-on-surface mb-sm">Your accounts</Text>
+        <Text className="font-inter-bold text-display-lg text-ink-headline mb-sm">Your accounts</Text>
         <Text className="font-inter text-body-md text-ink-body mb-xl">
           We detected {accounts.length} account{accounts.length !== 1 ? 's' : ''} from your messages. Select the ones to include.
         </Text>
@@ -79,22 +79,22 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
             return (
               <TouchableOpacity
                 key={account.id}
-                className={`flex-row items-center gap-md bg-bg-surface border rounded-xl p-md ${isSelected ? 'border-primary bg-accent-primary' : 'border-outline-variant'}`}
+                className={`flex-row items-center gap-md bg-bg-surface border rounded-xl p-md ${isSelected ? 'border-accent-primary bg-accent-primary' : 'border-border-subtle'}`}
                 onPress={() => toggle(account.id)}
                 activeOpacity={0.8}
               >
-                <View className={`w-[48px] h-[48px] rounded-lg items-center justify-center ${isSelected ? 'bg-primary/[0.08]' : 'bg-surface-variant'}`}>
+                <View className={`w-[48px] h-[48px] rounded-lg items-center justify-center ${isSelected ? 'bg-accent-primary/[0.08]' : 'bg-bg-surface'}`}>
                   <Icon name={account.icon} size={24} color="currentColor" />
                 </View>
                 <View className="flex-1">
-                  <Text className="font-inter-bold text-title-lg text-on-surface">{account.bank}</Text>
+                  <Text className="font-inter-bold text-title-lg text-ink-headline">{account.bank}</Text>
                   <Text className="font-inter text-body-sm text-ink-body mt-[2px]">
                     {account.type}
                     {account.last4 ? ` •••• ${account.last4}` : ''} · {account.txCount} txns
                   </Text>
                 </View>
-                <View className={`w-[24px] h-[24px] rounded-[6px] border-2 items-center justify-center ${isSelected ? 'bg-primary border-primary' : 'border-outline'}`}>
-                  {isSelected && <Text className="text-on-primary text-[13px] font-bold">✓</Text>}
+                <View className={`w-[24px] h-[24px] rounded-[6px] border-2 items-center justify-center ${isSelected ? 'bg-accent-primary border-accent-primary' : 'border-border-subtle'}`}>
+                  {isSelected && <Text className="text-bg-base text-[13px] font-bold">✓</Text>}
                 </View>
               </TouchableOpacity>
             );
@@ -102,9 +102,9 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
         </View>
 
         <View className="bg-accent-primary rounded-xl p-md items-center">
-          <Text className="font-inter text-body-md text-on-primary-container text-center">
-            <Text className="font-inter-bold text-primary">{totalTx}</Text> transactions across{' '}
-            <Text className="font-inter-bold text-primary">{selected.size}</Text> account{selected.size !== 1 ? 's' : ''} selected
+          <Text className="font-inter text-body-md text-bg-base text-center">
+            <Text className="font-inter-bold text-bg-base">{totalTx}</Text> transactions across{' '}
+            <Text className="font-inter-bold text-bg-base">{selected.size}</Text> account{selected.size !== 1 ? 's' : ''} selected
           </Text>
         </View>
       </ScrollView>
