@@ -121,8 +121,13 @@ interface HomeMetrics {
   forecast: number | null; // projected month-end spend
   vsLastMonthPct: number | null; // month-to-date vs same span last month, +ve = higher
   topCategoryName: string | null;
-  // null when no budgets are set — the safe-to-spend card hides itself rather than show 0
+  // null when no top-level plan AND no per-category budgets are set — the safe-to-spend
+  // card hides itself rather than show 0. When a top-level plan (planned_monthly_expense
+  // setting) is set, it takes over from the per-category-budget sum below, since a
+  // category-only sum silently ignores any spending in an unbudgeted category.
   safeToSpend: number | null;
+  perDaySafeToSpend: number | null;
+  plannedMonthlyExpense: number | null;
   budgetRemaining: number;
   upcomingBillsSum: number;
 }
@@ -137,6 +142,8 @@ const EMPTY_METRICS: HomeMetrics = {
   vsLastMonthPct: null,
   topCategoryName: null,
   safeToSpend: null,
+  perDaySafeToSpend: null,
+  plannedMonthlyExpense: null,
   budgetRemaining: 0,
   upcomingBillsSum: 0,
 };
@@ -400,9 +407,15 @@ export function DashboardScreen() {
         }
       }
 
-      // Safe to spend = what's left across active budgets, minus bills due in the next 7
-      // days — traceable on tap (see the alert below) rather than PocketGuard's black-box
-      // number, which was this case study's most-cited source of user distrust.
+      // Safe to spend = what's left against a top-level monthly plan (if the user set one
+      // in Budgets), else the sum across per-category budgets — either way minus bills due
+      // in the next 7 days. Traceable on tap (see the alert below) rather than PocketGuard's
+      // black-box number, which was this case study's most-cited source of user distrust.
+      //
+      // The per-category-budget sum alone silently ignores spending in any category that
+      // has no budget of its own — a user who only budgets "Food" but spends heavily
+      // elsewhere would see a misleadingly small remaining number. A top-level plan (set
+      // once in Budgets) fixes that by comparing against total month spend directly.
       const statuses = await getBudgetStatuses(now, txs);
       const budgetRemaining = statuses.reduce(
         (sum, s) => sum + Math.max(0, s.limit - s.spent),
@@ -413,8 +426,23 @@ export function DashboardScreen() {
         reminders,
       ).filter((d) => d.dueTs >= now.getTime());
       const upcomingBillsSum = bills7d.reduce((sum, d) => sum + d.amount, 0);
+
+      const plannedStr = await getSetting("planned_monthly_expense");
+      const plannedMonthlyExpense =
+        plannedStr && Number(plannedStr) > 0 ? Number(plannedStr) : null;
+
       const safeToSpend =
-        statuses.length > 0 ? budgetRemaining - upcomingBillsSum : null;
+        plannedMonthlyExpense != null
+          ? plannedMonthlyExpense - monthSpent - upcomingBillsSum
+          : statuses.length > 0
+            ? budgetRemaining - upcomingBillsSum
+            : null;
+
+      // Days remaining in the current period, inclusive of today (daysElapsed already
+      // counts today as elapsed via Math.ceil above).
+      const daysRemaining = Math.max(1, totalDays - daysElapsed + 1);
+      const perDaySafeToSpend =
+        safeToSpend != null ? safeToSpend / daysRemaining : null;
 
       if (!cancelled) {
         setMetrics({
@@ -427,6 +455,8 @@ export function DashboardScreen() {
           vsLastMonthPct,
           topCategoryName,
           safeToSpend,
+          perDaySafeToSpend,
+          plannedMonthlyExpense,
           budgetRemaining,
           upcomingBillsSum,
         });
@@ -707,9 +737,11 @@ export function DashboardScreen() {
           }
         />
 
-        {/* Safe to spend — budget remaining minus bills due in the next 7 days. Hidden
-          when no budgets exist, since 0 would misleadingly read as "nothing left". Tap
-          shows what it netted against, so it never becomes an untraceable black-box number. */}
+        {/* Safe to spend — a top-level monthly plan (if set in Budgets) minus month spend,
+          else the sum across per-category budgets — either way minus bills due in the next
+          7 days. Hidden when neither a plan nor any budget exists, since 0 would misleadingly
+          read as "nothing left". Tap shows what it netted against, so it never becomes an
+          untraceable black-box number. */}
         {metrics.safeToSpend !== null && (
           <TouchableOpacity
             activeOpacity={0.7}
@@ -717,8 +749,12 @@ export function DashboardScreen() {
             onPress={() =>
               Alert.alert(
                 "Safe to spend",
-                `Budget remaining: ${formatAmount(metrics.budgetRemaining, currency)}\n` +
-                  `Bills due in 7 days: ${formatAmount(metrics.upcomingBillsSum, currency)}`,
+                metrics.plannedMonthlyExpense != null
+                  ? `Planned this month: ${formatAmount(metrics.plannedMonthlyExpense, currency)}\n` +
+                    `Spent so far: ${formatAmount(metrics.monthSpent, currency)}\n` +
+                    `Bills due in 7 days: ${formatAmount(metrics.upcomingBillsSum, currency)}`
+                  : `Budget remaining: ${formatAmount(metrics.budgetRemaining, currency)}\n` +
+                    `Bills due in 7 days: ${formatAmount(metrics.upcomingBillsSum, currency)}`,
               )
             }
           >
@@ -734,6 +770,18 @@ export function DashboardScreen() {
                 metrics.safeToSpend < 0 ? "text-error-muted" : "text-ink-headline"
               }`}
             />
+            {metrics.perDaySafeToSpend !== null && (
+              <View className="flex-row items-baseline mt-[4px]">
+                <MaskedValue
+                  kind="net"
+                  value={metrics.perDaySafeToSpend}
+                  currency={currency}
+                  prefix={metrics.perDaySafeToSpend < 0 ? "−" : ""}
+                  className="font-mono text-supporting-text text-ink-body"
+                />
+                <Text className="font-inter text-supporting-text text-ink-body"> /day</Text>
+              </View>
+            )}
           </TouchableOpacity>
         )}
 
