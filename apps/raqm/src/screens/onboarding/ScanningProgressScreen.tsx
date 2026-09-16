@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Animated, Easing } from 'react-native';
-import Svg, { Circle, Defs } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
 import ReAnimated, {
   useSharedValue,
   useAnimatedStyle,
