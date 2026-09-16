@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Animated, Easing } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs } from 'react-native-svg';
 import ReAnimated, {
   useSharedValue,
   useAnimatedStyle,
@@ -17,9 +17,11 @@ import { SmsReader } from '../../native/SmsReader';
 import { useOnboardingStore, dateRangeToTimestamps } from '../../store/onboardingStore';
 import { runDetectionJobs, matchSplitPayments } from '../../services/txIntelligence';
 import { logEvent } from '../../services/logger';
+import { Icon } from '../../components/Icon';
 
 const RADIUS = 90;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+const STEP_LABELS = ['Reading messages', 'Extracting transactions', 'Categorizing'];
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -41,6 +43,7 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
   const [smsCount, setSmsCount] = useState(0);
   const [txCount, setTxCount] = useState(0);
   const [status, setStatus] = useState('Reading messages…');
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const progress = useRef(new Animated.Value(0)).current;
 
   // pulse rings
@@ -70,10 +73,10 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
       try {
         const { from, to } = dateRangeToTimestamps(dateRange, customFrom, customTo);
         setStatus('Reading messages…');
+        setCurrentStepIndex(0);
 
         const messages = await SmsReader.readInbox(from, to);
         setSmsCount(messages.length);
-        setStatus(`Analyzing ${messages.length} messages…`);
 
         // animate progress ring over the parse duration
         Animated.timing(progress, {
@@ -83,6 +86,7 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
           useNativeDriver: false,
         }).start();
 
+        setCurrentStepIndex(1);
         const parsed = [];
         for (const msg of messages) {
           if (!BankParserFactory.isKnownBankSender(msg.sender)) continue; // S5
@@ -94,6 +98,7 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
         }
 
         await setTransactions(parsed);
+        setCurrentStepIndex(2);
         setStatus(`Found ${parsed.length} transactions`);
         await runDetectionJobs();
         await matchSplitPayments();
@@ -140,17 +145,11 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
 
       <View className="w-[220px] h-[220px] items-center justify-center">
         <Svg width={220} height={220} viewBox="0 0 220 220">
-          <Defs>
-            <LinearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <Stop offset="0%" stopColor={Colors.primary} />
-              <Stop offset="100%" stopColor={Colors.secondary} />
-            </LinearGradient>
-          </Defs>
           <Circle cx={110} cy={110} r={RADIUS} fill="none" stroke={Colors.surfaceVariant} strokeWidth={8} />
           <AnimatedCircle
             cx={110} cy={110} r={RADIUS}
             fill="none"
-            stroke="url(#grad)"
+            stroke={Colors.accentPrimary}
             strokeWidth={8}
             strokeLinecap="round"
             strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
@@ -160,41 +159,28 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
           />
         </Svg>
         <View className="absolute items-center">
-          <Text className="font-inter-bold text-[44px] text-primary">{txCount}</Text>
+          <Text className="font-mono-medium text-metric-hero text-primary">{txCount}</Text>
           <Text className="font-inter text-body-sm text-on-surface-variant mt-[4px]">Transactions found</Text>
         </View>
       </View>
 
       <View className="items-center mt-xxl gap-sm">
         <View className="flex-row items-center gap-[6px] px-md py-[8px] rounded-full bg-secondary-container">
-          <Text className="text-[14px]">⟳</Text>
+          <Icon name="reload" size={16} color={Colors.onSecondaryContainer} />
           <Text className="font-mono-medium text-[13px] leading-[20px] text-on-secondary-container">{status}</Text>
         </View>
         <Text className="font-inter-bold text-title-lg text-on-surface text-center mt-sm">Analyzing your messages for bank alerts</Text>
         <Text className="font-inter text-body-sm text-on-surface-variant text-center max-w-[280px]">
           {smsCount > 0
             ? `Scanned ${smsCount} messages — extracting transactions.`
-            : 'Securely identifying and categorizing financial notifications.'}
+            : 'Identifying and categorizing financial notifications.'}
         </Text>
       </View>
 
-      <View className="flex-row gap-md mt-xxl w-full">
-        <View
-          className="flex-1 bg-bg-surface-raised rounded-xl p-md gap-[6px] border border-border-subtle"
-          style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}
-        >
-          <Text className="text-[22px]">🔐</Text>
-          <Text className="font-mono-medium text-[13px] leading-[20px] text-on-surface">Secure Sync</Text>
-          <Text className="font-mono text-[10px] leading-[16px] text-on-surface-variant">End-to-end encrypted local processing.</Text>
-        </View>
-        <View
-          className="flex-1 bg-bg-surface-raised rounded-xl p-md gap-[6px] border border-border-subtle"
-          style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}
-        >
-          <Text className="text-[22px]">✨</Text>
-          <Text className="font-mono-medium text-[13px] leading-[20px] text-on-surface">AI Sorting</Text>
-          <Text className="font-mono text-[10px] leading-[16px] text-on-surface-variant">Auto-detecting merchants and categories.</Text>
-        </View>
+      <View className="items-center mt-xxl gap-sm">
+        <Text className="font-inter-semibold text-body-standard text-ink-headline">
+          {STEP_LABELS[currentStepIndex]}
+        </Text>
       </View>
     </View>
   );
