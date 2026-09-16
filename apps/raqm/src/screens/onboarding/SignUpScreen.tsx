@@ -107,11 +107,11 @@ export function SignUpScreen({ navigation }: OnboardingScreenProps<'SignUp'>) {
   );
 }
 
-// Colored shadow isn't expressible as a NativeWind class.
+// System shadow: the only sanctioned shadow in RDL v2.0 (from DESIGN.md §6).
+// Converts CSS `0 8px 24px rgba(0,0,0,0.28)` to React Native shadow props.
 const logoShadow = {
-  shadowColor: Colors.accentPrimary,
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.3,
-  shadowRadius: 12,
-  elevation: 6,
+  shadowOffset: { width: 0, height: 8 },
+  shadowOpacity: 0.28,
+  shadowRadius: 24,
+  elevation: 8,
 };
