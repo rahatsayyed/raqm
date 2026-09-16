@@ -4,12 +4,15 @@
   "main": "index.ts",
   "private": true,
   "scripts": {
-    "postinstall": "patch-package --patch-dir ../../patches",
+    "postinstall": "patch-package --patch-dir ../../patches || true",
+    "prestart": "patch-package --patch-dir ../../patches",
     "start": "expo start",
+    "preandroid": "patch-package --patch-dir ../../patches",
     "android": "expo run:android",
+    "preios": "patch-package --patch-dir ../../patches",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "eas-build-post-install": "cd ../.. && npm run build --workspace=@rahatsayyed/bank-sms-parser"
+    "eas-build-post-install": "cd ../.. && npm run build --workspace=@rahatsayyed/bank-sms-parser && npx patch-package --patch-dir patches"
   },
   "dependencies": {
     "@expo-google-fonts/fraunces": "^0.4.1",
