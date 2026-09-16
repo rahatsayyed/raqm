@@ -47,18 +47,12 @@ async function requestAndroidRow(key: RowKey): Promise<boolean> {
 }
 
 async function requestNotifications(): Promise<boolean> {
-  if (Platform.OS === 'android') {
-    const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
-    );
-    return granted === PermissionsAndroid.RESULTS.GRANTED;
-  }
-  // iOS: the deleted PermissionNotificationsScreen.tsx was Android-only
-  // (raw PermissionsAndroid POST_NOTIFICATIONS request, no iOS branch
-  // existed to port — Raqm is an Android-only app per CLAUDE.md, this path
-  // is dead in practice). Use expo-notifications' standard permission
-  // request, matching how expo-notifications is already used elsewhere in
-  // this codebase (src/notifications/notifications.ts).
+  // Bug fix: POST_NOTIFICATIONS doesn't exist as a runtime permission below
+  // Android 13 (API 33) — PermissionsAndroid.request for it silently
+  // resolves denied/false with no dialog on older Android, permanently
+  // blocking this row. expo-notifications' requestPermissionsAsync handles
+  // every Android version correctly (no-op/auto-granted pre-33, real system
+  // dialog on 33+) and iOS, matching src/notifications/notifications.ts.
   const { status } = await Notifications.requestPermissionsAsync();
   return status === 'granted';
 }
@@ -77,7 +71,12 @@ async function checkAndroidRow(key: RowKey): Promise<boolean> {
   if (key === 'notificationAccess') {
     return SmsReader.isNotificationListenerEnabled();
   }
-  return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+  // Bug fix: PermissionsAndroid.check(POST_NOTIFICATIONS) is meaningless
+  // below Android 13 (the permission doesn't exist there) and always read
+  // false. expo-notifications' getPermissionsAsync reads the real OS state
+  // on every Android version (and iOS).
+  const { status } = await Notifications.getPermissionsAsync();
+  return status === 'granted';
 }
 
 export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permissions'>) {

@@ -50,13 +50,33 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
         const [records, categories] = await Promise.all([loadTxRecords(), getCategories('expense')]);
         const nameById = new Map(categories.map((c) => [c.id, c.name]));
         const spend: Record<string, number> = {};
+        let earliestTs: number | null = null;
+        let latestTs: number | null = null;
         for (const tx of records) {
           if (tx.type !== 'EXPENSE' || tx.categoryId == null || !countsTowardTotals(tx)) continue;
           const name = nameById.get(tx.categoryId);
           if (!name) continue;
           spend[name] = (spend[name] ?? 0) + Math.abs(tx.amount);
+          if (earliestTs === null || tx.timestamp < earliestTs) earliestTs = tx.timestamp;
+          if (latestTs === null || tx.timestamp > latestTs) latestTs = tx.timestamp;
         }
-        if (!cancelled) setCategorySpend(spend);
+        // Bug fix: `records` covers the whole scanned range (which can be
+        // "All time" / 1 year / etc, per DateRangeScreen), so a raw sum is a
+        // lifetime total, not a monthly one — feeding it straight to
+        // suggestBudgetsFromSpend (persisted as a 'monthly' budget in
+        // BudgetSetupScreen) could suggest 12x the real monthly spend.
+        // Normalize using the actual span of the aggregated transactions
+        // (earliest to latest timestamp, minimum 1 month) rather than the
+        // nominal preset, since a preset like "All time" has no fixed
+        // duration to divide by.
+        const MONTH_MS = 30 * 86_400_000;
+        const monthsSpanned = earliestTs !== null && latestTs !== null
+          ? Math.max(1, (latestTs - earliestTs) / MONTH_MS)
+          : 1;
+        const monthlySpend = Object.fromEntries(
+          Object.entries(spend).map(([name, total]) => [name, total / monthsSpanned]),
+        );
+        if (!cancelled) setCategorySpend(monthlySpend);
       } catch {
         // Non-fatal: BudgetSetupScreen falls back to a blank form.
       }
