@@ -1,12 +1,14 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Animated, Easing } from 'react-native';
 import { OnboardingScreenProps } from '../../navigation/types';
-import { Colors } from '../../theme';
+import { Colors, Shadows } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { GhostButton } from '../../components/GhostButton';
 import { Icon } from '../../components/Icon';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { formatAmount } from '../../utils/format';
+import { loadTxRecords, getCategories } from '../../db/database';
+import { countsTowardTotals } from '../../services/txIntelligenceCore';
 
 const DATE_RANGE_LABELS: Record<string, string> = {
   all: 'All time',
@@ -35,6 +37,35 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
     return seen.size;
   }, [transactions]);
 
+  // I4 fix: real per-category spend from the scan that just completed
+  // (already persisted to the DB by ScanningProgressScreen's insertParsedTxs,
+  // which is where categorization actually happens), threaded to
+  // BudgetSetupScreen so its "suggested budgets" copy is no longer a lie and
+  // suggestBudgetsFromSpend (Task 13) is actually used.
+  const [categorySpend, setCategorySpend] = useState<Record<string, number>>({});
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [records, categories] = await Promise.all([loadTxRecords(), getCategories('expense')]);
+        const nameById = new Map(categories.map((c) => [c.id, c.name]));
+        const spend: Record<string, number> = {};
+        for (const tx of records) {
+          if (tx.type !== 'EXPENSE' || tx.categoryId == null || !countsTowardTotals(tx)) continue;
+          const name = nameById.get(tx.categoryId);
+          if (!name) continue;
+          spend[name] = (spend[name] ?? 0) + Math.abs(tx.amount);
+        }
+        if (!cancelled) setCategorySpend(spend);
+      } catch {
+        // Non-fatal: BudgetSetupScreen falls back to a blank form.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const stats = [
     { icon: 'credit-card-outline', value: String(transactions.length), label: 'Transactions' },
     { icon: 'bank-outline', value: String(accountCount), label: 'Accounts' },
@@ -56,14 +87,14 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
   }, []);
 
   return (
-    <View className="flex-1 bg-background items-center justify-center px-container-margin">
+    <View className="flex-1 bg-bg-base items-center justify-center px-container-margin">
       <View className="absolute w-[340px] h-[340px] rounded-[170px] bg-accent-primary opacity-[0.04]" />
       <View className="absolute w-[260px] h-[260px] rounded-[130px] bg-accent-primary opacity-[0.06]" />
 
       <Animated.View style={[successRingStyle, { transform: [{ scale }] }]}>
         <View
           className="w-[96px] h-[96px] rounded-[48px] bg-accent-primary items-center justify-center"
-          style={{ shadowColor: Colors.accentPrimary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 16, elevation: 8 }}
+          style={Shadows.card}
         >
           <Icon name="check" size={40} color={Colors.bgBase} />
         </View>
@@ -89,7 +120,7 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
           <View
             key={stat.label}
             className="flex-1 bg-bg-surface rounded-xl p-md items-center gap-[4px] border border-border-subtle"
-            style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}
+            style={Shadows.card}
           >
             <Icon name={stat.icon as any} size={22} color={Colors.inkBody} />
             <Text className="font-mono-medium text-numeric-md text-accent-primary">{stat.value}</Text>
@@ -101,7 +132,7 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
       <Animated.View style={[footerStyle, { opacity: fade }]}>
         <PrimaryButton
           label="Set up my account →"
-          onPress={() => navigation.replace('BudgetSetup')}
+          onPress={() => navigation.replace('BudgetSetup', { categorySpend })}
         />
         <GhostButton
           label="Skip — explore locally"
