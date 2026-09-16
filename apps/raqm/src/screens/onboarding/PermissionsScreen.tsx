@@ -26,15 +26,13 @@ async function requestAndroidRow(key: RowKey): Promise<boolean> {
     return results['android.permission.READ_SMS'] === PermissionsAndroid.RESULTS.GRANTED;
   }
   if (key === 'location') {
-    // PermissionLocationScreen: foreground request must succeed first, then
-    // requestBackgroundPermissionsAsync() opens system Settings itself for
-    // "Allow all the time" (Android 11+ removed the runtime dialog option).
-    const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
-    if (foregroundStatus === Location.PermissionStatus.GRANTED) {
-      const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
-      return backgroundStatus === Location.PermissionStatus.GRANTED;
-    }
-    return false;
+    // C2 fix: tagging a transaction's approximate location only needs
+    // foreground access — requiring "Allow all the time" (which forces a
+    // Settings trip on Android 11+, and can be permanently denied) turned
+    // this into a hard, potentially unpassable gate. A foreground grant
+    // alone now satisfies this row; background is never requested here.
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    return status === Location.PermissionStatus.GRANTED;
   }
   // notificationAccess (NotificationListenerService) is not a runtime
   // permission — PermissionNotificationAccessScreen just called
@@ -65,6 +63,23 @@ async function requestNotifications(): Promise<boolean> {
   return status === 'granted';
 }
 
+// C2 fix: reads the ACTUAL current OS permission state, not session-local
+// grant flags, so a permission granted previously (or outside the app,
+// e.g. via device Settings) shows as "Granted" immediately on mount.
+async function checkAndroidRow(key: RowKey): Promise<boolean> {
+  if (key === 'sms') {
+    return PermissionsAndroid.check('android.permission.READ_SMS' as any);
+  }
+  if (key === 'location') {
+    const { status } = await Location.getForegroundPermissionsAsync();
+    return status === Location.PermissionStatus.GRANTED;
+  }
+  if (key === 'notificationAccess') {
+    return SmsReader.isNotificationListenerEnabled();
+  }
+  return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+}
+
 export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permissions'>) {
   const isAndroid = Platform.OS === 'android';
   const [granted, setGranted] = useState<Record<RowKey, boolean>>({
@@ -74,14 +89,40 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
     notifications: false,
   });
 
-  // Notification-listener access is granted in system Settings, outside the
-  // app, so re-check its state whenever the app regains foreground focus —
-  // same pattern CLAUDE.md calls out for settings-dependent screens.
+  // C2 fix: seed every row's granted state from the real OS permission
+  // state on mount, rather than starting every row "ungranted" even when
+  // the user already granted it in a previous session.
+  useEffect(() => {
+    if (!isAndroid) return;
+    let cancelled = false;
+    (async () => {
+      const [sms, notificationAccess, location, notifications] = await Promise.all([
+        checkAndroidRow('sms'),
+        checkAndroidRow('notificationAccess'),
+        checkAndroidRow('location'),
+        checkAndroidRow('notifications'),
+      ]);
+      if (!cancelled) {
+        setGranted({ sms, notificationAccess, location, notifications });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAndroid]);
+
+  // Notification-listener access and location (Android 11+ "Allow all the
+  // time") are both potentially granted in system Settings, outside the
+  // app, so re-check their state whenever the app regains foreground focus
+  // — same pattern CLAUDE.md calls out for settings-dependent screens.
   useEffect(() => {
     if (!isAndroid) return;
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         setGranted((prev) => ({ ...prev, notificationAccess: SmsReader.isNotificationListenerEnabled() }));
+        checkAndroidRow('location').then((location) => {
+          setGranted((prev) => ({ ...prev, location }));
+        });
       }
     });
     return () => sub.remove();
@@ -93,7 +134,7 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
   }, []);
 
   const canContinue = isAndroid
-    ? granted.sms && granted.notificationAccess && granted.location
+    ? granted.sms && granted.notificationAccess && granted.location && granted.notifications
     : granted.notifications;
 
   const next = useCallback(() => {
@@ -102,7 +143,7 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
 
   return (
     <View className="flex-1 bg-bg-base px-container-margin pt-xxl">
-      <StepCounter step={2} totalSteps={isAndroid ? 9 : 6} />
+      <StepCounter step={2} totalSteps={isAndroid ? 10 : 8} />
       <Text className="font-inter-semibold text-body-standard text-ink-headline mb-md">
         A couple of permissions
       </Text>
@@ -133,6 +174,14 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
               reason="So I can tag where a transaction happened when the SMS arrives"
               granted={granted.location}
               onGrant={() => grant('location')}
+            />
+            <PermissionRow
+              index={3}
+              icon="bell-ring-outline"
+              title="Notifications"
+              reason="So I can alert you about spending patterns"
+              granted={granted.notifications}
+              onGrant={() => grant('notifications')}
             />
           </>
         ) : (
