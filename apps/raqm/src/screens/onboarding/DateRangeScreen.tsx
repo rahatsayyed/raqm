@@ -7,7 +7,7 @@ import { Icon } from '../../components/Icon';
 import { StepCounter } from '../../components/onboarding/StepCounter';
 import { useOnboardingStore, type DateRange as Range } from '../../store/onboardingStore';
 import { SmsReader } from '../../native/SmsReader';
-import { Colors } from '../../theme';
+import { Colors, Shadows } from '../../theme';
 
 const PRESETS: { id: Exclude<Range, 'custom'>; label: string; subtitle: string; icon: string; recommended?: boolean }[] = [
   { id: 'all', label: 'All time', subtitle: 'Complete transaction history', icon: 'infinity' },
@@ -51,9 +51,9 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
   const canStart = selected !== 'custom' || (fromDate < toDate);
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-bg-base">
       <ScrollView contentContainerClassName="px-container-margin pt-[56px] pb-xl" showsVerticalScrollIndicator={false}>
-        <StepCounter step={3} totalSteps={9} />
+        <StepCounter step={3} totalSteps={10} />
         <Text className="font-inter-bold text-display-lg text-ink-headline mb-md">How far back{'\n'}should we look?</Text>
         <Text className="font-inter text-body-md text-ink-body mb-lg">
           We'll analyze your SMS messages to categorize your spending history.
@@ -78,7 +78,7 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
               <TouchableOpacity
                 key={range.id}
                 className={`flex-row items-center justify-between bg-bg-surface border rounded-xl p-md ${isSelected ? 'border-accent-primary bg-accent-primary' : 'border-border-subtle'}`}
-                style={isSelected ? { shadowColor: Colors.accentPrimary, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 } : undefined}
+                style={isSelected ? Shadows.card : undefined}
                 onPress={() => handleSelect(range.id)}
                 activeOpacity={0.8}
               >
@@ -105,7 +105,7 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
           {/* Custom range card */}
           <TouchableOpacity
             className={`flex-row items-center justify-between bg-bg-surface border rounded-xl p-md ${selected === 'custom' ? 'border-accent-primary bg-accent-primary' : 'border-border-subtle'}`}
-            style={selected === 'custom' ? { shadowColor: Colors.accentPrimary, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 } : undefined}
+            style={selected === 'custom' ? Shadows.card : undefined}
             onPress={() => handleSelect('custom')}
             activeOpacity={0.8}
           >

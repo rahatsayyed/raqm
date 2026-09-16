@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable } from 'react-native';
+import { View, Text, TextInput, Pressable, Platform } from 'react-native';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollView';
 import { Icon } from '../../components/Icon';
 import { Colors, Radius, Spacing } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { GhostButton } from '../../components/GhostButton';
+import { StepCounter } from '../../components/onboarding/StepCounter';
 
 // PrimaryButton only accepts a `style` (ViewStyle) prop, not `className`.
 const ctaButtonStyle = { height: 56, borderRadius: Radius.lg, marginTop: Spacing.sm };
@@ -30,6 +31,7 @@ export function SignUpScreen({ navigation }: OnboardingScreenProps<'SignUp'>) {
       className="flex-1 bg-bg-base px-container-margin pt-14 pb-10"
       showsVerticalScrollIndicator={false}
     >
+        <StepCounter step={Platform.OS === 'android' ? 8 : 6} totalSteps={Platform.OS === 'android' ? 10 : 8} />
         <View className="items-center mb-xxl gap-md">
           <View className="w-16 h-16 rounded-xl bg-accent-primary items-center justify-center" style={logoShadow}>
             <Text className="text-2xl text-bg-base font-inter-bold">رقم</Text>

@@ -1,10 +1,11 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Platform } from 'react-native';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollView';
 import { Icon } from '../../components/Icon';
 import { Colors, Spacing } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { StepCounter } from '../../components/onboarding/StepCounter';
 
 const OTP_LENGTH = 6;
 
@@ -45,6 +46,7 @@ export function OTPVerificationScreen({ navigation, route }: OnboardingScreenPro
     >
       <View className="flex-1 justify-between">
         <View className="items-center gap-md">
+          <StepCounter step={Platform.OS === 'android' ? 9 : 7} totalSteps={Platform.OS === 'android' ? 10 : 8} />
           <View className="w-[72px] h-[72px] rounded-xl bg-accent-primary items-center justify-center">
             <Icon name="email-outline" size={32} color={Colors.bgBase} />
           </View>

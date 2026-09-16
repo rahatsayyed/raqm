@@ -8,6 +8,7 @@ import { Icon } from '../../components/Icon';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { softDeleteAccountTxs } from '../../db/database';
 import { logEvent } from '../../services/logger';
+import { Colors } from '../../theme';
 
 type Account = { id: string; bank: string; last4: string | null; type: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; txCount: number };
 
@@ -48,8 +49,8 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
 
   if (accounts.length === 0) {
     return (
-      <View className="flex-1 bg-background items-center justify-center px-container-margin gap-md">
-        <Icon name="magnify" size={56} color="currentColor" />
+      <View className="flex-1 bg-bg-base items-center justify-center px-container-margin gap-md">
+        <Icon name="magnify" size={56} color={Colors.inkBody} />
         <Text className="font-inter-semibold text-headline-md text-ink-headline text-center">No accounts detected</Text>
         <Text className="font-inter text-body-md text-ink-body text-center">
           We couldn't find any bank transactions in your SMS. Make sure Read SMS permission was granted and try scanning again.
@@ -64,9 +65,9 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-bg-base">
       <ScrollView contentContainerClassName="px-container-margin pt-[48px] pb-xl" showsVerticalScrollIndicator={false}>
-        <StepCounter step={5} totalSteps={9} />
+        <StepCounter step={5} totalSteps={10} />
 
         <Text className="font-inter-bold text-display-lg text-ink-headline mb-sm">Your accounts</Text>
         <Text className="font-inter text-body-md text-ink-body mb-xl">
@@ -84,7 +85,7 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
                 activeOpacity={0.8}
               >
                 <View className={`w-[48px] h-[48px] rounded-lg items-center justify-center ${isSelected ? 'bg-accent-primary/[0.08]' : 'bg-bg-surface'}`}>
-                  <Icon name={account.icon} size={24} color="currentColor" />
+                  <Icon name={account.icon} size={24} color={isSelected ? Colors.accentPrimary : Colors.inkBody} />
                 </View>
                 <View className="flex-1">
                   <Text className="font-inter-bold text-title-lg text-ink-headline">{account.bank}</Text>
@@ -94,7 +95,7 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
                   </Text>
                 </View>
                 <View className={`w-[24px] h-[24px] rounded-[6px] border-2 items-center justify-center ${isSelected ? 'bg-accent-primary border-accent-primary' : 'border-border-subtle'}`}>
-                  {isSelected && <Text className="text-bg-base text-[13px] font-bold">✓</Text>}
+                  {isSelected && <Icon name="check" size={16} color={Colors.bgBase} />}
                 </View>
               </TouchableOpacity>
             );
