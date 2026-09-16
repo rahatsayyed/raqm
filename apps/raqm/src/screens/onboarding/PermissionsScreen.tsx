@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Platform, PermissionsAndroid, ScrollView, AppState } from 'react-native';
+import { View, Text, Platform, PermissionsAndroid, ScrollView, AppState, Pressable } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Location from 'expo-location';
 import { OnboardingScreenProps } from '../../navigation/types';
@@ -150,6 +150,14 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
       <Text className="font-inter text-annotation text-ink-label mt-md mb-lg">
         Everything is processed on your device. Nothing leaves your phone.
       </Text>
+
+      {isAndroid && (
+        <Pressable onPress={() => navigation.navigate('GPayPdfImport')}>
+          <Text className="font-inter-semibold text-supporting-text text-accent-primary text-center mb-md">
+            Or import a PDF statement instead
+          </Text>
+        </Pressable>
+      )}
 
       <OnboardingButton label="Continue" onPress={next} disabled={!canContinue} />
     </View>

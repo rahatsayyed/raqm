@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { File } from 'expo-file-system';
-import { MainStackScreenProps } from '../../navigation/types';
 import { parseGpayPdf, type GpayPdfRow } from '../../services/imports/gpayPdf';
 import { applyGpayPdfImport } from '../../db/database';
 import { useTxStore } from '../../store/txStore';
 
 type Step = 'idle' | 'preview' | 'importing';
 
-export function GPayPdfImportScreen({ navigation }: MainStackScreenProps<'GPayPdfImport'>) {
+// Reused from both MainNavigator (MainStackParamList's GPayPdfImport route) and
+// OnboardingNavigator (OnboardingStackParamList's GPayPdfImport route — see Task 17,
+// those two stacks are mutually exclusive and share no parent). Typed against only
+// what this screen actually uses (`navigation.goBack()`; `route` is never read) so
+// it type-checks as either stack's screen component without duplicating the screen.
+type GPayPdfImportScreenProps = { navigation: { goBack: () => void } };
+
+export function GPayPdfImportScreen({ navigation }: GPayPdfImportScreenProps) {
   const [step, setStep] = useState<Step>('idle');
   const [rows, setRows] = useState<GpayPdfRow[]>([]);
   const [skippedBlocks, setSkippedBlocks] = useState(0);
