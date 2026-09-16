@@ -5,14 +5,14 @@ import type { ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
 
 export type OnboardingStackParamList = {
   Welcome: undefined;
-  PermissionSMSRead: undefined;
-  PermissionNotifications: undefined;
-  PermissionNotificationAccess: undefined;
-  PermissionLocation: undefined;
+  Permissions: undefined;
   DateRange: undefined;
   ScanningProgress: undefined;
   AccountSelection: undefined;
   ScanComplete: undefined;
+  ManualAccountSetup: undefined;
+  SetupComplete: undefined;
+  BudgetSetup: undefined;
   SignUp: undefined;
   NameEntry: undefined;
   OTPVerification: { email: string };
