@@ -46,7 +46,7 @@ export function OTPVerificationScreen({ navigation, route }: OnboardingScreenPro
       <View className="flex-1 justify-between">
         <View className="items-center gap-md">
           <View className="w-[72px] h-[72px] rounded-xl bg-accent-primary items-center justify-center">
-            <Icon name="email-outline" size={32} color="#FFFFFF" />
+            <Icon name="email-outline" size={32} color={Colors.bgBase} />
           </View>
           <Text className="font-inter-semibold text-headline-md text-ink-headline text-center">Check your email</Text>
           <Text className="font-inter text-body-md text-ink-body text-center leading-6">
@@ -61,7 +61,7 @@ export function OTPVerificationScreen({ navigation, route }: OnboardingScreenPro
               key={i}
               ref={r => { inputRefs.current[i] = r; }}
               className={`w-12 h-[60px] rounded-lg border-[1.5px] bg-bg-surface text-center font-mono-medium text-numeric-lg text-ink-headline ${
-                otp[i] ? 'border-accent-primary bg-[#3EBD7E10]' : 'border-border-subtle'
+                otp[i] ? 'border-accent-primary bg-accent-primary/10' : 'border-border-subtle'
               }`}
               value={otp[i]}
               onChangeText={v => handleChange(v, i)}
