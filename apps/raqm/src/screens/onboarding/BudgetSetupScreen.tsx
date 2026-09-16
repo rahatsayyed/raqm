@@ -6,32 +6,48 @@ import { StepCounter } from '../../components/onboarding/StepCounter';
 import { OnboardingButton } from '../../components/onboarding/OnboardingButton';
 import { Colors, Spacing } from '../../theme';
 import { getCategoryIdByName, upsertBudget } from '../../db/database';
+import { suggestBudgetsFromSpend } from '../../services/onboarding/budgetSuggestions';
 
-const DEFAULT_CATEGORIES = ['Dining', 'Groceries', 'Transport', 'Shopping', 'Bills'];
+// C4 fix: 'Dining' isn't a real category — the seed list in database.ts uses
+// 'Food & Drinks' (Groceries/Transport/Shopping/Bills all match the real seed).
+const DEFAULT_CATEGORIES = ['Food & Drinks', 'Groceries', 'Transport', 'Shopping', 'Bills'];
 
-export function BudgetSetupScreen({ navigation }: OnboardingScreenProps<'BudgetSetup'>) {
+export function BudgetSetupScreen({ navigation, route }: OnboardingScreenProps<'BudgetSetup'>) {
   const isAndroid = Platform.OS === 'android';
+  // I4 fix: pre-fill from the real category spend ScanCompleteScreen threads
+  // through nav params via suggestBudgetsFromSpend (Task 13) — previously
+  // every field started blank while the copy claimed otherwise, and this
+  // function was never imported anywhere.
+  const suggested = isAndroid ? suggestBudgetsFromSpend(route.params?.categorySpend ?? {}) : {};
   const [amounts, setAmounts] = useState<Record<string, string>>(
-    Object.fromEntries(DEFAULT_CATEGORIES.map((c) => [c, ''])),
+    Object.fromEntries(DEFAULT_CATEGORIES.map((c) => [c, suggested[c] ? String(suggested[c]) : ''])),
   );
+  const [busy, setBusy] = useState(false);
 
   const setAmount = (category: string, value: string) => {
     setAmounts((prev) => ({ ...prev, [category]: value.replace(/[^0-9]/g, '') }));
   };
 
+  // I6 fix: guard against double-tap double-writing budgets / double-navigating.
   const handleContinue = async () => {
-    for (const [category, value] of Object.entries(amounts)) {
-      if (value.trim().length > 0 && Number(value) > 0) {
-        // ponytail: category names here are hardcoded defaults, not
-        // user-picked ones, so a missing categoryId (name not in the
-        // categories table) just skips saving that row rather than throwing.
-        const categoryId = await getCategoryIdByName(category);
-        if (categoryId !== null) {
-          await upsertBudget(categoryId, Number(value), 'monthly', false);
+    if (busy) return;
+    setBusy(true);
+    try {
+      for (const [category, value] of Object.entries(amounts)) {
+        if (value.trim().length > 0 && Number(value) > 0) {
+          // ponytail: category names here are hardcoded defaults, not
+          // user-picked ones, so a missing categoryId (name not in the
+          // categories table) just skips saving that row rather than throwing.
+          const categoryId = await getCategoryIdByName(category);
+          if (categoryId !== null) {
+            await upsertBudget(categoryId, Number(value), 'monthly', false);
+          }
         }
       }
+      navigation.navigate('SignUp');
+    } finally {
+      setBusy(false);
     }
-    navigation.navigate('SignUp');
   };
 
   return (
@@ -41,7 +57,7 @@ export function BudgetSetupScreen({ navigation }: OnboardingScreenProps<'BudgetS
       keyboardShouldPersistTaps="handled"
       className="flex-1 bg-bg-base px-container-margin pt-xxl"
     >
-      <StepCounter step={isAndroid ? 7 : 4} totalSteps={isAndroid ? 9 : 6} />
+      <StepCounter step={isAndroid ? 7 : 5} totalSteps={isAndroid ? 10 : 8} />
       <Text className="font-inter-semibold text-body-standard text-ink-headline mb-md">
         Set a starting budget
       </Text>
@@ -66,7 +82,7 @@ export function BudgetSetupScreen({ navigation }: OnboardingScreenProps<'BudgetS
       ))}
 
       <View className="mt-xxl">
-        <OnboardingButton label="Continue" onPress={handleContinue} />
+        <OnboardingButton label="Continue" onPress={handleContinue} disabled={busy} />
       </View>
     </KeyboardAwareScrollView>
   );
