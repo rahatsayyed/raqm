@@ -33,7 +33,7 @@ export function OnboardingNavigator() {
       <Stack.Screen name="NameEntry" component={NameEntryScreen} />
       <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
       {/* Reuses the main stack's PDF import screen — see types.ts Task 17 note */}
-      <Stack.Screen name="GPayPdfImport" component={GPayPdfImportScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="GPayPdfImport" component={GPayPdfImportScreen} />
     </Stack.Navigator>
   );
 }
