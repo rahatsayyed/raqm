@@ -4,6 +4,7 @@
   "main": "index.ts",
   "private": true,
   "scripts": {
+    "postinstall": "patch-package --patch-dir ../../patches",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
@@ -14,7 +15,7 @@
     "@expo-google-fonts/fraunces": "^0.4.1",
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
-    "@rahatsayyed/bank-sms-parser": "*",
+    "@rahatsayyed/bank-sms-parser": "file:../../packages/bank-sms-parser",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "9.1.0",
     "@react-navigation/bottom-tabs": "^7.3.10",
