@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput } from 'react-native';
 import { OnboardingScreenProps } from '../../navigation/types';
-import { Colors } from '../../theme';
+import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollView';
+import { Icon } from '../../components/Icon';
+import { Colors, Spacing } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { useAppStore } from '../../store/appStore';
 
@@ -16,14 +18,20 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
   const finish = () => setOnboardingComplete(name.trim());
 
   return (
-    <KeyboardAvoidingView className="flex-1 bg-surface" behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View className="flex-1 px-container-margin justify-between pt-20 pb-10">
+    <KeyboardAwareScrollView
+      enableOnAndroid
+      extraScrollHeight={Spacing.lg}
+      keyboardShouldPersistTaps="handled"
+      className="flex-1 bg-bg-base px-container-margin pt-20 pb-10"
+      showsVerticalScrollIndicator={false}
+    >
+      <View className="flex-1 justify-between">
         <View className="gap-md">
-          <Text className="text-5xl">👋</Text>
-          <Text className="font-inter-bold text-display-lg text-on-surface">
+          <Icon name="hand-wave-outline" size={48} color={Colors.inkHeadline} />
+          <Text className="font-inter-bold text-headline-md text-ink-headline">
             {firstName ? `Hey, ${firstName}!` : "What's your name?"}
           </Text>
-          <Text className="font-inter text-body-md text-on-surface-variant leading-6 max-w-[280px]">
+          <Text className="font-inter text-body-md text-ink-body leading-6 max-w-[280px]">
             We'll use your name to personalize your experience.
           </Text>
         </View>
@@ -31,9 +39,9 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
         <View className="gap-1">
           <TextInput
             ref={inputRef}
-            className="text-[28px] font-inter-bold text-on-surface pb-2 min-h-[48px]"
+            className="text-[28px] font-inter-bold text-ink-headline pb-2 min-h-[48px]"
             placeholder="Your full name"
-            placeholderTextColor={Colors.outline}
+            placeholderTextColor={Colors.inkLabel}
             value={name}
             onChangeText={setName}
             autoFocus
@@ -42,7 +50,7 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
             returnKeyType="done"
             onSubmitEditing={() => isValid && finish()}
           />
-          <View className={`h-0.5 rounded-sm ${name.length > 0 ? 'bg-primary' : 'bg-outline-variant'}`} />
+          <View className={`h-0.5 rounded-sm ${name.length > 0 ? 'bg-accent-primary' : 'bg-border-subtle'}`} />
         </View>
 
         <View>
@@ -53,6 +61,6 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
           />
         </View>
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
