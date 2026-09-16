@@ -12,7 +12,7 @@
     "preios": "patch-package --patch-dir ../../patches",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "eas-build-post-install": "cd ../.. && npm run build --workspace=@rahatsayyed/bank-sms-parser && npx patch-package --patch-dir patches"
+    "eas-build-post-install": "cd ../.. && npm run build --workspace=@rahatsayyed/bank-sms-parser && cd apps/raqm && npx patch-package --patch-dir ../../patches"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -59,6 +59,7 @@
     "@babel/core": "^7.25.2",
     "@types/react": "~19.2.2",
     "babel-preset-expo": "~57.0.0",
+    "patch-package": "^8.0.1",
     "tailwindcss": "^3.4.19",
     "tsx": "^4.7.0",
     "typescript": "~6.0.3"

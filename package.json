@@ -6,7 +6,7 @@
     "packages/*"
   ],
   "scripts": {
-    "postinstall": "patch-package",
+    "postinstall": "patch-package || true",
     "install:apps": "for dir in apps/*/; do npm install --prefix \"$dir\"; done",
     "raqm": "npm run raqm:start",
     "raqm:start": "npm run start --workspace=apps/raqm",
