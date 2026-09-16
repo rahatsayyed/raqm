@@ -6,11 +6,13 @@ import { StepCounter } from '../../components/onboarding/StepCounter';
 import { OnboardingButton } from '../../components/onboarding/OnboardingButton';
 import { Icon } from '../../components/Icon';
 import { Colors, Spacing } from '../../theme';
+import { addAccount as addAccountToDb } from '../../db/database';
 
 type DraftAccount = { name: string; startingBalance: string };
 
 export function ManualAccountSetupScreen({ navigation }: OnboardingScreenProps<'ManualAccountSetup'>) {
   const [accounts, setAccounts] = useState<DraftAccount[]>([{ name: '', startingBalance: '' }]);
+  const [busy, setBusy] = useState(false);
 
   const updateAccount = (index: number, patch: Partial<DraftAccount>) => {
     setAccounts((prev) => prev.map((a, i) => (i === index ? { ...a, ...patch } : a)));
@@ -20,6 +22,36 @@ export function ManualAccountSetupScreen({ navigation }: OnboardingScreenProps<'
 
   const canContinue = accounts.every((a) => a.name.trim().length > 0 && a.startingBalance.trim().length > 0);
 
+  // C3 fix: previously this screen collected account name + starting balance
+  // into local state, used it only for validation, then navigated to
+  // SetupComplete without persisting anything. Accounts are now actually
+  // created via the real addAccount() DB API, sequentially (this codebase's
+  // documented anti-pattern is Promise.all over sequential DB writes), and
+  // the real totals are threaded to SetupCompleteScreen as nav params.
+  const handleContinue = async () => {
+    if (!canContinue || busy) return;
+    setBusy(true);
+    try {
+      let totalBalance = 0;
+      for (const account of accounts) {
+        const balance = Number(account.startingBalance) || 0;
+        await addAccountToDb({
+          bankName: account.name.trim(),
+          isCard: false,
+          balance,
+        });
+        totalBalance += balance;
+      }
+      navigation.navigate('SetupComplete', {
+        accountCount: accounts.length,
+        totalBalance,
+        currency: 'INR',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <KeyboardAwareScrollView
       enableOnAndroid
@@ -27,7 +59,7 @@ export function ManualAccountSetupScreen({ navigation }: OnboardingScreenProps<'
       keyboardShouldPersistTaps="handled"
       className="flex-1 bg-bg-base px-container-margin pt-xxl"
     >
-      <StepCounter step={2} totalSteps={6} />
+      <StepCounter step={3} totalSteps={8} />
       <Text className="font-inter-semibold text-body-standard text-ink-headline mb-md">
         Add your accounts
       </Text>
@@ -73,8 +105,8 @@ export function ManualAccountSetupScreen({ navigation }: OnboardingScreenProps<'
 
       <OnboardingButton
         label="Continue"
-        disabled={!canContinue}
-        onPress={() => navigation.navigate('SetupComplete')}
+        disabled={!canContinue || busy}
+        onPress={handleContinue}
       />
     </KeyboardAwareScrollView>
   );

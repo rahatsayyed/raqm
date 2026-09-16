@@ -3504,17 +3504,23 @@ export async function addAccount(input: {
   nickname?: string | null;
   creditLimit?: number | null;
   dueDate?: string | null;
+  // Manual-account starting balance (e.g. iOS onboarding's ManualAccountSetupScreen).
+  // `balance`/`balance_updated_at` are existing accounts columns, otherwise only
+  // ever written by updateAccountBalanceFromTx as transactions arrive.
+  balance?: number | null;
 }): Promise<number> {
   const database = await getDb();
   const result = await database.runAsync(
-    `INSERT INTO accounts (bank_name, last4, is_card, is_manual, nickname, credit_limit, due_date)
-     VALUES (?, ?, ?, 1, ?, ?, ?)`,
+    `INSERT INTO accounts (bank_name, last4, is_card, is_manual, nickname, credit_limit, due_date, balance, balance_updated_at)
+     VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?)`,
     input.bankName,
     input.last4 ?? null,
     input.isCard ? 1 : 0,
     input.nickname ?? null,
     input.creditLimit ?? null,
     input.dueDate ?? null,
+    input.balance ?? null,
+    input.balance != null ? Date.now() : null,
   );
   return result.lastInsertRowId;
 }

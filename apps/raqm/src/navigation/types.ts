@@ -11,8 +11,8 @@ export type OnboardingStackParamList = {
   AccountSelection: undefined;
   ScanComplete: undefined;
   ManualAccountSetup: undefined;
-  SetupComplete: undefined;
-  BudgetSetup: undefined;
+  SetupComplete: { accountCount: number; totalBalance: number; currency: string } | undefined;
+  BudgetSetup: { categorySpend?: Record<string, number> } | undefined;
   SignUp: undefined;
   NameEntry: undefined;
   OTPVerification: { email: string };
