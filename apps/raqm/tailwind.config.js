@@ -69,14 +69,19 @@ module.exports = {
         'welcome-gradient-start': '#75daa8',
         'welcome-gradient-end': '#52b788',
 
-        // ── Extended custom (RDL) tokens ──────────────────────────────────
-        'bg-surface': '#121A17',
-        'bg-surface-raised': '#182420',
-        'border-subtle': '#243128',
-        'ink-headline': '#F4F1EA',
-        'ink-body': '#A9B3AC',
-        'ink-label': '#5C665F',
-        'error-muted': '#C1666B',
+        // ── Extended custom (RDL v2.0) tokens ─────────────────────────────
+        'bg-base': '#0A0E0C',
+        'bg-surface': '#10140F',
+        'bg-surface-raised': '#161C15',
+        'border-subtle': '#232B22',
+        'ink-headline': '#F2F0E9',
+        'ink-body': '#9FA89C',
+        'ink-label': '#5B635A',
+        'accent-primary': '#3EBD7E',
+        'accent-deep': '#173325',
+        notice: '#C68B4D',
+        'error-muted': '#C4707A',
+        // TODO(design-v2): unused post-onboarding-redesign, remove after full app migration
         'moss-structure': '#7C9885',
       },
       // Named scale mirrors src/theme/spacing.ts — prefer these over arbitrary
@@ -107,10 +112,10 @@ module.exports = {
       // RN loads each weight as its own font file, so families are per-weight.
       fontFamily: {
         inter: ['Inter_400Regular'],
+        'inter-light': ['Inter_300Light'],
         'inter-medium': ['Inter_500Medium'],
         'inter-semibold': ['Inter_600SemiBold'],
         'inter-bold': ['Inter_700Bold'],
-        fraunces: ['Fraunces_500Medium'],
         mono: ['JetBrainsMono_400Regular'],
         'mono-medium': ['JetBrainsMono_500Medium'],
       },
@@ -127,9 +132,9 @@ module.exports = {
         'label-sm': ['12px', { lineHeight: '16px', letterSpacing: '0.6px' }], // font-mono
 
         // ── RDL roles ────────────────────────────────────────────────────
-        'statement-lg': ['32px', { lineHeight: '40px', letterSpacing: '-0.64px' }],
-        'statement-mobile': ['28px', { lineHeight: '34px' }],
-        'metric-hero': ['44px', { lineHeight: '52px', letterSpacing: '-0.5px' }],
+        'statement-lg': ['32px', { lineHeight: '40px', letterSpacing: '-0.7px' }], // font-inter-light
+        'statement-mobile': ['28px', { lineHeight: '34px', letterSpacing: '-0.6px' }], // font-inter-light
+        'metric-hero': ['44px', { lineHeight: '52px', letterSpacing: '-1.0px' }],
         'section-header': ['13px', { lineHeight: '16px', letterSpacing: '1.04px' }],
         'insight-reading': ['17px', { lineHeight: '24px' }],
         'body-standard': ['15px', { lineHeight: '22px' }],

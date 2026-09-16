@@ -387,7 +387,7 @@ export function TransactionsScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={8}>
             <BackIcon color={Colors.onSurface} size={22} />
           </TouchableOpacity>
-          <Text className="font-fraunces text-[22px] leading-[28px] text-on-surface">Timeline</Text>
+          <Text className="font-inter-light text-[22px] leading-[28px] tracking-[-0.4px] text-on-surface">Timeline</Text>
         </View>
         {selectMode ? (
           <TouchableOpacity onPress={exitSelectMode} hitSlop={8}>
@@ -439,7 +439,7 @@ export function TransactionsScreen() {
         stickyHeaderIndices={stickyIndices}
         ListHeaderComponent={
           !searchOpen && statement ? (
-            <Text className="font-fraunces text-statement-mobile text-on-surface mt-[8px] mb-[24px]">{statement}</Text>
+            <Text className="font-inter-light text-statement-mobile text-on-surface mt-[8px] mb-[24px]">{statement}</Text>
           ) : null
         }
         ListEmptyComponent={

@@ -1,8 +1,7 @@
 import { TextStyle } from 'react-native';
 
-// Raqm Design Language — finalized font stack:
-//   Fraunces  → headlines/statements only (Statement roles)
-//   Inter     → everything else (titles, body, labels, section headers)
+// Raqm Design Language v2.0 — finalized font stack:
+//   Inter          → everything, including Statement roles (weight 300, tight tracking)
 //   JetBrains Mono → every number/amount (Metric + numeric roles)
 export const Typography = {
   // Headlines — Inter
@@ -96,20 +95,21 @@ export const Typography = {
     lineHeight: 20,
   },
 
-  // ── RDL roles: Fraunces (statements) + Inter (function) + Mono (metrics) ──
+  // ── RDL roles: Inter (statements) + Inter (function) + Mono (metrics) ──
 
   statementLg: {
-    fontFamily: 'Fraunces_500Medium',
+    fontFamily: 'Inter_300Light',
     fontSize: 32,
-    fontWeight: '500' as TextStyle['fontWeight'],
+    fontWeight: '300' as TextStyle['fontWeight'],
     lineHeight: 40,
-    letterSpacing: -0.64,
+    letterSpacing: -0.7,
   },
   statementMobile: {
-    fontFamily: 'Fraunces_500Medium',
+    fontFamily: 'Inter_300Light',
     fontSize: 28,
-    fontWeight: '500' as TextStyle['fontWeight'],
+    fontWeight: '300' as TextStyle['fontWeight'],
     lineHeight: 34,
+    letterSpacing: -0.6,
   },
   // Metric role — hero amounts are numbers, so they carry the mono voice.
   metricHero: {
@@ -117,7 +117,7 @@ export const Typography = {
     fontSize: 44,
     fontWeight: '500' as TextStyle['fontWeight'],
     lineHeight: 52,
-    letterSpacing: -0.5,
+    letterSpacing: -1.0,
   },
   sectionHeader: {
     fontFamily: 'Inter_600SemiBold',
