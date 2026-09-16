@@ -35,6 +35,13 @@ export function ManualAccountSetupScreen({ navigation }: OnboardingScreenProps<'
         Add each account you want to track, with its current balance.
       </Text>
 
+      <Pressable onPress={() => navigation.navigate('GPayPdfImport')} className="flex-row items-center mb-lg">
+        <Icon name="file-pdf-box" size={18} color={Colors.accentPrimary} />
+        <Text className="font-inter-semibold text-supporting-text text-accent-primary ml-xs">
+          Import a PDF statement instead (recommended)
+        </Text>
+      </Pressable>
+
       {accounts.map((account, index) => (
         <View key={index} className="mb-lg border-b border-border-subtle pb-lg">
           <Text className="font-inter text-annotation text-ink-label mb-xs">Account name</Text>

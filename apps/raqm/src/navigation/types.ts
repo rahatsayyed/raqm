@@ -16,6 +16,11 @@ export type OnboardingStackParamList = {
   SignUp: undefined;
   NameEntry: undefined;
   OTPVerification: { email: string };
+  // Reuses the main stack's GPayPdfImportScreen — see Task 17: OnboardingNavigator
+  // and MainNavigator are mutually-exclusive siblings under AppNavigator (swapped by
+  // isOnboardingComplete), never mounted together, so GPayPdfImport must be its own
+  // route here rather than reached via navigation.getParent().
+  GPayPdfImport: undefined;
 };
 
 export type MainTabParamList = {
