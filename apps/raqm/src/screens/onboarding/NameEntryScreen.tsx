@@ -1,15 +1,15 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TextInput } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, Platform } from 'react-native';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollView';
 import { Icon } from '../../components/Icon';
 import { Colors, Spacing } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { StepCounter } from '../../components/onboarding/StepCounter';
 import { useAppStore } from '../../store/appStore';
 
 export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry'>) {
   const [name, setName] = useState('');
-  const inputRef = useRef<TextInput>(null);
   const setOnboardingComplete = useAppStore(s => s.setOnboardingComplete);
 
   const firstName = name.trim().split(' ')[0];
@@ -27,6 +27,7 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
     >
       <View className="flex-1 justify-between">
         <View className="gap-md">
+          <StepCounter step={Platform.OS === 'android' ? 10 : 8} totalSteps={Platform.OS === 'android' ? 10 : 8} />
           <Icon name="hand-wave-outline" size={48} color={Colors.inkHeadline} />
           <Text className="font-inter-bold text-headline-md text-ink-headline">
             {firstName ? `Hey, ${firstName}!` : "What's your name?"}
@@ -38,7 +39,6 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
 
         <View className="gap-1">
           <TextInput
-            ref={inputRef}
             className="text-[28px] font-inter-bold text-ink-headline pb-2 min-h-[48px]"
             placeholder="Your full name"
             placeholderTextColor={Colors.inkLabel}

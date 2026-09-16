@@ -1,8 +1,13 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { OnboardingButton } from '../../components/onboarding/OnboardingButton';
+
+// I9 fix: this screen is shared with iOS, where SMS reading is impossible
+// and the next screens are manual/PDF entry — the Android-only "decoded from
+// your SMS" copy was shown there too.
+const isAndroid = Platform.OS === 'android';
 
 export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) {
   return (
@@ -16,16 +21,26 @@ export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) 
         entering={FadeInDown.duration(500).delay(100)}
         className="font-inter-light text-statement-lg text-ink-headline text-center mb-md"
       >
-        Your finances,{'\n'}
-        <Text className="text-accent-primary">decoded</Text> from your SMS.
+        {isAndroid ? (
+          <>
+            Your finances,{'\n'}
+            <Text className="text-accent-primary">decoded</Text> from your SMS.
+          </>
+        ) : (
+          <>
+            Your finances,{'\n'}
+            <Text className="text-accent-primary">understood</Text>, at a glance.
+          </>
+        )}
       </Animated.Text>
 
       <Animated.Text
         entering={FadeInDown.duration(500).delay(200)}
         className="font-inter text-body-standard text-ink-body text-center mb-xxl"
       >
-        Raqm reads your bank messages and turns them into a clear picture of
-        where your money goes. Nothing leaves your phone.
+        {isAndroid
+          ? 'Raqm reads your bank messages and turns them into a clear picture of where your money goes. Nothing leaves your phone.'
+          : 'Add your accounts and Raqm turns them into a clear picture of where your money goes. Nothing leaves your phone.'}
       </Animated.Text>
 
       <Animated.View entering={FadeInDown.duration(500).delay(300)}>
