@@ -60,13 +60,18 @@ export const Colors = {
   welcomeGradientStart: '#75daa8',
   welcomeGradientEnd: '#52b788',
 
-  // ── Extended custom tokens ───────────────────────────────────────────────
-  bgSurface: '#121A17',
-  bgSurfaceRaised: '#182420',
-  borderSubtle: '#243128',
-  inkHeadline: '#F4F1EA',
-  inkBody: '#A9B3AC',
-  inkLabel: '#5C665F',
-  errorMuted: '#C1666B',
+  // ── Extended custom tokens (RDL v2.0) ───────────────────────────────────
+  bgBase: '#0A0E0C',
+  bgSurface: '#10140F',
+  bgSurfaceRaised: '#161C15',
+  borderSubtle: '#232B22',
+  inkHeadline: '#F2F0E9',
+  inkBody: '#9FA89C',
+  inkLabel: '#5B635A',
+  accentPrimary: '#3EBD7E',
+  accentDeep: '#173325',
+  notice: '#C68B4D',
+  errorMuted: '#C4707A',
+  // TODO(design-v2): unused post-onboarding-redesign, remove after full app migration
   mossStructure: '#7C9885',
 } as const;
