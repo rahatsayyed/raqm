@@ -23,7 +23,7 @@ const successRingStyle = {
   alignItems: 'center' as const, justifyContent: 'center' as const,
   marginBottom: 40,
 };
-const textAreaStyle = { alignItems: 'center' as const, marginBottom: 40, gap: 8 };
+const textAreaStyle = { alignItems: 'center' as const, marginBottom: 40, gap: 4 };
 const statsRowStyle = { flexDirection: 'row' as const, gap: 16, marginBottom: 40, width: '100%' as const };
 const footerStyle = { width: '100%' as const, gap: 8 };
 
@@ -70,9 +70,17 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
       </Animated.View>
 
       <Animated.View style={[textAreaStyle, { opacity: fade, transform: [{ translateY: slideUp }] }]}>
-        <Text className="font-inter-bold text-display-lg text-ink-headline text-center">Transactions loaded</Text>
-        <Text className="font-inter text-body-md text-ink-body text-center max-w-[280px]">
-          {transactions.length} transactions found. {formatAmount(transactions.reduce((sum, tx) => sum + (tx.amount || 0), 0), transactions[0]?.currency)} tracked.
+        <Text className="font-mono-medium text-metric-hero text-ink-headline">
+          {transactions.length}
+        </Text>
+        <Text className="font-inter text-body-md text-ink-body text-center">
+          transactions found
+        </Text>
+        <Text className="font-mono-medium text-metric-hero text-ink-headline pt-sm">
+          {formatAmount(transactions.reduce((sum, tx) => sum + (tx.amount || 0), 0), transactions[0]?.currency)}
+        </Text>
+        <Text className="font-inter text-body-md text-ink-body text-center">
+          tracked
         </Text>
       </Animated.View>
 
@@ -84,7 +92,7 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
             style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}
           >
             <Icon name={stat.icon as any} size={22} color={Colors.inkBody} />
-            <Text className="font-mono-medium text-metric-hero text-accent-primary">{stat.value}</Text>
+            <Text className="font-mono-medium text-numeric-md text-accent-primary">{stat.value}</Text>
             <Text className="font-inter text-[11px] leading-[16px] text-ink-body">{stat.label}</Text>
           </View>
         ))}
