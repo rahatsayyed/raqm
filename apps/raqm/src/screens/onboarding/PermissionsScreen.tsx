@@ -26,13 +26,17 @@ async function requestAndroidRow(key: RowKey): Promise<boolean> {
     return results['android.permission.READ_SMS'] === PermissionsAndroid.RESULTS.GRANTED;
   }
   if (key === 'location') {
-    // C2 fix: tagging a transaction's approximate location only needs
-    // foreground access — requiring "Allow all the time" (which forces a
-    // Settings trip on Android 11+, and can be permanently denied) turned
-    // this into a hard, potentially unpassable gate. A foreground grant
-    // alone now satisfies this row; background is never requested here.
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    return status === Location.PermissionStatus.GRANTED;
+    // Background location is required, not just foreground: bank SMS can
+    // arrive (and the location tag gets captured) while the app is not in
+    // the foreground, since SMS reading happens via a background
+    // BroadcastReceiver. Android 10+ requires foreground to be granted
+    // first before background can be requested at all.
+    const foreground = await Location.requestForegroundPermissionsAsync();
+    if (foreground.status !== Location.PermissionStatus.GRANTED) {
+      return false;
+    }
+    const background = await Location.requestBackgroundPermissionsAsync();
+    return background.status === Location.PermissionStatus.GRANTED;
   }
   // notificationAccess (NotificationListenerService) is not a runtime
   // permission — PermissionNotificationAccessScreen just called
@@ -65,7 +69,7 @@ async function checkAndroidRow(key: RowKey): Promise<boolean> {
     return PermissionsAndroid.check('android.permission.READ_SMS' as any);
   }
   if (key === 'location') {
-    const { status } = await Location.getForegroundPermissionsAsync();
+    const { status } = await Location.getBackgroundPermissionsAsync();
     return status === Location.PermissionStatus.GRANTED;
   }
   if (key === 'notificationAccess') {
