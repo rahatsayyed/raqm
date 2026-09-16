@@ -1,12 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { StepCounter } from '../../components/onboarding/StepCounter';
+import { Icon } from '../../components/Icon';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { softDeleteAccountTxs } from '../../db/database';
 import { logEvent } from '../../services/logger';
 
-type Account = { id: string; bank: string; last4: string | null; type: string; icon: string; txCount: number };
+type Account = { id: string; bank: string; last4: string | null; type: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; txCount: number };
 
 export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'AccountSelection'>) {
   const { transactions } = useOnboardingStore();
@@ -23,7 +26,7 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
           bank: tx.bankName,
           last4: tx.accountLast4,
           type: tx.isFromCard ? 'Credit Card' : 'Bank Account',
-          icon: tx.isFromCard ? '💳' : '🏦',
+          icon: tx.isFromCard ? 'credit-card-outline' : 'bank-outline',
           txCount: 1,
         });
       }
@@ -46,9 +49,9 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
   if (accounts.length === 0) {
     return (
       <View className="flex-1 bg-background items-center justify-center px-container-margin gap-md">
-        <Text className="text-[56px]">🔍</Text>
+        <Icon name="magnify" size={56} color="currentColor" />
         <Text className="font-inter-semibold text-headline-md text-on-surface text-center">No accounts detected</Text>
-        <Text className="font-inter text-body-md text-on-surface-variant text-center">
+        <Text className="font-inter text-body-md text-ink-body text-center">
           We couldn't find any bank transactions in your SMS. Make sure Read SMS permission was granted and try scanning again.
         </Text>
         <PrimaryButton
@@ -63,12 +66,10 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
   return (
     <View className="flex-1 bg-background">
       <ScrollView contentContainerClassName="px-container-margin pt-[48px] pb-xl" showsVerticalScrollIndicator={false}>
-        <View className="h-[4px] bg-surface-variant rounded-full mb-xxl">
-          <View className="w-[80%] h-full bg-primary rounded-full" />
-        </View>
+        <StepCounter step={5} totalSteps={9} />
 
         <Text className="font-inter-bold text-display-lg text-on-surface mb-sm">Your accounts</Text>
-        <Text className="font-inter text-body-md text-on-surface-variant mb-xl">
+        <Text className="font-inter text-body-md text-ink-body mb-xl">
           We detected {accounts.length} account{accounts.length !== 1 ? 's' : ''} from your messages. Select the ones to include.
         </Text>
 
@@ -78,16 +79,16 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
             return (
               <TouchableOpacity
                 key={account.id}
-                className={`flex-row items-center gap-md bg-surface-container-lowest border rounded-xl p-md ${isSelected ? 'border-primary bg-primary-container' : 'border-outline-variant'}`}
+                className={`flex-row items-center gap-md bg-bg-surface border rounded-xl p-md ${isSelected ? 'border-primary bg-accent-primary' : 'border-outline-variant'}`}
                 onPress={() => toggle(account.id)}
                 activeOpacity={0.8}
               >
                 <View className={`w-[48px] h-[48px] rounded-lg items-center justify-center ${isSelected ? 'bg-primary/[0.08]' : 'bg-surface-variant'}`}>
-                  <Text className="text-[22px]">{account.icon}</Text>
+                  <Icon name={account.icon} size={24} color="currentColor" />
                 </View>
                 <View className="flex-1">
                   <Text className="font-inter-bold text-title-lg text-on-surface">{account.bank}</Text>
-                  <Text className="font-inter text-body-sm text-on-surface-variant mt-[2px]">
+                  <Text className="font-inter text-body-sm text-ink-body mt-[2px]">
                     {account.type}
                     {account.last4 ? ` •••• ${account.last4}` : ''} · {account.txCount} txns
                   </Text>
@@ -100,7 +101,7 @@ export function AccountSelectionScreen({ navigation }: OnboardingScreenProps<'Ac
           })}
         </View>
 
-        <View className="bg-primary-container rounded-xl p-md items-center">
+        <View className="bg-accent-primary rounded-xl p-md items-center">
           <Text className="font-inter text-body-md text-on-primary-container text-center">
             <Text className="font-inter-bold text-primary">{totalTx}</Text> transactions across{' '}
             <Text className="font-inter-bold text-primary">{selected.size}</Text> account{selected.size !== 1 ? 's' : ''} selected
