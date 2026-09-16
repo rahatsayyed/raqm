@@ -4,6 +4,7 @@ import { File } from 'expo-file-system';
 import { parseGpayPdf, type GpayPdfRow } from '../../services/imports/gpayPdf';
 import { applyGpayPdfImport } from '../../db/database';
 import { useTxStore } from '../../store/txStore';
+import type { MainStackScreenProps, OnboardingScreenProps } from '../../navigation/types';
 
 type Step = 'idle' | 'preview' | 'importing';
 
@@ -13,6 +14,15 @@ type Step = 'idle' | 'preview' | 'importing';
 // what this screen actually uses (`navigation.goBack()`; `route` is never read) so
 // it type-checks as either stack's screen component without duplicating the screen.
 type GPayPdfImportScreenProps = { navigation: { goBack: () => void } };
+
+// Compile-time guard: if a future edit makes this screen use route.params,
+// navigation.replace(...), setOptions(...), or anything else beyond goBack(),
+// one of these assignments stops compiling — catching the drift at build time
+// instead of at runtime inside whichever navigator lacks that capability.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _assertCompatibleWithMain: GPayPdfImportScreenProps = null as unknown as MainStackScreenProps<'GPayPdfImport'>;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _assertCompatibleWithOnboarding: GPayPdfImportScreenProps = null as unknown as OnboardingScreenProps<'GPayPdfImport'>;
 
 export function GPayPdfImportScreen({ navigation }: GPayPdfImportScreenProps) {
   const [step, setStep] = useState<Step>('idle');
