@@ -95,7 +95,7 @@ export const Typography = {
     lineHeight: 20,
   },
 
-  // ── RDL roles: Inter (statements) + Inter (function) + Mono (metrics) ──
+  // ── RDL roles: Inter (statements, weight 300) + Inter (function) + Mono (metrics) ──
 
   statementLg: {
     fontFamily: 'Inter_300Light',

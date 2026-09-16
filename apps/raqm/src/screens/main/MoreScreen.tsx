@@ -405,7 +405,7 @@ export function MoreScreen() {
               <Text className="font-inter-semibold text-[10px] text-primary">{initials}</Text>
             </View>
             <View className="flex-1">
-              <Text className="font-fraunces text-[15px] leading-none text-on-surface" numberOfLines={1}>{userName || 'User'}</Text>
+              <Text className="font-inter-light text-[15px] leading-none text-on-surface" numberOfLines={1}>{userName || 'User'}</Text>
               <Text className="font-inter text-[10px] text-ink-label opacity-60 mt-[2px]">{transactions.length} transactions on record</Text>
             </View>
           </View>

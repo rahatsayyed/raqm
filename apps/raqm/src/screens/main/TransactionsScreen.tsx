@@ -381,7 +381,7 @@ export function TransactionsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      {/* Top bar: back + Fraunces title, search / cancel on the right */}
+      {/* Top bar: back + Inter title, search / cancel on the right */}
       <View className="flex-row justify-between items-center px-[24px] pt-[8px] pb-[16px]">
         <View className="flex-row items-center gap-[12px]">
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={8}>
