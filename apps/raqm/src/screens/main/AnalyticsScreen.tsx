@@ -4,10 +4,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import { Colors } from '../../theme';
 import { useTxStore } from '../../store/txStore';
-import { getCategories, getSetting, getReminders, type Category, type TxRecord, type Reminder } from '../../db/database';
+import { getCategories, getReminders, type Category, type TxRecord, type Reminder } from '../../db/database';
 import { countsTowardTotals } from '../../services/txIntelligence';
 import { detectRecurringDues, mergeDues } from '../../services/dues';
-import { getDayBounds, getMonthBounds, type PeriodBounds } from '../../utils/period';
+import { getDayBounds, getCycleBounds, type PeriodBounds, type CycleConfig } from '../../utils/period';
+import { getCycleConfig } from '../../services/cycle';
 import { BriefingHero, NarrativeAdvisor, CategoryShift } from '../../components/analytics';
 import { SectionHeader, TransactionRow, ObligationCard } from '../../components/dashboard';
 import { AccountLiquidityCard } from '../../components/AccountLiquidityCard';
@@ -51,7 +52,7 @@ function upcomingLabel(ts: number): string {
 export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>) {
   const { txs, accountLabels } = useTxStore();
   const currency = txs[0]?.currency ?? '₹';
-  const [monthStartDay, setMonthStartDay] = useState(1);
+  const [cycleConfig, setCycleConfig] = useState<CycleConfig>({ mode: 'calendar', monthStartDay: 1, days: 30, anchor: Date.now() });
   const [categories, setCategories] = useState<Category[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
 
@@ -63,27 +64,24 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
     getReminders().then(setReminders);
   }, []);
 
-  const loadMonthStartDay = useCallback(() => {
-    getSetting('month_start_day').then((v) => setMonthStartDay(v ? Number(v) : 1));
+  const loadCycleConfig = useCallback(() => {
+    getCycleConfig().then(setCycleConfig);
   }, []);
 
   useEffect(() => {
-    loadMonthStartDay();
-  }, [loadMonthStartDay]);
+    loadCycleConfig();
+  }, [loadCycleConfig]);
 
-  // Re-read month_start_day when returning from Settings — this screen stays mounted
+  // Re-read the cycle config when returning from Settings — this screen stays mounted
   // beneath the pushed Settings screen, so a mount-only effect alone won't re-fire.
   useFocusEffect(
     useCallback(() => {
-      loadMonthStartDay();
-    }, [loadMonthStartDay]),
+      loadCycleConfig();
+    }, [loadCycleConfig]),
   );
 
-  // Clamp so a corrupted/legacy setting can't push the reference date into an adjacent month.
-  const clampedMonthStartDay = Math.min(28, Math.max(1, monthStartDay));
-
-  // Current calendar month bounds — the single period reference for everything below.
-  const bounds: PeriodBounds = useMemo(() => getMonthBounds(new Date(), clampedMonthStartDay), [clampedMonthStartDay]);
+  // Current cycle bounds — the single period reference for everything below.
+  const bounds: PeriodBounds = useMemo(() => getCycleBounds(new Date(), cycleConfig), [cycleConfig]);
 
   const periodTxs = useMemo(
     () => txs.filter((tx) => tx.timestamp >= bounds.from && tx.timestamp <= bounds.to && isCounted(tx)),
@@ -192,8 +190,8 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
   const categoryShift = useMemo(() => {
     const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
     const now = new Date();
-    const currMonth = getMonthBounds(now, clampedMonthStartDay);
-    const prevMonth = getMonthBounds(new Date(currMonth.from - 1), clampedMonthStartDay);
+    const currMonth = getCycleBounds(now, cycleConfig);
+    const prevMonth = getCycleBounds(new Date(currMonth.from - 1), cycleConfig);
 
     const prevWeekBounds = Array.from({ length: 4 }, (_, i) => ({
       from: prevMonth.from + i * WEEK_MS,
@@ -258,7 +256,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
 
       return { categoryId: catKey === -1 ? null : catKey, name, total, pctChange, trend };
     });
-  }, [txs, categories, clampedMonthStartDay]);
+  }, [txs, categories, cycleConfig]);
 
   // Hero — current calendar month-to-date spend + a daily sparkline.
   const heroTotal = useMemo(
@@ -300,13 +298,12 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
     [categories],
   );
 
-  // Narrative Advisor — month-to-date spend vs. the same date range one calendar month
-  // earlier (not a fixed 30 days), plus whichever category swung the most in that direction.
+  // Narrative Advisor — cycle-to-date spend vs. the same date range one full cycle
+  // earlier (calendar month or fixed N-day, whichever the user has set), plus whichever
+  // category swung the most in that direction.
   const narrativeComparison = useMemo(() => {
     const elapsedMs = Math.min(Date.now(), bounds.to) - bounds.from;
-    const prevReference = new Date(bounds.from);
-    prevReference.setMonth(prevReference.getMonth() - 1);
-    const prevBounds = getMonthBounds(prevReference, clampedMonthStartDay);
+    const prevBounds = getCycleBounds(new Date(bounds.from - 1), cycleConfig);
     const prevTo = Math.min(prevBounds.to, prevBounds.from + elapsedMs);
 
     const prevTxs = txs.filter(
@@ -354,7 +351,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
     }
 
     return { pctChange, direction, driverLabel };
-  }, [txs, bounds, heroTotal, clampedMonthStartDay, categories]);
+  }, [txs, bounds, heroTotal, cycleConfig, categories]);
 
   return (
     <ScrollView className="flex-1 bg-background" contentContainerClassName="pb-[32px]" showsVerticalScrollIndicator={false}>

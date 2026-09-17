@@ -19,6 +19,8 @@ import {
   getSetting, setSetting, insertCsvRows,
 } from '../../db/database';
 import { SmsReader } from '../../native/SmsReader';
+import { getCycleConfig, setCycleMode, setCycleDays } from '../../services/cycle';
+import type { CycleMode } from '../../utils/period';
 import {
   BankIcon, BanknoteIcon, RefreshIcon, ExportIcon, TrashIcon,
   GearIcon, InfoIcon, ChevronRightIcon,
@@ -101,8 +103,11 @@ export function MoreScreen() {
   const [groupCount, setGroupCount] = useState<number | null>(null);
   const [monthStartDay, setMonthStartDay] = useState(1);
   const [showDayPicker, setShowDayPicker] = useState(false);
+  const [cycleMode, setCycleModeState] = useState<CycleMode>('calendar');
+  const [cycleDays, setCycleDaysState] = useState(30);
+  const [showCycleTypePicker, setShowCycleTypePicker] = useState(false);
   const [csvImporting, setCsvImporting] = useState(false);
-  const [editField, setEditField] = useState<'name' | 'phone' | 'email' | 'upiId' | null>(null);
+  const [editField, setEditField] = useState<'name' | 'phone' | 'email' | 'upiId' | 'cycleDays' | null>(null);
   const [upiId, setUpiId] = useState('');
   const [appLock, setAppLock] = useState(false);
 
@@ -113,6 +118,7 @@ export function MoreScreen() {
       getCategoryRules().then((rules) => setRuleCount(rules.length));
       getTransactionGroups().then((groups) => setGroupCount(groups.length));
       getSetting('month_start_day').then((day) => setMonthStartDay(day ? Number(day) : 1));
+      getCycleConfig().then((cfg) => { setCycleModeState(cfg.mode); setCycleDaysState(cfg.days); });
       getSetting('upi_id').then((id) => setUpiId(id ?? ''));
       isAppLockEnabled().then(setAppLock);
     }, []),
@@ -145,6 +151,12 @@ export function MoreScreen() {
     }
   };
 
+
+  const handleSelectCycleMode = async (mode: CycleMode) => {
+    setCycleModeState(mode);
+    setShowCycleTypePicker(false);
+    await setCycleMode(mode);
+  };
 
   const handleSelectMonthStartDay = async (day: number) => {
     setMonthStartDay(day);
@@ -314,7 +326,10 @@ export function MoreScreen() {
       title: 'MONEY',
       rows: [
         { key: 'manage-accounts', label: 'Accounts', Icon: BankIcon, onPress: () => navigation.navigate('ManageAccounts') },
-        { key: 'month-start', label: 'Month Start Date', Icon: CalendarMonthIcon, meta: ordinal(monthStartDay), onPress: () => setShowDayPicker(true) },
+        { key: 'cycle-type', label: 'Budget Cycle', Icon: CalendarMonthIcon, meta: cycleMode === 'fixed' ? `Every ${cycleDays} days` : 'Calendar month', onPress: () => setShowCycleTypePicker(true) },
+        ...(cycleMode === 'fixed'
+          ? [{ key: 'cycle-days', label: 'Cycle Length', Icon: CalendarMonthIcon, meta: `${cycleDays} days`, onPress: () => setEditField('cycleDays') }]
+          : [{ key: 'month-start', label: 'Month Start Date', Icon: CalendarMonthIcon, meta: ordinal(monthStartDay), onPress: () => setShowDayPicker(true) }]),
         { key: 'budgets', label: 'Budgets', Icon: BanknoteIcon, onPress: () => navigation.navigate('Budgets') },
         { key: 'categories', label: 'Categories', Icon: LayersIcon, comingSoon: true },
         { key: 'tags', label: 'Tags', Icon: PinIcon, comingSoon: true },
@@ -500,6 +515,43 @@ export function MoreScreen() {
           setEditField(null);
         }}
       />
+
+      <EditFieldSheet
+        visible={editField === 'cycleDays'}
+        onClose={() => setEditField(null)}
+        title="Cycle length (days)"
+        placeholder="30"
+        keyboardType="numeric"
+        initialValue={String(cycleDays)}
+        onConfirm={async (value) => {
+          const days = Math.max(1, Math.trunc(Number(value)) || 30);
+          setCycleDaysState(days);
+          await setCycleDays(days);
+          setEditField(null);
+        }}
+      />
+
+      <Modal visible={showCycleTypePicker} transparent animationType="fade" onRequestClose={() => setShowCycleTypePicker(false)}>
+        <TouchableOpacity className="flex-1 bg-black/60 justify-center p-lg" activeOpacity={1} onPress={() => setShowCycleTypePicker(false)}>
+          <View className="bg-surface-container-lowest rounded-xl border border-outline-variant p-lg">
+            <Text className="font-inter-bold text-[16px] leading-[26px] text-on-surface mb-md">Budget cycle</Text>
+            <Text className="font-inter text-supporting-text text-on-surface-variant mb-md">
+              One cycle applies to every category budget, Dashboard, Analytics and exports.
+            </Text>
+            {(['calendar', 'fixed'] as const).map((mode) => (
+              <TouchableOpacity
+                key={mode}
+                className={`py-md px-sm rounded-md mb-xs ${cycleMode === mode ? 'bg-primary' : 'bg-surface-container'}`}
+                onPress={() => handleSelectCycleMode(mode)}
+              >
+                <Text className={`font-inter-medium text-body-standard ${cycleMode === mode ? 'text-on-primary' : 'text-on-surface'}`}>
+                  {mode === 'calendar' ? 'Calendar month' : 'Fixed N-day cycle'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <Modal visible={showDayPicker} transparent animationType="fade" onRequestClose={() => setShowDayPicker(false)}>
         <TouchableOpacity className="flex-1 bg-black/60 justify-center p-lg" activeOpacity={1} onPress={() => setShowDayPicker(false)}>

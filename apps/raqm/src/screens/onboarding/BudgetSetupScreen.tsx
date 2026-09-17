@@ -40,7 +40,7 @@ export function BudgetSetupScreen({ navigation, route }: OnboardingScreenProps<'
           // categories table) just skips saving that row rather than throwing.
           const categoryId = await getCategoryIdByName(category);
           if (categoryId !== null) {
-            await upsertBudget(categoryId, Number(value), 'monthly', false);
+            await upsertBudget(categoryId, Number(value), false);
           }
         }
       }

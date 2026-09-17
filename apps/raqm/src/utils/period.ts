@@ -76,3 +76,19 @@ export function getCustomBounds(ref: Date, days: number, anchorDate: Date): Peri
   const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + clampedDays - 1, 23, 59, 59, 999);
   return { from: start.getTime(), to: end.getTime() };
 }
+
+export type CycleMode = 'calendar' | 'fixed';
+
+/** The single app-wide budget cycle: a calendar month with a start day, or a fixed N-day block. */
+export interface CycleConfig {
+  mode: CycleMode;
+  monthStartDay: number;
+  days: number;
+  anchor: number;
+}
+
+export function getCycleBounds(ref: Date, cfg: CycleConfig): PeriodBounds {
+  return cfg.mode === 'fixed'
+    ? getCustomBounds(ref, cfg.days, new Date(cfg.anchor))
+    : getMonthBounds(ref, cfg.monthStartDay);
+}

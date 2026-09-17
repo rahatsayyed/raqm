@@ -8,11 +8,14 @@ import { getSetting, setSetting, getCategories, getBudgets, upsertBudget, delete
 
 const PLANNED_MONTHLY_EXPENSE_KEY = 'planned_monthly_expense';
 
+type Draft = { amount: string; rollover: boolean };
+const EMPTY_DRAFT: Draft = { amount: '', rollover: false };
+
 export function BudgetsScreen({ navigation }: MainStackScreenProps<'Budgets'>) {
   const [budgetAlerts, setBudgetAlerts] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [drafts, setDrafts] = useState<Record<number, { amount: string; periodType: 'monthly' | 'weekly' | 'custom'; rollover: boolean; customDays: string }>>({});
+  const [drafts, setDrafts] = useState<Record<number, Draft>>({});
   // Top-level "planned monthly spend" — an overall target independent of per-category
   // budgets. Dashboard's Safe-to-Spend card uses this (when set) instead of summing only
   // budgeted categories, since that sum silently ignores spend in unbudgeted categories.
@@ -29,14 +32,12 @@ export function BudgetsScreen({ navigation }: MainStackScreenProps<'Budgets'>) {
     setCategories(cats);
     setBudgets(buds);
     setPlannedExpense(planned ?? '');
-    const nextDrafts: Record<number, { amount: string; periodType: 'monthly' | 'weekly' | 'custom'; rollover: boolean; customDays: string }> = {};
+    const nextDrafts: Record<number, Draft> = {};
     for (const cat of cats) {
       const existing = buds.find((b) => b.categoryId === cat.id);
       nextDrafts[cat.id] = {
         amount: existing ? String(existing.amount) : '',
-        periodType: existing?.periodType ?? 'monthly',
         rollover: existing?.rollover ?? false,
-        customDays: existing?.customDays ? String(existing.customDays) : '',
       };
     }
     setDrafts(nextDrafts);
@@ -67,17 +68,14 @@ export function BudgetsScreen({ navigation }: MainStackScreenProps<'Budgets'>) {
     await setSetting(PLANNED_MONTHLY_EXPENSE_KEY, String(amount));
   }
 
-  function updateDraft(categoryId: number, patch: Partial<{ amount: string; periodType: 'monthly' | 'weekly' | 'custom'; rollover: boolean; customDays: string }>) {
-    setDrafts((prev) => ({ ...prev, [categoryId]: { ...prev[categoryId], ...patch } }));
+  function updateDraft(categoryId: number, patch: Partial<Draft>) {
+    setDrafts((prev) => ({ ...prev, [categoryId]: { ...(prev[categoryId] ?? EMPTY_DRAFT), ...patch } }));
   }
 
   // `patch` carries the value that was just changed — reading it from `drafts`
   // here would see the pre-setState closure value and persist stale data.
-  async function saveBudget(
-    categoryId: number,
-    patch?: Partial<{ amount: string; periodType: 'monthly' | 'weekly' | 'custom'; rollover: boolean; customDays: string }>,
-  ) {
-    const base = drafts[categoryId] ?? { amount: '', periodType: 'monthly' as const, rollover: false, customDays: '' };
+  async function saveBudget(categoryId: number, patch?: Partial<Draft>) {
+    const base = drafts[categoryId] ?? EMPTY_DRAFT;
     const draft = { ...base, ...patch };
     const amount = Number(draft.amount);
     if (!draft.amount || Number.isNaN(amount) || amount <= 0) {
@@ -88,8 +86,7 @@ export function BudgetsScreen({ navigation }: MainStackScreenProps<'Budgets'>) {
       }
       return;
     }
-    const customDays = draft.periodType === 'custom' ? Math.max(1, Math.trunc(Number(draft.customDays)) || 1) : null;
-    await upsertBudget(categoryId, amount, draft.periodType, draft.rollover, customDays);
+    await upsertBudget(categoryId, amount, draft.rollover);
     // Refresh only the budgets list — a full reload() would rebuild every draft
     // and clobber unsaved text a user may have typed in another category's field.
     const buds = await getBudgets();
@@ -137,64 +134,30 @@ export function BudgetsScreen({ navigation }: MainStackScreenProps<'Budgets'>) {
           </View>
           <View className="h-[1px] bg-outline-variant" />
           {categories.map((cat) => {
-            const draft = drafts[cat.id] ?? { amount: '', periodType: 'monthly' as const, rollover: false, customDays: '' };
+            const draft = drafts[cat.id] ?? EMPTY_DRAFT;
             return (
               <View key={cat.id} className="py-sm border-b border-outline-variant gap-xs">
                 <Text className="font-inter text-body-standard text-on-surface">{cat.emoji} {cat.name}</Text>
-                <View className="flex-row gap-sm items-center">
-                  <TextInput
-                    className="flex-1 border border-outline-variant rounded-md px-sm py-[8px] text-on-surface font-inter text-body-sm"
-                    placeholder="Amount"
-                    placeholderTextColor={Colors.onSurfaceVariant}
-                    keyboardType="numeric"
-                    value={draft.amount}
-                    onChangeText={(t) => updateDraft(cat.id, { amount: t })}
-                    onBlur={() => saveBudget(cat.id)}
+                <TextInput
+                  className="border border-outline-variant rounded-md px-sm py-[8px] text-on-surface font-inter text-body-sm"
+                  placeholder="Amount per cycle"
+                  placeholderTextColor={Colors.onSurfaceVariant}
+                  keyboardType="numeric"
+                  value={draft.amount}
+                  onChangeText={(t) => updateDraft(cat.id, { amount: t })}
+                  onBlur={() => saveBudget(cat.id)}
+                />
+                <View className="flex-row justify-between items-center pt-[4px]">
+                  <Text className="font-inter text-supporting-text text-on-surface-variant">Rollover unused amount</Text>
+                  <Switch
+                    value={draft.rollover}
+                    onValueChange={(v) => {
+                      updateDraft(cat.id, { rollover: v });
+                      saveBudget(cat.id, { rollover: v });
+                    }}
+                    trackColor={{ true: Colors.primary, false: Colors.surfaceVariant }}
                   />
-                  <View className="flex-row rounded-md overflow-hidden border border-outline-variant">
-                    {(['monthly', 'weekly', 'custom'] as const).map((p) => (
-                      <TouchableOpacity
-                        key={p}
-                        className={`py-[8px] px-[12px] ${draft.periodType === p ? 'bg-primary' : 'bg-surface-container-lowest'}`}
-                        onPress={() => {
-                          updateDraft(cat.id, { periodType: p });
-                          saveBudget(cat.id, { periodType: p });
-                        }}
-                      >
-                        <Text className={`font-mono text-label-sm tracking-[0px] ${draft.periodType === p ? 'text-on-primary font-inter-medium' : 'text-on-surface-variant'}`}>
-                          {p === 'monthly' ? 'Mo' : p === 'weekly' ? 'Wk' : 'N-day'}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
                 </View>
-                {draft.periodType === 'custom' && (
-                  <View className="flex-row gap-sm items-center pt-[4px]">
-                    <Text className="font-inter text-supporting-text text-on-surface-variant">Cycle length (days)</Text>
-                    <TextInput
-                      className="w-[64px] border border-outline-variant rounded-md px-sm py-[6px] text-on-surface font-inter text-body-sm"
-                      placeholder="30"
-                      placeholderTextColor={Colors.onSurfaceVariant}
-                      keyboardType="numeric"
-                      value={draft.customDays}
-                      onChangeText={(t) => updateDraft(cat.id, { customDays: t })}
-                      onBlur={() => saveBudget(cat.id)}
-                    />
-                  </View>
-                )}
-                {(draft.periodType === 'weekly' || draft.periodType === 'custom') && (
-                  <View className="flex-row justify-between items-center pt-[4px]">
-                    <Text className="font-inter text-supporting-text text-on-surface-variant">Rollover unused amount</Text>
-                    <Switch
-                      value={draft.rollover}
-                      onValueChange={(v) => {
-                        updateDraft(cat.id, { rollover: v });
-                        saveBudget(cat.id, { rollover: v });
-                      }}
-                      trackColor={{ true: Colors.primary, false: Colors.surfaceVariant }}
-                    />
-                  </View>
-                )}
               </View>
             );
           })}
