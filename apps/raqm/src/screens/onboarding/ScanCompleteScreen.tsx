@@ -3,7 +3,6 @@ import { View, Text, Animated, Easing } from 'react-native';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { Colors, Shadows } from '../../theme';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { GhostButton } from '../../components/GhostButton';
 import { Icon } from '../../components/Icon';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { formatAmount } from '../../utils/format';
@@ -151,12 +150,8 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
 
       <Animated.View style={[footerStyle, { opacity: fade }]}>
         <PrimaryButton
-          label="Set up my account →"
+          label="Set my budget →"
           onPress={() => navigation.replace('BudgetSetup', { categorySpend })}
-        />
-        <GhostButton
-          label="Skip — explore locally"
-          onPress={() => navigation.replace('NameEntry')}
         />
       </Animated.View>
     </View>
