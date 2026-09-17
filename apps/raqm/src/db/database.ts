@@ -554,6 +554,44 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  // Per-budget periodType/customDays are replaced by one app-wide cycle (see cycle_mode/
+  // cycle_days/cycle_anchor in app_settings, read via src/services/cycle.ts). The columns
+  // stay in place (unread from here on) rather than a risky SQLite column-drop rebuild.
+  // Best-effort one-time carry-forward: an existing 'custom' budget wins over a 'weekly'
+  // one (more specific), so a user who had already set a real cadence doesn't silently
+  // fall back to calendar-month.
+  if (current < 18) {
+    await database.runAsync(`BEGIN`);
+    try {
+      const existingCycleMode = await database.getFirstAsync<{ value: string }>(
+        `SELECT value FROM app_settings WHERE key = 'cycle_mode'`,
+      );
+      if (!existingCycleMode) {
+        const customBudget = await database.getFirstAsync<{ custom_days: number | null; created_at: number }>(
+          `SELECT custom_days, created_at FROM budgets WHERE period_type = 'custom' AND custom_days IS NOT NULL ORDER BY created_at ASC LIMIT 1`,
+        );
+        const weeklyBudget = await database.getFirstAsync<{ created_at: number }>(
+          `SELECT created_at FROM budgets WHERE period_type = 'weekly' ORDER BY created_at ASC LIMIT 1`,
+        );
+        const carryForward = customBudget
+          ? { days: customBudget.custom_days as number, anchor: customBudget.created_at }
+          : weeklyBudget
+            ? { days: 7, anchor: weeklyBudget.created_at }
+            : null;
+        if (carryForward) {
+          await database.runAsync(`INSERT INTO app_settings (key, value) VALUES ('cycle_mode', 'fixed')`);
+          await database.runAsync(`INSERT INTO app_settings (key, value) VALUES ('cycle_days', ?)`, String(carryForward.days));
+          await database.runAsync(`INSERT INTO app_settings (key, value) VALUES ('cycle_anchor', ?)`, String(carryForward.anchor));
+        }
+      }
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (18)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -2816,8 +2854,6 @@ export interface Budget {
   id: number;
   categoryId: number;
   amount: number;
-  periodType: 'monthly' | 'weekly' | 'custom';
-  customDays: number | null;
   rollover: boolean;
   createdAt: number;
 }
@@ -2827,8 +2863,6 @@ function rowToBudget(row: Record<string, unknown>): Budget {
     id: row.id as number,
     categoryId: row.category_id as number,
     amount: row.amount as number,
-    periodType: row.period_type as 'monthly' | 'weekly' | 'custom',
-    customDays: (row.custom_days as number | null) ?? null,
     rollover: (row.rollover as number) === 1,
     createdAt: row.created_at as number,
   };
@@ -2842,13 +2876,9 @@ export async function getBudgets(): Promise<Budget[]> {
   return rows.map(rowToBudget);
 }
 
-export async function upsertBudget(
-  categoryId: number,
-  amount: number,
-  periodType: 'monthly' | 'weekly' | 'custom',
-  rollover: boolean,
-  customDays: number | null = null,
-): Promise<void> {
+// period_type/custom_days columns are legacy (see migration 18) — left at their table
+// defaults ('monthly'/NULL) since every budget now shares the one app-wide cycle.
+export async function upsertBudget(categoryId: number, amount: number, rollover: boolean): Promise<void> {
   const database = await getDb();
   const existing = await database.getFirstAsync<{ id: number }>(
     `SELECT id FROM budgets WHERE category_id = ?`,
@@ -2856,21 +2886,17 @@ export async function upsertBudget(
   );
   if (existing) {
     await database.runAsync(
-      `UPDATE budgets SET amount = ?, period_type = ?, rollover = ?, custom_days = ? WHERE id = ?`,
+      `UPDATE budgets SET amount = ?, rollover = ? WHERE id = ?`,
       amount,
-      periodType,
       rollover ? 1 : 0,
-      customDays,
       existing.id,
     );
   } else {
     await database.runAsync(
-      `INSERT INTO budgets (category_id, amount, period_type, rollover, custom_days) VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO budgets (category_id, amount, rollover) VALUES (?, ?, ?)`,
       categoryId,
       amount,
-      periodType,
       rollover ? 1 : 0,
-      customDays,
     );
   }
 }

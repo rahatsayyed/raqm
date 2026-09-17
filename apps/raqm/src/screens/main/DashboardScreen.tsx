@@ -41,7 +41,8 @@ import { countsTowardTotals } from "../../services/txIntelligence";
 import { detectBalanceMismatches, type BalanceMismatch } from "../../services/balanceIntegrity";
 import { detectRecurringDues, mergeDues } from "../../services/dues";
 import { getBudgetStatuses } from "../../services/budgets";
-import { getMonthBounds, getDayBounds } from "../../utils/period";
+import { getCycleBounds, getDayBounds } from "../../utils/period";
+import { getCycleConfig } from "../../services/cycle";
 import type { MainStackParamList } from "../../navigation/types";
 import { formatAmount } from "../../utils/format";
 import { MaskedValue, MASK_TEXT } from "../../components/MaskedValue";
@@ -341,14 +342,12 @@ export function DashboardScreen() {
     to: number;
   } | null>(null);
 
-  // getMonthBounds internally clamps startDay to [1, 28], so pass raw value.
   const computeMetrics = useCallback(() => {
     let cancelled = false;
     (async () => {
-      const startDayStr = await getSetting("month_start_day");
-      const startDay = startDayStr ? Number(startDayStr) : 1;
+      const cycleConfig = await getCycleConfig();
       const now = new Date();
-      const { from, to } = getMonthBounds(now, startDay);
+      const { from, to } = getCycleBounds(now, cycleConfig);
       if (!cancelled) setMonthBounds({ from, to });
 
       let income = 0;
@@ -384,9 +383,9 @@ export function DashboardScreen() {
       const forecast =
         monthSpent > 0 ? (monthSpent / daysElapsed) * totalDays : null;
 
-      // Same span last month: from last period's start, the same number of ms elapsed.
+      // Same span last cycle: from last period's start, the same number of ms elapsed.
       const lastRef = new Date(from - DAY_MS);
-      const last = getMonthBounds(lastRef, startDay);
+      const last = getCycleBounds(lastRef, cycleConfig);
       const lastSpanSpent = spentIn(
         txs,
         last.from,

@@ -3,10 +3,11 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { Colors } from '../../theme';
 import { MainStackScreenProps } from '../../navigation/types';
 import { useTxStore } from '../../store/txStore';
-import { getSubcategories, getSetting, type Subcategory, type TxRecord } from '../../db/database';
+import { getSubcategories, type Subcategory, type TxRecord } from '../../db/database';
 import { countsTowardTotals } from '../../services/txIntelligence';
 import { getBudgetStatuses, type BudgetStatus } from '../../services/budgets';
-import { getMonthBounds, type PeriodBounds } from '../../utils/period';
+import { currentCycleBounds } from '../../services/cycle';
+import { type PeriodBounds } from '../../utils/period';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { formatAmount } from '../../utils/format';
 import { accountLabel } from '../../utils/accountLabel';
@@ -37,14 +38,12 @@ export function CategoryDetailScreen({ route, navigation }: MainStackScreenProps
     getBudgetStatuses().then(setBudgetStatuses);
   }, [categoryId]);
 
-  // No period param passed in (e.g. deep link) — fall back to the current custom month.
+  // No period param passed in (e.g. deep link) — fall back to the current cycle.
   useEffect(() => {
     if (parsedBounds) return;
     let cancelled = false;
-    getSetting('month_start_day').then((startDayStr) => {
-      if (cancelled) return;
-      const startDay = startDayStr ? Number(startDayStr) : 1;
-      setFallbackBounds(getMonthBounds(new Date(), startDay));
+    currentCycleBounds().then((bounds) => {
+      if (!cancelled) setFallbackBounds(bounds);
     });
     return () => {
       cancelled = true;

@@ -6,11 +6,10 @@ import {
   loadTxRecords,
   getCategories,
   getSubcategories,
-  getSetting,
   type TxRecord,
 } from '../db/database';
 import { countsTowardTotals } from './txIntelligence';
-import { getMonthBounds } from '../utils/period';
+import { currentCycleBounds } from './cycle';
 import { formatAmount } from '../utils/format';
 import { cleanupOldExports } from '../utils/cacheCleanup';
 
@@ -29,11 +28,9 @@ function isCredit(tx: TxRecord): boolean {
   return tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
 }
 
-/** E1 — respects the custom month start day (Plan 5 setting `month_start_day`). */
+/** E1 — respects the app-wide budget cycle (calendar month start day, or fixed N-day). */
 export async function buildMonthlySummary(ref: Date): Promise<MonthlySummary> {
-  const startDayRaw = await getSetting('month_start_day');
-  const startDay = startDayRaw ? parseInt(startDayRaw, 10) : 1;
-  const { from, to } = getMonthBounds(ref, startDay);
+  const { from, to } = await currentCycleBounds(ref);
 
   const txs = await loadTxRecords();
   const categories = await getCategories();

@@ -4,7 +4,8 @@ import {
   isMerchantExcludedFromBudget, type Budget, type TxRecord, type MerchantPrivacyRule,
 } from '../db/database';
 import { countsTowardTotals } from './txIntelligence';
-import { getMonthBounds, getWeekBounds, getCustomBounds, type PeriodBounds } from '../utils/period';
+import { getCycleBounds, type PeriodBounds } from '../utils/period';
+import { getCycleConfig, currentCycleBounds } from './cycle';
 import { postBudgetAlert } from '../notifications/notifications';
 import { formatAmount } from '../utils/format';
 import { logEvent } from './logger';
@@ -55,28 +56,10 @@ async function sumSpend(
   return Math.max(0, total);
 }
 
-async function currentBounds(budget: Budget, now: Date): Promise<PeriodBounds> {
-  if (budget.periodType === 'weekly') return getWeekBounds(now);
-  if (budget.periodType === 'custom') {
-    return getCustomBounds(now, budget.customDays ?? 1, new Date(budget.createdAt));
-  }
-  const startDayStr = await getSetting('month_start_day');
-  const startDay = startDayStr ? Number(startDayStr) : 1;
-  return getMonthBounds(now, startDay);
-}
-
-function previousWeekRef(now: Date): Date {
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-}
-
-// Previous period's bounds for rollover — for 'custom', periods are fixed anchor-aligned
-// blocks, so the previous one is found by re-deriving getCustomBounds one millisecond
-// before the current period started, rather than a fixed day offset like weekly uses.
-function previousPeriodBounds(budget: Budget, bounds: PeriodBounds, now: Date): PeriodBounds {
-  if (budget.periodType === 'custom') {
-    return getCustomBounds(new Date(bounds.from - 1), budget.customDays ?? 1, new Date(budget.createdAt));
-  }
-  return getWeekBounds(previousWeekRef(now));
+// Previous cycle's bounds for rollover — re-derives getCycleBounds one millisecond before
+// the current cycle started, so it works the same way for calendar-month and fixed N-day.
+function previousCycleBounds(bounds: PeriodBounds, cfg: Awaited<ReturnType<typeof getCycleConfig>>): PeriodBounds {
+  return getCycleBounds(new Date(bounds.from - 1), cfg);
 }
 
 // `txs`, when passed, is used as-is instead of re-scanning the transactions table — the hot
@@ -87,21 +70,22 @@ function previousPeriodBounds(budget: Budget, bounds: PeriodBounds, now: Date): 
 // long that scan took. Standalone callers (screens) that
 // have no fresh array on hand keep loading it themselves by simply not passing one.
 export async function getBudgetStatuses(now: Date = new Date(), txs?: TxRecord[]): Promise<BudgetStatus[]> {
-  const [budgets, resolvedTxs, privacyRules] = await Promise.all([
+  const [budgets, resolvedTxs, privacyRules, cycleConfig] = await Promise.all([
     getBudgets(),
     txs ?? loadTxRecords(),
     getMerchantPrivacyRules(),
+    getCycleConfig(),
   ]);
   const byId = new Map(resolvedTxs.map((t) => [t.id, t]));
+  const bounds = getCycleBounds(now, cycleConfig);
   const statuses: BudgetStatus[] = [];
 
   for (const budget of budgets) {
-    const bounds = await currentBounds(budget, now);
     const spent = await sumSpend(resolvedTxs, budget.categoryId, bounds, byId, privacyRules);
 
     let limit = budget.amount;
-    if ((budget.periodType === 'weekly' || budget.periodType === 'custom') && budget.rollover) {
-      const lastBounds = previousPeriodBounds(budget, bounds, now);
+    if (budget.rollover) {
+      const lastBounds = previousCycleBounds(bounds, cycleConfig);
       const lastSpent = await sumSpend(resolvedTxs, budget.categoryId, lastBounds, byId, privacyRules);
       const carry = Math.max(0, budget.amount - lastSpent);
       limit = budget.amount + carry;
@@ -129,9 +113,9 @@ export async function checkBudgetAlerts(txs?: TxRecord[]): Promise<void> {
 
     const now = new Date();
     const statuses = await getBudgetStatuses(now, txs);
+    const bounds = await currentCycleBounds(now);
 
     for (const status of statuses) {
-      const bounds = await currentBounds(status.budget, now);
       const baseKey = `budget_alert_sent_${status.budget.id}_${bounds.from}`;
 
       if (status.pct > 100) {

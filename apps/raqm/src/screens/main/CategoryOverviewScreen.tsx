@@ -3,9 +3,10 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { MainStackScreenProps } from '../../navigation/types';
 import { useTxStore } from '../../store/txStore';
-import { getCategories, getSetting, type Category, type TxRecord } from '../../db/database';
+import { getCategories, type Category, type TxRecord } from '../../db/database';
 import { countsTowardTotals } from '../../services/txIntelligence';
-import { getMonthBounds, type PeriodBounds } from '../../utils/period';
+import { currentCycleBounds } from '../../services/cycle';
+import { type PeriodBounds } from '../../utils/period';
 import { formatAmount } from '../../utils/format';
 import { Colors } from '../../theme';
 import { DonutChart, type DonutDatum } from '../../components/DonutChart';
@@ -28,7 +29,7 @@ export function CategoryOverviewScreen({ navigation }: MainStackScreenProps<'Cat
 
   useEffect(() => {
     getCategories().then(setCategories);
-    getSetting('month_start_day').then((day) => setBounds(getMonthBounds(new Date(), day ? Number(day) : 1)));
+    currentCycleBounds().then(setBounds);
   }, []);
 
   const rows = useMemo(() => {
