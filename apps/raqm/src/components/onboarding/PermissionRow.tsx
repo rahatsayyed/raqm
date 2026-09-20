@@ -34,14 +34,23 @@ export function PermissionRow({
   const c = OnbColors[scheme];
   const strokeColor = iconColor === 'notice' ? c.notice : c.accentPrimary;
 
+  // Bug #3 fix: the whole card is the tap target now, not just the small
+  // status glyph — the glyph inside stays a plain View (visual status only).
   return (
     <Animated.View
       entering={FadeInDown.duration(300).delay(index * 80)}
-      style={{ backgroundColor: c.bgSurface, borderRadius: 4, padding: 16, gap: 10, flex: 1 }}
+      style={{ flex: 1, borderRadius: 4, overflow: 'hidden' }}
     >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <Icon name={icon} size={22} color={strokeColor} />
-        <Pressable onPress={onGrant} disabled={granted} hitSlop={8}>
+      <Pressable
+        onPress={onGrant}
+        disabled={granted}
+        hitSlop={8}
+        style={({ pressed }: { pressed: boolean }) => [
+          { backgroundColor: c.bgSurface, padding: 16, gap: 10, opacity: pressed ? 0.85 : 1 },
+        ]}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Icon name={icon} size={22} color={strokeColor} />
           {granted ? (
             <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: c.accentPrimary, alignItems: 'center', justifyContent: 'center' }}>
               <Icon name="check" size={13} color={c.onAccent} />
@@ -49,15 +58,15 @@ export function PermissionRow({
           ) : (
             <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: c.borderSubtle }} />
           )}
-        </Pressable>
-      </View>
-      <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 13, color: c.inkHeadline }}>
-        {title}
-        {optional ? (
-          <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkBody }}> · Optional</Text>
-        ) : null}
-      </Text>
-      <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, lineHeight: 15, color: c.inkBody }}>{reason}</Text>
+        </View>
+        <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 13, color: c.inkHeadline }}>
+          {title}
+          {optional ? (
+            <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkBody }}> · Optional</Text>
+          ) : null}
+        </Text>
+        <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, lineHeight: 15, color: c.inkBody }}>{reason}</Text>
+      </Pressable>
     </Animated.View>
   );
 }

@@ -1,16 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { formatAmount } from '../../utils/format';
-import { loadTxRecords, getCategories } from '../../db/database';
+import { loadTxRecords, getCategories, softDeleteAccountTxs } from '../../db/database';
 import { countsTowardTotals } from '../../services/txIntelligenceCore';
+import { logEvent } from '../../services/logger';
 import { StepDots } from '../../components/onboarding/StepDots';
 import { GlassCard } from '../../components/onboarding/GlassCard';
 import { RqButton } from '../../components/onboarding/RqButton';
 import { Icon } from '../../components/Icon';
 import { useOnbColors } from '../../theme/onboardingColors';
+
+// Account-grouping shape, carried over from the now-merged AccountSelectionScreen
+// (item 6 of the fix list — that screen's own route is no longer navigated to).
+type Account = { id: string; bank: string; last4: string | null; type: string; txCount: number };
 
 // Bar tint order matches the mockup's category-bar colors (dark variant
 // values; light variant swaps only the neutral "Other" grey).
@@ -28,6 +34,40 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
   // nothing downstream reads them; suggestBudgetsFromSpend only needs
   // categorySpend.
   const { transactions } = useOnboardingStore();
+  const [busy, setBusy] = useState(false);
+
+  // Merged in from AccountSelectionScreen: group transactions by
+  // bank+last4, default every account selected, let the user tap to
+  // exclude one (soft-deletes its txs on continue).
+  const accounts = useMemo<Account[]>(() => {
+    const map = new Map<string, Account>();
+    for (const tx of transactions) {
+      const key = `${tx.bankName}|${tx.accountLast4 ?? 'unknown'}`;
+      if (map.has(key)) {
+        map.get(key)!.txCount += 1;
+      } else {
+        map.set(key, {
+          id: key,
+          bank: tx.bankName,
+          last4: tx.accountLast4,
+          type: tx.isFromCard ? 'Credit Card' : 'Bank Account',
+          txCount: 1,
+        });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => b.txCount - a.txCount);
+  }, [transactions]);
+  const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(() => new Set(accounts.map((a) => a.id)));
+  useEffect(() => {
+    setSelectedAccounts(new Set(accounts.map((a) => a.id)));
+  }, [accounts]);
+  const toggleAccount = (id: string) => {
+    setSelectedAccounts((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
 
   const [categorySpend, setCategorySpend] = useState<Record<string, number>>({});
   useEffect(() => {
@@ -90,9 +130,12 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16 }} className="px-lg pb-lg">
+    <View
+      style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }}
+      className="px-lg"
+    >
       <View className="mb-lg">
-        <StepDots total={7} filled={5} scheme={scheme} />
+        <StepDots total={8} filled={5} scheme={scheme} />
       </View>
 
       <Text style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 28, color: c.inkHeadline }} className="mb-md">
@@ -145,6 +188,44 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
         </ScrollView>
       </View>
 
+      {accounts.length > 0 && (
+        <View className="mt-md">
+          <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 12, color: c.inkBody }} className="mb-sm">
+            Accounts found · tap to include or exclude
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+            {accounts.map((account, i) => {
+              const isSelected = selectedAccounts.has(account.id);
+              return (
+                <Animated.View key={account.id} entering={FadeInDown.duration(350).delay(i * 60)}>
+                  <Pressable
+                    onPress={() => toggleAccount(account.id)}
+                    style={{
+                      width: 200,
+                      backgroundColor: c.bgSurface,
+                      borderRadius: 4,
+                      padding: 12,
+                      borderWidth: 1,
+                      borderColor: isSelected ? c.accentPrimary : c.borderSubtle,
+                      opacity: isSelected ? 1 : 0.6,
+                      gap: 4,
+                    }}
+                  >
+                    <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 13, color: c.inkHeadline }} numberOfLines={1}>
+                      {account.bank}
+                    </Text>
+                    <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkBody }} numberOfLines={1}>
+                      {account.type}
+                      {account.last4 ? ` •••• ${account.last4}` : ''} · {account.txCount} txns
+                    </Text>
+                  </Pressable>
+                </Animated.View>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
       <Pressable onPress={() => navigation.navigate('GPayPdfImport')} className="mt-md mb-sm">
         <Text
           style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkBody, textAlign: 'center', textDecorationLine: 'underline' }}
@@ -156,7 +237,27 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
       <RqButton
         label="Set your budget"
         scheme={scheme}
-        onPress={() => navigation.replace('BudgetSetup', { categorySpend })}
+        disabled={busy}
+        onPress={async () => {
+          if (busy) return;
+          setBusy(true);
+          try {
+            // Carried over from AccountSelectionScreen: deselected accounts'
+            // transactions are soft-deleted (recoverable from More → Deleted
+            // transactions), never hard-removed.
+            for (const acc of accounts) {
+              if (!selectedAccounts.has(acc.id)) {
+                await softDeleteAccountTxs(acc.bank, acc.last4 ?? null);
+              }
+            }
+          } catch (e) {
+            console.warn('Deselect cleanup failed:', e);
+            logEvent('error.caught', `ScanCompleteScreen deselect cleanup: ${e instanceof Error ? e.message : String(e)}`);
+          } finally {
+            setBusy(false);
+          }
+          navigation.replace('BudgetSetup', { categorySpend });
+        }}
         icon={<Icon name="arrow-right" size={18} color={c.onAccent} />}
       />
     </View>

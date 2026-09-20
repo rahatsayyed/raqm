@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Platform, PermissionsAndroid, ScrollView, AppState, Pressable } from 'react-native';
+import { View, Text, Platform, PermissionsAndroid, ScrollView, AppState } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import * as Location from 'expo-location';
@@ -168,9 +168,12 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
   }, [isAndroid, navigation]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16 }} className="px-lg pb-xl">
+    <View
+      style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }}
+      className="px-lg"
+    >
       <View className="mb-lg">
-        <StepDots total={7} filled={2} scheme={scheme} />
+        <StepDots total={8} filled={2} scheme={scheme} />
       </View>
 
       <Text style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 30, color: c.inkHeadline }} className="mb-xs">
@@ -246,15 +249,8 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
         Everything is processed on your device. Nothing leaves your phone.
       </Text>
 
-      {isAndroid && (
-        <Pressable onPress={() => navigation.navigate('GPayPdfImport')} className="mb-md">
-          <Text
-            style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 13, color: c.accentPrimary, textAlign: 'center' }}
-          >
-            Or import a PDF statement instead
-          </Text>
-        </Pressable>
-      )}
+      {/* Bug #4 fix: PDF-import belongs on ScanComplete per the artifact, not here —
+          removed the duplicate link that used to live on this screen. */}
 
       <RqButton label="Continue" scheme={scheme} onPress={next} disabled={!canContinue} />
     </View>

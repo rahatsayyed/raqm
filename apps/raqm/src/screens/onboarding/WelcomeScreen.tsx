@@ -1,43 +1,48 @@
 import React from 'react';
 import { View, Text, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import * as Notifications from 'expo-notifications';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { RqButton } from '../../components/onboarding/RqButton';
 import { GlassCard } from '../../components/onboarding/GlassCard';
 import { StepDots } from '../../components/onboarding/StepDots';
 import { useOnbColors } from '../../theme/onboardingColors';
+import { Spacing } from '../../theme';
 
-// I9 fix (kept from the pre-redesign screen): shared with iOS, where SMS
-// reading is impossible and the next screens are manual/PDF entry.
 const isAndroid = Platform.OS === 'android';
 
-// Onboarding-v3 redesign (Android scope only — see this task's report for
-// the iOS note). Matches the claude-design mockup's Welcome-Dark/Light.
+// Onboarding-v3 redesign, both platforms. Matches the claude-design mockup's
+// Welcome-Dark/Light (Android) and Welcome-iOS-Dark/Light.
 export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) {
   const insets = useSafeAreaInsets();
   const { scheme, colors: c } = useOnbColors();
 
-  return (
-    <View style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16 }} className="px-lg pb-xl">
-      {/* Sanctioned single gradient exception is Home's hero number, not here —
-          this radial glow is the mockup's own decorative circle, kept subtle
-          (opacity 0.06, matching the pre-redesign screen's own glow). */}
-      <Animated.View
-        entering={FadeIn.duration(600)}
-        style={{
-          position: 'absolute',
-          alignSelf: 'center',
-          top: '35%',
-          width: 288,
-          height: 288,
-          borderRadius: 144,
-          backgroundColor: c.accentPrimary,
-          opacity: 0.06,
-        }}
-      />
+  const getStarted = async () => {
+    if (isAndroid) {
+      navigation.navigate('Permissions');
+      return;
+    }
+    // iOS has no dedicated Permissions screen — notification permission is
+    // requested inline here, on "Get started" tap, per the artifact.
+    try {
+      await Notifications.requestPermissionsAsync();
+    } catch {
+      // Non-fatal: proceed to the import flow regardless of the outcome.
+    }
+    navigation.navigate('ImportStatement');
+  };
 
-      <StepDots total={6} filled={1} scheme={scheme} />
+  return (
+    <View
+      style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16, paddingBottom: insets.bottom + Spacing.xl }}
+      className="px-lg"
+    >
+      {/* Bug #1 fix: this screen previously had a self-added 288px circular
+          radial glow behind the copy — not present anywhere in the current
+          artifact (Welcome-Dark/Light, Welcome-iOS-Dark/Light), removed. */}
+
+      <StepDots total={isAndroid ? 8 : 5} filled={1} scheme={scheme} />
 
       <Text
         style={{ fontFamily: 'InstrumentSans_400Regular', color: c.inkBody, fontSize: 13, letterSpacing: 2.1 }}
@@ -60,14 +65,14 @@ export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) 
         >
           {isAndroid
             ? 'Raqm reads your bank SMS on this phone. Nothing is uploaded, nothing is shared, no bank login, ever.'
-            : 'Add your accounts and Raqm turns them into a clear picture of where your money goes. Nothing leaves your phone.'}
+            : 'Add a statement, set a budget, and Raqm keeps a quiet eye on your spend — no bank login, ever.'}
         </Animated.Text>
       </View>
 
       <Animated.View entering={FadeInDown.duration(500).delay(300)}>
         <GlassCard scheme={scheme}>
           <View style={{ gap: 16 }}>
-            <RqButton label="Get started" scheme={scheme} onPress={() => navigation.navigate('Permissions')} />
+            <RqButton label="Get started" scheme={scheme} onPress={getStarted} />
             <Text style={{ fontFamily: 'InstrumentSans_400Regular', color: c.inkBody, fontSize: 12, textAlign: 'center' }}>
               Private by design. No servers involved.
             </Text>
