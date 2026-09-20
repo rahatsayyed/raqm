@@ -1,17 +1,22 @@
 # DESIGN.md — Raqm Design Language (RDL)
 
-Version 2.0 · Living document · Rebuilt 2026-09-16
+Version 3.0 · Living document · Rebuilt 2026-09-20
 Optimized for AI-agent consumption — every screen must comply with these rules without re-explanation.
 In code, all values below come from `src/theme` tokens (`Colors.*`, `Typography.*`, `Spacing.*`, `Radius.*`) — never hardcoded.
 
-**v2.0 note:** v1.1's visual system (color, typography, shape, motion) was written
-quickly and never checked against real reference systems. v2.0 rebuilds those
-sections from studying 15 finance apps praised for onboarding/UI (Copilot
-Money, Monarch, YNAB, Cleo, Revolut, N26, Wise, Apple Card/Wallet, and others)
-and the actual concrete design systems Apple and Stripe publish, plus general
-anti-slop UI critique. Nothing here was carried over by default — every value
-below is a deliberate, re-justified choice, not inertia from v1.1. Product/UX
-principles that were never in question (§0, §1, §11–§16) are unchanged.
+**v3.0 note:** color (§2), typography (§3), shape (§5), and elevation (§6)
+are replaced with the values locked during the 2026-09 onboarding
+claude-design exploration
+(`docs/superpowers/specs/2026-09-17-onboarding-claude-design-decisions.md`).
+That exploration also designed a light mode; **this app stays dark-only** —
+adding a light mode is a separate product decision this rewrite does not
+make, so only the exploration's dark-mode values are adopted here. Some
+tokens below (marked "derived") were not literally specified for a
+production app-wide scale by the exploration — it only fixed a handful of
+onboarding-screen values — so this doc extends them at the same ratios the
+old v2.0 scale used, rather than inventing new ones freely. Product/UX
+principles that were never in question (§0, §1, §11–§16) remain unchanged
+from v2.0.
 
 ## 0. Product Context
 
@@ -42,106 +47,101 @@ Apply these to every screen, in priority order:
 4. **Never shame, never guilt, never celebrate overspending.** Neutral, advisor-toned observations only.
 5. **Density: minimal by default.** When in doubt, remove an element rather than add one.
 
-## 2. Color System (rebuilt)
+## 2. Color System (v3.0 — from the onboarding claude-design exploration)
 
-Dark mode is the only mode. The palette is "Forest, refined" — deep green
-structure with one precise accent, chosen deliberately because it already
-matches a legitimate non-generic premium-consumer family (deep green + bone +
-amber, as opposed to the AI-default beige/brass/oxblood palette common to
-"premium" briefs) — not because it's what the app already had. Every value
-below is freshly derived, not copied from v1.1.
+Dark mode is the only mode (app scope — the exploration also designed a
+light mode, not adopted here; see the v3.0 note above). The palette keeps
+the same "one precise accent on a near-black ground" family as v2.0's
+Forest system, re-derived from the exploration's onboarding screens rather
+than kept as v2.0 wrote it.
 
-Discipline borrowed directly from Apple and Stripe: **one accent color, used
-sparingly, never decoratively.** No gradients anywhere except one radial glow
-behind the Home hero number — this is the single sanctioned exception in the
-entire app, and it exists nowhere else.
+Discipline unchanged from v2.0: **one accent color, used sparingly, never
+decoratively.** No gradients anywhere except one radial glow behind the
+Home hero number — the single sanctioned exception in the entire app.
 
 ### Core palette
 
-| Token | Hex | Use |
-|---|---|---|
-| bg-base | `#0A0E0C` | App background — warm near-black, never pure `#000000` |
-| bg-surface | `#10140F` | Cards, sheets |
-| bg-surface-raised | `#161C15` | Nested cards, modals |
-| border-subtle | `#232B22` | Card borders, dividers (borders replace shadows) |
-| ink-headline | `#F2F0E9` | Headings, key numbers — warm off-white, never pure `#FFFFFF` |
-| ink-body | `#9FA89C` | Body copy |
-| ink-label | `#5B635A` | Timestamps, annotations |
+| Token | Hex | Use | Source |
+|---|---|---|---|
+| bg-base | `#0B0C0E` | App background — warm near-black, never pure `#000000` | Exploration §5.1, dark background |
+| bg-surface | `#15171A` | Cards, sheets | Exploration §5.1, dark card surface |
+| bg-surface-raised | `#1C1F23` | Nested cards, modals | Derived — one step lighter than bg-surface, same ratio v2.0 used |
+| border-subtle | `rgba(255,255,255,0.12)` | Card borders, dividers (borders replace shadows) | Exploration §5.1, dark hairline token |
+| ink-headline | `#F2F1EC` | Headings, key numbers — warm off-white, never pure `#FFFFFF` | Exploration §5.1, dark primary text |
+| ink-body | `#B7B6AE` | Body copy | Exploration §5.1, dark secondary text |
+| ink-label | `#6B6A62` | Timestamps, annotations | Derived — exploration didn't define a third text tier; kept v2.0's label-vs-body contrast ratio |
 
 ### Accent / semantic roles
 
-| Token | Hex | Emotion | Use |
-|---|---|---|---|
-| accent-primary | `#3EBD7E` | Trust / confidence | Primary actions, positive metrics, brand mark — the ONE accent, used sparingly |
-| accent-deep | `#173325` | Structure | Selected states, secondary containers |
-| notice | `#C68B4D` | Awareness (not danger) | Flag something worth attention — never alarm-red |
-| error-muted | `#C4707A` | Honesty | Failed transactions, hard errors only |
+| Token | Hex | Emotion | Use | Source |
+|---|---|---|---|---|
+| accent-primary | `#66CCAC` | Trust / confidence | Primary actions, positive metrics, brand mark — the ONE accent, used sparingly | Exploration's locked dark-mode CTA color, hue-locked to the light-mode brand green and verified at 9.5:1 contrast against `#14140F` text |
+| accent-deep | `#1F4A3B` | Structure | Selected states, secondary containers | Derived — same hue (161°) as accent-primary at lower lightness, not a literal exploration value |
+| notice | `#D9A85C` | Awareness (not danger) | Flag something worth attention — never alarm-red | Exploration's Permissions-screen location icon color |
+| error-muted | `#E08672` | Honesty | Failed transactions, hard errors only | Exploration §12, borrowed dark-mode error tint |
 
 Note: `error` (`#ffb4ab`) is the legacy MD3 token, still in code for
-back-compat — `error-muted` is the correct v2.0 token name for new work.
+back-compat — `error-muted` is the correct token name for new work.
 
-Rules:
+Rules (unchanged from v2.0):
 
 - One accent color per screen, used identically everywhere it appears (the same green in a button is the same green in a positive metric — no per-screen accent drift).
 - Green is never used for excitement or celebration — only confidence/positive-direction.
 - notice (amber), not red, is the default "pay attention" color. Red is reserved for actual failures (declined payment, parsing error), not "you spent more than usual."
 - No gradients except the single radial glow behind the Home hero number — nowhere else, no exceptions.
-- The secondary "moss" tier from v1.1 is retired — fewer color tokens means fewer places accent discipline can leak.
 
-## 3. Typography (rebuilt)
+## 3. Typography (v3.0 — from the onboarding claude-design exploration)
 
 Typography carries the design — treat it as the primary visual element, not decoration around it.
 
 **Font stack:**
 
-- **Inter** — every role. Titles, body copy, statements, section headers, labels, buttons. No serif anywhere.
-- **JetBrains Mono** — every number and amount. Balances, transaction amounts, counters, OTP, stats. Mono guarantees column alignment; no tabular-figure workaround needed.
-- **Material Symbols Outlined**, implemented via `@expo/vector-icons`'s `MaterialCommunityIcons` — not hand-drawn SVGs (see §8).
+- **Newsreader (italic)** — display / headline role only (screen titles, hero headline). Replaces Inter for this one role.
+- **Instrument Sans** — body, labels, buttons, section headers. Replaces Inter everywhere else.
+- **JetBrains Mono** — every number and amount, unchanged from v2.0. Balances, transaction amounts, counters, OTP, stats.
+- **Material Symbols Outlined**, implemented via `@expo/vector-icons`'s `MaterialCommunityIcons` — unchanged from v2.0 (see §8).
 
-**v1.1 used Fraunces (a serif) for headline "Statement" copy — retired in v2.0.**
-Studying Raqm's own named references (Apple, Stripe) showed neither uses a
-serif anywhere; both build "editorial premium" through negative tracking and
-weight choice on a sans font alone. A display serif for a "creative/editorial"
-brief is also a specifically flagged default pattern in UI-taste critique —
-reaching for it here was inertia, not a considered choice. Dropped.
+**Why the swap:** the exploration deliberately avoided reusing Inter
+because it's a flagged AI-default typeface, and picked a serif display
+face (Newsreader, italic) over a neutral sans (Instrument Sans) for body —
+the same "distinctive display + neutral workhorse" split Copilot Money and
+Apple both use, just with a serif carrying the display role instead of
+tracking/weight tricks on a sans face. This reverses v2.0's own explicit
+decision to drop Fraunces — that reversal is intentional, re-argued here,
+not an oversight: v2.0 dropped Fraunces because Apple/Stripe don't use a
+serif; this exploration instead treats the serif itself as the signature
+element (craft-lens "one signature element, everything else quiet"), so
+the two decisions optimize for different things and this one wins in v3.0.
 
-**Weight discipline:** Inter 300 / 400 / 600 / 700 only. Weight 500 is
-deliberately omitted, the same way Apple's system omits an equivalent
-mid-weight — a small precision device that keeps the type scale from feeling
-generic.
+**Weight discipline:** Newsreader 400 (italic only, headlines); Instrument
+Sans 400/500/600; JetBrains Mono 500/600 for numbers. Avoid weights lighter
+than 400 at any text size — `typography.md`'s legibility guidance flags
+light/thin weights as a legibility risk, especially small.
 
-**Tracking discipline (new):** large text gets negative letter-spacing,
-tightening as size increases — the concrete mechanism Apple and Stripe both
-use to signal precision instead of a serif:
+**Type roles** (not H1/H2/Body — every style has a job). Sizes below are the
+exploration's locked §10 scale; `Typography.*` token names in
+`src/theme/typography.ts` should be renamed/remapped to match on
+implementation, not layered on top as new tokens:
 
-| Size | Tracking |
-|---|---|
-| 44px+ (Metric hero) | -1.0px to -1.2px |
-| 32px (Statement) | -0.6px to -0.8px |
-| 20-24px | -0.3px |
-| Below 20px | 0 (no tracking adjustment) |
+| Role | Font | Size / weight | Example |
+|---|---|---|---|
+| Display / hero | Newsreader italic | 40px · 400 | The one screen that earns the largest size — first impression (e.g. Welcome) |
+| Display / screen title | Newsreader italic | 26–30px · 400 | Every other screen's headline |
+| Body / supporting text | Instrument Sans | 15–16px · 400 | Comfortably above the 11pt floor |
+| Body / card label | Instrument Sans | 12–14px · 600 | Bumped to Semibold near the small end — weight compensates for size |
+| Caption / secondary line | Instrument Sans | 11–12px · 400 | At or just above the 11px floor — smallest text in the system, never smaller |
+| Metric / numeric hero | JetBrains Mono | 44px · 600 | "₹28,430" (Home hero, scan count-up) |
+| Numeric / list-row amount | JetBrains Mono | 16px · 600 | Per-transaction/per-category amount in a row |
+| Numeric / subtotal | JetBrains Mono | 22px · 600 | A category or section subtotal |
+| Numeric / screen total | JetBrains Mono | 34px · 600 | The one large total on a screen — distinct from the 44px hero, which appears once |
+| Section | Instrument Sans | 13px uppercase · 600 | "RECENT ACTIVITY" |
+| Label | Instrument Sans | 11px uppercase · 600 | Form field labels, badges, step counters |
 
-**Type roles** (not H1/H2/Body — every style has a job). Token names are the `Typography.*` keys in `src/theme/typography.ts`:
-
-| Role | Token | Font | Size / weight / tracking | Example |
-|---|---|---|---|---|
-| Statement | `statementLg` / `statementMobile` | Inter | 32/28px · 300 · -0.6px | "You spent more on dining this month." |
-| Metric | `metricHero` | JetBrains Mono | 44px · 500 · -1.0px | "₹28,430" (Home hero) |
-| Numeric | `numericXl/Lg/Md/Sm` | JetBrains Mono | 48/32/20/14px | All other amounts and stats |
-| Section | `sectionHeader` | Inter | 13px uppercase · 600 · +letterspacing | "RECENT ACTIVITY" |
-| Insight | `insightReading` | Inter | 17px · 600 | "Weekend dining increased 28%." |
-| Reading | `bodyStandard` | Inter | 15px · 400 | Body copy |
-| Supporting | `supportingText` | Inter | 13px · 400 | Secondary line under a Reading block |
-| Annotation | `annotation` | Inter | 12px · 400, ink-label | "Updated 2 hours ago" |
-| Label | `labelCaps` | Inter | 11px uppercase · 600 | Form field labels, badges, step counters |
-| Mono label | `labelLg` / `labelSm` | JetBrains Mono | 14/12px | Data-adjacent labels: codes, tickers |
-
-Legacy tokens (`displayLg`, `headlineMd/Sm`, `titleLg`, `bodyLg/Md/Sm`) remain
-in active use by several reskinned screens (DateRange, AccountSelection,
-ScanComplete, SignUp, OTPVerification, NameEntry) — prefer the RDL roles
-above for new work, but this is not a "retired, do not use" list. `Fraunces`
-(`font-fraunces`) is the one genuinely retired piece: it's fully removed
-from the dependency tree and used nowhere in code.
+Legacy tokens (`displayLg`, `headlineMd/Sm`, `titleLg`, `bodyLg/Md/Sm`,
+`statementLg`, `insightReading`) map to the roles above by size/weight, not
+by name — expect a token rename pass, not a silent value swap, when this is
+implemented. `Fraunces` stays retired from the dependency tree; Newsreader
+is a new font dependency this rewrite introduces.
 
 ## 4. Layout & Grid
 
@@ -150,29 +150,59 @@ from the dependency tree and used nowhere in code.
 - Every screen has exactly one focal point above the fold.
 - Cards summarize; they never contain everything. Design for "tap to expand," not "cram it in."
 
-## 5. Shape (rebuilt)
+## 5. Shape (v3.0 — from the onboarding claude-design exploration)
 
-A precise numeric scale, not an arbitrary pair of values — the Apple/Stripe pattern is a real scale from sharp to pill, with pill reserved exclusively for the most "transactional" elements (CTAs, chips):
+**The radius scale shrinks and the CTA is no longer a pill.** This is the
+single biggest visual-philosophy change in v3.0: v2.0 reserved the
+maximum radius (a full pill) for CTAs specifically so shape alone made the
+primary action unambiguous. The exploration's locked scale gives the CTA a
+*smaller* radius than the cards around it instead — a deliberate "nothing
+shouts, color alone signals the action" trade-off, decided and written
+down as a trade-off, not an accident (see the exploration doc's §6.1).
 
-Values below mirror `tailwind.config.js`'s actual `borderRadius` scale —
-this table describes the real scale in code, not an aspirational one:
+Values below replace `tailwind.config.js`'s `borderRadius` scale entirely —
+old values on the left are what v2.0 shipped, for migration reference:
 
-| Token | Radius | Use |
-|---|---|---|
-| `radius-sm` | 4px | Inline chips, small tags |
-| `radius-md` | 8px | Buttons, inputs |
-| `radius-lg` | 12px | Cards |
-| `radius-xl` | 16px | Sheets, modals |
-| `radius-2xl` | 24px | Larger sheets |
-| `radius-3xl` | 32px | Rare, full-bleed containers |
-| `radius-pill` (9999px, via `rounded-full`) | — | Primary CTA buttons only — never cards, never containers |
+| Token | Old (v2.0) | New (v3.0) | Use |
+|---|---|---|---|
+| `radius-outer` | `radius-lg` 12px | **6px** | Outer container / glass card |
+| `radius-inner` | `radius-md` 8px | **4px** | Inner cell, button, input |
+| `radius-cta` | `radius-pill` 9999px | **3px** | Primary CTA — no longer a pill; smaller than `radius-inner` on purpose (see above) |
+| `radius-dot` | *(none — dots had no dedicated token)* | **1px** | Progress dots, tiny indicators |
 
-Circles reserved exclusively for: avatars, profile images, chart nodes. Never for buttons or containers. Radius should read as engineered precision, not friendly/bubbly.
+`radius-sm`/`radius-xl`/`radius-2xl`/`radius-3xl` (4/16/24/32px) had no
+equivalent in the exploration's locked scale — it only fixed four values
+for onboarding screens, not a full app-wide scale. Keep those legacy
+values for anything that isn't one of the four roles above until they are
+explicitly revisited.
 
-## 6. Elevation (rebuilt: one shadow token, not several)
+Circles remain reserved exclusively for: avatars, profile images, chart
+nodes — never for buttons or containers. Radius should read as engineered
+precision, not friendly/bubbly — the new scale intensifies that intent
+rather than reversing it.
 
-- No drop shadows as the default elevation method. Layer hierarchy through spacing, border-subtle, and contrast between bg-surface levels instead — matches Apple's "no shadows on cards/buttons/text/chrome" rule exactly.
-- **Exactly one shadow value exists in this system:** `0 8px 24px rgba(0,0,0,0.28)`, used only where elevation is unavoidable (modals over content, the one exception image/hero treatment). No screen may define its own shadow color, opacity, or radius — if a screen currently has a custom shadow object, it is a bug to fix, not a variant to keep.
+## 6. Elevation (v3.0 — no shadow token at all)
+
+**v2.0's one-shadow-token rule is retired, not just narrowed.** The
+exploration's model (`materials.md`'s own elevation vocabulary) is blur and
+translucency, never a drop shadow layered under an element — depth comes
+from how much of the background shows through, not a shadow drawn under
+it.
+
+- No drop shadows anywhere, including modals — the previous exception
+  (`0 8px 24px rgba(0,0,0,0.28)` for modals) is removed. Replace it with a
+  translucent glass surface instead (below).
+- **One glass surface per screen, never stacked**: `background:
+  rgba(255,255,255,0.06)`, `backdrop-filter: blur(24px) saturate(1.3)`,
+  `border: 1px solid rgba(255,255,255,0.12)` (the border-subtle token),
+  `inset 0 1px 0 rgba(255,255,255,0.08)` for a top highlight. Use it for
+  the one elevated container on a screen — a modal, a sheet, an onboarding
+  decision card — never for ordinary content cards, which stay flat
+  `bg-surface` with no blur.
+- Library: `expo-blur`, already how the exploration built this — no new
+  dependency needed. Ordinary card-to-card hierarchy still comes from
+  spacing, border-subtle, and contrast between `bg-surface` levels, as in
+  v2.0 — only the *elevated-layer* case changes.
 
 ## 7. Motion
 
@@ -202,7 +232,7 @@ Priority order when representing data: Insight → Comparison → Narrative → 
 State each component's job, not just its appearance:
 
 - **Cards** — summarize and invite exploration. Never the full data dump.
-- **Buttons** — commit an action. Primary CTAs use `radius-pill`; nothing else does.
+- **Buttons** — commit an action. Primary CTAs use `radius-cta` (3px, §5) with `padding:16px 24px` — no longer a pill (v3.0 change).
 - **Links** — navigate.
 - **Badges** — classify (never used for CTAs).
 - **Inputs** — ask for one thing at a time.
@@ -240,6 +270,27 @@ Never "No data." Always frame as early-stage learning:
 - Respect reduced-motion OS setting — fall back to instant Fade only.
 - Touch targets: 44×44px minimum.
 - Typography must scale with system font-size settings without breaking layout.
+
+**Checked-and-confirmed rules from the 2026-09 onboarding claude-design
+exploration** (`docs/superpowers/specs/2026-09-17-onboarding-claude-design-decisions.md`)
+— these three items do not conflict with anything above, so they are
+promoted into this doc directly rather than left exploration-only:
+
+- **CTA tap-target math**: a primary CTA using `padding:16px 24px` around
+  16px/600-weight label text renders at 16 + ~19 + 16 ≈ 51px tall. That
+  clears the 44×44px minimum above with margin. Any future CTA padding
+  change must be re-checked against 44px before shipping — do not assume
+  it still clears just because the old one did.
+- **Screen top padding is safe-area-relative, never a fixed number.** Use
+  `useSafeAreaInsets().top + 16` (from `react-native-safe-area-context`),
+  not a hardcoded px value — a fixed number only looks right on the one
+  device it was eyeballed against (notch vs. Dynamic Island vs. none vary
+  the real inset).
+- **Numeric amount sizes are named steps, not one wide range**: a
+  list-row amount, a subtotal, and a screen-level total are three
+  distinct sizes, not "somewhere between 16 and 38px." When adding a new
+  numeric role, name which of the three it is rather than picking an
+  in-between size.
 
 ## 15. Hard Constraints — Never Generate
 
