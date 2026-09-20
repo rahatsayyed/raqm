@@ -49,21 +49,16 @@ export function ImportStatementScreen({ navigation }: OnboardingScreenProps<'Imp
       </Animated.View>
 
       <View style={{ gap: 14 }}>
-        <RqButton
-          label="Import a PDF statement"
-          scheme={scheme}
-          onPress={() => navigation.navigate('GPayPdfImport')}
-        />
-        <Pressable onPress={() => navigation.navigate('BudgetSetup')}>
-          <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 13, color: c.accentPrimary, textAlign: 'center' }}>
-            Enter accounts manually instead
-          </Text>
-        </Pressable>
         <Pressable onPress={() => navigation.navigate('BudgetSetup')}>
           <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 13, color: c.inkBody, textAlign: 'center' }}>
             Skip for now
           </Text>
         </Pressable>
+        <RqButton
+          label="Import a PDF statement"
+          scheme={scheme}
+          onPress={() => navigation.navigate('GPayPdfImport')}
+        />
       </View>
     </View>
   );
