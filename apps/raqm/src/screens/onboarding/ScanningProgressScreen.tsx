@@ -24,9 +24,17 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
   const [status, setStatus] = useState('Reading messages');
   const progress = useRef(new RNAnimated.Value(0)).current;
   const [progressPct, setProgressPct] = useState(0);
+  // Bug #5 fix: the final transaction count, known once parsing finishes but
+  // used to drive the *displayed* count progressively as the bar animates,
+  // instead of jumping straight to the total. A ref (not state) since the
+  // progress listener reads it on every frame.
+  const finalCountRef = useRef(0);
 
   useEffect(() => {
-    const id = progress.addListener(({ value }) => setProgressPct(value));
+    const id = progress.addListener(({ value }) => {
+      setProgressPct(value);
+      setTxCount(Math.round(value * finalCountRef.current));
+    });
     return () => progress.removeListener(id);
   }, [progress]);
 
@@ -39,6 +47,18 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
         const messages = await SmsReader.readInbox(from, to);
         setSmsCount(messages.length);
 
+        setStatus('Extracting transactions');
+        const parsed = [];
+        for (const msg of messages) {
+          if (!BankParserFactory.isKnownBankSender(msg.sender)) continue; // S5
+          const tx = BankParserFactory.parse(msg.body, msg.sender, msg.timestamp);
+          if (tx) parsed.push(tx);
+        }
+        // Final count known now — the progress listener above uses it to
+        // grow the displayed number in sync with the bar, instead of the
+        // number jumping to the total immediately while the bar keeps animating.
+        finalCountRef.current = parsed.length;
+
         RNAnimated.timing(progress, {
           toValue: 1,
           duration: Math.max(2000, messages.length * 10),
@@ -46,23 +66,12 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
           useNativeDriver: false,
         }).start();
 
-        setStatus('Extracting transactions');
-        const parsed = [];
-        for (const msg of messages) {
-          if (!BankParserFactory.isKnownBankSender(msg.sender)) continue; // S5
-          const tx = BankParserFactory.parse(msg.body, msg.sender, msg.timestamp);
-          if (tx) {
-            parsed.push(tx);
-            setTxCount(parsed.length);
-          }
-        }
-
         await setTransactions(parsed);
         setStatus(`Found ${parsed.length} transactions`);
         await runDetectionJobs();
         await matchSplitPayments();
 
-        setTimeout(() => navigation.replace('AccountSelection'), 1200);
+        setTimeout(() => navigation.replace('ScanComplete'), 1200);
       } catch (e) {
         // Don't silently land on an empty AccountSelection pretending success —
         // surface the failure and give the DB write a second chance before moving on.
@@ -78,14 +87,16 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
             const tx = BankParserFactory.parse(msg.body, msg.sender, msg.timestamp);
             if (tx) parsed.push(tx);
           }
+          finalCountRef.current = parsed.length;
+          setTxCount(parsed.length);
           await setTransactions(parsed);
           setStatus(`Found ${parsed.length} transactions`);
-          setTimeout(() => navigation.replace('AccountSelection'), 1200);
+          setTimeout(() => navigation.replace('ScanComplete'), 1200);
         } catch (retryError) {
           console.warn('Onboarding scan retry failed:', retryError);
           logEvent('error.caught', `ScanningProgressScreen retry: ${retryError instanceof Error ? retryError.message : String(retryError)}`);
           setStatus('Scan failed. You can re-scan later from More → Re-scan SMS.');
-          setTimeout(() => navigation.replace('AccountSelection'), 2500);
+          setTimeout(() => navigation.replace('ScanComplete'), 2500);
         }
       }
     };
@@ -95,9 +106,12 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
   }, []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16 }} className="px-lg pb-xl">
+    <View
+      style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }}
+      className="px-lg"
+    >
       <View style={{ marginBottom: 'auto' }}>
-        <StepDots total={7} filled={4} scheme={scheme} />
+        <StepDots total={8} filled={4} scheme={scheme} />
       </View>
 
       <View style={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 28 }}>

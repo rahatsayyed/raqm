@@ -11,9 +11,13 @@ import { Spacing } from '../../theme';
 import { getCategoryIdByName, upsertBudget } from '../../db/database';
 import { suggestBudgetsFromSpend } from '../../services/onboarding/budgetSuggestions';
 
-// C4 fix (kept from pre-redesign screen): 'Dining' isn't a real category —
-// the seed list in database.ts uses 'Food & Drinks'.
-const DEFAULT_CATEGORIES = ['Food & Drinks', 'Groceries', 'Transport', 'Shopping', 'Bills'];
+// Full app-wide 12-category list (matches the canonical names in database.ts's
+// DEFAULT_CATEGORIES after the v19 migration) — was a hardcoded 5-category
+// subset, which meant most spend never got a budget target at all.
+const DEFAULT_CATEGORIES = [
+  'Bills', 'EMI', 'Entertainment', 'Food and Drink', 'Travel', 'Groceries',
+  'Health', 'Investment', 'Other', 'Shopping', 'Transportation', 'Transfer',
+];
 
 // Onboarding-v3 redesign: matches the mockup's BudgetSetup-Dark/Light — a
 // 2-column grid of category cards plus a full-width total card, instead of
@@ -52,13 +56,13 @@ export function BudgetSetupScreen({ navigation, route }: OnboardingScreenProps<'
           }
         }
       }
-      navigation.navigate('SignUp');
+      navigation.navigate('NameEntry');
     } finally {
       setBusy(false);
     }
   };
 
-  const skip = () => navigation.navigate('SignUp');
+  const skip = () => navigation.navigate('NameEntry');
 
   return (
     <KeyboardAwareScrollView
@@ -66,11 +70,11 @@ export function BudgetSetupScreen({ navigation, route }: OnboardingScreenProps<'
       extraScrollHeight={Spacing.lg}
       keyboardShouldPersistTaps="handled"
       style={{ flex: 1, backgroundColor: c.bgBase }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: 32, flexGrow: 1 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + Spacing.xl, flexGrow: 1 }}
       className="px-lg"
     >
       <View className="mb-md">
-        <StepDots total={7} filled={6} scheme={scheme} />
+        <StepDots total={isAndroid ? 8 : 5} filled={isAndroid ? 6 : 3} scheme={scheme} />
       </View>
 
       <Text style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 26, color: c.inkHeadline, lineHeight: 30 }} className="mb-xs">
@@ -81,8 +85,8 @@ export function BudgetSetupScreen({ navigation, route }: OnboardingScreenProps<'
       </Text>
 
       <GlassCard scheme={scheme} style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          <View style={{ width: '100%', backgroundColor: c.bgSurface, borderRadius: 4, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}>
+          <View style={{ width: '100%', backgroundColor: c.bgSurface, borderRadius: 4, padding: Spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <View>
               <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 13, color: c.inkHeadline }}>Total monthly budget</Text>
               <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkBody }}>Covers every category below</Text>
@@ -93,8 +97,8 @@ export function BudgetSetupScreen({ navigation, route }: OnboardingScreenProps<'
           </View>
 
           {DEFAULT_CATEGORIES.map((category) => (
-            <View key={category} style={{ width: '48%', backgroundColor: c.bgSurface, borderRadius: 4, padding: 16 }}>
-              <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 12, color: c.inkHeadline, marginBottom: 6 }}>
+            <View key={category} style={{ width: '48%', backgroundColor: c.bgSurface, borderRadius: 4, padding: Spacing.md }}>
+              <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 12, color: c.inkHeadline, marginBottom: Spacing.xs + 2 }}>
                 {category}
               </Text>
               <TextInput
