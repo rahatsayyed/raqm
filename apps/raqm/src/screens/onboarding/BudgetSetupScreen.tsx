@@ -70,17 +70,29 @@ export function BudgetSetupScreen({ navigation, route }: OnboardingScreenProps<'
       extraScrollHeight={Spacing.lg}
       keyboardShouldPersistTaps="handled"
       style={{ flex: 1, backgroundColor: c.bgBase }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + Spacing.xl, flexGrow: 1 }}
-      className="px-lg"
+      // Literal artifact padding is "56px 20px 32px" (BudgetSetup-Light/Dark.dc.html) —
+      // was `px-lg` (Spacing.lg = 24px) on the sides, which doesn't match the artifact's
+      // 20px. 20px has no matching Spacing token (sm=8, md=16, lg=24) so it's applied as
+      // a literal value here rather than rounded to the nearest token.
+      contentContainerStyle={{
+        paddingTop: insets.top + 16,
+        paddingBottom: insets.bottom + Spacing.xl,
+        paddingHorizontal: 20,
+        flexGrow: 1,
+      }}
     >
-      <View className="mb-md">
+      {/* Literal artifact margin-bottom below the step dots is 20px — no exact Spacing
+          token (sm=8, md=16); applied literally instead of rounding to mb-md (16). */}
+      <View style={{ marginBottom: 20 }}>
         <StepDots total={isAndroid ? 8 : 5} filled={isAndroid ? 6 : 3} scheme={scheme} />
       </View>
 
       <Text style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 26, color: c.inkHeadline, lineHeight: 30 }} className="mb-xs">
         {isAndroid ? 'Budget around what\nyou actually spend' : 'Set a target for\neach category'}
       </Text>
-      <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 13, color: c.inkBody }} className="mb-md">
+      {/* Literal artifact margin-bottom on the subtitle is 14px — no exact Spacing token
+          (sm=8, md=16); applied literally instead of rounding. */}
+      <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 13, color: c.inkBody, marginBottom: 14 }}>
         {isAndroid ? 'Based on last month. Adjust anything.' : 'You can change this anytime.'}
       </Text>
 

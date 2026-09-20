@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Animated as RNAnimated, Easing, Pressable } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BankParserFactory } from '@rahatsayyed/bank-sms-parser';
 import { OnboardingScreenProps } from '../../navigation/types';
@@ -22,21 +22,12 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
   const [smsCount, setSmsCount] = useState(0);
   const [txCount, setTxCount] = useState(0);
   const [status, setStatus] = useState('Reading messages');
-  const progress = useRef(new RNAnimated.Value(0)).current;
+  // Real progress (0..1), driven by insertParsedTxs's onProgress callback — not a
+  // guessed elapsed-time animation. The bar and counter only reach 100%/final count
+  // when the actual DB writes + categorization are done (bug: they used to finish
+  // early on a fixed-duration animation while sequential categorization kept running
+  // underneath, so the screen stalled after the bar looked "done").
   const [progressPct, setProgressPct] = useState(0);
-  // Bug #5 fix: the final transaction count, known once parsing finishes but
-  // used to drive the *displayed* count progressively as the bar animates,
-  // instead of jumping straight to the total. A ref (not state) since the
-  // progress listener reads it on every frame.
-  const finalCountRef = useRef(0);
-
-  useEffect(() => {
-    const id = progress.addListener(({ value }) => {
-      setProgressPct(value);
-      setTxCount(Math.round(value * finalCountRef.current));
-    });
-    return () => progress.removeListener(id);
-  }, [progress]);
 
   useEffect(() => {
     const run = async () => {
@@ -54,24 +45,22 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
           const tx = BankParserFactory.parse(msg.body, msg.sender, msg.timestamp);
           if (tx) parsed.push(tx);
         }
-        // Final count known now — the progress listener above uses it to
-        // grow the displayed number in sync with the bar, instead of the
-        // number jumping to the total immediately while the bar keeps animating.
-        finalCountRef.current = parsed.length;
 
-        RNAnimated.timing(progress, {
-          toValue: 1,
-          duration: Math.max(2000, messages.length * 10),
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: false,
-        }).start();
-
-        await setTransactions(parsed);
+        setStatus('Categorizing transactions');
+        await setTransactions(parsed, (fraction) => {
+          setProgressPct(fraction);
+          setTxCount(Math.round(fraction * parsed.length));
+        });
+        setProgressPct(1);
+        setTxCount(parsed.length);
         setStatus(`Found ${parsed.length} transactions`);
         await runDetectionJobs();
         await matchSplitPayments();
 
-        setTimeout(() => navigation.replace('ScanComplete'), 1200);
+        // Real work is done — the bar/counter are already genuinely at 100%/final
+        // count above. This is just a short beat so the 100% state is perceivable
+        // before the transition, not a stand-in for unfinished work.
+        setTimeout(() => navigation.replace('ScanComplete'), 300);
       } catch (e) {
         // Don't silently land on an empty AccountSelection pretending success —
         // surface the failure and give the DB write a second chance before moving on.
@@ -87,11 +76,14 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
             const tx = BankParserFactory.parse(msg.body, msg.sender, msg.timestamp);
             if (tx) parsed.push(tx);
           }
-          finalCountRef.current = parsed.length;
+          await setTransactions(parsed, (fraction) => {
+            setProgressPct(fraction);
+            setTxCount(Math.round(fraction * parsed.length));
+          });
+          setProgressPct(1);
           setTxCount(parsed.length);
-          await setTransactions(parsed);
           setStatus(`Found ${parsed.length} transactions`);
-          setTimeout(() => navigation.replace('ScanComplete'), 1200);
+          setTimeout(() => navigation.replace('ScanComplete'), 300);
         } catch (retryError) {
           console.warn('Onboarding scan retry failed:', retryError);
           logEvent('error.caught', `ScanningProgressScreen retry: ${retryError instanceof Error ? retryError.message : String(retryError)}`);

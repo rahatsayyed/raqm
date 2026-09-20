@@ -5,22 +5,41 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { formatAmount } from '../../utils/format';
-import { loadTxRecords, getCategories, softDeleteAccountTxs } from '../../db/database';
+import { loadTxRecords, getCategories, getAccounts, getSetting, softDeleteAccountTxs } from '../../db/database';
 import { countsTowardTotals } from '../../services/txIntelligenceCore';
+import { getMonthBounds } from '../../utils/period';
 import { logEvent } from '../../services/logger';
 import { StepDots } from '../../components/onboarding/StepDots';
 import { GlassCard } from '../../components/onboarding/GlassCard';
 import { RqButton } from '../../components/onboarding/RqButton';
+import { AccountLiquidityCard } from '../../components/AccountLiquidityCard';
 import { Icon } from '../../components/Icon';
 import { useOnbColors } from '../../theme/onboardingColors';
 
 // Account-grouping shape, carried over from the now-merged AccountSelectionScreen
 // (item 6 of the fix list — that screen's own route is no longer navigated to).
-type Account = { id: string; bank: string; last4: string | null; type: string; txCount: number };
+// balance/currency/updatedAt are looked up from the real `accounts` table (set 6:
+// AccountLiquidityCard reuse) once the scan's transactions have been written.
+type Account = {
+  id: string;
+  bank: string;
+  last4: string | null;
+  type: string;
+  txCount: number;
+  balance: number;
+  currency: string;
+  updatedAt: number;
+  monthSpend: number;
+};
 
 // Bar tint order matches the mockup's category-bar colors (dark variant
-// values; light variant swaps only the neutral "Other" grey).
+// values; light variant swaps only the neutral "Other" grey). "Other" is
+// always the last slot — it's the rolled-up remainder bucket, not a real
+// category (set 5 fix: never silently drop categories past the top N).
 const BAR_TINTS = ['accentPrimary', 'notice', 'neutral', 'blue', 'purple', 'grey'] as const;
+const TOP_N_CATEGORIES = 5;
+const UNCATEGORIZED_LABEL = 'Uncategorized';
+const OTHER_LABEL = 'Other';
 
 // Onboarding-v3 redesign: matches the mockup's ScanComplete-Dark/Light —
 // the "aha moment" screen. Real per-category monthly-spend math is
@@ -36,31 +55,8 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
   const { transactions } = useOnboardingStore();
   const [busy, setBusy] = useState(false);
 
-  // Merged in from AccountSelectionScreen: group transactions by
-  // bank+last4, default every account selected, let the user tap to
-  // exclude one (soft-deletes its txs on continue).
-  const accounts = useMemo<Account[]>(() => {
-    const map = new Map<string, Account>();
-    for (const tx of transactions) {
-      const key = `${tx.bankName}|${tx.accountLast4 ?? 'unknown'}`;
-      if (map.has(key)) {
-        map.get(key)!.txCount += 1;
-      } else {
-        map.set(key, {
-          id: key,
-          bank: tx.bankName,
-          last4: tx.accountLast4,
-          type: tx.isFromCard ? 'Credit Card' : 'Bank Account',
-          txCount: 1,
-        });
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => b.txCount - a.txCount);
-  }, [transactions]);
-  const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(() => new Set(accounts.map((a) => a.id)));
-  useEffect(() => {
-    setSelectedAccounts(new Set(accounts.map((a) => a.id)));
-  }, [accounts]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(new Set());
   const toggleAccount = (id: string) => {
     setSelectedAccounts((prev) => {
       const next = new Set(prev);
@@ -70,49 +66,121 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
   };
 
   const [categorySpend, setCategorySpend] = useState<Record<string, number>>({});
+  const [totalSpend, setTotalSpend] = useState(0);
+  const currency = transactions[0]?.currency ?? '₹';
+
+  // Root-cause fix (set 5): the old code summed `transactions` (the raw, un-deduped,
+  // un-filtered scan output — every type, every date the scan covered) for the
+  // top-line figure, while the category cards below summed a completely different
+  // query (loadTxRecords, EXPENSE-only, deduped, averaged over the whole scan span).
+  // Two different queries over two different date ranges can never agree. Fixed by
+  // computing BOTH from the exact same query + the exact same "last month" window
+  // (getMonthBounds, honoring the user's month-start-day setting — defaults to 1
+  // during onboarding since the setting hasn't been touched yet), and by never
+  // capping the category list without rolling the remainder into a visible bucket:
+  // every EXPENSE tx with no categoryId goes into "Uncategorized" (not dropped),
+  // and anything past the top 5 named categories rolls into "Other" — so top-line
+  // total === sum of every row shown, always.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [records, categories] = await Promise.all([loadTxRecords(), getCategories('expense')]);
+        const monthStartDayRaw = await getSetting('month_start_day');
+        const monthStartDay = monthStartDayRaw ? Number(monthStartDayRaw) : 1;
+        const { from, to } = getMonthBounds(new Date(), monthStartDay);
+
+        const [records, categories, dbAccounts] = await Promise.all([
+          loadTxRecords(),
+          getCategories('expense'),
+          getAccounts(),
+        ]);
         const nameById = new Map(categories.map((cat) => [cat.id, cat.name]));
+        const accountByKey = new Map(dbAccounts.map((a) => [`${a.bankName}|${a.last4 ?? 'unknown'}`, a]));
+
         const spend: Record<string, number> = {};
-        let earliestTs: number | null = null;
-        let latestTs: number | null = null;
+        const perAccount = new Map<string, Account>();
+        let total = 0;
+
         for (const tx of records) {
-          if (tx.type !== 'EXPENSE' || tx.categoryId == null || !countsTowardTotals(tx)) continue;
-          const name = nameById.get(tx.categoryId);
-          if (!name) continue;
-          spend[name] = (spend[name] ?? 0) + Math.abs(tx.amount);
-          if (earliestTs === null || tx.timestamp < earliestTs) earliestTs = tx.timestamp;
-          if (latestTs === null || tx.timestamp > latestTs) latestTs = tx.timestamp;
+          if (tx.type !== 'EXPENSE' || !countsTowardTotals(tx)) continue;
+          if (tx.timestamp < from || tx.timestamp > to) continue;
+          const amount = Math.abs(tx.amount);
+          const name = tx.categoryId != null ? nameById.get(tx.categoryId) : undefined;
+          const bucket = name ?? UNCATEGORIZED_LABEL;
+          spend[bucket] = (spend[bucket] ?? 0) + amount;
+          total += amount;
+
+          const acctKey = `${tx.bankName}|${tx.accountLast4 ?? 'unknown'}`;
+          const acctInfo = accountByKey.get(acctKey);
+          const existing = perAccount.get(acctKey);
+          if (existing) {
+            existing.monthSpend += amount;
+          } else {
+            perAccount.set(acctKey, {
+              id: acctKey,
+              bank: tx.bankName,
+              last4: tx.accountLast4,
+              type: acctInfo?.isCard ? 'Credit Card' : 'Bank Account',
+              txCount: 0,
+              balance: acctInfo?.balance ?? 0,
+              currency: tx.currency,
+              updatedAt: acctInfo?.balanceUpdatedAt ?? tx.timestamp,
+              monthSpend: amount,
+            });
+          }
         }
-        // Bug fix (kept from pre-redesign screen): normalize by the actual
-        // span of the aggregated transactions, not the nominal date-range
-        // preset, since "All time" has no fixed duration to divide by.
-        const MONTH_MS = 30 * 86_400_000;
-        const monthsSpanned =
-          earliestTs !== null && latestTs !== null ? Math.max(1, (latestTs - earliestTs) / MONTH_MS) : 1;
-        const monthlySpend = Object.fromEntries(
-          Object.entries(spend).map(([name, total]) => [name, total / monthsSpanned]),
-        );
-        if (!cancelled) setCategorySpend(monthlySpend);
-      } catch {
-        // Non-fatal: BudgetSetupScreen falls back to a blank form.
+        // txCount per account should reflect ALL of that account's transactions
+        // found in this scan (not just last-month EXPENSE ones used for spend) —
+        // matches the pre-redesign "N txns" label people expect on these cards.
+        for (const tx of records) {
+          const acctKey = `${tx.bankName}|${tx.accountLast4 ?? 'unknown'}`;
+          let acct = perAccount.get(acctKey);
+          if (!acct) {
+            const acctInfo = accountByKey.get(acctKey);
+            acct = {
+              id: acctKey,
+              bank: tx.bankName,
+              last4: tx.accountLast4,
+              type: acctInfo?.isCard ? 'Credit Card' : 'Bank Account',
+              txCount: 0,
+              balance: acctInfo?.balance ?? 0,
+              currency: tx.currency,
+              updatedAt: acctInfo?.balanceUpdatedAt ?? tx.timestamp,
+              monthSpend: 0,
+            };
+            perAccount.set(acctKey, acct);
+          }
+          acct.txCount += 1;
+        }
+
+        const accountList = Array.from(perAccount.values()).sort((a, b) => b.txCount - a.txCount);
+
+        if (!cancelled) {
+          setCategorySpend(spend);
+          setTotalSpend(total);
+          setAccounts(accountList);
+          setSelectedAccounts(new Set(accountList.map((a) => a.id)));
+        }
+      } catch (e) {
+        console.warn('ScanCompleteScreen: failed to load spend totals:', e);
+        logEvent('error.caught', `ScanCompleteScreen totals: ${e instanceof Error ? e.message : String(e)}`);
+        // Non-fatal: BudgetSetupScreen falls back to a blank form; the screen
+        // still renders with a zero total rather than the wrong-but-confident one.
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  const totalSpend = transactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
-  const currency = transactions[0]?.currency;
+  }, [transactions]);
 
   const topCategories = useMemo(() => {
     const entries = Object.entries(categorySpend).sort((a, b) => b[1] - a[1]);
-    const max = entries.length > 0 ? entries[0][1] : 1;
-    return entries.slice(0, 6).map(([name, amount], i) => ({
+    const top = entries.slice(0, TOP_N_CATEGORIES);
+    const rest = entries.slice(TOP_N_CATEGORIES);
+    const restTotal = rest.reduce((sum, [, amount]) => sum + amount, 0);
+    const rows = restTotal > 0 ? [...top, [OTHER_LABEL, restTotal] as [string, number]] : top;
+    const max = rows.length > 0 ? rows[0][1] : 1;
+    return rows.map(([name, amount], i) => ({
       name,
       amount,
       pct: Math.max(6, Math.round((amount / max) * 100)),
@@ -197,28 +265,30 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
             {accounts.map((account, i) => {
               const isSelected = selectedAccounts.has(account.id);
               return (
-                <Animated.View key={account.id} entering={FadeInDown.duration(350).delay(i * 60)}>
-                  <Pressable
+                <Animated.View
+                  key={account.id}
+                  entering={FadeInDown.duration(350).delay(i * 60)}
+                  style={{
+                    borderRadius: 4,
+                    borderWidth: 1,
+                    borderColor: isSelected ? c.accentPrimary : c.borderSubtle,
+                    opacity: isSelected ? 1 : 0.6,
+                  }}
+                >
+                  {/* Set 3 fix: reuse the real Dashboard/Analytics account card component
+                      instead of a bespoke one-off card — same visual/interaction pattern,
+                      just wrapped for onboarding's select-to-include/exclude behavior (the
+                      border/opacity above stands in for AccountLiquidityCard's own selection
+                      state, which it doesn't have — this screen is the only place that needs it). */}
+                  <AccountLiquidityCard
+                    bankName={account.bank}
+                    last4={account.last4}
+                    balance={account.balance}
+                    currency={account.currency}
+                    updatedAt={account.updatedAt}
+                    monthSpend={account.monthSpend}
                     onPress={() => toggleAccount(account.id)}
-                    style={{
-                      width: 200,
-                      backgroundColor: c.bgSurface,
-                      borderRadius: 4,
-                      padding: 12,
-                      borderWidth: 1,
-                      borderColor: isSelected ? c.accentPrimary : c.borderSubtle,
-                      opacity: isSelected ? 1 : 0.6,
-                      gap: 4,
-                    }}
-                  >
-                    <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 13, color: c.inkHeadline }} numberOfLines={1}>
-                      {account.bank}
-                    </Text>
-                    <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkBody }} numberOfLines={1}>
-                      {account.type}
-                      {account.last4 ? ` •••• ${account.last4}` : ''} · {account.txCount} txns
-                    </Text>
-                  </Pressable>
+                  />
                 </Animated.View>
               );
             })}
@@ -230,7 +300,7 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
         <Text
           style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkBody, textAlign: 'center', textDecorationLine: 'underline' }}
         >
-          Bank not detected? Import a PDF statement instead
+          Missing data? Import a PDF statement
         </Text>
       </Pressable>
 

@@ -50,13 +50,25 @@ export function PermissionRow({
         ]}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Icon name={icon} size={22} color={strokeColor} />
+          {/* Literal artifact icon size is 24x24 (was 22) */}
+          <Icon name={icon} size={24} color={strokeColor} />
           {granted ? (
             <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: c.accentPrimary, alignItems: 'center', justifyContent: 'center' }}>
               <Icon name="check" size={13} color={c.onAccent} />
             </View>
           ) : (
-            <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: c.borderSubtle }} />
+            // Literal artifact unchecked-ring stroke is rgba(20,20,20,0.2) light /
+            // rgba(255,255,255,0.24) dark — a distinct, more visible value from the
+            // shared borderSubtle token (0.08/0.12) used elsewhere, so applied literally.
+            <View
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: 9,
+                borderWidth: 1.5,
+                borderColor: scheme === 'dark' ? 'rgba(255,255,255,0.24)' : 'rgba(20,20,20,0.2)',
+              }}
+            />
           )}
         </View>
         <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 13, color: c.inkHeadline }}>
