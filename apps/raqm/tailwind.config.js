@@ -108,6 +108,14 @@ module.exports = {
         card: '12px',
         btn: '8px',
         sheet: '20px',
+        // DESIGN.md v3.0 §5 radius scale — new keys only, additive: the old
+        // scale above is NOT replaced app-wide (that's unscoped, separate
+        // work per docs/superpowers/specs/2026-09-20-onboarding-v3-implementation-notes.md).
+        // Used only by the 7 onboarding-v3 redesign screens.
+        outer: '6px',
+        inner: '4px',
+        cta: '3px',
+        dot: '1px',
       },
       // RN loads each weight as its own font file, so families are per-weight.
       fontFamily: {
@@ -118,6 +126,13 @@ module.exports = {
         'inter-bold': ['Inter_700Bold'],
         mono: ['JetBrainsMono_400Regular'],
         'mono-medium': ['JetBrainsMono_500Medium'],
+        // DESIGN.md v3.0 §3 — Newsreader (italic, display only) + Instrument
+        // Sans (body). New families, used only by the 7 onboarding-v3
+        // redesign screens; the rest of the app keeps Inter.
+        'newsreader-italic': ['Newsreader_400Regular_Italic'],
+        instrument: ['InstrumentSans_400Regular'],
+        'instrument-medium': ['InstrumentSans_500Medium'],
+        'instrument-semibold': ['InstrumentSans_600SemiBold'],
       },
       fontSize: {
         // ── Legacy Material-ish roles (src/theme/typography.ts) — pair with

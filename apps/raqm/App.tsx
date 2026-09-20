@@ -7,7 +7,17 @@ import { StatusBar } from 'expo-status-bar';
 import { useInAppUpdate } from './src/hooks/useInAppUpdate';
 import { useFonts } from 'expo-font';
 import { Inter_300Light, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
-import { JetBrainsMono_400Regular, JetBrainsMono_500Medium } from '@expo-google-fonts/jetbrains-mono';
+import { JetBrainsMono_400Regular, JetBrainsMono_500Medium, JetBrainsMono_600SemiBold } from '@expo-google-fonts/jetbrains-mono';
+// Onboarding-v3 redesign fonts (DESIGN.md v3.0 §3) — Newsreader italic for
+// display/headline roles, Instrument Sans for body/label/button roles.
+// Loaded app-wide here (same pattern as Inter/JetBrains Mono above) even
+// though only the 7 redesigned onboarding screens use them today.
+import { Newsreader_400Regular_Italic } from '@expo-google-fonts/newsreader';
+import {
+  InstrumentSans_400Regular,
+  InstrumentSans_500Medium,
+  InstrumentSans_600SemiBold,
+} from '@expo-google-fonts/instrument-sans';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -172,6 +182,11 @@ export default function App() {
     Inter_700Bold,
     JetBrainsMono_400Regular,
     JetBrainsMono_500Medium,
+    JetBrainsMono_600SemiBold,
+    Newsreader_400Regular_Italic,
+    InstrumentSans_400Regular,
+    InstrumentSans_500Medium,
+    InstrumentSans_600SemiBold,
   });
 
   useInAppUpdate();

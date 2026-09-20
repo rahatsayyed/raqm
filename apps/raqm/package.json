@@ -15,8 +15,10 @@
     "eas-build-post-install": "cd ../.. && npm run build --workspace=@rahatsayyed/bank-sms-parser && cd apps/raqm && npx patch-package --patch-dir ../../patches"
   },
   "dependencies": {
+    "@expo-google-fonts/instrument-sans": "^0.4.2",
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
+    "@expo-google-fonts/newsreader": "^0.4.1",
     "@expo/vector-icons": "^15.0.2",
     "@rahatsayyed/bank-sms-parser": "file:../../packages/bank-sms-parser",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -26,6 +28,7 @@
     "@react-navigation/native-stack": "^7.3.10",
     "@shopify/react-native-skia": "2.6.2",
     "expo": "^57.0.23",
+    "expo-blur": "~57.0.3",
     "expo-clipboard": "~57.0.2",
     "expo-contacts": "~57.0.5",
     "expo-crypto": "~57.0.3",
