@@ -169,17 +169,29 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
 
   return (
     <View
-      style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }}
-      className="px-lg"
+      style={{
+        flex: 1,
+        backgroundColor: c.bgBase,
+        paddingTop: insets.top + 16,
+        paddingBottom: insets.bottom + 40,
+        // Literal artifact padding is "56px 20px 40px" — 20px has no exact
+        // Spacing token (sm=8, md=16, lg=24), applied literally instead of px-lg (24).
+        paddingHorizontal: 20,
+      }}
     >
-      <View className="mb-lg">
+      {/* Literal artifact margin-bottom below the dots is 28px — no exact
+          Spacing token (lg=24, xl=32); applied literally instead of mb-lg (24). */}
+      <View style={{ marginBottom: 28 }}>
         <StepDots total={8} filled={2} scheme={scheme} />
       </View>
 
-      <Text style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 30, color: c.inkHeadline }} className="mb-xs">
+      {/* Literal artifact h1 margin-bottom is 8px — was mb-xs (Spacing.xs = 4). */}
+      <Text style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 30, color: c.inkHeadline, marginBottom: 8 }}>
         A couple of permissions
       </Text>
-      <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 15, lineHeight: 22, color: c.inkBody }} className="mb-lg">
+      {/* Literal artifact subtitle margin-bottom is 18px — no exact Spacing
+          token (md=16, lg=24); applied literally instead of mb-lg (24). */}
+      <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 15, lineHeight: 22, color: c.inkBody, marginBottom: 18 }}>
         Each one only reads what it needs, on this device.
       </Text>
 
