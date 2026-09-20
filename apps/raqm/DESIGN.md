@@ -49,11 +49,25 @@ Apply these to every screen, in priority order:
 
 ## 2. Color System (v3.0 — from the onboarding claude-design exploration)
 
-Dark mode is the only mode (app scope — the exploration also designed a
-light mode, not adopted here; see the v3.0 note above). The palette keeps
-the same "one precise accent on a near-black ground" family as v2.0's
-Forest system, re-derived from the exploration's onboarding screens rather
-than kept as v2.0 wrote it.
+Dark mode stays the only mode **app-wide** (the exploration also designed a
+light mode; app-wide adoption is still a separate, unmade product decision
+— see the v3.0 note above). **Exception, added by the 2026-09-20
+onboarding-v3-android implementation:** the 7 redesigned onboarding screens
+(Welcome, Permissions, Scan range, Scanning progress, Scan complete,
+Budget setup, Setup complete) implement BOTH light and dark mode, defaulting
+to the OS appearance setting — this was an explicit, scoped product
+decision for onboarding only, not a reversal of the app-wide dark-only
+rule. Those screens' tokens live in `src/theme/onboardingColors.ts`
+(`OnbColors.light` / `OnbColors.dark`, `useOnbColors()`), named separately
+from the app-wide tokens below (`onb*` naming, not `bg-base` etc.) so
+adopting light mode for onboarding didn't require re-theming the rest of
+the (still dark-only) app. The table below gains a Light column for
+reference; only the onboarding screens actually consume the light values
+today.
+
+The palette keeps the same "one precise accent on a near-black ground"
+family as v2.0's Forest system, re-derived from the exploration's
+onboarding screens rather than kept as v2.0 wrote it.
 
 Discipline unchanged from v2.0: **one accent color, used sparingly, never
 decoratively.** No gradients anywhere except one radial glow behind the
@@ -61,24 +75,24 @@ Home hero number — the single sanctioned exception in the entire app.
 
 ### Core palette
 
-| Token | Hex | Use | Source |
-|---|---|---|---|
-| bg-base | `#0B0C0E` | App background — warm near-black, never pure `#000000` | Exploration §5.1, dark background |
-| bg-surface | `#15171A` | Cards, sheets | Exploration §5.1, dark card surface |
-| bg-surface-raised | `#1C1F23` | Nested cards, modals | Derived — one step lighter than bg-surface, same ratio v2.0 used |
-| border-subtle | `rgba(255,255,255,0.12)` | Card borders, dividers (borders replace shadows) | Exploration §5.1, dark hairline token |
-| ink-headline | `#F2F1EC` | Headings, key numbers — warm off-white, never pure `#FFFFFF` | Exploration §5.1, dark primary text |
-| ink-body | `#B7B6AE` | Body copy | Exploration §5.1, dark secondary text |
-| ink-label | `#6B6A62` | Timestamps, annotations | Derived — exploration didn't define a third text tier; kept v2.0's label-vs-body contrast ratio |
+| Token | Dark | Light | Use | Source |
+|---|---|---|---|---|
+| bg-base | `#0B0C0E` | `#F7F6F3` | App background — warm near-black / warm off-white, never pure black/white | Dark: exploration §5.1. Light: exploration's light-mode Welcome/Permissions screens |
+| bg-surface | `#15171A` | `#FFFFFF` | Cards, sheets | Dark: exploration §5.1. Light: exploration's light-mode cards |
+| bg-surface-raised | `#1C1F23` | `#EFEDE8` | Nested cards, modals | Derived on both sides — one step lighter/darker than bg-surface; the exploration only shows flat cards, never a nested one, on either mode |
+| border-subtle | `rgba(255,255,255,0.12)` | `rgba(20,20,20,0.08)` | Card borders, dividers (borders replace shadows) | Exploration §5.1 (dark hairline) / light-mode screens' hairline |
+| ink-headline | `#F2F1EC` | `#14140F` | Headings, key numbers — warm off-white/near-black, never pure white/black | Exploration §5.1 |
+| ink-body | `#B7B6AE` | `#4A4A45` | Body copy | Exploration §5.1 |
+| ink-label | `#6B6A62` | `#8A8880` | Timestamps, annotations | Derived on both sides — exploration didn't define a third text tier on either mode; kept v2.0's label-vs-body contrast ratio |
 
 ### Accent / semantic roles
 
-| Token | Hex | Emotion | Use | Source |
-|---|---|---|---|---|
-| accent-primary | `#66CCAC` | Trust / confidence | Primary actions, positive metrics, brand mark — the ONE accent, used sparingly | Exploration's locked dark-mode CTA color, hue-locked to the light-mode brand green and verified at 9.5:1 contrast against `#14140F` text |
-| accent-deep | `#1F4A3B` | Structure | Selected states, secondary containers | Derived — same hue (161°) as accent-primary at lower lightness, not a literal exploration value |
-| notice | `#D9A85C` | Awareness (not danger) | Flag something worth attention — never alarm-red | Exploration's Permissions-screen location icon color |
-| error-muted | `#E08672` | Honesty | Failed transactions, hard errors only | Exploration §12, borrowed dark-mode error tint |
+| Token | Dark | Light | Emotion | Use | Source |
+|---|---|---|---|---|---|
+| accent-primary | `#66CCAC` | `#2E5D4E` | Trust / confidence | Primary actions, positive metrics, brand mark — the ONE accent, used sparingly | Dark: exploration's locked dark-mode CTA color, hue-locked to the light-mode brand green and verified at 9.5:1 contrast against `#14140F` text. Light: the exploration's light-mode CTA color |
+| accent-deep | `#1F4A3B` | `#DCE9E3` | Structure | Selected states, secondary containers | Derived on both sides — same hue as accent-primary at inverted lightness, not a literal exploration value |
+| notice | `#D9A85C` | `#B8813C` | Awareness (not danger) | Flag something worth attention — never alarm-red | Exploration's Permissions-screen location icon color, both modes |
+| error-muted | `#E08672` | `#B4483A` | Honesty | Failed transactions, hard errors only | Exploration §12 (dark) / implementation-notes.md §3 (light — the one light value the exploration fixed directly) |
 
 Note: `error` (`#ffb4ab`) is the legacy MD3 token, still in code for
 back-compat — `error-muted` is the correct token name for new work.

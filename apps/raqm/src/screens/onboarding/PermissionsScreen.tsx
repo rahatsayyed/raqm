@@ -1,14 +1,29 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Platform, PermissionsAndroid, ScrollView, AppState, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import * as Location from 'expo-location';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { PermissionRow } from '../../components/onboarding/PermissionRow';
-import { StepCounter } from '../../components/onboarding/StepCounter';
-import { OnboardingButton } from '../../components/onboarding/OnboardingButton';
+import { StepDots } from '../../components/onboarding/StepDots';
+import { RqButton } from '../../components/onboarding/RqButton';
+import { GlassCard } from '../../components/onboarding/GlassCard';
+import { useOnbColors } from '../../theme/onboardingColors';
 import { SmsReader } from '../../native/SmsReader';
 
 type RowKey = 'sms' | 'notificationAccess' | 'location' | 'notifications';
+
+// TODO(product-signoff): the claude-design mockup makes Location and
+// "Manage bank notifications" optional (only "Read bank SMS" and
+// "Notifications" stay required) — see
+// docs/superpowers/specs/2026-09-20-onboarding-v3-implementation-notes.md §2.
+// NOT enabled here: flipping this changes what the rest of the app can
+// assume it has (background-location tagging on every SMS-triggered
+// transaction; duplicate bank-notification suppression), and needs
+// explicit product sign-off first. Flip this to `true` only once that
+// sign-off happens — canContinue and the "· Optional" badges below both
+// key off it, so nothing else needs to change.
+const LOCATION_AND_NOTIFICATION_ACCESS_OPTIONAL = false;
 
 // Android permission constants and native calls copied from the deleted
 // PermissionSMSReadScreen / PermissionNotificationAccessScreen /
@@ -30,7 +45,9 @@ async function requestAndroidRow(key: RowKey): Promise<boolean> {
     // arrive (and the location tag gets captured) while the app is not in
     // the foreground, since SMS reading happens via a background
     // BroadcastReceiver. Android 10+ requires foreground to be granted
-    // first before background can be requested at all.
+    // first before background can be requested at all. This is ONE
+    // combined request, not two separate cards — the UI below reflects
+    // that with a single "Location" card.
     const foreground = await Location.requestForegroundPermissionsAsync();
     if (foreground.status !== Location.PermissionStatus.GRANTED) {
       return false;
@@ -69,6 +86,8 @@ async function checkAndroidRow(key: RowKey): Promise<boolean> {
     return PermissionsAndroid.check('android.permission.READ_SMS' as any);
   }
   if (key === 'location') {
+    // Location shows granted only once BOTH foreground and background are
+    // actually granted, never on foreground-only.
     const { status } = await Location.getBackgroundPermissionsAsync();
     return status === Location.PermissionStatus.GRANTED;
   }
@@ -85,6 +104,8 @@ async function checkAndroidRow(key: RowKey): Promise<boolean> {
 
 export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permissions'>) {
   const isAndroid = Platform.OS === 'android';
+  const insets = useSafeAreaInsets();
+  const { scheme, colors: c } = useOnbColors();
   const [granted, setGranted] = useState<Record<RowKey, boolean>>({
     sms: false,
     notificationAccess: false,
@@ -137,7 +158,9 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
   }, []);
 
   const canContinue = isAndroid
-    ? granted.sms && granted.notificationAccess && granted.location && granted.notifications
+    ? granted.sms &&
+      granted.notifications &&
+      (LOCATION_AND_NOTIFICATION_ACCESS_OPTIONAL || (granted.notificationAccess && granted.location))
     : granted.notifications;
 
   const next = useCallback(() => {
@@ -145,73 +168,95 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
   }, [isAndroid, navigation]);
 
   return (
-    <View className="flex-1 bg-bg-base px-container-margin pt-xxl">
-      <StepCounter step={2} totalSteps={isAndroid ? 10 : 8} />
-      <Text className="font-inter-semibold text-body-standard text-ink-headline mb-md">
+    <View style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16 }} className="px-lg pb-xl">
+      <View className="mb-lg">
+        <StepDots total={7} filled={2} scheme={scheme} />
+      </View>
+
+      <Text style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 30, color: c.inkHeadline }} className="mb-xs">
         A couple of permissions
       </Text>
+      <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 15, lineHeight: 22, color: c.inkBody }} className="mb-lg">
+        Each one only reads what it needs, on this device.
+      </Text>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {isAndroid ? (
-          <>
+      <GlassCard scheme={scheme} style={{ flex: 1 }}>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {isAndroid ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+                <PermissionRow
+                  index={0}
+                  icon="message-text-outline"
+                  title="Read bank SMS"
+                  reason="Finds transactions automatically. Never leaves your phone."
+                  granted={granted.sms}
+                  onGrant={() => grant('sms')}
+                  scheme={scheme}
+                />
+                <PermissionRow
+                  index={1}
+                  icon="bell-outline"
+                  title="Manage bank notifications"
+                  reason="Hides duplicate bank alerts once read."
+                  optional={LOCATION_AND_NOTIFICATION_ACCESS_OPTIONAL}
+                  granted={granted.notificationAccess}
+                  onGrant={() => grant('notificationAccess')}
+                  scheme={scheme}
+                />
+              </View>
+              <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+                <PermissionRow
+                  index={2}
+                  icon="map-marker-outline"
+                  iconColor="notice"
+                  title="Location"
+                  reason="Tags where a spend happened."
+                  optional={LOCATION_AND_NOTIFICATION_ACCESS_OPTIONAL}
+                  granted={granted.location}
+                  onGrant={() => grant('location')}
+                  scheme={scheme}
+                />
+                <PermissionRow
+                  index={3}
+                  icon="bell-ring-outline"
+                  title="Notifications"
+                  reason="Quiet spend nudges, on your terms."
+                  granted={granted.notifications}
+                  onGrant={() => grant('notifications')}
+                  scheme={scheme}
+                />
+              </View>
+            </View>
+          ) : (
             <PermissionRow
               index={0}
-              icon="message-text-outline"
-              title="Read bank SMS"
-              reason="So I can find your transactions automatically"
-              granted={granted.sms}
-              onGrant={() => grant('sms')}
-            />
-            <PermissionRow
-              index={1}
               icon="bell-outline"
-              title="Manage bank notifications"
-              reason="So I can hide duplicate bank alerts once I've read them"
-              granted={granted.notificationAccess}
-              onGrant={() => grant('notificationAccess')}
-            />
-            <PermissionRow
-              index={2}
-              icon="map-marker-outline"
-              title="Location"
-              reason="So I can tag where a transaction happened when the SMS arrives"
-              granted={granted.location}
-              onGrant={() => grant('location')}
-            />
-            <PermissionRow
-              index={3}
-              icon="bell-ring-outline"
               title="Notifications"
               reason="So I can alert you about spending patterns"
               granted={granted.notifications}
               onGrant={() => grant('notifications')}
+              scheme={scheme}
             />
-          </>
-        ) : (
-          <PermissionRow
-            index={0}
-            icon="bell-outline"
-            title="Notifications"
-            reason="So I can alert you about spending patterns"
-            granted={granted.notifications}
-            onGrant={() => grant('notifications')}
-          />
-        )}
-      </ScrollView>
+          )}
+        </ScrollView>
+      </GlassCard>
 
-      <Text className="font-inter text-annotation text-ink-label mt-md mb-lg">
+      <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkBody, textAlign: 'center' }} className="mt-md mb-sm">
         Everything is processed on your device. Nothing leaves your phone.
       </Text>
 
       {isAndroid && (
-        <Pressable onPress={() => navigation.navigate('GPayPdfImport')}>
-          <Text className="font-inter-semibold text-supporting-text text-accent-primary text-center mb-md">
+        <Pressable onPress={() => navigation.navigate('GPayPdfImport')} className="mb-md">
+          <Text
+            style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 13, color: c.accentPrimary, textAlign: 'center' }}
+          >
             Or import a PDF statement instead
           </Text>
         </Pressable>
       )}
 
-      <OnboardingButton label="Continue" onPress={next} disabled={!canContinue} />
+      <RqButton label="Continue" scheme={scheme} onPress={next} disabled={!canContinue} />
     </View>
   );
 }
