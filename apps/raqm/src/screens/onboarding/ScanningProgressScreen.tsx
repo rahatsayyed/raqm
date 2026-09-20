@@ -1,51 +1,34 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Animated, Easing } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
-import ReAnimated, { FadeIn } from 'react-native-reanimated';
+import { View, Text, Animated as RNAnimated, Easing, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BankParserFactory } from '@rahatsayyed/bank-sms-parser';
 import { OnboardingScreenProps } from '../../navigation/types';
-import { Colors } from '../../theme';
 import { SmsReader } from '../../native/SmsReader';
 import { useOnboardingStore, dateRangeToTimestamps } from '../../store/onboardingStore';
 import { runDetectionJobs, matchSplitPayments } from '../../services/txIntelligence';
 import { logEvent } from '../../services/logger';
-import { Icon } from '../../components/Icon';
+import { StepDots } from '../../components/onboarding/StepDots';
+import { GlassCard } from '../../components/onboarding/GlassCard';
+import { useOnbColors } from '../../theme/onboardingColors';
 
-const RADIUS = 90;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
-// ReAnimated.View isn't wrapped by NativeWind's interop — keep the static layout
-// alongside the Reanimated-driven opacity in a single style array. I3 fix:
-// these were an infinite withRepeat pulse (banned decorative motion per
-// DESIGN.md §7/§15) — now a one-time fade-in entrance instead.
-const pulseOuterBaseStyle = {
-  position: 'absolute' as const,
-  width: 280, height: 280, borderRadius: 140,
-  backgroundColor: Colors.accentPrimary,
-  opacity: 0.06,
-};
-const pulseInnerBaseStyle = {
-  position: 'absolute' as const,
-  width: 240, height: 240, borderRadius: 120,
-  backgroundColor: Colors.accentPrimary,
-  opacity: 0.08,
-};
-
+// Onboarding-v3 redesign: matches the mockup's ScanningProgress-Dark/Light.
+// Real scan logic (SMS read -> parse -> categorize -> detection jobs)
+// is unchanged from the pre-redesign screen — only the presentation
+// (glass card, count-up number, thin progress bar instead of a ring) changed.
 export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'ScanningProgress'>) {
+  const insets = useSafeAreaInsets();
+  const { scheme, colors: c } = useOnbColors();
   const { dateRange, customFrom, customTo, setTransactions } = useOnboardingStore();
   const [smsCount, setSmsCount] = useState(0);
   const [txCount, setTxCount] = useState(0);
-  // I3 fix: single narration source (was previously duplicated between this
-  // chip and a separate STEP_LABELS-driven heading with different wording).
   const [status, setStatus] = useState('Reading messages');
-  const progress = useRef(new Animated.Value(0)).current;
+  const progress = useRef(new RNAnimated.Value(0)).current;
+  const [progressPct, setProgressPct] = useState(0);
 
-  const strokeDashoffset = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [CIRCUMFERENCE, 0],
-  });
+  useEffect(() => {
+    const id = progress.addListener(({ value }) => setProgressPct(value));
+    return () => progress.removeListener(id);
+  }, [progress]);
 
   useEffect(() => {
     const run = async () => {
@@ -56,8 +39,7 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
         const messages = await SmsReader.readInbox(from, to);
         setSmsCount(messages.length);
 
-        // animate progress ring over the parse duration
-        Animated.timing(progress, {
+        RNAnimated.timing(progress, {
           toValue: 1,
           duration: Math.max(2000, messages.length * 10),
           easing: Easing.out(Easing.cubic),
@@ -109,47 +91,69 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
     };
 
     run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <View className="flex-1 bg-bg-base items-center justify-center px-container-margin py-xxl">
-      <ReAnimated.View entering={FadeIn.duration(400)} style={pulseOuterBaseStyle} />
-      <ReAnimated.View entering={FadeIn.duration(400).delay(80)} style={pulseInnerBaseStyle} />
-
-      <View className="w-[220px] h-[220px] items-center justify-center">
-        <Svg width={220} height={220} viewBox="0 0 220 220">
-          <Circle cx={110} cy={110} r={RADIUS} fill="none" stroke={Colors.borderSubtle} strokeWidth={8} />
-          <AnimatedCircle
-            cx={110} cy={110} r={RADIUS}
-            fill="none"
-            stroke={Colors.accentPrimary}
-            strokeWidth={8}
-            strokeLinecap="round"
-            strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
-            strokeDashoffset={strokeDashoffset}
-            rotation="-90"
-            origin="110, 110"
-          />
-        </Svg>
-        <View className="absolute items-center">
-          <Text className="font-mono-medium text-metric-hero text-accent-primary">{txCount}</Text>
-          <Text className="font-inter text-body-sm text-ink-body mt-[4px]">Transactions found</Text>
-        </View>
+    <View style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16 }} className="px-lg pb-xl">
+      <View style={{ marginBottom: 'auto' }}>
+        <StepDots total={7} filled={4} scheme={scheme} />
       </View>
 
-      <View className="items-center mt-xxl gap-sm">
-        {/* I3 fix: was bg-secondary-container/text-on-secondary-container — a
-            retired amber/secondary-tier pill violating the "one accent only"
-            rule. Neutral surface treatment instead. */}
-        <View className="flex-row items-center gap-[6px] px-md py-[8px] rounded-full bg-bg-surface border border-border-subtle">
-          <Icon name="reload" size={16} color={Colors.inkBody} />
-          <Text className="font-mono-medium text-[13px] leading-[20px] text-ink-body">{status}</Text>
-        </View>
-        <Text className="font-inter-bold text-title-lg text-ink-headline text-center mt-sm">Analyzing your messages for bank alerts</Text>
-        <Text className="font-inter text-body-sm text-ink-body text-center max-w-[280px]">
-          {smsCount > 0
-            ? `Scanned ${smsCount} messages — extracting transactions.`
-            : 'Identifying and categorizing financial notifications.'}
+      <View style={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 28 }}>
+        <Text
+          style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 26, color: c.inkHeadline, textAlign: 'center' }}
+        >
+          Reading your last 90 days
+        </Text>
+
+        <GlassCard scheme={scheme} style={{ width: '100%' }}>
+          <View style={{ alignItems: 'center', gap: 18 }}>
+            <Text style={{ fontFamily: 'JetBrainsMono_600SemiBold', fontSize: 44, color: c.inkHeadline, letterSpacing: -0.9 }}>
+              {txCount}
+            </Text>
+            <Text
+              style={{
+                fontFamily: 'InstrumentSans_400Regular',
+                fontSize: 13,
+                color: c.inkBody,
+                textTransform: 'uppercase',
+                letterSpacing: 1.5,
+              }}
+            >
+              transactions found so far
+            </Text>
+            <View style={{ width: '100%', height: 6, borderRadius: 1, backgroundColor: c.borderSubtle, overflow: 'hidden' }}>
+              <View
+                style={{
+                  width: `${Math.round(progressPct * 100)}%`,
+                  height: '100%',
+                  backgroundColor: c.accentPrimary,
+                  borderRadius: 1,
+                }}
+              />
+            </View>
+          </View>
+        </GlassCard>
+
+        <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 13, color: c.inkBody, textAlign: 'center', maxWidth: 260 }}>
+          {smsCount > 0 ? `Scanned ${smsCount} messages — everything happens on this device.` : 'Everything happens on this device. Nothing is sent anywhere.'}
+        </Text>
+
+        <Pressable onPress={() => navigation.replace('BudgetSetup')}>
+          <Text
+            style={{
+              fontFamily: 'InstrumentSans_500Medium',
+              fontSize: 13,
+              color: c.inkBody,
+              textDecorationLine: 'underline',
+            }}
+          >
+            Continue in background
+          </Text>
+        </Pressable>
+        <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkLabel, textAlign: 'center' }}>
+          {status}
         </Text>
       </View>
     </View>

@@ -1,53 +1,41 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Animated, Easing } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, ScrollView, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OnboardingScreenProps } from '../../navigation/types';
-import { Colors, Shadows } from '../../theme';
-import { PrimaryButton } from '../../components/PrimaryButton';
-import { Icon } from '../../components/Icon';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { formatAmount } from '../../utils/format';
 import { loadTxRecords, getCategories } from '../../db/database';
 import { countsTowardTotals } from '../../services/txIntelligenceCore';
+import { StepDots } from '../../components/onboarding/StepDots';
+import { GlassCard } from '../../components/onboarding/GlassCard';
+import { RqButton } from '../../components/onboarding/RqButton';
+import { Icon } from '../../components/Icon';
+import { useOnbColors } from '../../theme/onboardingColors';
 
-const DATE_RANGE_LABELS: Record<string, string> = {
-  all: 'All time',
-  '1year': '1 year',
-  '6months': '6 mo',
-  '3months': '3 mo',
-};
+// Bar tint order matches the mockup's category-bar colors (dark variant
+// values; light variant swaps only the neutral "Other" grey).
+const BAR_TINTS = ['accentPrimary', 'notice', 'neutral', 'blue', 'purple', 'grey'] as const;
 
-// Animated.View isn't wrapped by NativeWind's interop — these keep their static
-// layout in the same style object as the Animated-driven transform/opacity.
-const successRingStyle = {
-  width: 120, height: 120, borderRadius: 60,
-  borderWidth: 3, borderColor: `${Colors.accentPrimary}30`,
-  alignItems: 'center' as const, justifyContent: 'center' as const,
-  marginBottom: 40,
-};
-const textAreaStyle = { alignItems: 'center' as const, marginBottom: 40, gap: 4 };
-const statsRowStyle = { flexDirection: 'row' as const, gap: 16, marginBottom: 40, width: '100%' as const };
-const footerStyle = { width: '100%' as const, gap: 8 };
-
+// Onboarding-v3 redesign: matches the mockup's ScanComplete-Dark/Light —
+// the "aha moment" screen. Real per-category monthly-spend math is
+// unchanged from the pre-redesign screen (I4 fix: threaded to
+// BudgetSetupScreen via nav params).
 export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanComplete'>) {
-  const { transactions, dateRange } = useOnboardingStore();
+  const insets = useSafeAreaInsets();
+  const { scheme, colors: c } = useOnbColors();
+  // ponytail: accountCount/dateRange (used by the pre-redesign screen's
+  // stats row) are dropped — the mockup's layout has no room for them and
+  // nothing downstream reads them; suggestBudgetsFromSpend only needs
+  // categorySpend.
+  const { transactions } = useOnboardingStore();
 
-  const accountCount = useMemo(() => {
-    const seen = new Set(transactions.map(tx => `${tx.bankName}|${tx.accountLast4 ?? ''}`));
-    return seen.size;
-  }, [transactions]);
-
-  // I4 fix: real per-category spend from the scan that just completed
-  // (already persisted to the DB by ScanningProgressScreen's insertParsedTxs,
-  // which is where categorization actually happens), threaded to
-  // BudgetSetupScreen so its "suggested budgets" copy is no longer a lie and
-  // suggestBudgetsFromSpend (Task 13) is actually used.
   const [categorySpend, setCategorySpend] = useState<Record<string, number>>({});
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const [records, categories] = await Promise.all([loadTxRecords(), getCategories('expense')]);
-        const nameById = new Map(categories.map((c) => [c.id, c.name]));
+        const nameById = new Map(categories.map((cat) => [cat.id, cat.name]));
         const spend: Record<string, number> = {};
         let earliestTs: number | null = null;
         let latestTs: number | null = null;
@@ -59,19 +47,12 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
           if (earliestTs === null || tx.timestamp < earliestTs) earliestTs = tx.timestamp;
           if (latestTs === null || tx.timestamp > latestTs) latestTs = tx.timestamp;
         }
-        // Bug fix: `records` covers the whole scanned range (which can be
-        // "All time" / 1 year / etc, per DateRangeScreen), so a raw sum is a
-        // lifetime total, not a monthly one — feeding it straight to
-        // suggestBudgetsFromSpend (persisted as a 'monthly' budget in
-        // BudgetSetupScreen) could suggest 12x the real monthly spend.
-        // Normalize using the actual span of the aggregated transactions
-        // (earliest to latest timestamp, minimum 1 month) rather than the
-        // nominal preset, since a preset like "All time" has no fixed
-        // duration to divide by.
+        // Bug fix (kept from pre-redesign screen): normalize by the actual
+        // span of the aggregated transactions, not the nominal date-range
+        // preset, since "All time" has no fixed duration to divide by.
         const MONTH_MS = 30 * 86_400_000;
-        const monthsSpanned = earliestTs !== null && latestTs !== null
-          ? Math.max(1, (latestTs - earliestTs) / MONTH_MS)
-          : 1;
+        const monthsSpanned =
+          earliestTs !== null && latestTs !== null ? Math.max(1, (latestTs - earliestTs) / MONTH_MS) : 1;
         const monthlySpend = Object.fromEntries(
           Object.entries(spend).map(([name, total]) => [name, total / monthsSpanned]),
         );
@@ -85,75 +66,99 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
     };
   }, []);
 
-  const stats = [
-    { icon: 'credit-card-outline', value: String(transactions.length), label: 'Transactions' },
-    { icon: 'bank-outline', value: String(accountCount), label: 'Accounts' },
-    { icon: 'calendar-range-outline', value: DATE_RANGE_LABELS[dateRange] ?? dateRange, label: 'History' },
-  ];
+  const totalSpend = transactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+  const currency = transactions[0]?.currency;
 
-  const scale = useRef(new Animated.Value(0)).current;
-  const fade = useRef(new Animated.Value(0)).current;
-  const slideUp = useRef(new Animated.Value(24)).current;
+  const topCategories = useMemo(() => {
+    const entries = Object.entries(categorySpend).sort((a, b) => b[1] - a[1]);
+    const max = entries.length > 0 ? entries[0][1] : 1;
+    return entries.slice(0, 6).map(([name, amount], i) => ({
+      name,
+      amount,
+      pct: Math.max(6, Math.round((amount / max) * 100)),
+      tint: BAR_TINTS[i] ?? 'grey',
+    }));
+  }, [categorySpend]);
 
-  useEffect(() => {
-    Animated.sequence([
-      Animated.timing(scale, { toValue: 1, duration: 300, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      Animated.parallel([
-        Animated.timing(fade, { toValue: 1, duration: 400, useNativeDriver: true }),
-        Animated.timing(slideUp, { toValue: 0, duration: 400, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      ]),
-    ]).start();
-  }, []);
+  const tintColor: Record<(typeof BAR_TINTS)[number], string> = {
+    accentPrimary: c.accentPrimary,
+    notice: c.notice,
+    neutral: c.inkBody,
+    blue: scheme === 'dark' ? '#8FA8D9' : '#6B7FA6',
+    purple: scheme === 'dark' ? '#C99BC0' : '#9C6B8A',
+    grey: scheme === 'dark' ? '#6E6C66' : '#A6A29B',
+  };
 
   return (
-    <View className="flex-1 bg-bg-base items-center justify-center px-container-margin">
-      <View className="absolute w-[340px] h-[340px] rounded-[170px] bg-accent-primary opacity-[0.04]" />
-      <View className="absolute w-[260px] h-[260px] rounded-[130px] bg-accent-primary opacity-[0.06]" />
+    <View style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16 }} className="px-lg pb-lg">
+      <View className="mb-lg">
+        <StepDots total={7} filled={5} scheme={scheme} />
+      </View>
 
-      <Animated.View style={[successRingStyle, { transform: [{ scale }] }]}>
-        <View
-          className="w-[96px] h-[96px] rounded-[48px] bg-accent-primary items-center justify-center"
-          style={Shadows.card}
-        >
-          <Icon name="check" size={40} color={Colors.bgBase} />
-        </View>
-      </Animated.View>
+      <Text style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 28, color: c.inkHeadline }} className="mb-md">
+        Found it. All of it.
+      </Text>
 
-      <Animated.View style={[textAreaStyle, { opacity: fade, transform: [{ translateY: slideUp }] }]}>
-        <Text className="font-mono-medium text-metric-hero text-ink-headline">
-          {transactions.length}
-        </Text>
-        <Text className="font-inter text-body-md text-ink-body text-center">
-          transactions found
-        </Text>
-        <Text className="font-mono-medium text-metric-hero text-ink-headline pt-sm">
-          {formatAmount(transactions.reduce((sum, tx) => sum + (tx.amount || 0), 0), transactions[0]?.currency)}
-        </Text>
-        <Text className="font-inter text-body-md text-ink-body text-center">
-          tracked
-        </Text>
-      </Animated.View>
-
-      <Animated.View style={[statsRowStyle, { opacity: fade }]}>
-        {stats.map(stat => (
-          <View
-            key={stat.label}
-            className="flex-1 bg-bg-surface rounded-xl p-md items-center gap-[4px] border border-border-subtle"
-            style={Shadows.card}
+      <GlassCard scheme={scheme} style={{ marginBottom: 14 }}>
+        <View style={{ gap: 6 }}>
+          <Text
+            style={{
+              fontFamily: 'InstrumentSans_400Regular',
+              fontSize: 12,
+              color: c.inkBody,
+              textTransform: 'uppercase',
+              letterSpacing: 1.2,
+            }}
           >
-            <Icon name={stat.icon as any} size={22} color={Colors.inkBody} />
-            <Text className="font-mono-medium text-numeric-md text-accent-primary">{stat.value}</Text>
-            <Text className="font-inter text-[11px] leading-[16px] text-ink-body">{stat.label}</Text>
-          </View>
-        ))}
-      </Animated.View>
+            Spent last month
+          </Text>
+          <Text style={{ fontFamily: 'JetBrainsMono_600SemiBold', fontSize: 34, color: c.inkHeadline, letterSpacing: -0.6 }}>
+            {formatAmount(totalSpend, currency)}
+          </Text>
+        </View>
+      </GlassCard>
 
-      <Animated.View style={[footerStyle, { opacity: fade }]}>
-        <PrimaryButton
-          label="Set my budget →"
-          onPress={() => navigation.replace('BudgetSetup', { categorySpend })}
-        />
-      </Animated.View>
+      <View style={{ flex: 1, backgroundColor: c.bgSurface, borderRadius: 4, padding: 16, gap: 12 }}>
+        <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 13, color: c.inkHeadline }}>Top categories</Text>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={{ gap: 9 }}>
+            {topCategories.length === 0 ? (
+              <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 13, color: c.inkBody }}>
+                We're still learning your financial patterns.
+              </Text>
+            ) : (
+              topCategories.map((cat) => (
+                <View key={cat.name}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 13, color: c.inkBody }}>{cat.name}</Text>
+                    <Text style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 13, color: c.inkBody }}>
+                      {formatAmount(cat.amount, currency)}
+                    </Text>
+                  </View>
+                  <View style={{ height: 6, borderRadius: 1, backgroundColor: c.borderSubtle, overflow: 'hidden' }}>
+                    <View style={{ width: `${cat.pct}%`, height: '100%', borderRadius: 1, backgroundColor: tintColor[cat.tint] }} />
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+        </ScrollView>
+      </View>
+
+      <Pressable onPress={() => navigation.navigate('GPayPdfImport')} className="mt-md mb-sm">
+        <Text
+          style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkBody, textAlign: 'center', textDecorationLine: 'underline' }}
+        >
+          Bank not detected? Import a PDF statement instead
+        </Text>
+      </Pressable>
+
+      <RqButton
+        label="Set your budget"
+        scheme={scheme}
+        onPress={() => navigation.replace('BudgetSetup', { categorySpend })}
+        icon={<Icon name="arrow-right" size={18} color={c.onAccent} />}
+      />
     </View>
   );
 }

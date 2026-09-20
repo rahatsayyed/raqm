@@ -1,26 +1,32 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollView';
-import { StepCounter } from '../../components/onboarding/StepCounter';
-import { OnboardingButton } from '../../components/onboarding/OnboardingButton';
-import { Colors, Spacing } from '../../theme';
+import { StepDots } from '../../components/onboarding/StepDots';
+import { RqButton } from '../../components/onboarding/RqButton';
+import { GlassCard } from '../../components/onboarding/GlassCard';
+import { useOnbColors } from '../../theme/onboardingColors';
+import { Spacing } from '../../theme';
 import { getCategoryIdByName, upsertBudget } from '../../db/database';
 import { suggestBudgetsFromSpend } from '../../services/onboarding/budgetSuggestions';
 
-// C4 fix: 'Dining' isn't a real category — the seed list in database.ts uses
-// 'Food & Drinks' (Groceries/Transport/Shopping/Bills all match the real seed).
+// C4 fix (kept from pre-redesign screen): 'Dining' isn't a real category —
+// the seed list in database.ts uses 'Food & Drinks'.
 const DEFAULT_CATEGORIES = ['Food & Drinks', 'Groceries', 'Transport', 'Shopping', 'Bills'];
 
+// Onboarding-v3 redesign: matches the mockup's BudgetSetup-Dark/Light — a
+// 2-column grid of category cards plus a full-width total card, instead of
+// the pre-redesign screen's single-column list. Real suggested-budget math
+// and DB writes (upsertBudget) are unchanged.
 export function BudgetSetupScreen({ navigation, route }: OnboardingScreenProps<'BudgetSetup'>) {
   const isAndroid = Platform.OS === 'android';
-  // I4 fix: pre-fill from the real category spend ScanCompleteScreen threads
-  // through nav params via suggestBudgetsFromSpend (Task 13) — previously
-  // every field started blank while the copy claimed otherwise, and this
-  // function was never imported anywhere.
+  const insets = useSafeAreaInsets();
+  const { scheme, colors: c } = useOnbColors();
+
   const suggested = isAndroid ? suggestBudgetsFromSpend(route.params?.categorySpend ?? {}) : {};
   const [amounts, setAmounts] = useState<Record<string, string>>(
-    Object.fromEntries(DEFAULT_CATEGORIES.map((c) => [c, suggested[c] ? String(suggested[c]) : ''])),
+    Object.fromEntries(DEFAULT_CATEGORIES.map((cat) => [cat, suggested[cat] ? String(suggested[cat]) : ''])),
   );
   const [busy, setBusy] = useState(false);
 
@@ -28,7 +34,9 @@ export function BudgetSetupScreen({ navigation, route }: OnboardingScreenProps<'
     setAmounts((prev) => ({ ...prev, [category]: value.replace(/[^0-9]/g, '') }));
   };
 
-  // I6 fix: guard against double-tap double-writing budgets / double-navigating.
+  const total = Object.values(amounts).reduce((sum, v) => sum + (Number(v) || 0), 0);
+
+  // I6 fix (kept): guard against double-tap double-writing budgets / double-navigating.
   const handleContinue = async () => {
     if (busy) return;
     setBusy(true);
@@ -36,8 +44,8 @@ export function BudgetSetupScreen({ navigation, route }: OnboardingScreenProps<'
       for (const [category, value] of Object.entries(amounts)) {
         if (value.trim().length > 0 && Number(value) > 0) {
           // ponytail: category names here are hardcoded defaults, not
-          // user-picked ones, so a missing categoryId (name not in the
-          // categories table) just skips saving that row rather than throwing.
+          // user-picked ones, so a missing categoryId just skips saving
+          // that row rather than throwing.
           const categoryId = await getCategoryIdByName(category);
           if (categoryId !== null) {
             await upsertBudget(categoryId, Number(value), false);
@@ -50,39 +58,66 @@ export function BudgetSetupScreen({ navigation, route }: OnboardingScreenProps<'
     }
   };
 
+  const skip = () => navigation.navigate('SignUp');
+
   return (
     <KeyboardAwareScrollView
       enableOnAndroid
       extraScrollHeight={Spacing.lg}
       keyboardShouldPersistTaps="handled"
-      className="flex-1 bg-bg-base px-container-margin pt-xxl"
+      style={{ flex: 1, backgroundColor: c.bgBase }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: 32, flexGrow: 1 }}
+      className="px-lg"
     >
-      <StepCounter step={isAndroid ? 7 : 5} totalSteps={isAndroid ? 10 : 8} />
-      <Text className="font-inter-semibold text-body-standard text-ink-headline mb-md">
-        Set a starting budget
+      <View className="mb-md">
+        <StepDots total={7} filled={6} scheme={scheme} />
+      </View>
+
+      <Text style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 26, color: c.inkHeadline, lineHeight: 30 }} className="mb-xs">
+        {isAndroid ? 'Budget around what\nyou actually spend' : 'Set a target for\neach category'}
       </Text>
-      <Text className="font-inter text-supporting-text text-ink-body mb-lg">
-        {isAndroid
-          ? 'Based on what we found, here are suggested budgets. Adjust anything you like.'
-          : 'Set a target for each category. You can change this anytime.'}
+      <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 13, color: c.inkBody }} className="mb-md">
+        {isAndroid ? 'Based on last month. Adjust anything.' : 'You can change this anytime.'}
       </Text>
 
-      {DEFAULT_CATEGORIES.map((category) => (
-        <View key={category} className="flex-row items-center justify-between border-b border-border-subtle py-md">
-          <Text className="font-inter text-body-standard text-ink-headline">{category}</Text>
-          <TextInput
-            value={amounts[category]}
-            onChangeText={(text) => setAmount(category, text)}
-            placeholder="0"
-            placeholderTextColor={Colors.inkLabel}
-            keyboardType="number-pad"
-            className="font-mono-medium text-numeric-md text-ink-headline text-right w-24"
-          />
+      <GlassCard scheme={scheme} style={{ flex: 1 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          <View style={{ width: '100%', backgroundColor: c.bgSurface, borderRadius: 4, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View>
+              <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 13, color: c.inkHeadline }}>Total monthly budget</Text>
+              <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkBody }}>Covers every category below</Text>
+            </View>
+            <Text style={{ fontFamily: 'JetBrainsMono_600SemiBold', fontSize: 22, color: c.accentPrimary }}>
+              {total > 0 ? `₹${total.toLocaleString('en-IN')}` : '—'}
+            </Text>
+          </View>
+
+          {DEFAULT_CATEGORIES.map((category) => (
+            <View key={category} style={{ width: '48%', backgroundColor: c.bgSurface, borderRadius: 4, padding: 16 }}>
+              <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 12, color: c.inkHeadline, marginBottom: 6 }}>
+                {category}
+              </Text>
+              <TextInput
+                value={amounts[category]}
+                onChangeText={(text) => setAmount(category, text)}
+                placeholder="0"
+                placeholderTextColor={c.inkLabel}
+                keyboardType="number-pad"
+                style={{ fontFamily: 'JetBrainsMono_400Regular', fontSize: 16, color: c.inkHeadline, padding: 0 }}
+              />
+            </View>
+          ))}
         </View>
-      ))}
+      </GlassCard>
 
-      <View className="mt-xxl">
-        <OnboardingButton label="Continue" onPress={handleContinue} disabled={busy} />
+      <View className="mt-md" style={{ gap: 10 }}>
+        <Text
+          onPress={skip}
+          style={{ fontFamily: 'InstrumentSans_500Medium', fontSize: 13, color: c.inkBody, textAlign: 'center' }}
+        >
+          Skip for now
+        </Text>
+        <RqButton label="Continue" scheme={scheme} onPress={handleContinue} disabled={busy} />
       </View>
     </KeyboardAwareScrollView>
   );
