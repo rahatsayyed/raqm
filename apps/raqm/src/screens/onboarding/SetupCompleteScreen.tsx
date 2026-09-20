@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { OnboardingScreenProps } from '../../navigation/types';
@@ -9,21 +9,33 @@ import { StepDots } from '../../components/onboarding/StepDots';
 import { Icon } from '../../components/Icon';
 import { useOnbColors } from '../../theme/onboardingColors';
 import { formatAmount } from '../../utils/format';
+import { Spacing } from '../../theme';
+import { useAppStore } from '../../store/appStore';
 
 // C3 fix (kept from pre-redesign screen): renders the real account
 // totals ManualAccountSetupScreen passes through nav params. Onboarding-v3
 // redesign matches the mockup's SetupComplete-Dark/Light — a check-circle
 // mark + "You're set." headline, replacing the pre-redesign screen's
 // account-count-first layout.
-export function SetupCompleteScreen({ navigation, route }: OnboardingScreenProps<'SetupComplete'>) {
+export function SetupCompleteScreen({ route }: OnboardingScreenProps<'SetupComplete'>) {
+  const isAndroid = Platform.OS === 'android';
   const insets = useSafeAreaInsets();
   const { scheme, colors: c } = useOnbColors();
-  const { accountCount, totalBalance, currency } = route.params ?? { accountCount: 0, totalBalance: 0, currency: 'INR' };
+  const setOnboardingComplete = useAppStore((s) => s.setOnboardingComplete);
+  const { accountCount = 0, totalBalance = 0, currency = 'INR', userName = '' } = route.params ?? {};
+
+  // Bug #8 fix: this is now the only place onboarding actually finishes —
+  // NameEntryScreen used to call setOnboardingComplete() itself, which
+  // flipped RootNavigator to the main app before this screen ever mounted.
+  const finish = () => setOnboardingComplete(userName);
 
   return (
-    <View style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16 }} className="px-lg pb-xl">
+    <View
+      style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16, paddingBottom: insets.bottom + Spacing.xl }}
+      className="px-lg"
+    >
       <View style={{ marginBottom: 'auto' }}>
-        <StepDots total={7} filled={7} scheme={scheme} />
+        <StepDots total={isAndroid ? 8 : 5} filled={isAndroid ? 8 : 5} scheme={scheme} />
       </View>
 
       <View style={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 24 }}>
@@ -61,7 +73,7 @@ export function SetupCompleteScreen({ navigation, route }: OnboardingScreenProps
       <Animated.View entering={FadeInDown.duration(400).delay(200)}>
         <GlassCard scheme={scheme}>
           <View style={{ gap: 14 }}>
-            <RqButton label="Go to dashboard" scheme={scheme} onPress={() => navigation.navigate('BudgetSetup')} />
+            <RqButton label="Go to dashboard" scheme={scheme} onPress={finish} />
             <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkBody, textAlign: 'center' }}>
               Nothing was uploaded. Nothing will be.
             </Text>

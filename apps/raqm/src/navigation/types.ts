@@ -8,13 +8,21 @@ export type OnboardingStackParamList = {
   Permissions: undefined;
   DateRange: undefined;
   ScanningProgress: undefined;
+  // Onboarding-v3: account selection is now folded into ScanComplete (item 6 of the
+  // fix list) — this route is kept registered for type/back-compat only, nothing
+  // navigates here anymore.
   AccountSelection: undefined;
   ScanComplete: undefined;
   ManualAccountSetup: undefined;
-  SetupComplete: { accountCount: number; totalBalance: number; currency: string } | undefined;
+  // accountCount/totalBalance/currency: legacy params from ManualAccountSetupScreen's
+  // direct exit. userName: new NameEntry -> SetupComplete handoff. All optional so
+  // either caller can navigate here without the other's fields.
+  SetupComplete: { accountCount?: number; totalBalance?: number; currency?: string; userName?: string } | undefined;
   BudgetSetup: { categorySpend?: Record<string, number> } | undefined;
   SignUp: undefined;
   NameEntry: undefined;
+  // iOS-only: no SMS access, so this replaces the Android scan flow entirely.
+  ImportStatement: undefined;
   OTPVerification: { email: string };
   // Reuses the main stack's GPayPdfImportScreen — see Task 17: OnboardingNavigator
   // and MainNavigator are mutually-exclusive siblings under AppNavigator (swapped by
