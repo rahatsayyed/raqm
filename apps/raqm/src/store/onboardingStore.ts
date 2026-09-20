@@ -18,7 +18,7 @@ interface OnboardingStore {
   transactions: ParsedTransaction[];
   dbReady: boolean;
   initDb: () => Promise<void>;
-  setTransactions: (txs: ParsedTransaction[]) => Promise<void>;
+  setTransactions: (txs: ParsedTransaction[], onProgress?: (fraction: number) => void) => Promise<void>;
   addTransaction: (tx: ParsedTransaction) => Promise<void>;
 }
 
@@ -36,9 +36,9 @@ export const useOnboardingStore = create<OnboardingStore>((set) => ({
     set({ transactions: txs, dbReady: true });
   },
 
-  setTransactions: async (txs) => {
+  setTransactions: async (txs, onProgress) => {
     await clearTransactions();
-    await insertParsedTxs(txs);
+    await insertParsedTxs(txs, onProgress);
     set({ transactions: txs });
   },
 

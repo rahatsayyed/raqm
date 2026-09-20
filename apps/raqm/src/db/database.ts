@@ -1551,8 +1551,22 @@ export async function insertParsedTx(
   return { id: newId, merged: false };
 }
 
-export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
+export async function insertParsedTxs(
+  txs: ParsedTransaction[],
+  // Real progress signal (0..1) across both sequential passes below — lets callers
+  // (e.g. onboarding's ScanningProgressScreen) drive a progress bar off actual DB
+  // work instead of a guessed elapsed-time animation. Optional, so existing callers
+  // (rescan.ts) are unaffected.
+  onProgress?: (fraction: number) => void,
+): Promise<void> {
   if (txs.length === 0) return;
+
+  // Both sequential passes below (categorize, then insert) do comparable per-row DB
+  // work, so we weight them evenly: categorize = first half of progress, insert =
+  // second half. ponytail: a flat 50/50 split, not a measured weighting — good enough
+  // to keep perceived progress honest; revisit if one pass empirically dominates.
+  const totalSteps = txs.length * 2;
+  const reportProgress = (step: number) => onProgress?.(Math.min(1, step / totalSteps));
 
   // Resolve categorization outside the transaction — SEQUENTIALLY. Promise.all here
   // fired thousands of concurrent statements (every call misses the ruleCache before
@@ -1568,7 +1582,8 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
   const transferRules = await getAmountRules('transfer');
   const forcedTransfers: boolean[] = [];
   const decisions: Array<{ categoryId: number | null; subcategoryId: number | null }> = [];
-  for (const tx of txs) {
+  for (let ci = 0; ci < txs.length; ci++) {
+    const tx = txs[ci];
     const forcedTransfer = getTransferRuleMatch(tx.amount, transferRules);
     forcedTransfers.push(forcedTransfer);
     const effectiveTx = forcedTransfer ? { ...tx, type: TransactionType.TRANSFER } : tx;
@@ -1577,6 +1592,7 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
       decision.categoryId = await getCategoryIdByName('Transfer');
     }
     decisions.push(decision);
+    reportProgress(ci + 1);
   }
 
   // Hide Merchant rule: same as insertParsedTx — drops matching rows entirely, checked
@@ -1590,6 +1606,9 @@ export async function insertParsedTxs(txs: ParsedTransaction[]): Promise<void> {
   try {
     for (let i = 0; i < txs.length; i++) {
       const tx = txs[i];
+      // Reported unconditionally per iteration (top of loop, not after the insert) so
+      // skipped rows (dup/hidden/merged — every `continue` below) still advance progress.
+      reportProgress(txs.length + i + 1);
       // See isReferenceDuplicate above insertParsedTx — catches the same real transfer
       // reported by two different bank/sender identities, which a bulk scan can just as
       // easily pull in together as the live-SMS path can.
