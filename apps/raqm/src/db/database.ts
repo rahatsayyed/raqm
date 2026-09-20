@@ -592,6 +592,27 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  // App-wide category list confirmed as: Bills, EMI, Entertainment, Food and Drink, Travel,
+  // Groceries, Health, Investment, Other, Shopping, Transportation, Transfer. Nine of those
+  // twelve names already exist verbatim as defaults; the other three are pure renames of an
+  // existing default (same category, same id, same emoji) — same idiom as the v8 migration's
+  // 'Food & Dining' -> 'Food & Drinks' rename. In-place rename preserves categoryId, so every
+  // transaction/budget FK, and any user's own data, is untouched. Purely additive/renaming:
+  // no row is deleted, no user-created (is_custom=1) category is touched.
+  if (current < 19) {
+    await database.runAsync(`BEGIN`);
+    try {
+      await database.runAsync(`UPDATE categories SET name = 'Food and Drink' WHERE name = 'Food & Drinks' AND is_custom = 0`);
+      await database.runAsync(`UPDATE categories SET name = 'Transportation' WHERE name = 'Transport' AND is_custom = 0`);
+      await database.runAsync(`UPDATE categories SET name = 'Investment' WHERE name = 'Investments' AND is_custom = 0`);
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (19)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -1288,11 +1309,11 @@ async function categorizeParsedTx(
 // Merchant-keyword → default category name. Ordered: first match wins.
 const DEFAULT_KEYWORD_RULES: Array<[RegExp, string]> = [
   [/bigbasket|blinkit|zepto|instamart|dmart|grofers|grocer|supermarket|kirana/i, 'Groceries'],
-  [/swiggy|zomato|dominos|mcdonald|kfc|pizza|burger|biryani|restaurant|cafe|eatfit|faasos/i, 'Food & Dining'],
-  [/\buber\b|\bola\b|rapido|irctc|redbus|metro card|petrol|fuel|hpcl|iocl|bpcl|fastag/i, 'Transport'],
+  [/swiggy|zomato|dominos|mcdonald|kfc|pizza|burger|biryani|restaurant|cafe|eatfit|faasos/i, 'Food and Drink'],
+  [/\buber\b|\bola\b|rapido|irctc|redbus|metro card|petrol|fuel|hpcl|iocl|bpcl|fastag/i, 'Transportation'],
   [/amazon|flipkart|myntra|ajio|meesho|nykaa|snapdeal|tatacliq/i, 'Shopping'],
   [/netflix|spotify|hotstar|primevideo|prime video|bookmyshow|sonyliv|zee5|gaana|youtube/i, 'Entertainment'],
-  [/jio|airtel|\bvi\b|vodafone|bsnl|electricity|broadband|\bdth\b|tata power|bescom|recharge/i, 'Bills & Utilities'],
+  [/jio|airtel|\bvi\b|vodafone|bsnl|electricity|broadband|\bdth\b|tata power|bescom|recharge/i, 'Bills'],
   [/pharmacy|apollo|medplus|1mg|pharmeasy|netmeds|hospital|clinic|diagnostic/i, 'Health'],
   [/makemytrip|goibibo|\boyo\b|air india|indigo|spicejet|vistara|cleartrip|airbnb/i, 'Travel'],
   [/udemy|coursera|byjus|unacademy|school|college|tuition/i, 'Education'],
@@ -1823,9 +1844,9 @@ type CategoryDirection = 'expense' | 'income' | 'both';
 // either way and show up for both directions.
 const DEFAULT_CATEGORIES: [string, string, CategoryDirection][] = [
   // Expense
-  ['Food & Drinks', '🍔', 'expense'],
+  ['Food and Drink', '🍔', 'expense'],
   ['Groceries', '🛒', 'expense'],
-  ['Transport', '🚕', 'expense'],
+  ['Transportation', '🚕', 'expense'],
   ['Shopping', '🛍️', 'expense'],
   ['Bills', '📱', 'expense'],
   ['Rent & Housing', '🏠', 'expense'],
@@ -1838,7 +1859,7 @@ const DEFAULT_CATEGORIES: [string, string, CategoryDirection][] = [
   ['Fuel', '⛽', 'expense'],
   ['Transfer', '🔁', 'expense'],
   // Both
-  ['Investments', '📈', 'both'],
+  ['Investment', '📈', 'both'],
   ['Gifts', '🎁', 'both'],
   ['Other', '📦', 'both'],
   // Income / credit
@@ -1877,9 +1898,9 @@ const NEW_V8_CATEGORIES: [string, string, CategoryDirection][] = [
 ];
 
 const DEFAULT_SUBCATEGORIES: [string, string[]][] = [
-  ['Food & Drinks', ['Restaurants', 'Delivery', 'Coffee']],
+  ['Food and Drink', ['Restaurants', 'Delivery', 'Coffee']],
   ['Groceries', ['Supermarket', 'Vegetables', 'Meat']],
-  ['Transport', ['Cab', 'Public Transit']],
+  ['Transportation', ['Cab', 'Public Transit']],
   ['Bills', ['Electricity', 'Internet', 'Mobile']],
   ['Entertainment', ['Streaming', 'Movies', 'Games']],
 ];

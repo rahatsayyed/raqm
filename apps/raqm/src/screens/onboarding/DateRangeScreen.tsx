@@ -63,9 +63,12 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16 }} className="px-lg pb-xl">
+    <View
+      style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }}
+      className="px-lg"
+    >
       <View className="mb-lg">
-        <StepDots total={7} filled={3} scheme={scheme} />
+        <StepDots total={8} filled={3} scheme={scheme} />
       </View>
 
       <Text style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 30, color: c.inkHeadline }} className="mb-xs">
