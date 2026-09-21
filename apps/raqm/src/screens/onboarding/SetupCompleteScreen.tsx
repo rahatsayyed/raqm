@@ -31,31 +31,31 @@ export function SetupCompleteScreen({ route }: OnboardingScreenProps<'SetupCompl
 
   return (
     <View
-      style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16, paddingBottom: insets.bottom + Spacing.xl }}
-      className="px-lg"
+      style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + Spacing.xl }}
+      className="flex-1 bg-onb-bg-base dark:bg-onb-bg-base-dark px-lg"
     >
-      <View style={{ marginBottom: 'auto' }}>
+      <View className="mb-auto">
         <StepDots total={isAndroid ? 8 : 5} filled={isAndroid ? 8 : 5} scheme={scheme} />
       </View>
 
-      <View style={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 24 }}>
+      <View className="flex-grow items-center justify-center gap-lg">
         <Animated.View
           entering={FadeIn.duration(400)}
-          style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: c.accentPrimary, alignItems: 'center', justifyContent: 'center' }}
+          className="w-16 h-16 rounded-full items-center justify-center bg-onb-accent-primary dark:bg-onb-accent-primary-dark"
         >
           <Icon name="check" size={30} color={c.onAccent} />
         </Animated.View>
 
         <Animated.Text
           entering={FadeInDown.duration(400).delay(100)}
-          style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 30, color: c.inkHeadline, textAlign: 'center' }}
+          className="font-newsreader-italic text-[30px] text-onb-ink-headline dark:text-onb-ink-headline-dark text-center"
         >
           You're set.
         </Animated.Text>
 
         <Animated.Text
           entering={FadeInDown.duration(400).delay(150)}
-          style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 15, lineHeight: 22, color: c.inkBody, textAlign: 'center', maxWidth: 260 }}
+          className="font-instrument text-[15px] leading-[22px] text-onb-ink-body dark:text-onb-ink-body-dark text-center max-w-[260px]"
         >
           Raqm is watching your spend, quietly, from right here on your phone.
         </Animated.Text>
@@ -63,7 +63,7 @@ export function SetupCompleteScreen({ route }: OnboardingScreenProps<'SetupCompl
         {accountCount > 0 && (
           <Animated.Text
             entering={FadeInDown.duration(400).delay(180)}
-            style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 16, color: c.inkBody, textAlign: 'center' }}
+            className="font-mono-medium text-[16px] text-onb-ink-body dark:text-onb-ink-body-dark text-center"
           >
             {accountCount} account{accountCount !== 1 ? 's' : ''} · {formatAmount(totalBalance, currency)}
           </Animated.Text>
@@ -72,9 +72,9 @@ export function SetupCompleteScreen({ route }: OnboardingScreenProps<'SetupCompl
 
       <Animated.View entering={FadeInDown.duration(400).delay(200)}>
         <GlassCard scheme={scheme}>
-          <View style={{ gap: 14 }}>
+          <View className="gap-[14px]">
             <RqButton label="Go to dashboard" scheme={scheme} onPress={finish} />
-            <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkBody, textAlign: 'center' }}>
+            <Text className="font-instrument text-[11px] text-onb-ink-body dark:text-onb-ink-body-dark text-center">
               Nothing was uploaded. Nothing will be.
             </Text>
           </View>

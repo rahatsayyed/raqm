@@ -105,7 +105,7 @@ async function checkAndroidRow(key: RowKey): Promise<boolean> {
 export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permissions'>) {
   const isAndroid = Platform.OS === 'android';
   const insets = useSafeAreaInsets();
-  const { scheme, colors: c } = useOnbColors();
+  const { scheme } = useOnbColors();
   const [granted, setGranted] = useState<Record<RowKey, boolean>>({
     sms: false,
     notificationAccess: false,
@@ -169,37 +169,35 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
 
   return (
     <View
+      className="flex-1 bg-onb-bg-base px-[20px] dark:bg-onb-bg-base-dark"
       style={{
-        flex: 1,
-        backgroundColor: c.bgBase,
         paddingTop: insets.top + 16,
         paddingBottom: insets.bottom + 40,
         // Literal artifact padding is "56px 20px 40px" — 20px has no exact
-        // Spacing token (sm=8, md=16, lg=24), applied literally instead of px-lg (24).
-        paddingHorizontal: 20,
+        // Spacing token (sm=8, md=16, lg=24), applied as px-[20px] in className.
       }}
     >
       {/* Literal artifact margin-bottom below the dots is 28px — no exact
           Spacing token (lg=24, xl=32); applied literally instead of mb-lg (24). */}
-      <View style={{ marginBottom: 28 }}>
+      <View className="mb-[28px]">
         <StepDots total={8} filled={2} scheme={scheme} />
       </View>
 
       {/* Literal artifact h1 margin-bottom is 8px — was mb-xs (Spacing.xs = 4). */}
-      <Text style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 30, color: c.inkHeadline, marginBottom: 8 }}>
+      <Text className="mb-[8px] font-newsreader-italic text-[30px] text-onb-ink-headline dark:text-onb-ink-headline-dark">
         A couple of permissions
       </Text>
       {/* Literal artifact subtitle margin-bottom is 18px — no exact Spacing
           token (md=16, lg=24); applied literally instead of mb-lg (24). */}
-      <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 15, lineHeight: 22, color: c.inkBody, marginBottom: 18 }}>
+      <Text className="mb-[18px] font-instrument text-[15px] leading-[22px] text-onb-ink-body dark:text-onb-ink-body-dark">
         Each one only reads what it needs, on this device.
       </Text>
 
       <GlassCard scheme={scheme}>
         <ScrollView showsVerticalScrollIndicator={false}>
           {isAndroid ? (
-            <View style={{ gap: 10 }}>
-              <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View className="gap-[10px]">
+              <View className="flex-row gap-[10px]">
                 <PermissionRow
                   index={0}
                   icon="message-outline"
@@ -219,7 +217,7 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
                   scheme={scheme}
                 />
               </View>
-              <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View className="flex-row gap-[10px]">
                 <PermissionRow
                   index={2}
                   icon="map-marker-outline"
@@ -261,9 +259,9 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
           footer note below, matching the artifact's `margin: auto 0 0` on
           that note — the note sits just above Continue, not the card
           stretching to the screen's full height. */}
-      <View style={{ flex: 1 }} />
+      <View className="flex-1" />
 
-      <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkBody, textAlign: 'center' }} className="mb-sm">
+      <Text className="mb-sm text-center font-instrument text-[11px] text-onb-ink-body dark:text-onb-ink-body-dark">
         Location and notification management are optional — skip either and continue.
       </Text>
 

@@ -24,7 +24,8 @@ export function ImportStatementScreen({ navigation }: OnboardingScreenProps<'Imp
       className="px-lg"
     >
       <View className="mb-lg">
-        <StepDots total={5} filled={2} scheme={scheme} />
+        {/* Bug fix: artifact shows 4 dots (2 filled), not 5. */}
+        <StepDots total={4} filled={2} scheme={scheme} />
       </View>
 
       <Text style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 30, color: c.inkHeadline }} className="mb-xs">
@@ -34,31 +35,52 @@ export function ImportStatementScreen({ navigation }: OnboardingScreenProps<'Imp
         iPhone can't read bank SMS, so this is how Raqm learns your spend.
       </Text>
 
-      <Animated.View entering={FadeInDown.duration(400)} style={{ flex: 1, justifyContent: 'center' }}>
+      <Animated.View entering={FadeInDown.duration(400)} className="flex-1 justify-center">
         <GlassCard scheme={scheme}>
-          <View style={{ alignItems: 'center', gap: 12 }}>
-            <Icon name="file-pdf-box" size={40} color={c.accentPrimary} />
-            <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 14, color: c.inkHeadline, textAlign: 'center' }}>
-              A bank or UPI app statement, as a PDF
-            </Text>
-            <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 12, color: c.inkBody, textAlign: 'center' }}>
-              Parsed entirely on this device. Nothing is uploaded.
-            </Text>
+          {/* Bug fix: artifact centers the card content (justify-content:
+              center) with gap:16, and wraps the icon in a 56px tinted
+              circular badge — none of that was here. */}
+          <View className="items-center justify-center gap-4">
+            <View className="w-14 h-14 rounded-full items-center justify-center bg-onb-accent-primary/10 dark:bg-onb-accent-primary-dark/[0.14]">
+              <Icon name="file-document-outline" size={26} color={c.accentPrimary} />
+            </View>
+            <View className="items-center">
+              <Text className="text-[13px] font-instrument-semibold text-onb-ink-headline dark:text-onb-ink-headline-dark text-center">
+                A bank or UPI app statement, as a PDF
+              </Text>
+              {/* Bug fix: artifact copy is "Parsed on this device. Never
+                  uploaded." with a 220px max-width, not this longer line. */}
+              <Text
+                style={{ maxWidth: 220 }}
+                className="mt-1.5 text-[11px] font-instrument leading-4 text-onb-ink-body dark:text-onb-ink-body-dark text-center"
+              >
+                Parsed on this device. Never uploaded.
+              </Text>
+            </View>
           </View>
         </GlassCard>
       </Animated.View>
 
-      <View style={{ gap: 14 }}>
-        <Pressable onPress={() => navigation.navigate('BudgetSetup')}>
-          <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 13, color: c.inkBody, textAlign: 'center' }}>
-            Skip for now
-          </Text>
-        </Pressable>
+      {/* Bug fix: artifact stacks the primary button FIRST, then two 11px
+          underlined text links ("Enter accounts manually instead" was
+          missing entirely) — gap:10/marginTop:16, not gap:14 with no top
+          margin and only one link. */}
+      <View className="mt-4 gap-2.5">
         <RqButton
           label="Import a PDF statement"
           scheme={scheme}
           onPress={() => navigation.navigate('GPayPdfImport')}
         />
+        <Pressable onPress={() => navigation.navigate('ManualAccountSetup')}>
+          <Text className="text-[11px] font-instrument underline text-onb-ink-body dark:text-onb-ink-body-dark text-center">
+            Enter accounts manually instead
+          </Text>
+        </Pressable>
+        <Pressable onPress={() => navigation.navigate('BudgetSetup')}>
+          <Text className="text-[11px] font-instrument underline text-onb-ink-body dark:text-onb-ink-body-dark text-center">
+            Skip for now
+          </Text>
+        </Pressable>
       </View>
     </View>
   );

@@ -7,8 +7,9 @@ import { OnboardingScreenProps } from '../../navigation/types';
 import { RqButton } from '../../components/onboarding/RqButton';
 import { GlassCard } from '../../components/onboarding/GlassCard';
 import { StepDots } from '../../components/onboarding/StepDots';
+import { Icon } from '../../components/Icon';
 import { useOnbColors } from '../../theme/onboardingColors';
-import { Spacing } from '../../theme';
+import { cn } from '../../utils/cn';
 
 const isAndroid = Platform.OS === 'android';
 
@@ -17,6 +18,7 @@ const isAndroid = Platform.OS === 'android';
 export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) {
   const insets = useSafeAreaInsets();
   const { scheme, colors: c } = useOnbColors();
+  const isDark = scheme === 'dark';
 
   const getStarted = async () => {
     if (isAndroid) {
@@ -35,8 +37,10 @@ export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) 
 
   return (
     <View
-      style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16, paddingBottom: insets.bottom + Spacing.xl }}
-      className="px-lg"
+      // paddingTop/paddingBottom stay inline: they depend on safe-area
+      // insets at runtime, which className can't express.
+      style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }}
+      className={cn('flex-1 px-lg', isDark ? 'bg-onb-bg-base-dark' : 'bg-onb-bg-base')}
     >
       {/* Bug #1 fix: this screen previously had a self-added 288px circular
           radial glow behind the copy — not present anywhere in the current
@@ -44,14 +48,18 @@ export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) 
 
       <StepDots total={isAndroid ? 8 : 5} filled={1} scheme={scheme} />
 
+      {/* Bug fix (recheck against artifact): gap below the dots is 40px
+          (mt-xxl) in both Welcome-Light/Dark, not 32px (mt-xl). */}
       <Text
-        style={{ fontFamily: 'InstrumentSans_400Regular', color: c.inkBody, fontSize: 13, letterSpacing: 2.1 }}
-        className="uppercase mt-xl mb-auto"
+        className={cn(
+          'uppercase mt-xxl mb-auto text-[13px] tracking-[2.1px] font-instrument',
+          isDark ? 'text-onb-ink-body-dark' : 'text-onb-ink-body',
+        )}
       >
         Raqm
       </Text>
 
-      <View style={{ flexGrow: 1, justifyContent: 'center', gap: 20 }}>
+      <View className="flex-grow justify-center gap-5">
         <Animated.Text
           entering={FadeInDown.duration(500).delay(100)}
           style={{ fontFamily: 'Newsreader_400Regular_Italic', color: c.inkHeadline, fontSize: 40, lineHeight: 46 }}
@@ -71,9 +79,22 @@ export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) 
 
       <Animated.View entering={FadeInDown.duration(500).delay(300)}>
         <GlassCard scheme={scheme}>
-          <View style={{ gap: 16 }}>
-            <RqButton label="Get started" scheme={scheme} onPress={getStarted} />
-            <Text style={{ fontFamily: 'InstrumentSans_400Regular', color: c.inkBody, fontSize: 12, textAlign: 'center' }}>
+          <View className="gap-4">
+            {/* Bug fix (recheck against artifact): every Welcome artboard
+                (Android + iOS, light + dark) shows an arrow-right icon next
+                to "Get started" — was missing entirely. */}
+            <RqButton
+              label="Get started"
+              scheme={scheme}
+              onPress={getStarted}
+              icon={<Icon name="arrow-right" size={18} color={c.onAccent} />}
+            />
+            <Text
+              className={cn(
+                'text-[12px] text-center font-instrument',
+                isDark ? 'text-onb-ink-body-dark' : 'text-onb-ink-body',
+              )}
+            >
               Private by design. No servers involved.
             </Text>
           </View>

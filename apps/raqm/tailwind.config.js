@@ -83,6 +83,44 @@ module.exports = {
         'error-muted': '#C4707A',
         // TODO(design-v2): unused post-onboarding-redesign, remove after full app migration
         'moss-structure': '#7C9885',
+
+        // ── Onboarding-v3 tokens (light/dark) — mirrors
+        // src/theme/onboardingColors.ts's OnbColors exactly. Deliberately
+        // separate from the tokens above (which are the app-wide dark-only
+        // scale) since onboarding is the only OS-light/dark-aware surface.
+        // darkMode defaults to 'media' here (no override below), matching
+        // useColorScheme()'s OS-based detection, so pair every onb-* class
+        // with its dark:onb-*-dark counterpart.
+        'onb-bg-base': '#F7F6F3',
+        'onb-bg-base-dark': '#0B0C0E',
+        'onb-bg-surface': '#FFFFFF',
+        'onb-bg-surface-dark': '#15171A',
+        'onb-bg-surface-raised': '#EFEDE8',
+        'onb-bg-surface-raised-dark': '#1C1F23',
+        'onb-border-subtle': 'rgba(20,20,20,0.08)',
+        'onb-border-subtle-dark': 'rgba(255,255,255,0.12)',
+        'onb-glass-bg': 'rgba(255,255,255,0.55)',
+        'onb-glass-bg-dark': 'rgba(255,255,255,0.06)',
+        'onb-glass-highlight': 'rgba(255,255,255,0.6)',
+        'onb-glass-highlight-dark': 'rgba(255,255,255,0.08)',
+        'onb-ink-headline': '#14140F',
+        'onb-ink-headline-dark': '#F2F1EC',
+        'onb-ink-body': '#4A4A45',
+        'onb-ink-body-dark': '#B7B6AE',
+        'onb-ink-label': '#8A8880',
+        'onb-ink-label-dark': '#6B6A62',
+        'onb-accent-primary': '#2E5D4E',
+        'onb-accent-primary-dark': '#66CCAC',
+        'onb-accent-deep': '#DCE9E3',
+        'onb-accent-deep-dark': '#1F4A3B',
+        'onb-notice': '#B8813C',
+        'onb-notice-dark': '#D9A85C',
+        'onb-error-muted': '#B4483A',
+        'onb-error-muted-dark': '#E08672',
+        'onb-on-accent': '#F7F6F3',
+        'onb-on-accent-dark': '#14140F',
+        'onb-dot-inactive': 'rgba(20,20,20,0.12)',
+        'onb-dot-inactive-dark': 'rgba(255,255,255,0.14)',
       },
       // Named scale mirrors src/theme/spacing.ts — prefer these over arbitrary
       // px values so screens stay in sync with the theme tokens by construction.
@@ -126,6 +164,9 @@ module.exports = {
         'inter-bold': ['Inter_700Bold'],
         mono: ['JetBrainsMono_400Regular'],
         'mono-medium': ['JetBrainsMono_500Medium'],
+        // Loaded in App.tsx but had no token yet — needed for the onboarding-v3
+        // "total monthly budget" amount (artifact weight 600).
+        'mono-semibold': ['JetBrainsMono_600SemiBold'],
         // DESIGN.md v3.0 §3 — Newsreader (italic, display only) + Instrument
         // Sans (body). New families, used only by the 7 onboarding-v3
         // redesign screens; the rest of the app keeps Inter.
