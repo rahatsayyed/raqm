@@ -69,48 +69,44 @@ export function BudgetSetupScreen({ navigation, route }: OnboardingScreenProps<'
       enableOnAndroid
       extraScrollHeight={Spacing.lg}
       keyboardShouldPersistTaps="handled"
-      style={{ flex: 1, backgroundColor: c.bgBase }}
-      // Literal artifact padding is "56px 20px 32px" (BudgetSetup-Light/Dark.dc.html) —
-      // was `px-lg` (Spacing.lg = 24px) on the sides, which doesn't match the artifact's
-      // 20px. 20px has no matching Spacing token (sm=8, md=16, lg=24) so it's applied as
-      // a literal value here rather than rounded to the nearest token.
-      contentContainerStyle={{
-        paddingTop: insets.top + 16,
-        paddingBottom: insets.bottom + Spacing.xl,
-        paddingHorizontal: 20,
-        flexGrow: 1,
-      }}
+      className="flex-1 bg-onb-bg-base dark:bg-onb-bg-base-dark"
+      // paddingTop/paddingBottom depend on runtime insets so they stay as
+      // style; paddingHorizontal (literal artifact 20px, no exact Spacing
+      // token) and flexGrow are static, moved to contentContainerClassName.
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + Spacing.xl }}
+      contentContainerClassName="px-[20px] flex-grow"
     >
       {/* Literal artifact margin-bottom below the step dots is 20px — no exact Spacing
           token (sm=8, md=16); applied literally instead of rounding to mb-md (16). */}
-      <View style={{ marginBottom: 20 }}>
+      <View className="mb-[20px]">
         <StepDots total={isAndroid ? 8 : 5} filled={isAndroid ? 6 : 3} scheme={scheme} />
       </View>
 
-      <Text style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 26, color: c.inkHeadline, lineHeight: 30 }} className="mb-xs">
+      <Text className="font-newsreader-italic text-[26px] leading-[30px] text-onb-ink-headline dark:text-onb-ink-headline-dark mb-xs">
         {isAndroid ? 'Budget around what\nyou actually spend' : 'Set a target for\neach category'}
       </Text>
       {/* Literal artifact margin-bottom on the subtitle is 14px — no exact Spacing token
           (sm=8, md=16); applied literally instead of rounding. */}
-      <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 13, color: c.inkBody, marginBottom: 14 }}>
+      <Text className="font-instrument text-[13px] text-onb-ink-body dark:text-onb-ink-body-dark mb-[14px]">
         {isAndroid ? 'Based on last month. Adjust anything.' : 'You can change this anytime.'}
       </Text>
 
       <GlassCard scheme={scheme} style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}>
-          <View style={{ width: '100%', backgroundColor: c.bgSurface, borderRadius: 4, padding: Spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View className="flex-row flex-wrap gap-sm">
+          <View className="w-full bg-onb-bg-surface dark:bg-onb-bg-surface-dark rounded-inner p-md flex-row justify-between items-center">
             <View>
-              <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 13, color: c.inkHeadline }}>Total monthly budget</Text>
-              <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkBody }}>Covers every category below</Text>
+              <Text className="font-instrument-semibold text-[13px] text-onb-ink-headline dark:text-onb-ink-headline-dark">Total monthly budget</Text>
+              <Text className="font-instrument text-[11px] text-onb-ink-body dark:text-onb-ink-body-dark">Covers every category below</Text>
             </View>
-            <Text style={{ fontFamily: 'JetBrainsMono_600SemiBold', fontSize: 22, color: c.accentPrimary }}>
+            <Text className="font-mono-semibold text-[22px] text-onb-accent-primary dark:text-onb-accent-primary-dark">
               {total > 0 ? `₹${total.toLocaleString('en-IN')}` : '—'}
             </Text>
           </View>
 
           {DEFAULT_CATEGORIES.map((category) => (
-            <View key={category} style={{ width: '48%', backgroundColor: c.bgSurface, borderRadius: 4, padding: Spacing.md }}>
-              <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 12, color: c.inkHeadline, marginBottom: Spacing.xs + 2 }}>
+            <View key={category} className="w-[48%] bg-onb-bg-surface dark:bg-onb-bg-surface-dark rounded-inner p-md">
+              {/* Literal artifact margin-bottom is 6px (Spacing.xs + 2, no exact token). */}
+              <Text className="font-instrument-semibold text-[12px] text-onb-ink-headline dark:text-onb-ink-headline-dark mb-[6px]">
                 {category}
               </Text>
               <TextInput
@@ -119,17 +115,17 @@ export function BudgetSetupScreen({ navigation, route }: OnboardingScreenProps<'
                 placeholder="0"
                 placeholderTextColor={c.inkLabel}
                 keyboardType="number-pad"
-                style={{ fontFamily: 'JetBrainsMono_400Regular', fontSize: 16, color: c.inkHeadline, padding: 0 }}
+                className="font-mono text-[16px] text-onb-ink-headline dark:text-onb-ink-headline-dark p-0"
               />
             </View>
           ))}
         </View>
       </GlassCard>
 
-      <View className="mt-md" style={{ gap: 10 }}>
+      <View className="mt-md gap-[10px]">
         <Text
           onPress={skip}
-          style={{ fontFamily: 'InstrumentSans_500Medium', fontSize: 13, color: c.inkBody, textAlign: 'center' }}
+          className="font-instrument-medium text-[13px] text-onb-ink-body dark:text-onb-ink-body-dark text-center"
         >
           Skip for now
         </Text>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { OnbColors, type OnbScheme } from '../../theme/onboardingColors';
+import { cn } from '../../utils/cn';
+import type { OnbScheme } from '../../theme/onboardingColors';
 
 type StepDotsProps = { total: number; filled: number; scheme: OnbScheme };
 
@@ -10,20 +11,26 @@ type StepDotsProps = { total: number; filled: number; scheme: OnbScheme };
 // iOS's 5, including NameEntry as of the fixes pass). StepCounter.tsx is
 // untouched and still used only by the orphaned legacy screens this
 // redesign doesn't route through (AccountSelection, SignUp,
-// OTPVerification, ManualAccountSetup).
+// OTPVerification, ManualAccountSetup). Colors now come from tailwind's
+// onb-* tokens keyed off `scheme` (explicit ternary, matching RqButton's
+// convention), not the OnbColors runtime lookup.
 export function StepDots({ total, filled, scheme }: StepDotsProps) {
-  const c = OnbColors[scheme];
+  const isDark = scheme === 'dark';
   return (
-    <View style={{ flexDirection: 'row', gap: 6 }}>
+    <View className="flex-row gap-1.5">
       {Array.from({ length: total }).map((_, i) => (
         <View
           key={i}
-          style={{
-            width: 20,
-            height: 4,
-            borderRadius: 1,
-            backgroundColor: i < filled ? c.accentPrimary : c.dotInactive,
-          }}
+          className={cn(
+            'w-5 h-1 rounded-dot',
+            i < filled
+              ? isDark
+                ? 'bg-onb-accent-primary-dark'
+                : 'bg-onb-accent-primary'
+              : isDark
+                ? 'bg-onb-dot-inactive-dark'
+                : 'bg-onb-dot-inactive',
+          )}
         />
       ))}
     </View>

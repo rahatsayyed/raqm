@@ -47,9 +47,10 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
       enableOnAndroid
       extraScrollHeight={Spacing.lg}
       keyboardShouldPersistTaps="handled"
-      style={{ flex: 1, backgroundColor: c.bgBase }}
+      className="flex-1 bg-onb-bg-base dark:bg-onb-bg-base-dark"
       // Literal artifact padding: "56px 20px 40px". 20px has no exact Spacing
       // token (sm=8, md=16, lg=24) — applied literally rather than px-lg (24).
+      // Kept as style: insets.top/bottom are runtime values, not static classes.
       contentContainerStyle={{
         paddingTop: insets.top + 16,
         paddingBottom: insets.bottom + 40,
@@ -57,16 +58,16 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
         flexGrow: 1,
       }}
     >
-      <View style={{ flex: 1 }}>
+      <View className="flex-1">
         {/* Literal artifact: 8 dots, margin-bottom 28px, directly followed by
             the icon/title/subtitle/input in document flow (NOT centered or
             split via justify-content: space-between) — a flex-grow spacer
             after the input pushes the CTA to the bottom instead. */}
-        <View style={{ marginBottom: 28 }}>
+        <View className="mb-[28px]">
           <StepDots total={isAndroid ? 8 : 5} filled={isAndroid ? 7 : 4} scheme={scheme} />
         </View>
 
-        <Animated.View entering={FadeInDown.duration(400).delay(50)} style={{ marginBottom: 14 }}>
+        <Animated.View entering={FadeInDown.duration(400).delay(50)} className="mb-[14px]">
           {/* Artifact icon is a plain person outline (circle head + shoulder
               arc), stroke = inkHeadline, 24x24, stroke-width 1.5 — not a
               hand-wave icon in accent color like the prior pass used. */}
@@ -74,13 +75,13 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
         </Animated.View>
         <Animated.Text
           entering={FadeInDown.duration(400).delay(100)}
-          style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 30, color: c.inkHeadline, marginBottom: 8 }}
+          className="font-newsreader-italic text-[30px] text-onb-ink-headline dark:text-onb-ink-headline-dark mb-2"
         >
           {firstName ? `Hey, ${firstName}!` : "What's your name?"}
         </Animated.Text>
         <Animated.Text
           entering={FadeInDown.duration(400).delay(150)}
-          style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 15, lineHeight: 22, color: c.inkBody, maxWidth: 280, marginBottom: 24 }}
+          className="font-instrument text-[15px] leading-[22px] text-onb-ink-body dark:text-onb-ink-body-dark max-w-[280px] mb-lg"
         >
           We'll use your name to personalize your experience.
         </Animated.Text>
@@ -88,23 +89,16 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
         {/* Literal artifact input: no card/glass background — a bare field,
             'Instrument Sans' 28/600, border: none, padding-bottom 8px, with
             a separate 2px accent underline bar (gap 6px) below it. */}
-        <Animated.View entering={FadeInDown.duration(400).delay(200)} style={{ gap: 6 }}>
+        <Animated.View entering={FadeInDown.duration(400).delay(200)} className="gap-1.5">
           <Text
             // Visually hidden label — matches the artifact's sr-only <label>.
-            style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 }}
+            className="absolute w-px h-px overflow-hidden opacity-0"
           >
             Your full name
           </Text>
           <TextInput
             ref={inputRef}
-            style={{
-              fontFamily: 'InstrumentSans_600SemiBold',
-              fontSize: 28,
-              color: c.inkHeadline,
-              borderWidth: 0,
-              padding: 0,
-              paddingBottom: 8,
-            }}
+            className="font-instrument-semibold text-[28px] text-onb-ink-headline dark:text-onb-ink-headline-dark border-0 p-0 pb-2"
             placeholder="Your full name"
             placeholderTextColor={c.inkLabel}
             value={name}
@@ -114,10 +108,10 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
             returnKeyType="done"
             onSubmitEditing={finish}
           />
-          <View style={{ height: 2, borderRadius: 1, backgroundColor: c.accentPrimary }} />
+          <View className="h-[2px] rounded-[1px] bg-onb-accent-primary dark:bg-onb-accent-primary-dark" />
         </Animated.View>
 
-        <View style={{ flexGrow: 1 }} />
+        <View className="flex-grow" />
 
         <RqButton label={isValid ? `Continue as ${firstName}` : 'Continue'} scheme={scheme} onPress={finish} disabled={!isValid} />
       </View>

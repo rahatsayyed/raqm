@@ -8,6 +8,7 @@ import { StepDots } from '../../components/onboarding/StepDots';
 import { RqButton } from '../../components/onboarding/RqButton';
 import { GlassCard } from '../../components/onboarding/GlassCard';
 import { useOnbColors } from '../../theme/onboardingColors';
+import { cn } from '../../utils/cn';
 import { useOnboardingStore, type DateRange as Range } from '../../store/onboardingStore';
 import { SmsReader } from '../../native/SmsReader';
 
@@ -64,23 +65,24 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
 
   return (
     <View
-      style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }}
-      className="px-lg"
+      style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }}
+      className="flex-1 bg-onb-bg-base dark:bg-onb-bg-base-dark px-lg"
     >
       <View className="mb-lg">
-        <StepDots total={8} filled={3} scheme={scheme} />
+        {/* Bug fix: design has 7 dots, not 8. */}
+        <StepDots total={7} filled={3} scheme={scheme} />
       </View>
 
-      <Text style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 30, color: c.inkHeadline }} className="mb-xs">
+      <Text className="font-newsreader-italic text-[30px] text-onb-ink-headline dark:text-onb-ink-headline-dark mb-xs">
         How far back should we look?
       </Text>
-      <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 15, lineHeight: 22, color: c.inkBody }} className="mb-lg">
+      <Text className="font-instrument text-[15px] leading-[22px] text-onb-ink-body dark:text-onb-ink-body-dark mb-lg">
         You can change this anytime in Settings.
       </Text>
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
         <GlassCard scheme={scheme}>
-          <View style={{ gap: 8 }}>
+          <View className="gap-2">
             {rows.map((row) => {
               const isSelected = selected === row.id;
               const subtitle =
@@ -94,76 +96,72 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
                   key={row.id}
                   onPress={() => handleSelect(row.id)}
                   activeOpacity={0.8}
-                  style={{
-                    backgroundColor: isSelected ? c.accentPrimary : c.bgSurface,
-                    borderRadius: 4,
-                    padding: 16,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
+                  className={cn(
+                    'rounded-inner p-md flex-row items-center justify-between',
+                    isSelected ? 'bg-onb-accent-primary dark:bg-onb-accent-primary-dark' : 'bg-onb-bg-surface dark:bg-onb-bg-surface-dark',
+                  )}
                 >
-                  <View style={{ flex: 1, paddingRight: 12 }}>
+                  <View className="flex-1 pr-3">
                     <Text
-                      style={{
-                        fontFamily: 'InstrumentSans_600SemiBold',
-                        fontSize: 14,
-                        color: isSelected ? c.onAccent : c.inkHeadline,
-                      }}
+                      className={cn(
+                        'font-instrument-semibold text-[14px]',
+                        isSelected ? 'text-onb-on-accent dark:text-onb-on-accent-dark' : 'text-onb-ink-headline dark:text-onb-ink-headline-dark',
+                      )}
                     >
                       {row.label}
                     </Text>
                     {subtitle ? (
                       <Text
-                        style={{
-                          fontFamily: 'InstrumentSans_400Regular',
-                          fontSize: 12,
-                          color: isSelected ? c.onAccent : c.inkBody,
-                          marginTop: 2,
-                        }}
+                        className={cn(
+                          'font-instrument text-[12px] mt-0.5',
+                          isSelected ? 'text-onb-on-accent dark:text-onb-on-accent-dark' : 'text-onb-ink-body dark:text-onb-ink-body-dark',
+                        )}
                       >
                         {subtitle}
                       </Text>
                     ) : null}
                   </View>
                   {row.id === 'custom' ? (
-                    <Icon name="chevron-right" size={18} color={isSelected ? c.onAccent : c.inkBody} />
+                    // Bug fix: design's chevron is 16x16, was 18.
+                    <Icon name="chevron-right" size={16} color={isSelected ? c.onAccent : c.inkBody} />
                   ) : isSelected ? (
-                    <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: c.onAccent, alignItems: 'center', justifyContent: 'center' }}>
-                      <Icon name="check" size={13} color={c.accentPrimary} />
+                    // Bug fix: design's status glyph is an 18x18 SVG with viewBox
+                    // "0 0 24 24" holding a r=9 circle — at 18/24 scale that
+                    // renders ~13.5px, not a full 18px (same fix already applied
+                    // to PermissionRow.tsx this session).
+                    <View className="w-[14px] h-[14px] rounded-[7px] bg-onb-on-accent dark:bg-onb-on-accent-dark items-center justify-center">
+                      <Icon name="check" size={10} color={c.accentPrimary} />
                     </View>
                   ) : (
-                    <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: c.borderSubtle }} />
+                    <View className="w-[14px] h-[14px] rounded-[7px] border-[1.5px] border-onb-border-subtle dark:border-onb-border-subtle-dark" />
                   )}
                 </TouchableOpacity>
               );
             })}
 
             {selected === 'custom' && (
-              <View style={{ backgroundColor: c.bgSurface, borderRadius: 4, overflow: 'hidden' }}>
+              <View className="bg-onb-bg-surface dark:bg-onb-bg-surface-dark rounded-inner overflow-hidden">
                 <TouchableOpacity
                   onPress={() => setPickingField('from')}
-                  style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 }}
+                  className="flex-row justify-between px-md py-[14px]"
                 >
-                  <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 14, color: c.inkBody }}>From</Text>
-                  <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 14, color: c.accentPrimary }}>
+                  <Text className="font-instrument text-[14px] text-onb-ink-body dark:text-onb-ink-body-dark">From</Text>
+                  <Text className="font-instrument-semibold text-[14px] text-onb-accent-primary dark:text-onb-accent-primary-dark">
                     {fmt(fromDate.getTime())}
                   </Text>
                 </TouchableOpacity>
-                <View style={{ height: 1, backgroundColor: c.borderSubtle, marginHorizontal: 16 }} />
+                <View className="h-px bg-onb-border-subtle dark:bg-onb-border-subtle-dark mx-md" />
                 <TouchableOpacity
                   onPress={() => setPickingField('to')}
-                  style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 }}
+                  className="flex-row justify-between px-md py-[14px]"
                 >
-                  <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 14, color: c.inkBody }}>To</Text>
-                  <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 14, color: c.accentPrimary }}>
+                  <Text className="font-instrument text-[14px] text-onb-ink-body dark:text-onb-ink-body-dark">To</Text>
+                  <Text className="font-instrument-semibold text-[14px] text-onb-accent-primary dark:text-onb-accent-primary-dark">
                     {fmt(toDate.getTime())}
                   </Text>
                 </TouchableOpacity>
                 {fromDate >= toDate && (
-                  <Text
-                    style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 12, color: c.errorMuted, paddingHorizontal: 16, paddingBottom: 10 }}
-                  >
+                  <Text className="font-instrument text-[12px] text-onb-error-muted dark:text-onb-error-muted-dark px-md pb-[10px]">
                     Start date must be before end date
                   </Text>
                 )}

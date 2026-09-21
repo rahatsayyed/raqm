@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { OnbColors, type OnbScheme } from '../../theme/onboardingColors';
+import type { OnbScheme } from '../../theme/onboardingColors';
 
 type GlassCardProps = {
   scheme: OnbScheme;
@@ -17,31 +17,18 @@ type GlassCardProps = {
 // BlurView for the actual blur, a translucent tint View, and a 1px
 // top-highlight View.
 export function GlassCard({ scheme, children, style }: GlassCardProps) {
-  const c = OnbColors[scheme];
   return (
-    <View style={[styles.wrap, { borderColor: c.borderSubtle }, style]}>
+    <View
+      className="rounded-outer border border-onb-border-subtle dark:border-onb-border-subtle-dark overflow-hidden"
+      style={style}
+    >
+      {/* BlurView has no cssInterop registered (unlike
+          KeyboardAwareScrollView) — style/StyleSheet stays here per
+          CLAUDE.md's carve-out for things NativeWind can't express. */}
       <BlurView intensity={40} tint={scheme} style={StyleSheet.absoluteFill} />
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: c.glassBg }]} />
-      <View style={[styles.highlight, { backgroundColor: c.glassHighlight }]} />
-      <View style={styles.content}>{children}</View>
+      <View className="absolute inset-0 bg-onb-glass-bg dark:bg-onb-glass-bg-dark" />
+      <View className="absolute top-0 left-0 right-0 h-px bg-onb-glass-highlight dark:bg-onb-glass-highlight-dark" />
+      <View className="p-md">{children}</View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    borderRadius: 6,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  highlight: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-  },
-  content: {
-    padding: 16,
-  },
-});

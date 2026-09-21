@@ -10,6 +10,7 @@ import { logEvent } from '../../services/logger';
 import { StepDots } from '../../components/onboarding/StepDots';
 import { GlassCard } from '../../components/onboarding/GlassCard';
 import { useOnbColors } from '../../theme/onboardingColors';
+import { cn } from '../../utils/cn';
 
 // Onboarding-v3 redesign: matches the mockup's ScanningProgress-Dark/Light.
 // Real scan logic (SMS read -> parse -> categorize -> detection jobs)
@@ -17,7 +18,8 @@ import { useOnbColors } from '../../theme/onboardingColors';
 // (glass card, count-up number, thin progress bar instead of a ring) changed.
 export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'ScanningProgress'>) {
   const insets = useSafeAreaInsets();
-  const { scheme, colors: c } = useOnbColors();
+  const { scheme } = useOnbColors();
+  const isDark = scheme === 'dark';
   const { dateRange, customFrom, customTo, setTransactions } = useOnboardingStore();
   const [smsCount, setSmsCount] = useState(0);
   const [txCount, setTxCount] = useState(0);
@@ -99,66 +101,81 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
 
   return (
     <View
-      style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }}
-      className="px-lg"
+      style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }}
+      className={cn('flex-1 px-[20px]', isDark ? 'bg-onb-bg-base-dark' : 'bg-onb-bg-base')}
     >
-      <View style={{ marginBottom: 'auto' }}>
+      <View className="mb-auto">
         <StepDots total={8} filled={4} scheme={scheme} />
       </View>
 
-      <View style={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 28 }}>
+      <View className="flex-grow items-center justify-center gap-[28px]">
         <Text
-          style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 26, color: c.inkHeadline, textAlign: 'center' }}
+          className={cn(
+            'font-newsreader-italic text-[26px] text-center',
+            isDark ? 'text-onb-ink-headline-dark' : 'text-onb-ink-headline',
+          )}
         >
           Reading your last 90 days
         </Text>
 
         <GlassCard scheme={scheme} style={{ width: '100%' }}>
-          <View style={{ alignItems: 'center', gap: 18 }}>
-            <Text style={{ fontFamily: 'JetBrainsMono_600SemiBold', fontSize: 44, color: c.inkHeadline, letterSpacing: -0.9 }}>
+          <View className="items-center gap-[18px]">
+            <Text
+              className={cn(
+                'font-mono-medium text-[44px] tracking-[-0.9px]',
+                isDark ? 'text-onb-ink-headline-dark' : 'text-onb-ink-headline',
+              )}
+            >
               {txCount}
             </Text>
             <Text
-              style={{
-                fontFamily: 'InstrumentSans_400Regular',
-                fontSize: 13,
-                color: c.inkBody,
-                textTransform: 'uppercase',
-                letterSpacing: 1.5,
-              }}
+              className={cn(
+                'font-instrument text-[13px] uppercase tracking-[1.5px]',
+                isDark ? 'text-onb-ink-body-dark' : 'text-onb-ink-body',
+              )}
             >
               transactions found so far
             </Text>
-            <View style={{ width: '100%', height: 6, borderRadius: 1, backgroundColor: c.borderSubtle, overflow: 'hidden' }}>
+            {/* Bug fix while migrating: track background was c.borderSubtle
+                (0.08 light / 0.12 dark) — the artifact's progress track is
+                rgba(20,20,20,0.08) light / rgba(255,255,255,0.1) dark, a
+                distinct one-off value from the shared border token. */}
+            <View
+              className={cn(
+                'w-full h-[6px] rounded-dot overflow-hidden',
+                isDark ? 'bg-[rgba(255,255,255,0.1)]' : 'bg-[rgba(20,20,20,0.08)]',
+              )}
+            >
               <View
-                style={{
-                  width: `${Math.round(progressPct * 100)}%`,
-                  height: '100%',
-                  backgroundColor: c.accentPrimary,
-                  borderRadius: 1,
-                }}
+                style={{ width: `${Math.round(progressPct * 100)}%` }}
+                className={cn('h-full rounded-dot', isDark ? 'bg-onb-accent-primary-dark' : 'bg-onb-accent-primary')}
               />
             </View>
           </View>
         </GlassCard>
 
-        <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 13, color: c.inkBody, textAlign: 'center', maxWidth: 260 }}>
+        <Text
+          className={cn(
+            'font-instrument text-[13px] text-center max-w-[260px]',
+            isDark ? 'text-onb-ink-body-dark' : 'text-onb-ink-body',
+          )}
+        >
           {smsCount > 0 ? `Scanned ${smsCount} messages — everything happens on this device.` : 'Everything happens on this device. Nothing is sent anywhere.'}
         </Text>
 
         <Pressable onPress={() => navigation.replace('BudgetSetup')}>
           <Text
-            style={{
-              fontFamily: 'InstrumentSans_500Medium',
-              fontSize: 13,
-              color: c.inkBody,
-              textDecorationLine: 'underline',
-            }}
+            className={cn(
+              'font-instrument-medium text-[13px] underline',
+              isDark ? 'text-onb-ink-body-dark' : 'text-onb-ink-body',
+            )}
           >
             Continue in background
           </Text>
         </Pressable>
-        <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkLabel, textAlign: 'center' }}>
+        <Text
+          className={cn('font-instrument text-[11px] text-center', isDark ? 'text-onb-ink-label-dark' : 'text-onb-ink-label')}
+        >
           {status}
         </Text>
       </View>

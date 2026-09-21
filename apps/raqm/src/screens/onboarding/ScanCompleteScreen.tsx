@@ -15,6 +15,7 @@ import { RqButton } from '../../components/onboarding/RqButton';
 import { AccountLiquidityCard } from '../../components/AccountLiquidityCard';
 import { Icon } from '../../components/Icon';
 import { useOnbColors } from '../../theme/onboardingColors';
+import { cn } from '../../utils/cn';
 
 // Account-grouping shape, carried over from the now-merged AccountSelectionScreen
 // (item 6 of the fix list — that screen's own route is no longer navigated to).
@@ -188,66 +189,84 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
     }));
   }, [categorySpend]);
 
-  const tintColor: Record<(typeof BAR_TINTS)[number], string> = {
-    accentPrimary: c.accentPrimary,
-    notice: c.notice,
-    neutral: c.inkBody,
-    blue: scheme === 'dark' ? '#8FA8D9' : '#6B7FA6',
-    purple: scheme === 'dark' ? '#C99BC0' : '#9C6B8A',
-    grey: scheme === 'dark' ? '#6E6C66' : '#A6A29B',
+  // Class-name equivalent of the old raw-hex tintColor map — accentPrimary/
+  // notice/neutral reuse the shared onb-* tokens; blue/purple/grey are
+  // literal one-off chart accents (not part of OnbColors) via arbitrary
+  // bracket values, `dark:` variant since darkMode defaults to 'media'
+  // (matches this app's OS-based useColorScheme()).
+  const tintClass: Record<(typeof BAR_TINTS)[number], string> = {
+    accentPrimary: 'bg-onb-accent-primary dark:bg-onb-accent-primary-dark',
+    notice: 'bg-onb-notice dark:bg-onb-notice-dark',
+    neutral: 'bg-onb-ink-body dark:bg-onb-ink-body-dark',
+    blue: 'bg-[#6B7FA6] dark:bg-[#8FA8D9]',
+    purple: 'bg-[#9C6B8A] dark:bg-[#C99BC0]',
+    grey: 'bg-[#A6A29B] dark:bg-[#6E6C66]',
   };
 
   return (
     <View
-      style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }}
-      className="px-lg"
+      // Design bug fixes found while rechecking ScanComplete-Light/Dark.dc.html:
+      // horizontal padding is literally 20px (was px-lg = 24), and bottom
+      // padding is literally 32px (was +24).
+      style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }}
+      className="px-[20px]"
     >
-      <View className="mb-lg">
-        <StepDots total={8} filled={5} scheme={scheme} />
+      {/* Design bug fix: dots row margin-bottom is 20px (was mb-lg = 24).
+          Also: the artifact's dot row is 7 dots (5 filled), not 8/5 — this
+          screen's own artboard, so fixed here; other onboarding screens'
+          StepDots counts are out of this file's scope. */}
+      <View className="mb-[20px]">
+        <StepDots total={7} filled={5} scheme={scheme} />
       </View>
 
-      <Text style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 28, color: c.inkHeadline }} className="mb-md">
+      <Text style={{ fontFamily: 'Newsreader_400Regular_Italic' }} className="mb-md text-[28px] text-onb-ink-headline dark:text-onb-ink-headline-dark">
         Found it. All of it.
       </Text>
 
       <GlassCard scheme={scheme} style={{ marginBottom: 14 }}>
-        <View style={{ gap: 6 }}>
+        <View className="gap-1.5">
           <Text
-            style={{
-              fontFamily: 'InstrumentSans_400Regular',
-              fontSize: 12,
-              color: c.inkBody,
-              textTransform: 'uppercase',
-              letterSpacing: 1.2,
-            }}
+            style={{ fontFamily: 'InstrumentSans_400Regular', letterSpacing: 1.2 }}
+            className="text-[12px] uppercase text-onb-ink-body dark:text-onb-ink-body-dark"
           >
             Spent last month
           </Text>
-          <Text style={{ fontFamily: 'JetBrainsMono_600SemiBold', fontSize: 34, color: c.inkHeadline, letterSpacing: -0.6 }}>
+          <Text
+            style={{ fontFamily: 'JetBrainsMono_600SemiBold', letterSpacing: -0.6 }}
+            className="text-[34px] text-onb-ink-headline dark:text-onb-ink-headline-dark"
+          >
             {formatAmount(totalSpend, currency)}
           </Text>
         </View>
       </GlassCard>
 
-      <View style={{ flex: 1, backgroundColor: c.bgSurface, borderRadius: 4, padding: 16, gap: 12 }}>
-        <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 13, color: c.inkHeadline }}>Top categories</Text>
+      <View className="flex-1 bg-onb-bg-surface dark:bg-onb-bg-surface-dark rounded-inner p-md gap-3">
+        <Text style={{ fontFamily: 'InstrumentSans_600SemiBold' }} className="text-[13px] text-onb-ink-headline dark:text-onb-ink-headline-dark">
+          Top categories
+        </Text>
         <ScrollView showsVerticalScrollIndicator={false}>
-          <View style={{ gap: 9 }}>
+          <View className="gap-[9px]">
             {topCategories.length === 0 ? (
-              <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 13, color: c.inkBody }}>
+              <Text style={{ fontFamily: 'InstrumentSans_400Regular' }} className="text-[13px] text-onb-ink-body dark:text-onb-ink-body-dark">
                 We're still learning your financial patterns.
               </Text>
             ) : (
               topCategories.map((cat) => (
                 <View key={cat.name}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 13, color: c.inkBody }}>{cat.name}</Text>
-                    <Text style={{ fontFamily: 'JetBrainsMono_500Medium', fontSize: 13, color: c.inkBody }}>
+                  <View className="flex-row justify-between mb-1">
+                    <Text style={{ fontFamily: 'InstrumentSans_400Regular' }} className="text-[13px] text-onb-ink-body dark:text-onb-ink-body-dark">
+                      {cat.name}
+                    </Text>
+                    <Text style={{ fontFamily: 'JetBrainsMono_500Medium' }} className="text-[13px] text-onb-ink-body dark:text-onb-ink-body-dark">
                       {formatAmount(cat.amount, currency)}
                     </Text>
                   </View>
-                  <View style={{ height: 6, borderRadius: 1, backgroundColor: c.borderSubtle, overflow: 'hidden' }}>
-                    <View style={{ width: `${cat.pct}%`, height: '100%', borderRadius: 1, backgroundColor: tintColor[cat.tint] }} />
+                  <View className="h-[6px] rounded-dot bg-onb-border-subtle dark:bg-onb-border-subtle-dark overflow-hidden">
+                    {/* `pct` is computed at runtime per render — a dynamic
+                        arbitrary-value className can't be picked up by
+                        NativeWind's static content scanner, so width stays
+                        a style (CLAUDE.md's NativeWind carve-out). */}
+                    <View style={{ width: `${cat.pct}%` }} className={cn('h-full rounded-dot', tintClass[cat.tint])} />
                   </View>
                 </View>
               ))
@@ -258,7 +277,10 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
 
       {accounts.length > 0 && (
         <View className="mt-md">
-          <Text style={{ fontFamily: 'InstrumentSans_600SemiBold', fontSize: 12, color: c.inkBody }} className="mb-sm">
+          <Text
+            style={{ fontFamily: 'InstrumentSans_600SemiBold' }}
+            className="mb-sm text-[12px] uppercase text-onb-ink-body dark:text-onb-ink-body-dark"
+          >
             Accounts found · tap to include or exclude
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
@@ -268,12 +290,12 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
                 <Animated.View
                   key={account.id}
                   entering={FadeInDown.duration(350).delay(i * 60)}
-                  style={{
-                    borderRadius: 4,
-                    borderWidth: 1,
-                    borderColor: isSelected ? c.accentPrimary : c.borderSubtle,
-                    opacity: isSelected ? 1 : 0.6,
-                  }}
+                  className={cn(
+                    'rounded-inner border',
+                    isSelected
+                      ? 'border-onb-accent-primary dark:border-onb-accent-primary-dark opacity-100'
+                      : 'border-onb-border-subtle dark:border-onb-border-subtle-dark opacity-60',
+                  )}
                 >
                   {/* Set 3 fix: reuse the real Dashboard/Analytics account card component
                       instead of a bespoke one-off card — same visual/interaction pattern,
@@ -298,7 +320,8 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
 
       <Pressable onPress={() => navigation.navigate('GPayPdfImport')} className="mt-md mb-sm">
         <Text
-          style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkBody, textAlign: 'center', textDecorationLine: 'underline' }}
+          style={{ fontFamily: 'InstrumentSans_400Regular' }}
+          className="text-[11px] text-center underline text-onb-ink-body dark:text-onb-ink-body-dark"
         >
           Missing data? Import a PDF statement
         </Text>
