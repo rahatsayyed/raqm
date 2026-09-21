@@ -47,7 +47,10 @@ export function RqButton({ label, onPress, disabled, scheme, icon }: RqButtonPro
       >
         <Text
           style={{
-            fontFamily: 'InstrumentSans_600SemiBold',
+            // Literal artifact weight: 500 (medium) on the light artboards,
+            // 600 (semibold) on the dark ones — was hardcoded to semibold
+            // for both.
+            fontFamily: scheme === 'dark' ? 'InstrumentSans_600SemiBold' : 'InstrumentSans_500Medium',
             fontSize: 16,
             color: disabled ? c.inkLabel : c.onAccent,
           }}
