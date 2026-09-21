@@ -39,6 +39,7 @@ import { SplitDetailScreen } from '../screens/main/SplitDetailScreen';
 import { HomeIcon, AnalyticsIcon, PeopleIcon, ChatIcon } from '../components/TabIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../theme';
+import type { LaunchDeepLink } from '../../modules/sms-reader/src/SmsReader.types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<MainStackParamList>();
@@ -98,13 +99,33 @@ function TabNavigator() {
   );
 }
 
-export function MainNavigator() {
+// Cold start from the widget/shortcut used to always mount on "Tabs" (Home) first, then
+// navigate() to QuickAddCash once deepLinks.ts drained the launch extra — visible as a flash
+// of Home before the sheet slid up. Passing the already-drained link straight into
+// initialRouteName/initialParams here means QuickAddCash (or TransactionDetail) is the first
+// thing ever rendered, no flash, no extra navigate() call for this case.
+function initialRouteFor(link: LaunchDeepLink | null): keyof MainStackParamList {
+  if (link?.openQuickAdd) return 'QuickAddCash';
+  if (typeof link?.openTransaction === 'number') return 'TransactionDetail';
+  return 'Tabs';
+}
+
+export function MainNavigator({ launchDeepLink = null }: { launchDeepLink?: LaunchDeepLink | null }) {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRouteFor(launchDeepLink)}>
       <Stack.Screen name="Tabs" component={TabNavigator} />
       <Stack.Screen name="Transactions" component={TransactionsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="More" component={MoreScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="TransactionDetail" component={TransactionDetailScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen
+        name="TransactionDetail"
+        component={TransactionDetailScreen}
+        options={{ animation: 'slide_from_right' }}
+        initialParams={
+          typeof launchDeepLink?.openTransaction === 'number'
+            ? { transactionId: launchDeepLink.openTransaction }
+            : undefined
+        }
+      />
       <Stack.Screen name="AddTransaction" component={AddTransactionScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="QuickAddCash" component={QuickAddCashScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="EditTransaction" component={EditTransactionScreen} options={{ animation: 'slide_from_right' }} />
