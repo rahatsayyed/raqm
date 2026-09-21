@@ -14,11 +14,23 @@ import { attachDeepLinkHandler } from './deepLinks';
 import { Colors } from '../theme';
 import { logEvent } from '../services/logger';
 import { SmsReader } from '../native/SmsReader';
+import { consumeLaunchDeepLink } from '../../modules/sms-reader/src/SmsReaderModule';
 
 export function AppNavigator() {
   const isOnboardingComplete = useAppStore(s => s.isOnboardingComplete);
   const loadTxs = useTxStore(s => s.load);
   const [ready, setReady] = useState(false);
+  // Drained exactly once, at first render — before attachDeepLinkHandler's own mount-time
+  // drain() gets a chance to run (that one now just finds nothing left and no-ops on cold
+  // start; it's still needed for warm start via the AppState listener). See MainNavigator's
+  // initialRouteFor for why this replaces the old "mount Home, then navigate()" flash.
+  const [launchDeepLink] = useState(() => {
+    try {
+      return consumeLaunchDeepLink();
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -122,7 +134,11 @@ export function AppNavigator() {
 
   return (
     <NavigationContainer ref={navigationRef}>
-      {isOnboardingComplete ? <MainNavigator /> : <OnboardingNavigator />}
+      {isOnboardingComplete ? (
+        <MainNavigator launchDeepLink={launchDeepLink} />
+      ) : (
+        <OnboardingNavigator />
+      )}
     </NavigationContainer>
   );
 }
