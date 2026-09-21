@@ -195,14 +195,14 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
         Each one only reads what it needs, on this device.
       </Text>
 
-      <GlassCard scheme={scheme} style={{ flex: 1 }}>
+      <GlassCard scheme={scheme}>
         <ScrollView showsVerticalScrollIndicator={false}>
           {isAndroid ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-              <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+            <View style={{ gap: 10 }}>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
                 <PermissionRow
                   index={0}
-                  icon="message-text-outline"
+                  icon="message-outline"
                   title="Read bank SMS"
                   reason="Finds transactions automatically. Never leaves your phone."
                   granted={granted.sms}
@@ -212,15 +212,14 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
                 <PermissionRow
                   index={1}
                   icon="bell-outline"
-                  title="Manage bank notifications"
-                  reason="Hides duplicate bank alerts once read."
-                  optional={LOCATION_AND_NOTIFICATION_ACCESS_OPTIONAL}
-                  granted={granted.notificationAccess}
-                  onGrant={() => grant('notificationAccess')}
+                  title="Notifications"
+                  reason="Quiet spend nudges, on your terms."
+                  granted={granted.notifications}
+                  onGrant={() => grant('notifications')}
                   scheme={scheme}
                 />
               </View>
-              <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
                 <PermissionRow
                   index={2}
                   icon="map-marker-outline"
@@ -234,11 +233,12 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
                 />
                 <PermissionRow
                   index={3}
-                  icon="bell-ring-outline"
-                  title="Notifications"
-                  reason="Quiet spend nudges, on your terms."
-                  granted={granted.notifications}
-                  onGrant={() => grant('notifications')}
+                  icon="bell-off-outline"
+                  title="Manage notifications"
+                  reason="Hides duplicate bank alerts once read."
+                  optional={LOCATION_AND_NOTIFICATION_ACCESS_OPTIONAL}
+                  granted={granted.notificationAccess}
+                  onGrant={() => grant('notificationAccess')}
                   scheme={scheme}
                 />
               </View>
@@ -257,8 +257,14 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
         </ScrollView>
       </GlassCard>
 
-      <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkBody, textAlign: 'center' }} className="mt-md mb-sm">
-        Everything is processed on your device. Nothing leaves your phone.
+      {/* Fills the gap between the card (which now hugs its content) and the
+          footer note below, matching the artifact's `margin: auto 0 0` on
+          that note — the note sits just above Continue, not the card
+          stretching to the screen's full height. */}
+      <View style={{ flex: 1 }} />
+
+      <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, color: c.inkBody, textAlign: 'center' }} className="mb-sm">
+        Location and notification management are optional — skip either and continue.
       </Text>
 
       {/* Bug #4 fix: PDF-import belongs on ScanComplete per the artifact, not here —

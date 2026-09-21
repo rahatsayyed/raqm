@@ -39,32 +39,50 @@ export function PermissionRow({
   return (
     <Animated.View
       entering={FadeInDown.duration(300).delay(index * 80)}
-      style={{ flex: 1, borderRadius: 4, overflow: 'hidden' }}
+      // Bug fix: backgroundColor lived only on the inner Pressable — on
+      // Android, overflow:hidden + borderRadius on this outer View without
+      // its own background made the card corners composite against
+      // whatever sits behind the glass card, so the card read as
+      // background-less. Setting it here too makes the card opaque
+      // regardless of that clipping layer.
+      style={{ flex: 1, borderRadius: 4, padding: 16, overflow: 'hidden', backgroundColor: c.bgSurface }}
     >
       <Pressable
         onPress={onGrant}
         disabled={granted}
         hitSlop={8}
-        style={({ pressed }: { pressed: boolean }) => [
-          { backgroundColor: c.bgSurface, padding: 16, gap: 10, opacity: pressed ? 0.85 : 1 },
-        ]}
+        style={({ pressed }: { pressed: boolean }) => ({
+          backgroundColor: c.bgSurface,
+          padding: 16,
+          gap: 10,
+          opacity: pressed ? 0.85 : 1,
+        })}
       >
+        <View style={{display:'flex', gap: 6}}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          {/* Literal artifact icon size is 24x24 (was 22) */}
-          <Icon name={icon} size={24} color={strokeColor} />
+          {/* Reduced from 24: the artifact's icons are thin 1.5px-stroke
+              line art; MaterialCommunityIcons' outline glyphs render
+              bolder at the same box size, so a smaller box reads closer
+              to the artifact's actual visual weight. */}
+          <Icon name={icon} size={18} color={strokeColor} />
           {granted ? (
-            <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: c.accentPrimary, alignItems: 'center', justifyContent: 'center' }}>
-              <Icon name="check" size={13} color={c.onAccent} />
+            // Bug fix: the artifact's glyph is an 18x18 SVG with viewBox
+            // "0 0 24 24" holding a r=9 circle — at that 18/24 scale the
+            // circle renders at ~13.5px, not a full 18px. Was drawn at a
+            // full 18px, ~30% too big.
+            <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: c.accentPrimary, alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="check" size={8} color={c.onAccent} />
             </View>
           ) : (
             // Literal artifact unchecked-ring stroke is rgba(20,20,20,0.2) light /
             // rgba(255,255,255,0.24) dark — a distinct, more visible value from the
             // shared borderSubtle token (0.08/0.12) used elsewhere, so applied literally.
+            // Size: same ~13.5px-scaled-to-14 fix as the granted glyph above.
             <View
               style={{
-                width: 18,
-                height: 18,
-                borderRadius: 9,
+                width: 14,
+                height: 14,
+                borderRadius: 7,
                 borderWidth: 1.5,
                 borderColor: scheme === 'dark' ? 'rgba(255,255,255,0.24)' : 'rgba(20,20,20,0.2)',
               }}
@@ -78,6 +96,7 @@ export function PermissionRow({
           ) : null}
         </Text>
         <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 11, lineHeight: 15, color: c.inkBody }}>{reason}</Text>
+      </View>
       </Pressable>
     </Animated.View>
   );
