@@ -49,7 +49,7 @@ export function AccountLiquidityCard({
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={onPress}
-        className="w-[290px] min-h-[140px] flex-row rounded-md border border-outline-variant relative overflow-hidden"
+        className="w-[290px] min-h-[140px] flex-row rounded-inner border border-outline-variant relative overflow-hidden"
       >
         <View className="w-[35%] bg-surface-container-low p-3 justify-between border-r border-outline-variant">
           <View className="w-[40px] h-[40px] rounded-sm bg-surface-bright items-center justify-center">
