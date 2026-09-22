@@ -73,7 +73,7 @@ export function BudgetSetupScreen({ navigation, route }: OnboardingScreenProps<'
       // paddingTop/paddingBottom depend on runtime insets so they stay as
       // style; paddingHorizontal (literal artifact 20px, no exact Spacing
       // token) and flexGrow are static, moved to contentContainerClassName.
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + Spacing.xl }}
+      contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + Spacing.md }}
       contentContainerClassName="px-[20px] flex-grow"
     >
       {/* Literal artifact margin-bottom below the step dots is 20px — no exact Spacing

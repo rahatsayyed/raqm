@@ -39,7 +39,7 @@ export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) 
     <View
       // paddingTop/paddingBottom stay inline: they depend on safe-area
       // insets at runtime, which className can't express.
-      style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }}
+      style={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }}
       className={cn('flex-1 px-lg', isDark ? 'bg-onb-bg-base-dark' : 'bg-onb-bg-base')}
     >
       {/* Bug #1 fix: this screen previously had a self-added 288px circular

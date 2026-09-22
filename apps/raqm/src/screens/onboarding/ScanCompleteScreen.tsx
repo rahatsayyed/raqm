@@ -208,7 +208,7 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
       // Design bug fixes found while rechecking ScanComplete-Light/Dark.dc.html:
       // horizontal padding is literally 20px (was px-lg = 24), and bottom
       // padding is literally 32px (was +24).
-      style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }}
+      style={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }}
       className="flex-1 bg-onb-bg-base dark:bg-onb-bg-base-dark px-[20px]"
     >
       {/* Design bug fix: dots row margin-bottom is 20px (was mb-lg = 24).

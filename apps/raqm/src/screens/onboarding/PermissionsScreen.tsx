@@ -171,8 +171,8 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
     <View
       className="flex-1 bg-onb-bg-base px-[20px] dark:bg-onb-bg-base-dark"
       style={{
-        paddingTop: insets.top + 16,
-        paddingBottom: insets.bottom + 40,
+        paddingTop: insets.top + 8,
+        paddingBottom: insets.bottom + 20,
         // Literal artifact padding is "56px 20px 40px" — 20px has no exact
         // Spacing token (sm=8, md=16, lg=24), applied as px-[20px] in className.
       }}

@@ -52,8 +52,8 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
       // token (sm=8, md=16, lg=24) — applied literally rather than px-lg (24).
       // Kept as style: insets.top/bottom are runtime values, not static classes.
       contentContainerStyle={{
-        paddingTop: insets.top + 16,
-        paddingBottom: insets.bottom + 40,
+        paddingTop: insets.top + 8,
+        paddingBottom: insets.bottom + 20,
         paddingHorizontal: 20,
         flexGrow: 1,
       }}

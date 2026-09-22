@@ -31,7 +31,7 @@ export function SetupCompleteScreen({ route }: OnboardingScreenProps<'SetupCompl
 
   return (
     <View
-      style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + Spacing.xl }}
+      style={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + Spacing.md }}
       className="flex-1 bg-onb-bg-base dark:bg-onb-bg-base-dark px-lg"
     >
       <View className="mb-auto">
