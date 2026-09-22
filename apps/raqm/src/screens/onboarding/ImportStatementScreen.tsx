@@ -20,18 +20,18 @@ export function ImportStatementScreen({ navigation }: OnboardingScreenProps<'Imp
 
   return (
     <View
-      style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16, paddingBottom: insets.bottom + Spacing.xl }}
-      className="px-lg"
+      style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + Spacing.xl }}
+      className="flex-1 bg-onb-bg-base dark:bg-onb-bg-base-dark px-lg"
     >
       <View className="mb-lg">
         {/* Bug fix: artifact shows 4 dots (2 filled), not 5. */}
         <StepDots total={4} filled={2} scheme={scheme} />
       </View>
 
-      <Text style={{ fontFamily: 'Newsreader_400Regular_Italic', fontSize: 30, color: c.inkHeadline }} className="mb-xs">
+      <Text className="mb-xs text-[30px] font-newsreader-italic text-onb-ink-headline dark:text-onb-ink-headline-dark">
         Add your first statement
       </Text>
-      <Text style={{ fontFamily: 'InstrumentSans_400Regular', fontSize: 15, lineHeight: 22, color: c.inkBody }} className="mb-lg">
+      <Text className="mb-lg text-[15px] leading-[22px] font-instrument text-onb-ink-body dark:text-onb-ink-body-dark">
         iPhone can't read bank SMS, so this is how Raqm learns your spend.
       </Text>
 
@@ -51,8 +51,7 @@ export function ImportStatementScreen({ navigation }: OnboardingScreenProps<'Imp
               {/* Bug fix: artifact copy is "Parsed on this device. Never
                   uploaded." with a 220px max-width, not this longer line. */}
               <Text
-                style={{ maxWidth: 220 }}
-                className="mt-1.5 text-[11px] font-instrument leading-4 text-onb-ink-body dark:text-onb-ink-body-dark text-center"
+                className="mt-1.5 max-w-[220px] text-[11px] font-instrument leading-4 text-onb-ink-body dark:text-onb-ink-body-dark text-center"
               >
                 Parsed on this device. Never uploaded.
               </Text>

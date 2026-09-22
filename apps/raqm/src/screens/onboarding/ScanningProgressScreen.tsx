@@ -118,7 +118,7 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
           Reading your last 90 days
         </Text>
 
-        <GlassCard scheme={scheme} style={{ width: '100%' }}>
+        <GlassCard scheme={scheme} className="w-full">
           <View className="items-center gap-[18px]">
             <Text
               className={cn(

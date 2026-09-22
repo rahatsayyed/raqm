@@ -208,8 +208,8 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
       // Design bug fixes found while rechecking ScanComplete-Light/Dark.dc.html:
       // horizontal padding is literally 20px (was px-lg = 24), and bottom
       // padding is literally 32px (was +24).
-      style={{ flex: 1, backgroundColor: c.bgBase, paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }}
-      className="px-[20px]"
+      style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }}
+      className="flex-1 bg-onb-bg-base dark:bg-onb-bg-base-dark px-[20px]"
     >
       {/* Design bug fix: dots row margin-bottom is 20px (was mb-lg = 24).
           Also: the artifact's dot row is 7 dots (5 filled), not 8/5 — this
@@ -219,21 +219,19 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
         <StepDots total={7} filled={5} scheme={scheme} />
       </View>
 
-      <Text style={{ fontFamily: 'Newsreader_400Regular_Italic' }} className="mb-md text-[28px] text-onb-ink-headline dark:text-onb-ink-headline-dark">
+      <Text className="mb-md text-[28px] font-newsreader-italic text-onb-ink-headline dark:text-onb-ink-headline-dark">
         Found it. All of it.
       </Text>
 
-      <GlassCard scheme={scheme} style={{ marginBottom: 14 }}>
+      <GlassCard scheme={scheme} className="mb-[14px]">
         <View className="gap-1.5">
           <Text
-            style={{ fontFamily: 'InstrumentSans_400Regular', letterSpacing: 1.2 }}
-            className="text-[12px] uppercase text-onb-ink-body dark:text-onb-ink-body-dark"
+            className="text-[12px] uppercase tracking-[1.2px] font-instrument text-onb-ink-body dark:text-onb-ink-body-dark"
           >
             Spent last month
           </Text>
           <Text
-            style={{ fontFamily: 'JetBrainsMono_600SemiBold', letterSpacing: -0.6 }}
-            className="text-[34px] text-onb-ink-headline dark:text-onb-ink-headline-dark"
+            className="text-[34px] tracking-[-0.6px] font-mono-semibold text-onb-ink-headline dark:text-onb-ink-headline-dark"
           >
             {formatAmount(totalSpend, currency)}
           </Text>
@@ -241,23 +239,23 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
       </GlassCard>
 
       <View className="flex-1 bg-onb-bg-surface dark:bg-onb-bg-surface-dark rounded-inner p-md gap-3">
-        <Text style={{ fontFamily: 'InstrumentSans_600SemiBold' }} className="text-[13px] text-onb-ink-headline dark:text-onb-ink-headline-dark">
+        <Text className="text-[13px] font-instrument-semibold text-onb-ink-headline dark:text-onb-ink-headline-dark">
           Top categories
         </Text>
         <ScrollView showsVerticalScrollIndicator={false}>
           <View className="gap-[9px]">
             {topCategories.length === 0 ? (
-              <Text style={{ fontFamily: 'InstrumentSans_400Regular' }} className="text-[13px] text-onb-ink-body dark:text-onb-ink-body-dark">
+              <Text className="text-[13px] font-instrument text-onb-ink-body dark:text-onb-ink-body-dark">
                 We're still learning your financial patterns.
               </Text>
             ) : (
               topCategories.map((cat) => (
                 <View key={cat.name}>
                   <View className="flex-row justify-between mb-1">
-                    <Text style={{ fontFamily: 'InstrumentSans_400Regular' }} className="text-[13px] text-onb-ink-body dark:text-onb-ink-body-dark">
+                    <Text className="text-[13px] font-instrument text-onb-ink-body dark:text-onb-ink-body-dark">
                       {cat.name}
                     </Text>
-                    <Text style={{ fontFamily: 'JetBrainsMono_500Medium' }} className="text-[13px] text-onb-ink-body dark:text-onb-ink-body-dark">
+                    <Text className="text-[13px] font-mono-medium text-onb-ink-body dark:text-onb-ink-body-dark">
                       {formatAmount(cat.amount, currency)}
                     </Text>
                   </View>
@@ -278,8 +276,7 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
       {accounts.length > 0 && (
         <View className="mt-md">
           <Text
-            style={{ fontFamily: 'InstrumentSans_600SemiBold' }}
-            className="mb-sm text-[12px] uppercase text-onb-ink-body dark:text-onb-ink-body-dark"
+            className="mb-sm text-[12px] uppercase font-instrument-semibold text-onb-ink-body dark:text-onb-ink-body-dark"
           >
             Accounts found · tap to include or exclude
           </Text>
@@ -320,8 +317,7 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
 
       <Pressable onPress={() => navigation.navigate('GPayPdfImport')} className="mt-md mb-sm">
         <Text
-          style={{ fontFamily: 'InstrumentSans_400Regular' }}
-          className="text-[11px] text-center underline text-onb-ink-body dark:text-onb-ink-body-dark"
+          className="text-[11px] text-center underline font-instrument text-onb-ink-body dark:text-onb-ink-body-dark"
         >
           Missing data? Import a PDF statement
         </Text>

@@ -1,12 +1,23 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { cssInterop } from 'nativewind';
+import { cn } from '../../utils/cn';
 import type { OnbScheme } from '../../theme/onboardingColors';
+
+// BlurView isn't styled by NativeWind's babel transform automatically (it's
+// the only place in the app that uses it) — cssInterop registers className
+// so it behaves like a first-class NativeWind component here too.
+cssInterop(BlurView, { className: 'style' });
 
 type GlassCardProps = {
   scheme: OnbScheme;
   children: React.ReactNode;
+  // className is for static overrides (flex-1, w-full, mb-...) — callers
+  // should prefer it over `style` now that it's supported. `style` stays
+  // for truly dynamic/runtime values only.
+  className?: string;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -16,16 +27,16 @@ type GlassCardProps = {
 // `inset 0 1px 0 rgba(...)` becomes three stacked layers here: expo-blur's
 // BlurView for the actual blur, a translucent tint View, and a 1px
 // top-highlight View.
-export function GlassCard({ scheme, children, style }: GlassCardProps) {
+export function GlassCard({ scheme, children, className, style }: GlassCardProps) {
   return (
     <View
-      className="rounded-outer border border-onb-border-subtle dark:border-onb-border-subtle-dark overflow-hidden"
+      className={cn(
+        'rounded-outer border border-onb-border-subtle dark:border-onb-border-subtle-dark overflow-hidden',
+        className,
+      )}
       style={style}
     >
-      {/* BlurView has no cssInterop registered (unlike
-          KeyboardAwareScrollView) — style/StyleSheet stays here per
-          CLAUDE.md's carve-out for things NativeWind can't express. */}
-      <BlurView intensity={40} tint={scheme} style={StyleSheet.absoluteFill} />
+      <BlurView intensity={40} tint={scheme} className="absolute inset-0" />
       <View className="absolute inset-0 bg-onb-glass-bg dark:bg-onb-glass-bg-dark" />
       <View className="absolute top-0 left-0 right-0 h-px bg-onb-glass-highlight dark:bg-onb-glass-highlight-dark" />
       <View className="p-md">{children}</View>
