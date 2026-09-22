@@ -5,6 +5,7 @@ import { ArrowUpRightIcon, RefreshIcon } from "./TabIcon";
 import { formatAmount } from "../utils/format";
 import { MaskedValue } from "./MaskedValue";
 import { RefreshAccountSheet } from "./RefreshAccountSheet";
+import { cn } from "../utils/cn";
 
 interface Props {
   bankName: string;
@@ -17,6 +18,8 @@ interface Props {
   monthSpend?: number;
   onPress?: () => void;
   onManualUpdate?: (balance: number) => Promise<unknown> | void;
+  /** Smaller footprint for the ScanComplete onboarding strip (230x108 vs. the default 290x140). */
+  compact?: boolean;
 }
 
 function timeAgo(ts: number): string {
@@ -40,6 +43,7 @@ export function AccountLiquidityCard({
   monthSpend,
   onPress,
   onManualUpdate,
+  compact = false,
 }: Props) {
   const [sheetVisible, setSheetVisible] = useState(false);
   const label = displayName || bankName;
@@ -49,17 +53,30 @@ export function AccountLiquidityCard({
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={onPress}
-        className="w-[290px] min-h-[140px] flex-row rounded-inner border border-outline-variant relative overflow-hidden"
+        className={cn(
+          'flex-row rounded-inner border border-outline-variant relative overflow-hidden',
+          compact ? 'w-[230px] min-h-[108px]' : 'w-[290px] min-h-[140px]',
+        )}
       >
-        <View className="w-[35%] bg-surface-container-low p-3 justify-between border-r border-outline-variant">
-          <View className="w-[40px] h-[40px] rounded-sm bg-surface-bright items-center justify-center">
-            <Text className="font-inter-bold text-body-sm text-primary">
+        <View
+          className={cn(
+            'w-[35%] bg-surface-container-low justify-between border-r border-outline-variant',
+            compact ? 'p-[10px]' : 'p-3',
+          )}
+        >
+          <View
+            className={cn(
+              'rounded-sm bg-surface-bright items-center justify-center',
+              compact ? 'w-[28px] h-[28px]' : 'w-[40px] h-[40px]',
+            )}
+          >
+            <Text className={cn('font-inter-bold text-primary', compact ? 'text-[12px]' : 'text-body-sm')}>
               {label.charAt(0).toUpperCase()}
             </Text>
           </View>
           <View>
             <Text
-              className="font-inter-semibold text-annotation text-on-surface"
+              className={cn('font-inter-semibold text-on-surface', compact ? 'text-[10px]' : 'text-annotation')}
               numberOfLines={1}
             >
               {label}
@@ -69,7 +86,12 @@ export function AccountLiquidityCard({
             )}
           </View>
         </View>
-        <View className="w-[65%] bg-surface-container-lowest p-3 justify-between">
+        <View
+          className={cn(
+            'w-[65%] bg-surface-container-lowest justify-between',
+            compact ? 'p-[10px]' : 'p-3',
+          )}
+        >
           <View className="flex flex-row gap-1 items-end justify-end">
             {monthSpend != null && (
               <Text className="font-mono text-sm text-on-surface-variant mt-[2px]">{formatAmount(monthSpend, currency)}</Text>
@@ -86,7 +108,10 @@ export function AccountLiquidityCard({
                 kind="bank_balance"
                 value={balance}
                 currency={currency}
-                className="font-mono-medium text-[22px] leading-[26px] text-on-surface"
+                className={cn(
+                  'font-mono-medium text-on-surface',
+                  compact ? 'text-[15px] leading-[18px]' : 'text-[22px] leading-[26px]',
+                )}
                 numberOfLines={1}
               />
             </View>

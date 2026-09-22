@@ -311,6 +311,7 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
                     updatedAt={account.updatedAt}
                     monthSpend={account.monthSpend}
                     onPress={() => toggleAccount(account.id)}
+                    compact
                   />
                 </Animated.View>
               );
