@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { Icon } from '../../components/Icon';
 import { StepDots } from '../../components/onboarding/StepDots';
 import { RqButton } from '../../components/onboarding/RqButton';
 import { GlassCard } from '../../components/onboarding/GlassCard';
+import { CalendarRangeSheet } from '../../components/onboarding/CalendarRangeSheet';
 import { useOnbColors } from '../../theme/onboardingColors';
 import { cn } from '../../utils/cn';
 import { useOnboardingStore, type DateRange as Range } from '../../store/onboardingStore';
@@ -29,10 +29,11 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
   const insets = useSafeAreaInsets();
   const { scheme, colors: c } = useOnbColors();
   const { dateRange, setDateRange, customFrom, customTo, setCustomRange } = useOnboardingStore();
-  const [selected, setSelected] = useState<Range>(dateRange);
+  // Stale 'custom' with no dates ever applied should read All time.
+  const [selected, setSelected] = useState<Range>(dateRange === 'custom' && !customFrom ? 'all' : dateRange);
   const [earliestTs, setEarliestTs] = useState<number | null>(null);
 
-  const [pickingField, setPickingField] = useState<'from' | 'to' | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [fromDate, setFromDate] = useState<Date>(customFrom ? new Date(customFrom) : new Date(Date.now() - 90 * 86_400_000));
   const [toDate, setToDate] = useState<Date>(customTo ? new Date(customTo) : new Date());
 
@@ -56,7 +57,7 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
     navigation.replace('ScanningProgress');
   };
 
-  const canStart = selected !== 'custom' || fromDate < toDate;
+  const canStart = selected !== 'custom' || fromDate <= toDate;
 
   const rows: { id: Range; label: string; icon: string }[] = [
     ...PRESETS,
@@ -89,12 +90,14 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
                 row.id === 'all' && earliestTs
                   ? `From ${fmt(earliestTs)}`
                   : row.id === 'custom'
-                    ? 'Pick your own start and end date'
+                    ? isSelected
+                      ? `${fmt(fromDate.getTime())} – ${fmt(toDate.getTime())}`
+                      : 'Pick your own start and end date'
                     : undefined;
               return (
                 <TouchableOpacity
                   key={row.id}
-                  onPress={() => handleSelect(row.id)}
+                  onPress={() => (row.id === 'custom' ? setSheetOpen(true) : handleSelect(row.id))}
                   activeOpacity={0.8}
                   className={cn(
                     'rounded-inner p-md flex-row items-center justify-between',
@@ -138,54 +141,25 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
                 </TouchableOpacity>
               );
             })}
-
-            {selected === 'custom' && (
-              <View className="bg-onb-bg-surface dark:bg-onb-bg-surface-dark rounded-inner overflow-hidden">
-                <TouchableOpacity
-                  onPress={() => setPickingField('from')}
-                  className="flex-row justify-between px-md py-[14px]"
-                >
-                  <Text className="font-instrument text-[14px] text-onb-ink-body dark:text-onb-ink-body-dark">From</Text>
-                  <Text className="font-instrument-semibold text-[14px] text-onb-accent-primary dark:text-onb-accent-primary-dark">
-                    {fmt(fromDate.getTime())}
-                  </Text>
-                </TouchableOpacity>
-                <View className="h-px bg-onb-border-subtle dark:bg-onb-border-subtle-dark mx-md" />
-                <TouchableOpacity
-                  onPress={() => setPickingField('to')}
-                  className="flex-row justify-between px-md py-[14px]"
-                >
-                  <Text className="font-instrument text-[14px] text-onb-ink-body dark:text-onb-ink-body-dark">To</Text>
-                  <Text className="font-instrument-semibold text-[14px] text-onb-accent-primary dark:text-onb-accent-primary-dark">
-                    {fmt(toDate.getTime())}
-                  </Text>
-                </TouchableOpacity>
-                {fromDate >= toDate && (
-                  <Text className="font-instrument text-[12px] text-onb-error-muted dark:text-onb-error-muted-dark px-md pb-[10px]">
-                    Start date must be before end date
-                  </Text>
-                )}
-              </View>
-            )}
           </View>
         </GlassCard>
       </ScrollView>
 
-      {pickingField !== null && (
-        <DateTimePicker
-          value={pickingField === 'from' ? fromDate : toDate}
-          mode="date"
-          display="default"
-          maximumDate={pickingField === 'from' ? toDate : new Date()}
-          minimumDate={pickingField === 'to' ? fromDate : earliestTs ? new Date(earliestTs) : undefined}
-          onValueChange={(_event, date) => {
-            if (pickingField === 'from') setFromDate(date ?? fromDate);
-            else setToDate(date ?? toDate);
-            setPickingField(null);
-          }}
-          onDismiss={() => setPickingField(null)}
-        />
-      )}
+      <CalendarRangeSheet
+        visible={sheetOpen}
+        scheme={scheme}
+        initialFrom={fromDate}
+        initialTo={toDate}
+        // 10-year fallback floor while the earliest-SMS lookup is in flight.
+        minDate={earliestTs ? new Date(earliestTs) : new Date(Date.now() - 10 * 365 * 86_400_000)}
+        onClose={() => setSheetOpen(false)}
+        onApply={(from, to) => {
+          setFromDate(from);
+          setToDate(to);
+          handleSelect('custom');
+          setSheetOpen(false);
+        }}
+      />
 
       <View className="pt-lg">
         <RqButton label="Continue" scheme={scheme} onPress={handleStart} disabled={!canStart} />
