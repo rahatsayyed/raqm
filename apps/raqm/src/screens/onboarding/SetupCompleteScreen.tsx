@@ -38,7 +38,7 @@ export function SetupCompleteScreen({ route }: OnboardingScreenProps<'SetupCompl
         <StepDots total={isAndroid ? 8 : 5} filled={isAndroid ? 8 : 5} scheme={scheme} />
       </View>
 
-      <View className="flex-grow items-center justify-center gap-lg">
+      <View className="flex-grow items-center justify-center">
         <Animated.View
           entering={FadeIn.duration(400)}
           className="w-16 h-16 rounded-full items-center justify-center bg-onb-accent-primary dark:bg-onb-accent-primary-dark"
@@ -55,7 +55,7 @@ export function SetupCompleteScreen({ route }: OnboardingScreenProps<'SetupCompl
 
         <Animated.Text
           entering={FadeInDown.duration(400).delay(150)}
-          className="font-instrument text-[15px] leading-[22px] text-onb-ink-body dark:text-onb-ink-body-dark text-center max-w-[260px]"
+          className="font-instrument text-[15px] leading-[18px] text-onb-ink-body dark:text-onb-ink-body-dark text-center max-w-[280px] mt-4"
         >
           Raqm is watching your spend, quietly, from right here on your phone.
         </Animated.Text>
