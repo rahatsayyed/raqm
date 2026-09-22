@@ -262,7 +262,7 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
       <View className="flex-1" />
 
       <Text className="mb-sm text-center font-instrument text-[11px] text-onb-ink-body dark:text-onb-ink-body-dark">
-        Location and notification management are optional — skip either and continue.
+        Location and notification management are optional.
       </Text>
 
       {/* Bug #4 fix: PDF-import belongs on ScanComplete per the artifact, not here —

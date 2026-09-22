@@ -110,7 +110,7 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
                     >
                       {row.label}
                     </Text>
-                    {subtitle ? (
+                    {subtitle && isSelected ? (
                       <Text
                         className={cn(
                           'font-instrument text-[12px] mt-0.5',
