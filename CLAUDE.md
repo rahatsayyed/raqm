@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **⚠️ COMMENTS: no comment longer than one line, ever. See [Code Comments](#code-comments) before writing or editing any file.**
+
 ## Repository
 
 npm-workspaces monorepo for **Raqm**, a private, on-device personal finance tracker (Android-only, Expo). Two workspaces:
@@ -58,7 +60,7 @@ Expo API surface changed significantly in SDK 56 — check https://docs.expo.dev
 
 ## Code Comments
 
-Write no comments by default. Add a comment only where the code cannot explain itself: a non-obvious workaround, a business rule, or a gotcha from the invariants list above. One short line, not a block. Never restate what the code already says (e.g. no `// increment i` above `i++`). Never write multi-line comment blocks or docstrings for simple functions.
+**HARD RULE, checked on every Edit/Write: one line max, no exceptions.** Write no comments by default. Add a comment only where the code cannot explain itself: a non-obvious workaround, a business rule, or a gotcha from the invariants list above. One short line, not a block — if the reasoning needs more than one line, put it in the PR description or chat, not the file. Never restate what the code already says (e.g. no `// increment i` above `i++`). Never write multi-line comment blocks or docstrings for simple functions. Before submitting an Edit/Write, re-scan every comment you just added or touched and collapse anything spanning more than one line.
 
 ## Git
 
