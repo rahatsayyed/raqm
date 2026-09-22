@@ -91,7 +91,7 @@ export function BudgetSetupScreen({ navigation, route }: OnboardingScreenProps<'
         {isAndroid ? 'Based on last month. Adjust anything.' : 'You can change this anytime.'}
       </Text>
 
-      <GlassCard scheme={scheme} style={{ flex: 1 }}>
+      <GlassCard scheme={scheme} className="flex-1">
         <View className="flex-row flex-wrap gap-sm">
           <View className="w-full bg-onb-bg-surface dark:bg-onb-bg-surface-dark rounded-inner p-md flex-row justify-between items-center">
             <View>

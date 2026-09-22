@@ -41,13 +41,12 @@ export function PermissionRow({
   // Bug #3 fix: the whole card is the tap target now, not just the small
   // status glyph — the glyph inside stays a plain View (visual status only).
   return (
-    // Animated.View isn't cssInterop-registered for className in this app
-    // (see RqButton.tsx) — style stays here. Bug fix: padding lived on BOTH
-    // this View and the Pressable below (32px total inset instead of the
-    // artifact's 16px) — removed here, kept once on the Pressable.
+    // Bug fix: padding lived on BOTH this View and the Pressable below (32px
+    // total inset instead of the artifact's 16px) — removed here, kept once
+    // on the Pressable.
     <Animated.View
       entering={FadeInDown.duration(300).delay(index * 80)}
-      style={{ flex: 1, borderRadius: 4, overflow: 'hidden', backgroundColor: c.bgSurface }}
+      className="flex-1 rounded-inner overflow-hidden bg-onb-bg-surface dark:bg-onb-bg-surface-dark"
     >
       <Pressable
         onPress={onGrant}

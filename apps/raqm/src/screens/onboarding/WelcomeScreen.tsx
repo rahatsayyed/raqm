@@ -62,14 +62,20 @@ export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) 
       <View className="flex-grow justify-center gap-5">
         <Animated.Text
           entering={FadeInDown.duration(500).delay(100)}
-          style={{ fontFamily: 'Newsreader_400Regular_Italic', color: c.inkHeadline, fontSize: 40, lineHeight: 46 }}
+          className={cn(
+            'text-[40px] leading-[46px] font-newsreader-italic',
+            isDark ? 'text-onb-ink-headline-dark' : 'text-onb-ink-headline',
+          )}
         >
           Your money,{'\n'}read quietly.
         </Animated.Text>
 
         <Animated.Text
           entering={FadeInDown.duration(500).delay(200)}
-          style={{ fontFamily: 'InstrumentSans_400Regular', color: c.inkBody, fontSize: 16, lineHeight: 24, maxWidth: 300 }}
+          className={cn(
+            'text-[16px] leading-[24px] max-w-[300px] font-instrument',
+            isDark ? 'text-onb-ink-body-dark' : 'text-onb-ink-body',
+          )}
         >
           {isAndroid
             ? 'Raqm reads your bank SMS on this phone. Nothing is uploaded, nothing is shared, no bank login, ever.'
