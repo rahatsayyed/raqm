@@ -160,7 +160,7 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
             isDark ? 'text-onb-ink-body-dark' : 'text-onb-ink-body',
           )}
         >
-          {smsCount > 0 ? `Scanned ${smsCount} messages — everything happens on this device.` : 'Everything happens on this device. Nothing is sent anywhere.'}
+          {smsCount > 0 ? `everything happens on this device.` : 'Everything happens on this device. Nothing is sent anywhere.'}
         </Text>
 
         <Pressable onPress={() => navigation.replace('BudgetSetup')}>

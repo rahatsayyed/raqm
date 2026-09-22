@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { useOnboardingStore } from '../../store/onboardingStore';
-import { formatAmount } from '../../utils/format';
+import { formatAmount, currencySymbol } from '../../utils/format';
 import { loadTxRecords, getCategories, getAccounts, getSetting, softDeleteAccountTxs } from '../../db/database';
 import { countsTowardTotals } from '../../services/txIntelligenceCore';
 import { getMonthBounds } from '../../utils/period';
@@ -252,9 +252,12 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
             Spent last month
           </Text>
           <Text
-            className="text-[34px] tracking-[-0.6px] font-mono-semibold text-onb-ink-headline dark:text-onb-ink-headline-dark"
+            className="text-[34px] tracking-[-0.6px] text-onb-ink-headline dark:text-onb-ink-headline-dark"
           >
-            {formatAmount(totalSpend, currency)}
+            <Text className="font-mono-medium">{currencySymbol(currency)}</Text>
+            <Text className="font-mono-semibold">
+              {formatAmount(totalSpend, currency).slice(currencySymbol(currency).length)}
+            </Text>
           </Text>
           {spendTrend && (
             <Text
