@@ -55,7 +55,7 @@ export function AccountLiquidityCard({
         onPress={onPress}
         className={cn(
           'flex-row rounded-inner border border-outline-variant relative overflow-hidden',
-          compact ? 'w-[230px] min-h-[108px]' : 'w-[290px] min-h-[140px]',
+          compact ? 'w-[240px] min-h-[112px]' : 'w-[290px] min-h-[140px]',
         )}
       >
         <View

@@ -68,6 +68,7 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
 
   const [categorySpend, setCategorySpend] = useState<Record<string, number>>({});
   const [totalSpend, setTotalSpend] = useState(0);
+  const [prevMonthSpend, setPrevMonthSpend] = useState<number | null>(null);
   const currency = transactions[0]?.currency ?? '₹';
 
   // Root-cause fix (set 5): the old code summed `transactions` (the raw, un-deduped,
@@ -89,6 +90,10 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
         const monthStartDayRaw = await getSetting('month_start_day');
         const monthStartDay = monthStartDayRaw ? Number(monthStartDayRaw) : 1;
         const { from, to } = getMonthBounds(new Date(), monthStartDay);
+        // Previous period, for the "vs. the month before" trend line — one day
+        // before this period's start, run through the same bounds function so
+        // it honors the custom month-start-day setting too.
+        const { from: prevFrom, to: prevTo } = getMonthBounds(new Date(from - 1), monthStartDay);
 
         const [records, categories, dbAccounts] = await Promise.all([
           loadTxRecords(),
@@ -101,9 +106,15 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
         const spend: Record<string, number> = {};
         const perAccount = new Map<string, Account>();
         let total = 0;
+        let prevTotal = 0;
+        let hasPrevData = false;
 
         for (const tx of records) {
           if (tx.type !== 'EXPENSE' || !countsTowardTotals(tx)) continue;
+          if (tx.timestamp >= prevFrom && tx.timestamp <= prevTo) {
+            prevTotal += Math.abs(tx.amount);
+            hasPrevData = true;
+          }
           if (tx.timestamp < from || tx.timestamp > to) continue;
           const amount = Math.abs(tx.amount);
           const name = tx.categoryId != null ? nameById.get(tx.categoryId) : undefined;
@@ -159,6 +170,7 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
         if (!cancelled) {
           setCategorySpend(spend);
           setTotalSpend(total);
+          setPrevMonthSpend(hasPrevData ? prevTotal : null);
           setAccounts(accountList);
           setSelectedAccounts(new Set(accountList.map((a) => a.id)));
         }
@@ -173,6 +185,15 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
       cancelled = true;
     };
   }, [transactions]);
+
+  // null when there's no prior-period data to compare against (fresh install,
+  // first month of history) — the trend line is hidden rather than showing a
+  // misleading 0%/∞% swing.
+  const spendTrend = useMemo(() => {
+    if (prevMonthSpend == null || prevMonthSpend === 0) return null;
+    const pct = Math.round(((totalSpend - prevMonthSpend) / prevMonthSpend) * 100);
+    return { pct: Math.abs(pct), isDown: pct <= 0 };
+  }, [totalSpend, prevMonthSpend]);
 
   const topCategories = useMemo(() => {
     const entries = Object.entries(categorySpend).sort((a, b) => b[1] - a[1]);
@@ -235,6 +256,18 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
           >
             {formatAmount(totalSpend, currency)}
           </Text>
+          {spendTrend && (
+            <Text
+              className={cn(
+                'text-[12px] font-instrument',
+                spendTrend.isDown
+                  ? 'text-onb-accent-primary dark:text-onb-accent-primary-dark'
+                  : 'text-onb-notice dark:text-onb-notice-dark',
+              )}
+            >
+              {spendTrend.isDown ? '↓' : '↑'} {spendTrend.pct}% vs. the month before
+            </Text>
+          )}
         </View>
       </GlassCard>
 
@@ -278,7 +311,12 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
           <Text
             className="mb-sm px-[20px] text-[12px] uppercase font-instrument-semibold text-onb-ink-body dark:text-onb-ink-body-dark"
           >
-            Accounts found · tap to include or exclude
+            Accounts found · 
+            <Text
+            className="px-[20px] text-[10px] italic lowercase"
+          >
+            {" "}tap to include or exclude
+            </Text>
           </Text>
           <ScrollView
             horizontal
