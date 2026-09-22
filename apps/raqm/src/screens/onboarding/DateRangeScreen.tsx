@@ -66,7 +66,7 @@ export function DateRangeScreen({ navigation }: OnboardingScreenProps<'DateRange
 
   return (
     <View
-      style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }}
+      style={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }}
       className="flex-1 bg-onb-bg-base dark:bg-onb-bg-base-dark px-lg"
     >
       <View className="mb-lg">

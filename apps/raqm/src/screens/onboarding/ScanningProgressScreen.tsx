@@ -101,7 +101,7 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
 
   return (
     <View
-      style={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }}
+      style={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }}
       className={cn('flex-1 px-[20px]', isDark ? 'bg-onb-bg-base-dark' : 'bg-onb-bg-base')}
     >
       <View className="mb-auto">
