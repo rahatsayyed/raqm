@@ -274,13 +274,17 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
       </View>
 
       {accounts.length > 0 && (
-        <View className="mt-md">
+        <View className="mt-md -mx-[20px]">
           <Text
-            className="mb-sm text-[12px] uppercase font-instrument-semibold text-onb-ink-body dark:text-onb-ink-body-dark"
+            className="mb-sm px-[20px] text-[12px] uppercase font-instrument-semibold text-onb-ink-body dark:text-onb-ink-body-dark"
           >
             Accounts found · tap to include or exclude
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 10, paddingHorizontal: 20 }}
+          >
             {accounts.map((account, i) => {
               const isSelected = selectedAccounts.has(account.id);
               return (
@@ -291,7 +295,7 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
                     'rounded-inner border',
                     isSelected
                       ? 'border-onb-accent-primary dark:border-onb-accent-primary-dark opacity-100'
-                      : 'border-onb-border-subtle dark:border-onb-border-subtle-dark opacity-60',
+                      : '',
                   )}
                 >
                   {/* Set 3 fix: reuse the real Dashboard/Analytics account card component
