@@ -75,6 +75,12 @@ export function BudgetSetupScreen({
   const suggested = isAndroid
     ? suggestBudgetsFromSpend(route.params?.categorySpend ?? {})
     : {};
+  // Most-spent (our proxy for most-used) categories lead the grid instead
+  // of a fixed alphabetical-ish order, so the categories that matter most
+  // to this user are the first ones they see and fill in.
+  const orderedCategories = [...DEFAULT_CATEGORIES].sort(
+    (a, b) => (suggested[b] ?? 0) - (suggested[a] ?? 0),
+  );
   const [amounts, setAmounts] = useState<Record<string, string>>(
     Object.fromEntries(
       DEFAULT_CATEGORIES.map((cat) => [
@@ -150,8 +156,8 @@ export function BudgetSetupScreen({
           token (sm=8, md=16); applied literally instead of rounding to mb-md (16). */}
       <View className="mb-[20px]">
         <StepDots
-          total={isAndroid ? 8 : 5}
-          filled={isAndroid ? 6 : 3}
+          total={isAndroid ? 8 : 6}
+          filled={isAndroid ? 6 : 4}
           scheme={scheme}
         />
       </View>
@@ -188,7 +194,7 @@ export function BudgetSetupScreen({
             }}
           >
             <View className="flex-row flex-wrap gap-sm">
-              {DEFAULT_CATEGORIES.map((category) => (
+              {orderedCategories.map((category) => (
                 <View
                   key={category}
                   className="w-[48%] bg-onb-bg-surface dark:bg-onb-bg-surface-dark rounded-inner p-md pb-lg"
