@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import * as Notifications from 'expo-notifications';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { RqButton } from '../../components/onboarding/RqButton';
 import { GlassCard } from '../../components/onboarding/GlassCard';
@@ -20,19 +19,12 @@ export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) 
   const { scheme, colors: c } = useOnbColors();
   const isDark = scheme === 'dark';
 
-  const getStarted = async () => {
-    if (isAndroid) {
-      navigation.navigate('Permissions');
-      return;
-    }
-    // iOS has no dedicated Permissions screen — notification permission is
-    // requested inline here, on "Get started" tap, per the artifact.
-    try {
-      await Notifications.requestPermissionsAsync();
-    } catch {
-      // Non-fatal: proceed to the import flow regardless of the outcome.
-    }
-    navigation.navigate('ImportStatement');
+  // Both platforms route through PermissionsScreen — it already has a
+  // built iOS branch (single Notifications row, "why" copy) that used to
+  // sit unreachable while this screen fired the system dialog cold, with
+  // no in-app explanation before it.
+  const getStarted = () => {
+    navigation.navigate('Permissions');
   };
 
   return (
@@ -46,7 +38,7 @@ export function WelcomeScreen({ navigation }: OnboardingScreenProps<'Welcome'>) 
           radial glow behind the copy — not present anywhere in the current
           artifact (Welcome-Dark/Light, Welcome-iOS-Dark/Light), removed. */}
 
-      <StepDots total={isAndroid ? 8 : 5} filled={1} scheme={scheme} />
+      <StepDots total={isAndroid ? 8 : 6} filled={1} scheme={scheme} />
 
       {/* Bug fix (recheck against artifact): gap below the dots is 40px
           (mt-xxl) in both Welcome-Light/Dark, not 32px (mt-xl). */}

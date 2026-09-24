@@ -311,14 +311,10 @@ export function ScanCompleteScreen({ navigation }: OnboardingScreenProps<'ScanCo
 
       {accounts.length > 0 && (
         <View className="mt-md -mx-[20px]">
-          <Text
-            className="mb-sm px-[20px] text-[12px] uppercase font-instrument-semibold text-onb-ink-body dark:text-onb-ink-body-dark"
-          >
-            Accounts found · 
-            <Text
-            className="px-[20px] text-[10px] italic lowercase"
-          >
-            {" "}tap to include or exclude
+          <Text className="mb-sm px-[20px] text-[12px] uppercase font-instrument-semibold text-onb-ink-body dark:text-onb-ink-body-dark">
+            Accounts found ·{' '}
+            <Text className="text-[10px] italic lowercase text-onb-ink-body dark:text-onb-ink-body-dark">
+              tap to include or exclude
             </Text>
           </Text>
           <ScrollView

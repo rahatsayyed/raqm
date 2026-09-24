@@ -24,8 +24,8 @@ export function ImportStatementScreen({ navigation }: OnboardingScreenProps<'Imp
       className="flex-1 bg-onb-bg-base dark:bg-onb-bg-base-dark px-lg"
     >
       <View className="mb-lg">
-        {/* Bug fix: artifact shows 4 dots (2 filled), not 5. */}
-        <StepDots total={4} filled={2} scheme={scheme} />
+        {/* Now step 3 of 6: Welcome -> Permissions -> ImportStatement. */}
+        <StepDots total={6} filled={3} scheme={scheme} />
       </View>
 
       <Text className="mb-xs text-[30px] font-newsreader-italic text-onb-ink-headline dark:text-onb-ink-headline-dark">

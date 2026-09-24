@@ -4,13 +4,38 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BankParserFactory } from '@rahatsayyed/bank-sms-parser';
 import { OnboardingScreenProps } from '../../navigation/types';
 import { SmsReader } from '../../native/SmsReader';
-import { useOnboardingStore, dateRangeToTimestamps } from '../../store/onboardingStore';
+import { useOnboardingStore, dateRangeToTimestamps, type DateRange } from '../../store/onboardingStore';
 import { runDetectionJobs, matchSplitPayments } from '../../services/txIntelligence';
 import { logEvent } from '../../services/logger';
 import { StepDots } from '../../components/onboarding/StepDots';
 import { GlassCard } from '../../components/onboarding/GlassCard';
 import { useOnbColors } from '../../theme/onboardingColors';
 import { cn } from '../../utils/cn';
+
+function fmtShort(ts: number) {
+  return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
+// Bug fix: this used to hardcode "your last 90 days" regardless of what the
+// user actually picked on DateRangeScreen — false whenever they picked
+// anything but the (non-existent) 90-day preset. Mirrors DateRangeScreen's
+// own PRESETS labels.
+function rangeLabel(range: DateRange, customFrom: number | null, customTo: number | null) {
+  switch (range) {
+    case 'all':
+      return 'Reading everything on your phone';
+    case '1year':
+      return 'Reading your last 12 months';
+    case '6months':
+      return 'Reading your last 6 months';
+    case '3months':
+      return 'Reading your last 3 months';
+    case 'custom':
+      return customFrom && customTo
+        ? `Reading ${fmtShort(customFrom)} – ${fmtShort(customTo)}`
+        : 'Reading your selected range';
+  }
+}
 
 // Onboarding-v3 redesign: matches the mockup's ScanningProgress-Dark/Light.
 // Real scan logic (SMS read -> parse -> categorize -> detection jobs)
@@ -115,7 +140,7 @@ export function ScanningProgressScreen({ navigation }: OnboardingScreenProps<'Sc
             isDark ? 'text-onb-ink-headline-dark' : 'text-onb-ink-headline',
           )}
         >
-          Reading your last 90 days
+          {rangeLabel(dateRange, customFrom, customTo)}
         </Text>
 
         <GlassCard scheme={scheme} className="w-full">

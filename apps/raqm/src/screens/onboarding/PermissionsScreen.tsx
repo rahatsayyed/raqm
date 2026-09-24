@@ -164,7 +164,7 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
     : granted.notifications;
 
   const next = useCallback(() => {
-    navigation.navigate(isAndroid ? 'DateRange' : 'ManualAccountSetup');
+    navigation.navigate(isAndroid ? 'DateRange' : 'ImportStatement');
   }, [isAndroid, navigation]);
 
   return (
@@ -180,17 +180,17 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
       {/* Literal artifact margin-bottom below the dots is 28px — no exact
           Spacing token (lg=24, xl=32); applied literally instead of mb-lg (24). */}
       <View className="mb-[28px]">
-        <StepDots total={8} filled={2} scheme={scheme} />
+        <StepDots total={isAndroid ? 8 : 6} filled={2} scheme={scheme} />
       </View>
 
       {/* Literal artifact h1 margin-bottom is 8px — was mb-xs (Spacing.xs = 4). */}
       <Text className="mb-[8px] font-newsreader-italic text-[30px] text-onb-ink-headline dark:text-onb-ink-headline-dark">
-        A couple of permissions
+        {isAndroid ? 'A couple of permissions' : 'One quick permission'}
       </Text>
       {/* Literal artifact subtitle margin-bottom is 18px — no exact Spacing
           token (md=16, lg=24); applied literally instead of mb-lg (24). */}
       <Text className="mb-[18px] font-instrument text-[15px] leading-[22px] text-onb-ink-body dark:text-onb-ink-body-dark">
-        Each one only reads what it needs, on this device.
+        {isAndroid ? 'Each one only reads what it needs, on this device.' : 'So Raqm can nudge you about your spending.'}
       </Text>
 
       <GlassCard scheme={scheme}>
@@ -261,9 +261,15 @@ export function PermissionsScreen({ navigation }: OnboardingScreenProps<'Permiss
           stretching to the screen's full height. */}
       <View className="flex-1" />
 
-      <Text className="mb-sm text-center font-instrument text-[11px] text-onb-ink-body dark:text-onb-ink-body-dark">
-        Location and notification management are optional.
-      </Text>
+      {/* Bug fix: this used to say "optional" unconditionally even though
+          canContinue blocks on these two rows while the flag above is
+          false — don't tell the user they can skip something that then
+          stops them from continuing. */}
+      {isAndroid && LOCATION_AND_NOTIFICATION_ACCESS_OPTIONAL && (
+        <Text className="mb-sm text-center font-instrument text-[11px] text-onb-ink-body dark:text-onb-ink-body-dark">
+          Location and notification management are optional.
+        </Text>
+      )}
 
       {/* Bug #4 fix: PDF-import belongs on ScanComplete per the artifact, not here —
           removed the duplicate link that used to live on this screen. */}

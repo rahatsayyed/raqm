@@ -35,7 +35,7 @@ export function SetupCompleteScreen({ route }: OnboardingScreenProps<'SetupCompl
       className="flex-1 bg-onb-bg-base dark:bg-onb-bg-base-dark px-lg"
     >
       <View className="mb-auto">
-        <StepDots total={isAndroid ? 8 : 5} filled={isAndroid ? 8 : 5} scheme={scheme} />
+        <StepDots total={isAndroid ? 8 : 6} filled={isAndroid ? 8 : 6} scheme={scheme} />
       </View>
 
       <View className="flex-grow items-center justify-center">

@@ -64,7 +64,7 @@ export function NameEntryScreen({ navigation }: OnboardingScreenProps<'NameEntry
             split via justify-content: space-between) — a flex-grow spacer
             after the input pushes the CTA to the bottom instead. */}
         <View className="mb-[28px]">
-          <StepDots total={isAndroid ? 8 : 5} filled={isAndroid ? 7 : 4} scheme={scheme} />
+          <StepDots total={isAndroid ? 8 : 6} filled={isAndroid ? 7 : 5} scheme={scheme} />
         </View>
 
         <Animated.View entering={FadeInDown.duration(400).delay(50)} className="mb-[14px]">
