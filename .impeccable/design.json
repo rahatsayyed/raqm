@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-24T00:00:00Z",
+  "title": "Design System: Raqm",
+  "extensions": {
+    "colorMeta": {
+      "accent-primary": { "role": "primary", "displayName": "Confidence Green", "canonical": "#66CCAC", "tonalRamp": ["#0F241D", "#173325", "#1F4A3B", "#2E5D4E", "#3F8067", "#52A282", "#66CCAC", "#A6E3CD"] },
+      "bg-base": { "role": "neutral", "displayName": "Warm Near-Black", "canonical": "#0B0C0E", "tonalRamp": ["#000000", "#0B0C0E", "#15171A", "#1C1F23", "#2A2D31", "#45484C", "#75787C", "#B0B3B6"] },
+      "bg-surface": { "role": "neutral", "displayName": "Card Ground", "canonical": "#15171A", "tonalRamp": ["#050506", "#0B0C0E", "#15171A", "#1C1F23", "#2A2D31", "#45484C", "#75787C", "#B0B3B6"] },
+      "bg-surface-raised": { "role": "neutral", "displayName": "Raised Ground", "canonical": "#1C1F23", "tonalRamp": ["#08090A", "#121416", "#1C1F23", "#26292D", "#35383C", "#4F5256", "#7C7F82", "#B4B6B9"] },
+      "border-subtle": { "role": "neutral", "displayName": "Hairline Border", "canonical": "rgba(255,255,255,0.12)" },
+      "ink-headline": { "role": "neutral", "displayName": "Headline Ink", "canonical": "#F2F1EC", "tonalRamp": ["#1A1A17", "#3A3A34", "#5C5C54", "#7E7E73", "#A0A093", "#C2C1B3", "#E4E3D3", "#F2F1EC"] },
+      "ink-body": { "role": "neutral", "displayName": "Body Ink", "canonical": "#B7B6AE" },
+      "ink-label": { "role": "neutral", "displayName": "Label Ink", "canonical": "#6B6A62" },
+      "accent-deep": { "role": "secondary", "displayName": "Structural Deep", "canonical": "#1F4A3B" },
+      "notice": { "role": "semantic", "displayName": "Amber Notice", "canonical": "#D9A85C" },
+      "error-muted": { "role": "semantic", "displayName": "Muted Error", "canonical": "#E08672" },
+      "onb-accent-primary": { "role": "primary", "displayName": "Confidence Green (Onboarding Light)", "canonical": "#2E5D4E" },
+      "onb-bg-base": { "role": "neutral", "displayName": "Warm Off-White (Onboarding Light)", "canonical": "#F7F6F3" }
+    },
+    "typographyMeta": {
+      "display-hero": { "displayName": "Display / Hero", "purpose": "The one screen that earns the largest size — first impression (Welcome)." },
+      "display-screen-title": { "displayName": "Display / Screen Title", "purpose": "Every other screen's headline." },
+      "body-supporting": { "displayName": "Body / Supporting Text", "purpose": "Comfortably above the 11pt legibility floor." },
+      "body-card-label": { "displayName": "Body / Card Label", "purpose": "Weight compensates for size near the small end." },
+      "caption": { "displayName": "Caption", "purpose": "Smallest text in the system, never smaller." },
+      "metric-numeric-hero": { "displayName": "Metric / Numeric Hero", "purpose": "The Home hero amount, scan count-up." },
+      "numeric-list-row": { "displayName": "Numeric / List-Row", "purpose": "Per-transaction/per-category amount in a row." },
+      "numeric-subtotal": { "displayName": "Numeric / Subtotal", "purpose": "A category or section subtotal." },
+      "numeric-screen-total": { "displayName": "Numeric / Screen Total", "purpose": "The one large total on a screen." },
+      "section": { "displayName": "Section", "purpose": "Uppercase section headers, e.g. RECENT ACTIVITY." },
+      "label": { "displayName": "Label", "purpose": "Form field labels, badges, step counters." }
+    },
+    "shadows": [
+      { "name": "onboarding-glass", "value": "backdrop-filter: blur(24px) saturate(1.3); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); box-shadow: inset 0 1px 0 rgba(255,255,255,0.08)", "purpose": "One glass surface per onboarding screen, never stacked — modal, sheet, or decision card only." },
+      { "name": "legacy-card", "value": "0 8px 24px rgba(0,0,0,0.28)", "purpose": "Pre-v3.0 single app-wide shadow token (src/theme/shadows.ts Shadows.card), still in force outside onboarding." }
+    ],
+    "motion": [
+      { "name": "ease-out-entrance", "value": "ease-out, 150-400ms", "purpose": "Default for entrances/appear/reveal — no spring/elastic curves." },
+      { "name": "ease-in-exit", "value": "ease-in, 150-400ms", "purpose": "Default for exits/collapse." },
+      { "name": "press-scale", "value": "scale(0.97), withTiming 100ms in / 150ms out", "purpose": "The one system-wide press-feedback device, e.g. RqButton." }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Onboarding Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "v3.0-migrated CTA used across onboarding-v3 screens (RqButton). radius-cta, no pill, press-scale feedback.",
+      "html": "<button class=\"ds-btn-primary\">Continue</button>",
+      "css": ".ds-btn-primary { background: #66CCAC; color: #14140F; border: none; border-radius: 3px; padding: 16px 24px; font-family: 'Instrument Sans', sans-serif; font-weight: 600; font-size: 16px; min-height: 51px; transition: transform 0.15s ease-out; } .ds-btn-primary:hover { background: #1F4A3B; color: #F2F1EC; } .ds-btn-primary:focus-visible { outline: 2px solid #66CCAC; outline-offset: 2px; } .ds-btn-primary:active { transform: scale(0.97); }"
+    },
+    {
+      "name": "App-Wide Primary Button (unmigrated, v2.0)",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "PrimaryButton.tsx as shipped today — flagged migration debt, not a target pattern: rounded-lg (12px), fixed height, hand-rolled colored drop shadow inconsistent with both the old and new elevation rules.",
+      "html": "<button class=\"ds-btn-primary-legacy\">Continue</button>",
+      "css": ".ds-btn-primary-legacy { background: #75daa8; color: #003823; border: none; border-radius: 12px; height: 56px; padding: 0 24px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 18px; box-shadow: 0 8px 16px rgba(117,218,168,0.25); } .ds-btn-primary-legacy:active { opacity: 0.85; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "No background or shadow; navigates/dismisses rather than commits.",
+      "html": "<button class=\"ds-btn-ghost\">Cancel</button>",
+      "css": ".ds-btn-ghost { background: transparent; color: #bdcac0; border: none; height: 48px; padding: 0 24px; font-family: 'Inter', sans-serif; font-weight: 500; font-size: 16px; } .ds-btn-ghost:hover { color: #F2F1EC; } .ds-btn-ghost:focus-visible { outline: 2px solid #66CCAC; outline-offset: 2px; }"
+    },
+    {
+      "name": "Onboarding Glass Card",
+      "kind": "card",
+      "refersTo": "glass-card",
+      "description": "GlassCard.tsx — the one elevated container per onboarding screen: blur + translucent tint + 1px top-highlight, radius-outer.",
+      "html": "<div class=\"ds-card-glass\"><div class=\"ds-card-glass-highlight\"></div><div class=\"ds-card-glass-content\">Budget: ₹28,430</div></div>",
+      "css": ".ds-card-glass { position: relative; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12); overflow: hidden; backdrop-filter: blur(24px) saturate(1.3); background: rgba(255,255,255,0.06); } .ds-card-glass-highlight { position: absolute; top: 0; left: 0; right: 0; height: 1px; background: rgba(255,255,255,0.08); } .ds-card-glass-content { padding: 16px; font-family: 'JetBrains Mono', monospace; color: #F2F1EC; }"
+    },
+    {
+      "name": "Ordinary Content Card",
+      "kind": "card",
+      "refersTo": "content-card",
+      "description": "Flat app-wide card outside onboarding — no blur, summarizes rather than contains everything.",
+      "html": "<div class=\"ds-card-flat\">Dining · ₹3,400 this month</div>",
+      "css": ".ds-card-flat { background: #15171A; border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 16px; color: #dde4df; font-family: 'Inter', sans-serif; font-size: 15px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "EditFieldSheet.tsx's TextInput — flat surface, hairline border, Inter body text.",
+      "html": "<input class=\"ds-input\" placeholder=\"Enter amount\" />",
+      "css": ".ds-input { background: #10140F; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 12px 16px; font-family: 'Inter', sans-serif; font-size: 15px; color: #dde4df; } .ds-input::placeholder { color: #5B635A; } .ds-input:focus-visible { outline: 2px solid #66CCAC; outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Precision and Silence",
+    "overview": "Raqm's visual language exists to make a near-black canvas feel calm and exact, never busy. The reference feel is Copilot Money's typography-led editorial precision (dark canvas, no illustration or mascot, tight tracking), crossed with Apple's restraint (one accent, minimal shadow, no decoration) and Stripe's numeric precision (tabular figures, negative tracking on amounts as a 'financial DNA' signal). The explicit anti-reference is Monarch's gamified, celebratory consumer style — Raqm never shames, never celebrates, never gamifies spending. Typography carries the design rather than decorating it: a serif display face (Newsreader, italic) supplies the one signature element per screen, a neutral sans (Instrument Sans) carries everything else, and JetBrains Mono renders every number without exception. Color follows the same restraint: one accent, used identically everywhere it appears, never decoratively. Depth is conveyed by translucency and blur rather than a shadow drawn under an element.",
+    "keyCharacteristics": [
+      "One accent color (#66CCAC dark / #2E5D4E onboarding-light), used identically everywhere it appears — never per-screen accent drift.",
+      "Serif display (Newsreader, italic) as the one signature element; neutral sans (Instrument Sans) for everything else; JetBrains Mono for every number.",
+      "Depth from translucency and blur, not drop shadows — one glass surface per screen, never stacked.",
+      "A shrinking radius scale where the primary CTA is deliberately smaller-radius than the cards around it — color, not shape, signals the action.",
+      "Warm near-black / warm off-white grounds, never pure black or white."
+    ],
+    "rules": [
+      { "name": "The One Voice Rule", "body": "One accent color per screen, used identically everywhere it appears — the same green in a button is the same green in a positive metric, with no per-screen accent drift.", "section": "colors" },
+      { "name": "The No-Alarm Rule", "body": "Amber (notice), not red, is the default \"pay attention\" color. Red (error-muted) is reserved for actual failures only.", "section": "colors" },
+      { "name": "The One Gradient Rule", "body": "No gradients anywhere except a single radial glow behind the Home hero number.", "section": "colors" },
+      { "name": "The Named-Step Rule", "body": "A list-row amount, a subtotal, and a screen-level total are three distinct named sizes, not somewhere between 16 and 38px.", "section": "typography" },
+      { "name": "The Weight-Floor Rule", "body": "Avoid weights lighter than 400 at any text size — light/thin weights are a legibility risk, especially small.", "section": "typography" },
+      { "name": "The One Glass Surface Rule", "body": "At most one glass/blur surface per screen, never stacked — for the single elevated container, never for ordinary content cards.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use one accent color (accent-primary) per screen, identically wherever it appears.",
+      "Do render every number — balances, amounts, counters — in JetBrains Mono.",
+      "Do use amber (notice) as the default \"pay attention\" color; reserve red (error-muted) for actual failures only.",
+      "Do convey depth via translucency/blur for the one elevated surface per screen; use flat bg-surface with a hairline border for ordinary cards.",
+      "Do give the primary CTA a smaller radius (radius-cta, 3px) than the cards around it once a screen migrates to v3.0 — color, not shape, signals the action."
+    ],
+    "donts": [
+      "Don't use gradients anywhere except the single sanctioned radial glow behind the Home hero number.",
+      "Don't stack more than one glass/blur surface on a single screen.",
+      "Don't treat PrimaryButton's hand-rolled colored drop shadow as a system pattern — it is unmigrated v2.0 debt inconsistent with both the old one-shadow-token rule and the new no-drop-shadow rule, not a second sanctioned shadow style.",
+      "Don't use emoji icons, hand-rolled decorative SVGs, or per-screen custom shadows anywhere in the app.",
+      "Don't reintroduce bouncy/springy/elastic motion curves — press feedback and all transitions are ease-out/ease-in only."
+    ]
+  }
+}
