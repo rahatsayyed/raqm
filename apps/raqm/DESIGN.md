@@ -1,222 +1,279 @@
-# DESIGN.md — Raqm Design Language (RDL)
+---
+name: Raqm
+description: A calm, on-device expense tracker for the Indian market — precision-toned numbers on a near-black canvas, one accent used sparingly.
+colors:
+  bg-base: "#0B0C0E"
+  bg-surface: "#15171A"
+  bg-surface-raised: "#1C1F23"
+  border-subtle: "rgba(255,255,255,0.12)"
+  ink-headline: "#F2F1EC"
+  ink-body: "#B7B6AE"
+  ink-label: "#6B6A62"
+  accent-primary: "#66CCAC"
+  accent-deep: "#1F4A3B"
+  notice: "#D9A85C"
+  error-muted: "#E08672"
+  onb-bg-base: "#F7F6F3"
+  onb-bg-base-dark: "#0B0C0E"
+  onb-bg-surface: "#FFFFFF"
+  onb-bg-surface-dark: "#15171A"
+  onb-bg-surface-raised: "#EFEDE8"
+  onb-bg-surface-raised-dark: "#1C1F23"
+  onb-border-subtle: "rgba(20,20,20,0.08)"
+  onb-border-subtle-dark: "rgba(255,255,255,0.12)"
+  onb-glass-bg: "rgba(255,255,255,0.55)"
+  onb-glass-bg-dark: "rgba(255,255,255,0.06)"
+  onb-glass-highlight: "rgba(255,255,255,0.6)"
+  onb-glass-highlight-dark: "rgba(255,255,255,0.08)"
+  onb-ink-headline: "#14140F"
+  onb-ink-headline-dark: "#F2F1EC"
+  onb-ink-body: "#4A4A45"
+  onb-ink-body-dark: "#B7B6AE"
+  onb-ink-label: "#8A8880"
+  onb-ink-label-dark: "#6B6A62"
+  onb-accent-primary: "#2E5D4E"
+  onb-accent-primary-dark: "#66CCAC"
+  onb-accent-deep: "#DCE9E3"
+  onb-accent-deep-dark: "#1F4A3B"
+  onb-notice: "#B8813C"
+  onb-notice-dark: "#D9A85C"
+  onb-error-muted: "#B4483A"
+  onb-error-muted-dark: "#E08672"
+  onb-on-accent: "#F7F6F3"
+  onb-on-accent-dark: "#14140F"
+  onb-dot-inactive: "rgba(20,20,20,0.12)"
+  onb-dot-inactive-dark: "rgba(255,255,255,0.14)"
+typography:
+  display-hero:
+    fontFamily: "Newsreader, Georgia, serif"
+    fontSize: "40px"
+    fontWeight: 400
+    fontStyle: italic
+  display-screen-title:
+    fontFamily: "Newsreader, Georgia, serif"
+    fontSize: "26px-30px"
+    fontWeight: 400
+    fontStyle: italic
+  body-supporting:
+    fontFamily: "Instrument Sans, sans-serif"
+    fontSize: "15px-16px"
+    fontWeight: 400
+  body-card-label:
+    fontFamily: "Instrument Sans, sans-serif"
+    fontSize: "12px-14px"
+    fontWeight: 600
+  caption:
+    fontFamily: "Instrument Sans, sans-serif"
+    fontSize: "11px-12px"
+    fontWeight: 400
+  metric-numeric-hero:
+    fontFamily: "JetBrains Mono, monospace"
+    fontSize: "44px"
+    fontWeight: 600
+  numeric-list-row:
+    fontFamily: "JetBrains Mono, monospace"
+    fontSize: "16px"
+    fontWeight: 600
+  numeric-subtotal:
+    fontFamily: "JetBrains Mono, monospace"
+    fontSize: "22px"
+    fontWeight: 600
+  numeric-screen-total:
+    fontFamily: "JetBrains Mono, monospace"
+    fontSize: "34px"
+    fontWeight: 600
+  section:
+    fontFamily: "Instrument Sans, sans-serif"
+    fontSize: "13px"
+    fontWeight: 600
+    letterSpacing: "uppercase"
+  label:
+    fontFamily: "Instrument Sans, sans-serif"
+    fontSize: "11px"
+    fontWeight: 600
+    letterSpacing: "uppercase"
+rounded:
+  radius-outer: "6px"
+  radius-inner: "4px"
+  radius-cta: "3px"
+  radius-dot: "1px"
+  radius-sm: "4px"
+  radius-xl: "16px"
+  radius-2xl: "24px"
+  radius-3xl: "32px"
+spacing:
+  xs: "4px"
+  sm: "8px"
+  md: "16px"
+  lg: "24px"
+  xl: "32px"
+  xxl: "40px"
+  container-margin: "24px"
+  gutter: "16px"
+  section-gap: "40px"
+components:
+  button-primary:
+    backgroundColor: "{colors.accent-primary}"
+    textColor: "{colors.onb-on-accent-dark}"
+    typography: "{typography.body-card-label}"
+    rounded: "{rounded.radius-cta}"
+    padding: "16px 24px"
+  button-primary-hover:
+    backgroundColor: "{colors.accent-deep}"
+    textColor: "{colors.onb-on-accent-dark}"
+    typography: "{typography.body-card-label}"
+    rounded: "{rounded.radius-cta}"
+    padding: "16px 24px"
+---
 
-Version 3.0 · Living document · Rebuilt 2026-09-20
+# Design System: Raqm
+
+Version 4.0 · Living document · Restructured 2026-09-24
 Optimized for AI-agent consumption — every screen must comply with these rules without re-explanation.
-In code, all values below come from `src/theme` tokens (`Colors.*`, `Typography.*`, `Spacing.*`, `Radius.*`) — never hardcoded.
+In code, all values below come from `src/theme` tokens (`Colors.*`, `Typography.*`, `Spacing.*`, `Radius.*`) and, for onboarding, `src/theme/onboardingColors.ts`'s `OnbColors.light`/`OnbColors.dark` — never hardcoded.
 
-**v3.0 note:** color (§2), typography (§3), shape (§5), and elevation (§6)
-are replaced with the values locked during the 2026-09 onboarding
-claude-design exploration
-(`docs/superpowers/specs/2026-09-17-onboarding-claude-design-decisions.md`).
-That exploration also designed a light mode; **this app stays dark-only** —
-adding a light mode is a separate product decision this rewrite does not
-make, so only the exploration's dark-mode values are adopted here. Some
-tokens below (marked "derived") were not literally specified for a
-production app-wide scale by the exploration — it only fixed a handful of
-onboarding-screen values — so this doc extends them at the same ratios the
-old v2.0 scale used, rather than inventing new ones freely. Product/UX
-principles that were never in question (§0, §1, §11–§16) remain unchanged
-from v2.0.
+**v3.0 note (kept for history):** color (§2), typography (§3), shape (§5), and elevation (§6) were replaced with the values locked during the 2026-09 onboarding claude-design exploration (`docs/superpowers/specs/2026-09-17-onboarding-claude-design-decisions.md`). That exploration also designed a light mode; this app stays dark-only outside onboarding — adding a light mode app-wide is a separate product decision this rewrite does not make, so only the exploration's dark-mode values are adopted as the app-wide canonical scale. Some tokens (marked "derived") were not literally specified for a production app-wide scale by the exploration — it only fixed a handful of onboarding-screen values — so this doc extends them at the same ratios the old v2.0 scale used, rather than inventing new ones freely. Product/UX principles that were never in question (§0, §1, §11–§16) remained unchanged from v2.0.
+
+**v4.0 note:** this pass restructures the file into the canonical DESIGN.md eight-section order (Overview, Colors, Typography, Layout, Elevation & Depth, Shapes, Components, Do's and Don'ts) with a machine-readable YAML frontmatter, and preserves every non-canonical Raqm-specific section (Product Context, Non-Negotiable Principles, Motion, Iconography, Charts, Copywriting Voice, AI Presentation Rules, Empty States, Accessibility, Hard Constraints, Screen → Question Map) unchanged in substance below the canonical eight. Two corrections against the actual shipped code, not the plan: (1) the stale "Personal CFO, not an expense tracker" positioning in Product Context is corrected to match `PRODUCT.md`'s ruling — Raqm **is** an expense tracker; (2) the v3.0 migration-status claim is corrected against what the code actually shows (see Overview) — adoption is broader than a single screen for fonts and a single screen for glass elevation, but still confined to the onboarding-v3 flow; the app-wide shared theme and every non-onboarding screen remain on v2.0 values.
+
+## Overview
+
+**Creative North Star: "Precision and Silence"**
+
+Raqm's visual language exists to make a near-black canvas feel calm and exact, never busy. The reference feel — carried forward unchanged from the file's own established voice — is Copilot Money's typography-led editorial precision (dark canvas, no illustration or mascot, tight tracking), crossed with Apple's restraint (one accent, minimal shadow, no decoration) and Stripe's numeric precision (tabular figures, negative tracking on amounts as a "financial DNA" signal). The explicit anti-reference is Monarch's gamified, celebratory consumer style — Raqm never shames, never celebrates, never gamifies spending.
+
+Typography carries the design rather than decorating it: a serif display face (Newsreader, italic) supplies the one signature element per screen, a neutral sans (Instrument Sans) carries everything else, and JetBrains Mono renders every number without exception — the same "one signature element, everything else quiet" discipline the file has always argued for. Color follows the same restraint: one accent, used identically everywhere it appears, never decoratively. Depth is conveyed by translucency and blur rather than a shadow drawn under an element — surfaces read as "how much of the background shows through," not as objects floating above a page.
+
+**Migration status.** v3.0 (Newsreader + Instrument Sans typography, the `#66CCAC`-family color palette, the shrunk `radius-cta`/`radius-outer`/`radius-inner`/`radius-dot` shape scale, and the no-drop-shadow glass/blur elevation model) is the intended system for the whole app, being migrated screen-by-screen starting with onboarding. As of this pass, the build shows a broader adoption than a single-screen pilot: all onboarding-v3 screens (`WelcomeScreen`, `PermissionsScreen`, `DateRangeScreen`, `ScanningProgressScreen`, `ScanCompleteScreen`, `NameEntryScreen`, `BudgetSetupScreen`, `SetupCompleteScreen`, `ImportStatementScreen`) and their shared components (`GlassCard`, `RqButton`, `CalendarRangeSheet`, `PermissionRow`) consume Newsreader/Instrument Sans fonts, the `onb-*` color tokens, and the `radius-cta`/`radius-outer` shape scale. The glass/blur elevation model is implemented once, in the shared `GlassCard` component (`expo-blur`'s `BlurView` + a translucent tint layer + a 1px top-highlight layer), and every onboarding-v3 screen composes through it — it is not a single-screen exception. Outside onboarding, migration has not started: every other screen, and the shared `src/theme` tokens those screens read from (`colors.ts`, `typography.ts`, `spacing.ts`'s `Radius` export, `shadows.ts`) are still 100% on v2.0 values — `typography.ts`'s own header comment still says "v2.0" and contains zero Newsreader/Instrument Sans references; `colors.ts`'s app-wide tokens (`accentPrimary: '#3EBD7E'`, etc.) are still the old hexes; `Radius` still has no `outer/inner/cta/dot` keys and still exports `full: 9999` (a pill), which the app-wide `PrimaryButton` component still uses via `rounded-lg` (12px, not a pill, but also not v3.0's 3px `radius-cta`) with its own hand-rolled colored drop shadow — itself a defect against both the old and new elevation rules (see Elevation & Depth). This is migration debt, not a documentation error to silently "fix" by rewriting the code — the same pattern this codebase already uses for its NativeWind migration.
+
+**Key Characteristics:**
+- One accent color (`#66CCAC` dark / `#2E5D4E` onboarding-light), used identically everywhere it appears — never per-screen accent drift.
+- Serif display (Newsreader, italic) as the one signature element; neutral sans (Instrument Sans) for everything else; JetBrains Mono for every number.
+- Depth from translucency and blur, not drop shadows — one glass surface per screen, never stacked.
+- A shrinking radius scale where the primary CTA is deliberately smaller-radius than the cards around it — color, not shape, signals the action.
+- Warm near-black / warm off-white grounds, never pure black or white.
+
+## Colors
+
+The palette is a single precise accent on a near-black ground — one hue used sparingly and never decoratively — with a second, separately-named light/dark pair reserved for the onboarding flow only.
+
+### Primary
+- **Confidence Green** (`#66CCAC` dark / `#2E5D4E` onboarding-light — `accent-primary`): Trust and confidence. Primary actions, positive metrics, the brand mark — the ONE accent, used identically everywhere it appears. Never used for excitement or celebration, only confidence/positive-direction.
+
+### Neutral
+- **Warm Near-Black** (`#0B0C0E` — `bg-base`): App background — warm near-black, never pure black.
+- **Card Ground** (`#15171A` — `bg-surface`): Cards, sheets.
+- **Raised Ground** (`#1C1F23` — `bg-surface-raised`): Nested cards, modals.
+- **Hairline Border** (`rgba(255,255,255,0.12)` — `border-subtle`): Card borders and dividers; borders replace shadows for ordinary card-to-card hierarchy.
+- **Headline Ink** (`#F2F1EC` — `ink-headline`): Headings, key numbers — warm off-white, never pure white.
+- **Body Ink** (`#B7B6AE` — `ink-body`): Body copy.
+- **Label Ink** (`#6B6A62` — `ink-label`): Timestamps, annotations.
+- **Structural Deep** (`#1F4A3B` — `accent-deep`): Selected states, secondary containers.
+
+### Semantic
+- **Amber Notice** (`#D9A85C` — `notice`): Awareness, not danger — flags something worth attention. The default "pay attention" color; never red.
+- **Muted Error** (`#E08672` — `error-muted`): Honesty — failed transactions, hard errors only. Reserved for actual failures, never for "you spent more than usual."
+
+### Named Rules
+**The One Voice Rule.** One accent color per screen, used identically everywhere it appears — the same green in a button is the same green in a positive metric, with no per-screen accent drift.
+**The No-Alarm Rule.** Amber (`notice`), not red, is the default "pay attention" color. Red (`error-muted`) is reserved for actual failures — a declined payment, a parsing error — never for routine overspending.
+**The One Gradient Rule.** No gradients anywhere except a single radial glow behind the Home hero number — the one sanctioned exception in the entire app.
+
+## Typography
+
+**Display Font:** Newsreader (italic only, headline/hero roles)
+**Body Font:** Instrument Sans (body, labels, buttons, section headers)
+**Numeric/Mono Font:** JetBrains Mono (every number and amount, unchanged since v2.0)
+
+**Character:** A serif display face carries the one signature element per screen; a neutral sans carries everything else; a monospace face carries every number without exception — the same "distinctive display + neutral workhorse" split Copilot Money and Apple both use, with the serif itself standing in as the signature element rather than a weight or tracking trick on a sans face.
+
+### Hierarchy
+- **Display / Hero** (400, italic, 40px): the one screen that earns the largest size — first impression (Welcome).
+- **Display / Screen title** (400, italic, 26–30px): every other screen's headline.
+- **Body / Supporting text** (400, 15–16px): comfortably above the 11pt legibility floor.
+- **Body / Card label** (600, 12–14px): weight compensates for size near the small end.
+- **Caption / Secondary line** (400, 11–12px): smallest text in the system, never smaller.
+- **Metric / Numeric hero** (600, 44px, JetBrains Mono): e.g. "₹28,430" — the Home hero, scan count-up.
+- **Numeric / List-row amount** (600, 16px, JetBrains Mono): per-transaction/per-category amount in a row.
+- **Numeric / Subtotal** (600, 22px, JetBrains Mono): a category or section subtotal.
+- **Numeric / Screen total** (600, 34px, JetBrains Mono): the one large total on a screen, distinct from the 44px hero which appears once.
+- **Section** (600, 13px uppercase, Instrument Sans): "RECENT ACTIVITY".
+- **Label** (600, 11px uppercase, Instrument Sans): form field labels, badges, step counters.
+
+### Named Rules
+**The Named-Step Rule.** A list-row amount, a subtotal, and a screen-level total are three distinct named sizes, not "somewhere between 16 and 38px." A new numeric role names which of the three it is rather than picking an in-between size.
+**The Weight-Floor Rule.** Avoid weights lighter than 400 at any text size — light/thin weights are a legibility risk, especially small.
+
+## Layout
+
+- 8pt base grid. Minimum screen margin: 20px (mobile).
+- Whitespace exceeds the minimum comfortable amount — modeled after Apple, not Material Design density.
+- Every screen has exactly one focal point above the fold.
+- Cards summarize; they never contain everything. Design for "tap to expand," not "cram it in."
+- Spacing scale (`src/theme/spacing.ts`, unchanged between v2 and v3): `xs` 4px, `sm` 8px, `md` 16px, `lg` 24px, `xl` 32px, `xxl` 40px, plus named layout constants `container-margin` 24px, `gutter` 16px, `section-gap` 40px.
+
+## Elevation & Depth
+
+The system uses blur and translucency for depth, not drop shadows — how much of the background shows through an element, not a shadow drawn under it. This is the v3.0 model, implemented today only inside the shared `GlassCard` component consumed by every onboarding-v3 screen. Ordinary card-to-card hierarchy still comes from spacing, `border-subtle`, and contrast between surface levels — not blur — matching the v2.0 model that remains in force everywhere outside onboarding.
+
+### Shadow Vocabulary
+- **Onboarding glass surface** (`expo-blur` `BlurView` intensity 40 + `background: rgba(255,255,255,0.06)` dark / `rgba(255,255,255,0.55)` light + `border-subtle` + a 1px top-highlight layer at `rgba(255,255,255,0.08)` dark / `rgba(255,255,255,0.6)` light): one glass surface per screen, never stacked — the elevated container in onboarding (a decision card, a sheet). Never for ordinary content cards, which stay flat with no blur.
+- **Legacy card shadow** (`shadowOffset: 0/8, shadowOpacity: 0.28, shadowRadius: 24, elevation: 8` — `src/theme/shadows.ts`'s `Shadows.card`): the one shadow token the pre-v3.0 system defines app-wide, still in force outside onboarding.
+
+### Named Rules
+**The One Glass Surface Rule.** At most one glass/blur surface per screen, never stacked — for the single elevated container (modal, sheet, decision card), never for ordinary content cards.
+
+## Shapes
+
+The radius scale shrinks under v3.0, and the primary CTA is deliberately given a *smaller* radius than the cards around it — a "nothing shouts, color alone signals the action" trade-off, not an accident. Circles are reserved exclusively for avatars, profile images, and chart nodes — never for buttons or containers. Radius should read as engineered precision, not friendly/bubbly.
+
+- `radius-outer` (6px): outer container / glass card.
+- `radius-inner` (4px): inner cell, button, input.
+- `radius-cta` (3px): primary CTA — smaller than `radius-inner` on purpose.
+- `radius-dot` (1px): progress dots, tiny indicators.
+- Legacy carryover, still valid for any role not covered by the four above: `radius-sm` 4px, `radius-xl` 16px, `radius-2xl` 24px, `radius-3xl` 32px. `Radius.full` (9999px, a pill) also remains in code and in active use by the app-wide `PrimaryButton` — this is the old CTA shape the v3.0 scale supersedes, not a second valid CTA shape; see the Overview migration-status note.
+
+## Components
+
+### Buttons
+- **Onboarding primary (`RqButton`, v3.0-migrated):** `radius-cta` (3px), `padding: 16px 24px` (`px-lg py-md`), `accent-primary` background, Instrument Sans 500/600 label, press feedback is a plain 0.97 scale via `withTiming` — never a spring. This is the target shape for the whole app once migrated.
+- **App-wide primary (`PrimaryButton`, still v2.0):** `rounded-lg` (12px, not a pill despite the old spec's pill description, and not yet `radius-cta`), fixed 56px height, `px-lg` padding, plus a hand-rolled colored drop shadow (`shadowColor: Colors.primary`, offset 0/8, opacity 0.25, radius 16, elevation 8) that matches neither the legacy single-shadow-token rule nor v3.0's no-drop-shadow rule — flagged as a defect, not documented as a system rule (see Do's and Don'ts).
+- **Ghost (`GhostButton`):** no background or shadow, Inter medium label in `on-surface-variant` — navigates/dismisses rather than commits.
+
+### Cards / Containers
+- **Onboarding glass card (`GlassCard`):** `radius-outer` (6px), `border-subtle`, blur + translucent tint + 1px top-highlight (see Elevation & Depth). Used for the one elevated container per onboarding screen.
+- **Ordinary content card (app-wide):** flat `bg-surface`, `border-subtle` hairline, no blur — summarizes, never contains a full data dump; design for "tap to expand."
+
+### Inputs / Fields
+- **Style (`EditFieldSheet`):** `bg-surface`, `rounded-lg` (8px), `border-subtle` 1px border, Inter body text, placeholder in `ink-label`.
+- **Confirm action:** a filled `accent-primary` button directly below the field, not a separate modal footer.
+
+### Navigation
+- Shared `TopHeader` carries the screen title and the avatar entry point to More; tab bar icons come from `MaterialCommunityIcons` (see Iconography below), filled variant reserved for the active tab only.
+
+## Do's and Don'ts
+
+### Do:
+- **Do** use one accent color (`accent-primary`) per screen, identically wherever it appears.
+- **Do** render every number — balances, amounts, counters — in JetBrains Mono.
+- **Do** use amber (`notice`) as the default "pay attention" color; reserve red (`error-muted`) for actual failures only.
+- **Do** convey depth via translucency/blur for the one elevated surface per screen; use flat `bg-surface` with a hairline border for ordinary cards.
+- **Do** give the primary CTA a smaller radius (`radius-cta`, 3px) than the cards around it once a screen migrates to v3.0 — color, not shape, signals the action.
+
+### Don't:
+- **Don't** use gradients anywhere except the single sanctioned radial glow behind the Home hero number.
+- **Don't** stack more than one glass/blur surface on a single screen.
+- **Don't** treat `PrimaryButton`'s hand-rolled colored drop shadow as a system pattern — it is unmigrated v2.0 debt inconsistent with both the old one-shadow-token rule and the new no-drop-shadow rule, not a second sanctioned shadow style.
+- **Don't** use emoji icons, hand-rolled decorative SVGs, or per-screen custom shadows anywhere in the app.
+- **Don't** reintroduce bouncy/springy/elastic motion curves — press feedback and all transitions are ease-out/ease-in only.
 
 ## 0. Product Context
 
-Raqm is an SMS-based personal finance app for the Indian market, expanding to
-iPhone (manual entry / PDF import, since iOS cannot read SMS). It reads bank
-SMS, extracts transactions automatically, and presents financial
-understanding — not transaction lists. It is positioned as a Personal CFO,
-not an expense tracker.
+Raqm is an on-device personal expense tracker for the Indian market. On Android it reads bank SMS, extracts and categorizes transactions automatically, and requires no manual bookkeeping; on iOS (no SMS access) the same tracking happens via manual entry and PDF statement import. **Raqm is an expense tracker** — not a Personal CFO. It doesn't yet have the transaction history or breadth of financial data to make CFO-level calls (forecasting, advice, planning); that positioning gets earned later, not claimed now (per `PRODUCT.md`'s Positioning section, which corrects this file's earlier "Personal CFO, not an expense tracker" framing).
 
-Target user: earns money, rarely reviews finances, doesn't enjoy budgeting,
-wants clarity without effort, values privacy.
+Target user: earns money, rarely reviews finances, doesn't enjoy budgeting, wants clarity without effort, values privacy.
 
-Reference feel: Copilot Money's typography-led editorial precision (the
-closest real-world match — dark canvas, no illustration/mascot, tight
-tracking) + Apple's restraint (one accent, one shadow, no decoration) +
-Stripe's numeric precision (tabular figures, negative tracking as a
-"financial DNA" signal) — never a fintech dashboard, never a budgeting
-spreadsheet, never a bubbly consumer app (Monarch's gamified/celebratory
-style is the explicit anti-reference).
-
-## 1. Non-Negotiable Principles
-
-Apply these to every screen, in priority order:
-
-1. **Silence is a feature.** If nothing important happened, show nothing. No filler UI, no "you're all caught up!" noise.
-2. **Explain before visualizing.** A one-line insight ("Dining increased ₹3,400 this month, mostly Friday evenings") outranks a chart. Charts are last resort, not default.
-3. **One screen, one question.** Home = what matters today / Timeline = what happened / Insights (Briefing) = why / Forecast = what's next / Recommendations = what should I do / Settings = what can I control. If a screen can't state its question in one sentence, cut it.
-4. **Never shame, never guilt, never celebrate overspending.** Neutral, advisor-toned observations only.
-5. **Density: minimal by default.** When in doubt, remove an element rather than add one.
-
-## 2. Color System (v3.0 — from the onboarding claude-design exploration)
-
-Dark mode stays the only mode **app-wide** (the exploration also designed a
-light mode; app-wide adoption is still a separate, unmade product decision
-— see the v3.0 note above). **Exception, added by the 2026-09-20
-onboarding-v3-android implementation:** the 7 redesigned onboarding screens
-(Welcome, Permissions, Scan range, Scanning progress, Scan complete,
-Budget setup, Setup complete) implement BOTH light and dark mode, defaulting
-to the OS appearance setting — this was an explicit, scoped product
-decision for onboarding only, not a reversal of the app-wide dark-only
-rule. Those screens' tokens live in `src/theme/onboardingColors.ts`
-(`OnbColors.light` / `OnbColors.dark`, `useOnbColors()`), named separately
-from the app-wide tokens below (`onb*` naming, not `bg-base` etc.) so
-adopting light mode for onboarding didn't require re-theming the rest of
-the (still dark-only) app. The table below gains a Light column for
-reference; only the onboarding screens actually consume the light values
-today.
-
-The palette keeps the same "one precise accent on a near-black ground"
-family as v2.0's Forest system, re-derived from the exploration's
-onboarding screens rather than kept as v2.0 wrote it.
-
-Discipline unchanged from v2.0: **one accent color, used sparingly, never
-decoratively.** No gradients anywhere except one radial glow behind the
-Home hero number — the single sanctioned exception in the entire app.
-
-### Core palette
-
-| Token | Dark | Light | Use | Source |
-|---|---|---|---|---|
-| bg-base | `#0B0C0E` | `#F7F6F3` | App background — warm near-black / warm off-white, never pure black/white | Dark: exploration §5.1. Light: exploration's light-mode Welcome/Permissions screens |
-| bg-surface | `#15171A` | `#FFFFFF` | Cards, sheets | Dark: exploration §5.1. Light: exploration's light-mode cards |
-| bg-surface-raised | `#1C1F23` | `#EFEDE8` | Nested cards, modals | Derived on both sides — one step lighter/darker than bg-surface; the exploration only shows flat cards, never a nested one, on either mode |
-| border-subtle | `rgba(255,255,255,0.12)` | `rgba(20,20,20,0.08)` | Card borders, dividers (borders replace shadows) | Exploration §5.1 (dark hairline) / light-mode screens' hairline |
-| ink-headline | `#F2F1EC` | `#14140F` | Headings, key numbers — warm off-white/near-black, never pure white/black | Exploration §5.1 |
-| ink-body | `#B7B6AE` | `#4A4A45` | Body copy | Exploration §5.1 |
-| ink-label | `#6B6A62` | `#8A8880` | Timestamps, annotations | Derived on both sides — exploration didn't define a third text tier on either mode; kept v2.0's label-vs-body contrast ratio |
-
-### Accent / semantic roles
-
-| Token | Dark | Light | Emotion | Use | Source |
-|---|---|---|---|---|---|
-| accent-primary | `#66CCAC` | `#2E5D4E` | Trust / confidence | Primary actions, positive metrics, brand mark — the ONE accent, used sparingly | Dark: exploration's locked dark-mode CTA color, hue-locked to the light-mode brand green and verified at 9.5:1 contrast against `#14140F` text. Light: the exploration's light-mode CTA color |
-| accent-deep | `#1F4A3B` | `#DCE9E3` | Structure | Selected states, secondary containers | Derived on both sides — same hue as accent-primary at inverted lightness, not a literal exploration value |
-| notice | `#D9A85C` | `#B8813C` | Awareness (not danger) | Flag something worth attention — never alarm-red | Exploration's Permissions-screen location icon color, both modes |
-| error-muted | `#E08672` | `#B4483A` | Honesty | Failed transactions, hard errors only | Exploration §12 (dark) / implementation-notes.md §3 (light — the one light value the exploration fixed directly) |
-
-Note: `error` (`#ffb4ab`) is the legacy MD3 token, still in code for
-back-compat — `error-muted` is the correct token name for new work.
-
-Rules (unchanged from v2.0):
-
-- One accent color per screen, used identically everywhere it appears (the same green in a button is the same green in a positive metric — no per-screen accent drift).
-- Green is never used for excitement or celebration — only confidence/positive-direction.
-- notice (amber), not red, is the default "pay attention" color. Red is reserved for actual failures (declined payment, parsing error), not "you spent more than usual."
-- No gradients except the single radial glow behind the Home hero number — nowhere else, no exceptions.
-
-## 3. Typography (v3.0 — from the onboarding claude-design exploration)
-
-Typography carries the design — treat it as the primary visual element, not decoration around it.
-
-**Font stack:**
-
-- **Newsreader (italic)** — display / headline role only (screen titles, hero headline). Replaces Inter for this one role.
-- **Instrument Sans** — body, labels, buttons, section headers. Replaces Inter everywhere else.
-- **JetBrains Mono** — every number and amount, unchanged from v2.0. Balances, transaction amounts, counters, OTP, stats.
-- **Material Symbols Outlined**, implemented via `@expo/vector-icons`'s `MaterialCommunityIcons` — unchanged from v2.0 (see §8).
-
-**Why the swap:** the exploration deliberately avoided reusing Inter
-because it's a flagged AI-default typeface, and picked a serif display
-face (Newsreader, italic) over a neutral sans (Instrument Sans) for body —
-the same "distinctive display + neutral workhorse" split Copilot Money and
-Apple both use, just with a serif carrying the display role instead of
-tracking/weight tricks on a sans face. This reverses v2.0's own explicit
-decision to drop Fraunces — that reversal is intentional, re-argued here,
-not an oversight: v2.0 dropped Fraunces because Apple/Stripe don't use a
-serif; this exploration instead treats the serif itself as the signature
-element (craft-lens "one signature element, everything else quiet"), so
-the two decisions optimize for different things and this one wins in v3.0.
-
-**Weight discipline:** Newsreader 400 (italic only, headlines); Instrument
-Sans 400/500/600; JetBrains Mono 500/600 for numbers. Avoid weights lighter
-than 400 at any text size — `typography.md`'s legibility guidance flags
-light/thin weights as a legibility risk, especially small.
-
-**Type roles** (not H1/H2/Body — every style has a job). Sizes below are the
-exploration's locked §10 scale; `Typography.*` token names in
-`src/theme/typography.ts` should be renamed/remapped to match on
-implementation, not layered on top as new tokens:
-
-| Role | Font | Size / weight | Example |
-|---|---|---|---|
-| Display / hero | Newsreader italic | 40px · 400 | The one screen that earns the largest size — first impression (e.g. Welcome) |
-| Display / screen title | Newsreader italic | 26–30px · 400 | Every other screen's headline |
-| Body / supporting text | Instrument Sans | 15–16px · 400 | Comfortably above the 11pt floor |
-| Body / card label | Instrument Sans | 12–14px · 600 | Bumped to Semibold near the small end — weight compensates for size |
-| Caption / secondary line | Instrument Sans | 11–12px · 400 | At or just above the 11px floor — smallest text in the system, never smaller |
-| Metric / numeric hero | JetBrains Mono | 44px · 600 | "₹28,430" (Home hero, scan count-up) |
-| Numeric / list-row amount | JetBrains Mono | 16px · 600 | Per-transaction/per-category amount in a row |
-| Numeric / subtotal | JetBrains Mono | 22px · 600 | A category or section subtotal |
-| Numeric / screen total | JetBrains Mono | 34px · 600 | The one large total on a screen — distinct from the 44px hero, which appears once |
-| Section | Instrument Sans | 13px uppercase · 600 | "RECENT ACTIVITY" |
-| Label | Instrument Sans | 11px uppercase · 600 | Form field labels, badges, step counters |
-
-Legacy tokens (`displayLg`, `headlineMd/Sm`, `titleLg`, `bodyLg/Md/Sm`,
-`statementLg`, `insightReading`) map to the roles above by size/weight, not
-by name — expect a token rename pass, not a silent value swap, when this is
-implemented. `Fraunces` stays retired from the dependency tree; Newsreader
-is a new font dependency this rewrite introduces.
-
-## 4. Layout & Grid
-
-- 8pt base grid. Minimum screen margin: 20px (mobile). Re-confirmed, not inherited by default — Apple and Stripe both use an 8px base independently, so this is correct baseline practice, not v1.1 residue.
-- Whitespace should exceed the minimum comfortable amount — model after Apple, not Material Design density.
-- Every screen has exactly one focal point above the fold.
-- Cards summarize; they never contain everything. Design for "tap to expand," not "cram it in."
-
-## 5. Shape (v3.0 — from the onboarding claude-design exploration)
-
-**The radius scale shrinks and the CTA is no longer a pill.** This is the
-single biggest visual-philosophy change in v3.0: v2.0 reserved the
-maximum radius (a full pill) for CTAs specifically so shape alone made the
-primary action unambiguous. The exploration's locked scale gives the CTA a
-*smaller* radius than the cards around it instead — a deliberate "nothing
-shouts, color alone signals the action" trade-off, decided and written
-down as a trade-off, not an accident (see the exploration doc's §6.1).
-
-Values below replace `tailwind.config.js`'s `borderRadius` scale entirely —
-old values on the left are what v2.0 shipped, for migration reference:
-
-| Token | Old (v2.0) | New (v3.0) | Use |
-|---|---|---|---|
-| `radius-outer` | `radius-lg` 12px | **6px** | Outer container / glass card |
-| `radius-inner` | `radius-md` 8px | **4px** | Inner cell, button, input |
-| `radius-cta` | `radius-pill` 9999px | **3px** | Primary CTA — no longer a pill; smaller than `radius-inner` on purpose (see above) |
-| `radius-dot` | *(none — dots had no dedicated token)* | **1px** | Progress dots, tiny indicators |
-
-`radius-sm`/`radius-xl`/`radius-2xl`/`radius-3xl` (4/16/24/32px) had no
-equivalent in the exploration's locked scale — it only fixed four values
-for onboarding screens, not a full app-wide scale. Keep those legacy
-values for anything that isn't one of the four roles above until they are
-explicitly revisited.
-
-Circles remain reserved exclusively for: avatars, profile images, chart
-nodes — never for buttons or containers. Radius should read as engineered
-precision, not friendly/bubbly — the new scale intensifies that intent
-rather than reversing it.
-
-## 6. Elevation (v3.0 — no shadow token at all)
-
-**v2.0's one-shadow-token rule is retired, not just narrowed.** The
-exploration's model (`materials.md`'s own elevation vocabulary) is blur and
-translucency, never a drop shadow layered under an element — depth comes
-from how much of the background shows through, not a shadow drawn under
-it.
-
-- No drop shadows anywhere, including modals — the previous exception
-  (`0 8px 24px rgba(0,0,0,0.28)` for modals) is removed. Replace it with a
-  translucent glass surface instead (below).
-- **One glass surface per screen, never stacked**: `background:
-  rgba(255,255,255,0.06)`, `backdrop-filter: blur(24px) saturate(1.3)`,
-  `border: 1px solid rgba(255,255,255,0.12)` (the border-subtle token),
-  `inset 0 1px 0 rgba(255,255,255,0.08)` for a top highlight. Use it for
-  the one elevated container on a screen — a modal, a sheet, an onboarding
-  decision card — never for ordinary content cards, which stay flat
-  `bg-surface` with no blur.
-- Library: `expo-blur`, already how the exploration built this — no new
-  dependency needed. Ordinary card-to-card hierarchy still comes from
-  spacing, border-subtle, and contrast between `bg-surface` levels, as in
-  v2.0 — only the *elevated-layer* case changes.
+Reference feel: Copilot Money's typography-led editorial precision (the closest real-world match — dark canvas, no illustration/mascot, tight tracking) + Apple's restraint (one accent, one shadow, no decoration) + Stripe's numeric precision (tabular figures, negative tracking as a "financial DNA" signal) — never a fintech dashboard, never a budgeting spreadsheet, never a bubbly consumer app (Monarch's gamified/celebratory style is the explicit anti-reference).
 
 ## 7. Motion
 
@@ -226,7 +283,7 @@ it.
 - Motion exists only to explain a state change (a number updating, a card expanding). Never decorative. Every animation must be justifiable in one sentence (hierarchy, storytelling, feedback, or state transition) — "it looked nice" is not a reason.
 - Implementation: `react-native-reanimated` v4, per the `creating-reanimated-animations` skill in `.claude/skills/` — see that skill's "Project notes (Raqm)" section for the exact mapping from this vocabulary to Reanimated APIs.
 
-## 8. Iconography (rebuilt)
+## 8. Iconography
 
 - Reference set: **Material Symbols Outlined** — rounded outline, ~2px stroke weight.
 - **In-app implementation: `MaterialCommunityIcons` via `@expo/vector-icons`, standing in for Material Symbols Outlined** (see `src/components/Icon.tsx`'s Task 2 note for why). v1.1 asked engineers to hand-draw SVGs matching Material Symbols geometry — high friction, and the direct cause of every onboarding screen falling back to emoji instead. A real, maintained icon library removes that friction entirely.
@@ -241,17 +298,6 @@ Priority order when representing data: Insight → Comparison → Narrative → 
 - Avoid: pie charts, multi-series bar charts, dashboards with 4+ simultaneous charts on one screen.
 - When a chart is used, it supports a stated insight directly above it — never stands alone.
 
-## 10. Component Behavior Rules
-
-State each component's job, not just its appearance:
-
-- **Cards** — summarize and invite exploration. Never the full data dump.
-- **Buttons** — commit an action. Primary CTAs use `radius-cta` (3px, §5) with `padding:16px 24px` — no longer a pill (v3.0 change).
-- **Links** — navigate.
-- **Badges** — classify (never used for CTAs).
-- **Inputs** — ask for one thing at a time.
-- **AI cards** — recommend or surface an insight; always show confidence level or source when possible (see §12).
-
 ## 11. Copywriting Voice
 
 Write like a calm private wealth advisor. Never like marketing.
@@ -264,20 +310,12 @@ Write like a calm private wealth advisor. Never like marketing.
 
 Rules: never shame, never celebrate overspending, never manufacture urgency. Prefer simple language over technically precise language when both communicate equally. Avoid filler verbs ("Elevate", "Unleash", "Revolutionize") — use concrete verbs.
 
-## 12. AI Presentation Rules
-
-- AI should feel invisible — the user's reaction should be "of course it knows that," never "whoa, AI did that."
-- Tone: calm, professional, first-person-observational. Not "Hey 👋" — instead: "I noticed something worth your attention."
-- Always infer before asking. Only prompt the user when inference genuinely isn't possible.
-- When confidence is low, say so plainly ("This looks like a subscription, but I'm not fully sure") — never present a guess as fact.
-- No AI chatbot UI searching for problems to surface. Insights are pushed contextually, not via open-ended chat-first UX.
-
-## 13. Empty States
+## 12. Empty States
 
 Never "No data." Always frame as early-stage learning:
 "We're still learning your financial patterns. Insights will appear as your timeline grows."
 
-## 14. Accessibility (hard requirements, not optional polish)
+## 13. Accessibility (hard requirements, not optional polish)
 
 - Minimum contrast: WCAG AA for all text against its background token.
 - Full keyboard/screen-reader navigation support.
@@ -285,28 +323,13 @@ Never "No data." Always frame as early-stage learning:
 - Touch targets: 44×44px minimum.
 - Typography must scale with system font-size settings without breaking layout.
 
-**Checked-and-confirmed rules from the 2026-09 onboarding claude-design
-exploration** (`docs/superpowers/specs/2026-09-17-onboarding-claude-design-decisions.md`)
-— these three items do not conflict with anything above, so they are
-promoted into this doc directly rather than left exploration-only:
+**Checked-and-confirmed rules from the 2026-09 onboarding claude-design exploration** (`docs/superpowers/specs/2026-09-17-onboarding-claude-design-decisions.md`) — these three items do not conflict with anything above:
 
-- **CTA tap-target math**: a primary CTA using `padding:16px 24px` around
-  16px/600-weight label text renders at 16 + ~19 + 16 ≈ 51px tall. That
-  clears the 44×44px minimum above with margin. Any future CTA padding
-  change must be re-checked against 44px before shipping — do not assume
-  it still clears just because the old one did.
-- **Screen top padding is safe-area-relative, never a fixed number.** Use
-  `useSafeAreaInsets().top + 16` (from `react-native-safe-area-context`),
-  not a hardcoded px value — a fixed number only looks right on the one
-  device it was eyeballed against (notch vs. Dynamic Island vs. none vary
-  the real inset).
-- **Numeric amount sizes are named steps, not one wide range**: a
-  list-row amount, a subtotal, and a screen-level total are three
-  distinct sizes, not "somewhere between 16 and 38px." When adding a new
-  numeric role, name which of the three it is rather than picking an
-  in-between size.
+- **CTA tap-target math**: a primary CTA using `padding:16px 24px` around 16px/600-weight label text renders at 16 + ~19 + 16 ≈ 51px tall. That clears the 44×44px minimum above with margin. Any future CTA padding change must be re-checked against 44px before shipping — do not assume it still clears just because the old one did.
+- **Screen top padding is safe-area-relative, never a fixed number.** Use `useSafeAreaInsets().top + 16` (from `react-native-safe-area-context`), not a hardcoded px value — a fixed number only looks right on the one device it was eyeballed against (notch vs. Dynamic Island vs. none vary the real inset).
+- **Numeric amount sizes are named steps, not one wide range**: a list-row amount, a subtotal, and a screen-level total are three distinct sizes, not "somewhere between 16 and 38px." When adding a new numeric role, name which of the three it is rather than picking an in-between size.
 
-## 15. Hard Constraints — Never Generate
+## 14. Hard Constraints — Never Generate
 
 - Ad placements or sponsored content of any kind
 - Cashback/rewards gamification (points, streaks, badges for spending)
@@ -317,16 +340,3 @@ promoted into this doc directly rather than left exploration-only:
 - Chatbot-first AI interface
 - Bouncy/springy/playful motion
 - Emoji icons, hand-rolled decorative SVGs, gradients outside the one sanctioned Home glow, per-screen custom shadows
-
-## 16. Screen → Question Map
-
-| Screen | Must answer |
-|---|---|
-| Home | What matters today? |
-| Timeline | What happened? |
-| Insights (Briefing) | Why did it happen? |
-| Forecast | What happens next? |
-| Recommendations | What should I do? |
-| Settings | What can I control? |
-
-Any screen that can't be mapped to one of these questions should not exist.
