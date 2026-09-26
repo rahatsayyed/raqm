@@ -8,7 +8,7 @@ export function Footer() {
         <div>
           <p className="font-display text-lg text-ink-headline">Raqm</p>
           <p className="font-body text-sm text-ink-label">
-            On-device. Nothing you don&apos;t choose to share ever leaves your phone.
+            On-device. Nothing you don’t choose to share ever leaves your phone.
           </p>
         </div>
         <nav className="flex gap-4">
@@ -16,7 +16,7 @@ export function Footer() {
             <Link
               key={feature.slug}
               href={`/features/${feature.slug}`}
-              className="font-body text-sm text-ink-body hover:text-accent-primary"
+              className="rounded-dot font-body text-sm text-ink-body transition-colors duration-150 hover:text-accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary"
             >
               {feature.name}
             </Link>

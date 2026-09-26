@@ -7,7 +7,7 @@ import { Footer } from '@/components/Footer';
 
 export default function HomePage() {
   return (
-    <main>
+    <main id="main-content">
       <Hero />
       <WhyRaqm />
       <FeatureBentoGrid />

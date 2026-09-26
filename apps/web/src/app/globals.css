@@ -26,6 +26,7 @@
 :root {
   --glass-bg: rgba(255, 255, 255, 0.55);
   --glass-highlight: rgba(255, 255, 255, 0.6);
+  color-scheme: light;
 }
 
 body {

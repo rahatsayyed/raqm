@@ -16,7 +16,7 @@ export default async function FeaturePage({ params }: { params: Promise<{ slug: 
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
+    <main id="main-content" className="mx-auto max-w-3xl px-6 py-16">
       <Link href="/" className="mb-8 inline-block font-body text-sm text-ink-label hover:text-accent-primary">
         ← Back to Raqm
       </Link>
