@@ -15,5 +15,9 @@ export async function waitlistSignupAction(
     return { status: 'success' };
   }
 
-  return submitWaitlistEmail(email, source, createServerSupabaseClient());
+  try {
+    return await submitWaitlistEmail(email, source, createServerSupabaseClient());
+  } catch {
+    return { status: 'error', message: 'Something went wrong. Please try again.' };
+  }
 }
