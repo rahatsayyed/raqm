@@ -177,7 +177,6 @@ The palette is a single precise accent on a near-black ground — one hue used s
 ### Named Rules
 **The One Voice Rule.** One accent color per screen, used identically everywhere it appears — the same green in a button is the same green in a positive metric, with no per-screen accent drift.
 **The No-Alarm Rule.** Amber (`notice`), not red, is the default "pay attention" color. Red (`error-muted`) is reserved for actual failures — a declined payment, a parsing error — never for routine overspending.
-**The One Gradient Rule.** No gradients anywhere except a single radial glow behind the Home hero number — the one sanctioned exception in the entire app.
 
 ## Typography
 
@@ -264,7 +263,7 @@ The radius scale shrinks under v3.0, and the primary CTA is deliberately given a
 - **Don't** use gradients anywhere except the single sanctioned radial glow behind the Home hero number.
 - **Don't** stack more than one glass/blur surface on a single screen.
 - **Don't** treat `PrimaryButton`'s hand-rolled colored drop shadow as a system pattern — it is unmigrated v2.0 debt inconsistent with both the old one-shadow-token rule and the new no-drop-shadow rule, not a second sanctioned shadow style.
-- **Don't** use emoji icons, hand-rolled decorative SVGs, or per-screen custom shadows anywhere in the app.
+- **Don't** use emoji icons, hand-rolled decorative SVGs, or per-screen custom shadows anywhere in the app — except the bounded category-row illustration exception in §8 Iconography, which applies to category rows only.
 - **Don't** reintroduce bouncy/springy/elastic motion curves — press feedback and all transitions are ease-out/ease-in only.
 
 ## 0. Product Context
@@ -288,27 +287,24 @@ Reference feel: Copilot Money's typography-led editorial precision (the closest 
 - Reference set: **Material Symbols Outlined** — rounded outline, ~2px stroke weight.
 - **In-app implementation: `MaterialCommunityIcons` via `@expo/vector-icons`, standing in for Material Symbols Outlined** (see `src/components/Icon.tsx`'s Task 2 note for why). v1.1 asked engineers to hand-draw SVGs matching Material Symbols geometry — high friction, and the direct cause of every onboarding screen falling back to emoji instead. A real, maintained icon library removes that friction entirely.
 - Filled variant reserved for active/selected states only.
-- No emoji-style icons, anywhere, ever. No multi-color icons. Icons support text labels — never replace them on primary actions.
+
+### Category-row illustration exception (added 2026-09-24, dashboard redesign)
+
+Category rows (Home dashboard's Categories section, and any category list/budget screen) may carry one soft, translucent, single-tone illustration of the category's real-world object — a bowl for Food, a bag for Shopping, a leaf for Groceries — bleeding from the row's trailing edge as a background texture. This is a narrow, named exception to the Overview's "no illustration or mascot" reference feel and to the Don'ts "no hand-rolled decorative SVGs" rule below — it does **not** reopen either rule anywhere else in the app (not the hero, not transactions, not accounts, not obligations, not onboarding).
+
+Mandatory constraints:
+- **One hue per category**, distinct from `accent-primary` — category color is identity, not a positive/confidence signal, so it must never read as the app's one accent.
+- **Texture, not artwork.** Opacity capped low enough that the row's amount and progress bar stay fully legible over it at a glance — if a user has to look twice to read the number, the illustration is too loud.
+- **Category rows only.** No illustration anywhere else in the app.
+- **Flat, single-tone, line-art character.** No shading, no perspective, no gradient fill inside the illustration itself — a tinted silhouette or line drawing, not a rendered object.
+- Exact per-category hues are an implementation decision, sampled from the approved reference comp when this pattern is built — not invented ahead of that.
 
 ## 9. Charts & Data Visualization
 
 Priority order when representing data: Insight → Comparison → Narrative → Chart. A chart is the fallback when a sentence can't carry the information, not the default.
 
 - Prefer: "Dining increased ₹3,400 this month, mostly Friday evenings" + small trend sparkline.
-- Avoid: pie charts, multi-series bar charts, dashboards with 4+ simultaneous charts on one screen.
-- When a chart is used, it supports a stated insight directly above it — never stands alone.
-
-## 11. Copywriting Voice
-
-Write like a calm private wealth advisor. Never like marketing.
-
-| Instead of | Say |
-|---|---|
-| "Expense Breakdown" | "Where your money went" |
-| "Analytics" | "What changed" |
-| "No data" | "We're still learning your financial patterns" |
-
-Rules: never shame, never celebrate overspending, never manufacture urgency. Prefer simple language over technically precise language when both communicate equally. Avoid filler verbs ("Elevate", "Unleash", "Revolutionize") — use concrete verbs.
+- Avoid: dashboards with 4+ simultaneous charts on one screen.
 
 ## 12. Empty States
 
@@ -339,4 +335,3 @@ Never "No data." Always frame as early-stage learning:
 - Red/alarm styling for routine spending patterns
 - Chatbot-first AI interface
 - Bouncy/springy/playful motion
-- Emoji icons, hand-rolled decorative SVGs, gradients outside the one sanctioned Home glow, per-screen custom shadows
