@@ -16,22 +16,12 @@ open the app. Where the app is dark-only (onboarding excepted), this site
 runs the light-mode `onb-*` values full-time: a deliberate, confirmed
 divergence for this surface, not a reversal of the app's dark-only rule.
 
-**Confirmed with the human partner for this first surface (home page):**
-a two-phase composition — "Promise, then Proof." The first viewport stays
-close to bare (headline, one line, the waitlist CTA, generous negative
-space, a single glass card), then yields to the bento density (why-Raqm,
-feature clusters, flagship strip) as a deliberate change in rhythm rather
-than opening dense. Two other structures were rolled and shown alongside
-it (a bento-first hero that opens directly on the grid, and a
-Fraunces-voiced "statement" hero styled like the opening line of a
-financial statement) and are recorded here as the standing alternates if
-"Promise, then Proof" doesn't hold up once built. A fused catalog
-challenger ("The Woven Ledger" — bento tiles that visibly assemble on
-scroll, dramatizing many small automatic SMS-parsing decisions resolving
-into one clear picture) was judged competitive on product clarity but
-heavier to build than a seed-stage call should lock in; it's worth
-carrying forward as a candidate signature interaction for a later pass,
-not the seed's committed structure.
+Per-surface composition (which structure a given page's first viewport
+uses, the exact hero layout, its signature interaction) is deliberately
+not recorded here — that's route-specific strategy, not durable
+world-level identity. It lives in each surface's own brief under
+`.impeccable/surfaces/` (see `apps/web/.impeccable/surfaces/apps-web-src-app-page-tsx.md`
+for the home page's confirmed direction).
 
 **Confirmed with the human partner: imagery stance is CSS/SVG only.** No
 photography, no illustration, no device mockups for this round — the
@@ -118,13 +108,12 @@ other line of copy stays in Newsreader or Instrument Sans.
 
 Bento grid: variable card sizes, gapless/tight gutters, asymmetric —
 never a uniform 3-column grid (per spec §4 and the anti-slop bento
-guidance it cites). The confirmed home-page pattern is two-phase: a
-near-bare first viewport, then the bento density arrives as a second
-beat rather than opening dense. Deep-dive pages (`/features/[slug]`)
-follow the simpler template already fixed in spec §3 (header + status
-badge, 2–3 paragraphs, one CSS/SVG-only supporting visual, repeated
-waitlist CTA, back-to-home link) — composition invention there is scoped
-to that simpler shape, not the home page's structure.
+guidance it cites). Deep-dive pages (`/features/[slug]`) follow the
+simpler template already fixed in spec §3 (header + status badge, 2–3
+paragraphs, one CSS/SVG-only supporting visual, repeated waitlist CTA,
+back-to-home link). Exactly how a given page's first viewport composes
+this grammar (density, rhythm, hero structure) is that surface's own
+decision — see its brief under `.impeccable/surfaces/`.
 
 ## Elevation & Depth
 
@@ -165,8 +154,6 @@ rounding — radius should read as engineered precision.
 - **Do** build every bento card with the glass treatment (blur +
   translucent tint + 1px top-highlight) — the dense grid is the
   confirmed exception to the app's one-glass-surface-per-screen rule.
-- **Do** open the home page close to bare and let bento density arrive as
-  a second beat, per the confirmed "Promise, then Proof" structure.
 
 ### Don't:
 - **Don't** introduce a second accent color or a dark-mode variant for
@@ -177,5 +164,7 @@ rounding — radius should read as engineered precision.
   a silent addition.
 - **Don't** use a comparison table or name competitors, even implicitly
   through imagery or layout (product-level constraint, spec §2).
-- **Don't** promote the home page's confirmed composition onto the
-  deep-dive pages — they keep the simpler template spec §3 already fixed.
+- **Don't** promote any one surface's confirmed composition (recorded in
+  its own brief under `.impeccable/surfaces/`) into this file — DESIGN.md
+  stays world-level; the deep-dive pages keep the simpler template spec
+  §3 already fixed regardless of what the home page's brief decides.
