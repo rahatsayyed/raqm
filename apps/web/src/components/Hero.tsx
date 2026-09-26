@@ -1,8 +1,9 @@
 import { WaitlistForm } from './WaitlistForm';
+import { ScrollReveal } from './ScrollReveal';
 
 export function Hero() {
   return (
-    <section className="relative mx-auto max-w-5xl overflow-hidden px-6 py-28 sm:py-36">
+    <ScrollReveal className="relative mx-auto max-w-5xl overflow-hidden px-6 py-28 sm:py-36">
       <div
         aria-hidden="true"
         className="glass-card pointer-events-none absolute -right-10 -top-6 h-36 w-56 rotate-6 opacity-30"
@@ -22,6 +23,6 @@ export function Hero() {
           banks supported
         </p>
       </div>
-    </section>
+    </ScrollReveal>
   );
 }

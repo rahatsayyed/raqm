@@ -1,3 +1,5 @@
+import { ScrollReveal } from './ScrollReveal';
+
 interface FeatureCluster {
   title: string;
   items: string[];
@@ -44,7 +46,7 @@ const clusters: FeatureCluster[] = [
 
 export function FeatureBentoGrid() {
   return (
-    <section className="mx-auto max-w-5xl px-6 py-16">
+    <ScrollReveal className="mx-auto max-w-5xl px-6 py-16">
       <h2 className="mb-8 text-balance font-display text-2xl text-ink-headline sm:text-3xl">
         Everything you need, free
       </h2>
@@ -64,6 +66,6 @@ export function FeatureBentoGrid() {
           </div>
         ))}
       </div>
-    </section>
+    </ScrollReveal>
   );
 }

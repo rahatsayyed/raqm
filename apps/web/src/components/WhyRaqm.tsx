@@ -1,3 +1,5 @@
+import { ScrollReveal } from './ScrollReveal';
+
 interface WhyCard {
   title: string;
   body: string;
@@ -29,7 +31,7 @@ const cards: WhyCard[] = [
 
 export function WhyRaqm() {
   return (
-    <section className="mx-auto max-w-5xl px-6 py-16">
+    <ScrollReveal className="mx-auto max-w-5xl px-6 py-16">
       <h2 className="mb-8 text-balance font-display text-2xl text-ink-headline sm:text-3xl">Why Raqm</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2">
         {cards.map((card) => (
@@ -41,6 +43,6 @@ export function WhyRaqm() {
           </div>
         ))}
       </div>
-    </section>
+    </ScrollReveal>
   );
 }
