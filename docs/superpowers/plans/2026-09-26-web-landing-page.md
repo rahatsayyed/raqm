@@ -42,14 +42,15 @@
 **Interfaces:**
 - Produces: a buildable Next.js app at `apps/web`, reachable via `npm run web:dev` from the repo root.
 
-- [ ] **Step 1: Create the worktree**
+- [ ] **Step 1: Confirm the worktree**
+
+The worktree already exists — created before this plan's execution started:
 
 ```bash
-git worktree add .worktrees/web-landing -b feat/web-landing build/v0-mvp
-cd .worktrees/web-landing
+git worktree list | grep web-landing
 ```
 
-All later steps in this plan run from inside this worktree.
+Expected: `.worktrees/web-landing` on branch `feat/web-landing`. `cd` into it; all later steps in this plan run from inside this worktree. Root `npm install` has already been run there — don't repeat it here.
 
 - [ ] **Step 2: Scaffold Next.js**
 
