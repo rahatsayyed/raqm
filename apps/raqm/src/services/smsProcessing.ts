@@ -76,15 +76,20 @@ export async function postParsedTxNotification(
     categoryName = categories.find((c) => c.id === insertedTx.categoryId)?.name ?? 'Uncategorized';
   }
   const notifBody = `${bankLabel} • ${categoryName}`;
-  const notificationId = await postTxNotification(
-    id,
-    notifTitle,
-    notifBody,
-    debit ? 'Not An Expense' : 'Not An Income',
-    notificationColorFor(debit),
-  );
-  logEvent('notif.posted', `txId=${id}`);
-  return notificationId;
+  try {
+    const notificationId = await postTxNotification(
+      id,
+      notifTitle,
+      notifBody,
+      debit ? 'Not An Expense' : 'Not An Income',
+      notificationColorFor(debit),
+    );
+    logEvent('notif.posted', `txId=${id}`);
+    return notificationId;
+  } catch {
+    logEvent('notif.posted', `failed txId=${id}`);
+    return '';
+  }
 }
 
 /**
@@ -138,14 +143,18 @@ export async function processIncomingSms(data: { body: string; sender: string; t
       const fromLabel = accountLabel(debitTx.bankName, debitTx.accountLast4, labels);
       const toLabel = accountLabel(creditTx.bankName, creditTx.accountLast4, labels);
       const amount = `₹${debitTx.amount.toLocaleString('en-IN')}`;
-      await postTxNotification(
-        debitId,
-        'Self-transfer',
-        `${amount} transferred from ${fromLabel} to ${toLabel}`,
-        'Not An Expense',
-        SELF_TRANSFER_COLOR,
-      );
-      logEvent('notif.posted', `txId=${debitId}`);
+      try {
+        await postTxNotification(
+          debitId,
+          'Self-transfer',
+          `${amount} transferred from ${fromLabel} to ${toLabel}`,
+          'Not An Expense',
+          SELF_TRANSFER_COLOR,
+        );
+        logEvent('notif.posted', `txId=${debitId}`);
+      } catch {
+        logEvent('notif.posted', `failed txId=${debitId}`);
+      }
     }
 
     return { id, merchant: tx.merchant ?? null, bankLabel, amount: tx.amount, isDebit: debit };

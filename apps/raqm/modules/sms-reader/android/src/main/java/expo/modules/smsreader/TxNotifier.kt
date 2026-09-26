@@ -40,6 +40,23 @@ object TxNotifier {
   ): String {
     val notificationId = UUID.randomUUID().toString()
 
+    try {
+      return postInternal(context, title, body, colorHex, txId, notExpenseLabel, notificationId)
+    } catch (e: Exception) {
+      DiagnosticLog.write(context, "notif.actions_attached", "failed txId=$txId ${e.javaClass.simpleName}")
+      return ""
+    }
+  }
+
+  private fun postInternal(
+    context: Context,
+    title: String,
+    body: String,
+    colorHex: String?,
+    txId: Int,
+    notExpenseLabel: String,
+    notificationId: String,
+  ): String {
     // notification_icon is generated into the *app* module's res/ by expo-notifications' config
     // plugin (app.json), not this library module's — so it can't be referenced via this
     // module's own R class and has to be looked up by name at runtime. Falls back to a stock
