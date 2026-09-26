@@ -763,10 +763,16 @@ export function Hero() {
       </p>
       <WaitlistForm source="home_hero" />
       <p className="font-body text-sm text-ink-label">Your SMS never leaves your phone.</p>
+      <p className="font-mono text-sm text-ink-label">
+        <span className="text-lg font-semibold text-accent-primary">120+</span> Indian and international
+        banks supported
+      </p>
     </section>
   );
 }
 ```
+
+The `120+` figure is the one JetBrains Mono "signature numeric moment" the Global Constraints require. It is not fabricated — it's `packages/bank-sms-parser/README.md`'s own real, current claim ("Supports 120+ Indian and international banks"), the one honest number available before launch (there are no real usage stats yet to show instead). Do not invent a different number or a usage-style stat ("X transactions parsed") — nothing like that exists truthfully yet.
 
 - [ ] **Step 2: Implement WhyRaqm**
 
