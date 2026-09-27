@@ -50,11 +50,15 @@ export default async function FeaturePage({ params }: { params: Promise<{ slug: 
           </span>
           <h1 className={`mb-4 font-display text-4xl sm:text-5xl ${variant.title}`}>{feature.name}</h1>
           <p className={`mb-12 font-body text-lg ${variant.body}`}>{feature.tagline}</p>
-          <div className="mb-12 flex flex-col gap-4">
-            {feature.paragraphs.map((paragraph, index) => (
-              <p key={index} className={`font-body text-base ${variant.body}`}>
-                {paragraph}
-              </p>
+          <div className={`mb-16 flex flex-col divide-y divide-[color-mix(in_srgb,currentColor_12%,transparent)] ${variant.title}`}>
+            {feature.sections.map((section, index) => (
+              <div key={section.heading} className="grid grid-cols-1 gap-2 py-7 first:pt-0 sm:grid-cols-[10rem_1fr] sm:gap-8">
+                <span className={`font-mono text-xs opacity-50 ${variant.title}`}>{String(index + 1).padStart(2, '0')}</span>
+                <div>
+                  <h3 className={`mb-2 font-display text-xl sm:text-2xl ${variant.title}`}>{section.heading}</h3>
+                  <p className={`font-body text-base ${variant.body}`}>{section.body}</p>
+                </div>
+              </div>
             ))}
           </div>
           <div className={`${variant.panel} p-8`}>

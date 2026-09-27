@@ -1,18 +1,37 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { waitlistSignupAction } from '@/app/actions/waitlist';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const label = pending ? 'Joining…' : 'Get early access';
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    buttonRef.current?.style.setProperty('--reveal-x', `${event.clientX - rect.left}px`);
+    buttonRef.current?.style.setProperty('--reveal-y', `${event.clientY - rect.top}px`);
+  };
+
   return (
     <button
+      ref={buttonRef}
       type="submit"
       disabled={pending}
-      className="shrink-0 whitespace-nowrap rounded-cta bg-accent-primary px-6 py-4 font-body text-sm font-medium text-[var(--color-surface)] transition-[background-color,transform] duration-150 hover:bg-accent-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary active:scale-[0.98] disabled:opacity-60 disabled:active:scale-100"
+      onPointerMove={handlePointerMove}
+      className="group relative shrink-0 overflow-hidden whitespace-nowrap rounded-cta bg-accent-primary px-6 py-4 font-body text-sm font-medium transition-transform duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary active:scale-[0.98] disabled:opacity-60 disabled:active:scale-100"
     >
-      {pending ? 'Joining…' : 'Get early access'}
+      <span className="relative text-[var(--color-surface)]">{label}</span>
+      <span
+        aria-hidden="true"
+        className="absolute inset-0 flex items-center justify-center bg-[var(--color-surface)] text-accent-primary opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+        style={{ clipPath: 'circle(70px at var(--reveal-x, 50%) var(--reveal-y, 50%))' }}
+      >
+        {label}
+      </span>
     </button>
   );
 }
