@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-27T00:00:00Z",
+  "title": "Design System: Raqm Marketing Site",
+  "extensions": {
+    "colorMeta": {
+      "accent-primary": { "role": "primary", "displayName": "Deep Green Accent", "canonical": "#2E5D4E", "tonalRamp": ["#0A1512", "#123A2C", "#1B4A3A", "#234F40", "#2E5D4E", "#4C8D77", "#7CB89F", "#C4E3D5"] },
+      "accent-deep": { "role": "primary", "displayName": "Accent Selected Tint", "canonical": "#DCE9E3", "tonalRamp": ["#1B4A3A", "#234F40", "#2E5D4E", "#4C8D77", "#7CB89F", "#A8D2C1", "#DCE9E3", "#F0F6F3"] },
+      "bg": { "role": "neutral", "displayName": "Warm Off-White", "canonical": "#F7F6F3", "tonalRamp": ["#1A1917", "#38362F", "#5C594E", "#847F70", "#B3AE9E", "#D8D4C8", "#F7F6F3", "#FFFFFF"] },
+      "surface": { "role": "neutral", "displayName": "Card White", "canonical": "#FFFFFF", "tonalRamp": ["#171614", "#332F2A", "#524C42", "#77705F", "#A69E8B", "#D4CFC0", "#F2F0EA", "#FFFFFF"] },
+      "surface-raised": { "role": "neutral", "displayName": "Glass Base Tone", "canonical": "#EFEDE8", "tonalRamp": ["#19180F", "#3A3728", "#5D5843", "#847C61", "#B0A788", "#D4CDB6", "#EFEDE8", "#FBFAF7"] },
+      "ink-headline": { "role": "neutral", "displayName": "Headline Ink", "canonical": "#14140F", "tonalRamp": ["#000000", "#14140F", "#2A2A22", "#454537", "#67675A", "#8E8E80", "#BEBEB2", "#EFEFE9"] },
+      "ink-body": { "role": "neutral", "displayName": "Body Ink", "canonical": "#4A4A45", "tonalRamp": ["#0E0E0C", "#242422", "#3C3C38", "#4A4A45", "#6A6A63", "#8F8F87", "#BABAB0", "#E6E6DD"] },
+      "ink-label": { "role": "neutral", "displayName": "Label Ink", "canonical": "#8A8880", "tonalRamp": ["#1C1B18", "#39372F", "#585549", "#787463", "#8A8880", "#ABA89B", "#CDCABE", "#EFEDE6"] },
+      "notice": { "role": "semantic", "displayName": "Amber Notice", "canonical": "#B8813C", "tonalRamp": ["#2E1D0D", "#5C3A1A", "#835626", "#A06D31", "#B8813C", "#CBA06B", "#E0C39C", "#F2E3CE"] },
+      "error-muted": { "role": "semantic", "displayName": "Muted Error Red", "canonical": "#B4483A", "tonalRamp": ["#2C0F0A", "#591F15", "#7F2E20", "#9C3A2C", "#B4483A", "#CB7264", "#E19E93", "#F2CAC4"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display (Newsreader, italic)", "purpose": "The Hero H1, every section H2, and each deep-dive page's own H1 — the one signature typographic gesture per view." },
+      "body": { "displayName": "Body (Instrument Sans)", "purpose": "Everything else: paragraphs, labels, buttons, nav, card titles." },
+      "mono": { "displayName": "Numeric signature (JetBrains Mono)", "purpose": "The Hero's \"120+\" stat only, plus the Phone Mockup's recreated in-app numbers (a scoped exception, see DESIGN.md Typography)." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "lenis-smooth-scroll", "value": "duration: 1.1, smoothWheel: true, disabled under prefers-reduced-motion", "purpose": "Site-wide scroll physics (SmoothScrollProvider) — the whole page scrolls through Lenis rather than native scroll." },
+      { "name": "scroll-reveal-entrance", "value": "opacity 0→1, y 24px→0, 0.6s power2.out, GSAP ScrollTrigger top 85% once:true", "purpose": "Default entrance for every major section (ScrollReveal) on first scroll into view; renders in final state immediately under reduced motion." },
+      { "name": "hero-parallax-scroll", "value": "ease: none (linear scrub), y shift 50 / -80 / 130px across back/mid/front layers, ScrollTrigger scrub tied to Hero's own scroll range", "purpose": "HeroParallax's three decorative shapes separate in depth as the Hero scrolls through the viewport." },
+      { "name": "hero-parallax-pointer", "value": "gsap.quickTo, power3.out, 0.7s settle, x amplitude 6 / 16 / 30px toward pointer position", "purpose": "Same three HeroParallax shapes drift toward the cursor inside the Hero." },
+      { "name": "reduced-motion-fallback", "value": "all four motion primitives above check prefers-reduced-motion: reduce and freeze/disable entirely", "purpose": "Hard accessibility invariant — nothing on this surface moves against the visitor's OS preference." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "WaitlistForm's submit button — the site's one CTA style.",
+      "html": "<button class=\"ds-btn-primary\">Get early access</button>",
+      "css": ".ds-btn-primary { background: #2E5D4E; color: #FFFFFF; border: none; border-radius: 3px; padding: 16px 24px; font-family: 'Instrument Sans', sans-serif; font-weight: 500; font-size: 14px; white-space: nowrap; transition: background-color 0.15s, transform 0.15s; } .ds-btn-primary:hover { background: color-mix(in srgb, #2E5D4E 90%, black); } .ds-btn-primary:focus-visible { outline: 2px solid #2E5D4E; outline-offset: 2px; } .ds-btn-primary:active { transform: scale(0.98); } .ds-btn-primary:disabled { opacity: 0.6; }"
+    },
+    {
+      "name": "Glass Card",
+      "kind": "card",
+      "refersTo": "glass-card",
+      "description": "The shared .glass-card utility — every bento tile, the Hero card, flagship links, and the waitlist card.",
+      "html": "<div class=\"ds-card-glass\">Nothing leaves your phone</div>",
+      "css": ".ds-card-glass { background: rgba(255,255,255,0.55); border: 1px solid rgba(20,20,20,0.08); border-radius: 6px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6); backdrop-filter: blur(24px) saturate(1.3); padding: 24px; font-family: 'Instrument Sans', sans-serif; color: #4A4A45; }"
+    },
+    {
+      "name": "Email Input",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "WaitlistForm's email field.",
+      "html": "<input class=\"ds-input\" type=\"email\" placeholder=\"you@email.com\" />",
+      "css": ".ds-input { background: #FFFFFF; border: 1px solid rgba(20,20,20,0.08); border-radius: 4px; padding: 16px; font-family: 'Instrument Sans', sans-serif; font-size: 14px; color: #14140F; } .ds-input::placeholder { color: #4A4A45; } .ds-input:focus-visible { outline: 2px solid #2E5D4E; outline-offset: 0; }"
+    },
+    {
+      "name": "Section Marker",
+      "kind": "custom",
+      "refersTo": "section-marker",
+      "description": "The 'NN / 04' sequential eyebrow opening each of the home page's four major sections — quiet wayfinding chrome, not a functional index.",
+      "html": "<span class=\"ds-section-marker\">01 / 04</span>",
+      "css": ".ds-section-marker { display: block; margin-bottom: 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8A8880; opacity: 0.4; }"
+    },
+    {
+      "name": "Crosshair Mark",
+      "kind": "custom",
+      "refersTo": "crosshair-mark",
+      "description": "A tiny SVG '+' blueprint mark used at the Hero's top-left corner and beside the 'Why Raqm' heading. Decorative only.",
+      "html": "<svg aria-hidden=\"true\" width=\"12\" height=\"12\" viewBox=\"0 0 12 12\" class=\"ds-crosshair\"><line x1=\"6\" y1=\"0\" x2=\"6\" y2=\"12\" stroke=\"#8A8880\" stroke-width=\"1\" /><line x1=\"0\" y1=\"6\" x2=\"12\" y2=\"6\" stroke=\"#8A8880\" stroke-width=\"1\" /></svg>",
+      "css": ".ds-crosshair { opacity: 0.4; }"
+    },
+    {
+      "name": "Phone Mockup",
+      "kind": "custom",
+      "refersTo": "phone-mockup",
+      "description": "CSS/SVG-only recreation of the app's own Dashboard screen inside a hand-built phone silhouette; not a photo or image asset. Snapshot below at a fixed 71% budget-used state.",
+      "html": "<div class=\"ds-phone-frame\"><div class=\"ds-phone-notch\"></div><div class=\"ds-phone-screen\"><div class=\"ds-phone-topbar\"><span class=\"ds-phone-brand\">Raqm</span><div class=\"ds-phone-avatar\"></div></div><div class=\"ds-phone-card\"><span class=\"ds-phone-month\">September</span><div class=\"ds-phone-amount\">₹42,680</div><div class=\"ds-phone-sub\">spent this month</div><div class=\"ds-phone-remaining\">₹17,320 remaining of ₹60,000</div></div></div></div>",
+      "css": ".ds-phone-frame { position: relative; width: 280px; aspect-ratio: 9/19; border-radius: 2.5rem; border: 1px solid rgba(0,0,0,0.1); background: #14140F; padding: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); } .ds-phone-notch { position: absolute; left: 50%; top: 12px; width: 96px; height: 20px; transform: translateX(-50%); border-radius: 9999px; background: #14140F; z-index: 1; } .ds-phone-screen { position: relative; height: 100%; overflow: hidden; border-radius: 2rem; background: #FFFFFF; } .ds-phone-topbar { display: flex; align-items: center; justify-content: space-between; padding: 32px 20px 8px; } .ds-phone-brand { font-family: 'Newsreader', serif; font-style: italic; font-size: 14px; color: #14140F; } .ds-phone-avatar { width: 24px; height: 24px; border-radius: 9999px; background: #EFEDE8; } .ds-phone-card { margin: 0 20px 24px; border-radius: 6px; border: 1px solid rgba(20,20,20,0.08); background: #EFEDE8; padding: 20px; } .ds-phone-month { display: block; margin-bottom: 12px; font-family: 'Instrument Sans', sans-serif; font-size: 10px; font-weight: 600; text-transform: uppercase; color: #8A8880; } .ds-phone-amount { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700; color: #14140F; } .ds-phone-sub { margin-top: 8px; font-family: 'Instrument Sans', sans-serif; font-size: 12px; color: #4A4A45; } .ds-phone-remaining { margin-top: 16px; font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: #14140F; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Precision and Silence, carried onto a Persuade surface",
+    "overview": "This is not a new visual identity. It is Raqm's existing brand system — the same colors, type pairing, and glass/bento grammar apps/raqm/DESIGN.md v4.0 defines — carried onto a Persuade surface for people who can't yet open the app. The site now has a real motion and depth grammar, not just a static glass/bento layout. Three things carry it: a persistent background depth layer (BackgroundDepth, mounted once in the root layout) of blurred, low-opacity color blobs sitting fixed behind every route; Lenis smooth scroll (SmoothScrollProvider) governing how the whole page moves under the cursor/wheel/touch, in place of native scroll; and a GSAP-driven motion system layered on top — every major section fades and rises into place once on first scroll into view (ScrollReveal), and the Hero additionally runs a three-layer scroll- and pointer-driven parallax (HeroParallax). All three motion primitives check prefers-reduced-motion independently and degrade to a fully static, fully visible page. Two pieces of technical chrome run through every section: a small sequential NN / 04 marker opening each major section, and a tiny two-line SVG crosshair echoing a blueprint/technical-drawing mark.",
+    "keyCharacteristics": [
+      "Same brand as the app: one accent (#2E5D4E), used identically everywhere it appears, never decoratively.",
+      "Light-only for this surface, reusing the onb-* token values as the primary and only palette (not a secondary/dark variant of them).",
+      "Depth from translucency and blur, never drop shadows — now expressed at two layers: an ambient fixed background glow (BackgroundDepth) and the foreground glass-card treatment.",
+      "One persistent motion system (Lenis smooth scroll + GSAP scroll-reveals + Hero parallax), universally reduced-motion-safe.",
+      "A shrinking radius scale where the primary CTA gets a smaller radius than the cards around it — color, not shape, signals the action.",
+      "No photography or illustration anywhere; the one device mockup that exists is CSS/SVG, not an image asset."
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "#2E5D4E is the only accent on the page. It never shares a screen with a second saturated color; amber and muted-red exist only for their named notice/error roles, never as decoration.", "section": "colors" },
+      { "name": "The One Ambient Layer Rule", "body": "BackgroundDepth's three blurred blobs are the page's one persistent background treatment, mounted once in the root layout. No section adds its own background gradient or glow on top of it.", "section": "colors" },
+      { "name": "The One Signature Rule", "body": "JetBrains Mono appears in exactly one place in the site's own chrome and copy (the \"120+\" banks-supported stat). Every other number and every other line of copy stays in Newsreader or Instrument Sans.", "section": "typography" },
+      { "name": "The Recreated-UI Exception", "body": "PhoneMockup's internal numbers are mono too, but this doesn't compete with the One Signature Rule — that surface is depicting the real app's own screen, where every number is mono by the app's own invariant. Scoped strictly to product-UI recreation, never to marketing chrome.", "section": "typography" },
+      { "name": "The Translucency-Not-Shadow Rule", "body": "Every elevated surface reads as how much of the background shows through, never as an object floating above the page with a shadow under it — except the one physical-object illustration (PhoneMockup), which is allowed a shadow because it's depicting a real object, not a card.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do reuse the app's exact onb-* color values as this site's primary (not secondary/dark) palette.",
+      "Do render every number in JetBrains Mono in the site's own chrome, and confine that usage to the one signature numeric moment (the \"120+\" stat) — with the Phone Mockup's internal numbers as the one confirmed, narrowly-scoped exception.",
+      "Do give the primary CTA a smaller radius (radius-cta, 3px) than the cards around it.",
+      "Do build every bento card with the glass treatment (blur + translucent tint + 1px top-highlight) — the dense grid is the confirmed exception to the app's one-glass-surface-per-screen rule.",
+      "Do keep BackgroundDepth as the page's one persistent ambient background layer, mounted once in the root layout, not per-section.",
+      "Do gate every new motion addition on prefers-reduced-motion the same way SmoothScrollProvider, ScrollReveal, and HeroParallax already do — this is a hard accessibility invariant on this surface."
+    ],
+    "donts": [
+      "Don't introduce a second accent color or a dark-mode variant for this surface — light-only, one accent, confirmed.",
+      "Don't use drop shadows for elevation anywhere on this surface, except PhoneMockup's confirmed physical-object exception.",
+      "Don't add photography or illustration — still confirmed CSS/SVG-only. This no longer blanket-bans device mockups: PhoneMockup is the one confirmed, hand-built exception; don't add a second one, and don't treat this as license to add a real screenshot or photo anywhere.",
+      "Don't use a comparison table or name competitors, even implicitly through imagery or layout (product-level constraint, spec §2).",
+      "Don't add a second Hero-style parallax moment elsewhere on the page — the Hero is the one parallax surface; every other section uses the plainer Scroll Reveal entrance only.",
+      "Don't promote any one surface's confirmed composition (recorded in its own brief under .impeccable/surfaces/) into this file — DESIGN.md stays world-level."
+    ]
+  }
+}
