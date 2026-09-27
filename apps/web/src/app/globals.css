@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-bg: #F7F6F3;
+  --color-surface: #FFFFFF;
+  --color-surface-raised: #EFEDE8;
+  --color-border-subtle: rgba(20, 20, 20, 0.08);
+  --color-ink-headline: #14140F;
+  --color-ink-body: #4A4A45;
+  --color-ink-label: #8A8880;
+  --color-accent-primary: #2E5D4E;
+  --color-accent-deep: #DCE9E3;
+  --color-notice: #B8813C;
+  --color-error-muted: #B4483A;
+
+  --radius-outer: 6px;
+  --radius-inner: 4px;
+  --radius-cta: 3px;
+  --radius-dot: 1px;
+
+  --font-display: var(--font-newsreader);
+  --font-body: var(--font-instrument-sans);
+  --font-mono: var(--font-jetbrains-mono);
+}
+
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-bg-flat: rgba(255, 255, 255, 0.82);
+  --glass-highlight: rgba(255, 255, 255, 0.6);
+  color-scheme: light;
+}
+
+@layer base {
+  body {
+    background: var(--color-bg);
+    color: var(--color-ink-body);
+    font-family: var(--font-instrument-sans);
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-newsreader);
+    font-style: italic;
+  }
+}
+
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+@layer components {
+  .glass-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-outer);
+    box-shadow: inset 0 1px 0 var(--glass-highlight);
+    backdrop-filter: blur(24px) saturate(1.3);
+  }
+
+  .glass-card-flat {
+    background: var(--glass-bg-flat);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-outer);
+    box-shadow: inset 0 1px 0 var(--glass-highlight);
+  }
+}
+
+@keyframes tx-ticker-scroll {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.tx-ticker-track {
+  animation: tx-ticker-scroll 60s linear infinite;
+}
+
+.tx-ticker:hover .tx-ticker-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tx-ticker-track {
+    animation-play-state: paused;
+  }
+}
+
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-group(.morph) {
+  animation-duration: 420ms;
+}
+
+::view-transition-image-pair(.morph) {
+  animation-name: feature-morph-blur;
+}
+
+@keyframes feature-morph-blur {
+  30% {
+    filter: blur(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
