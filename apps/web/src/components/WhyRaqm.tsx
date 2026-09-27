@@ -1,4 +1,5 @@
 import { ScrollReveal } from './ScrollReveal';
+import { WobbleCard } from './WobbleCard';
 import { SAMPLE_TRANSACTIONS } from '@/lib/sample-transactions';
 
 const loggedExample = SAMPLE_TRANSACTIONS[0];
@@ -9,7 +10,10 @@ export function WhyRaqm() {
       <span className="mb-3 block font-mono text-xs text-ink-label opacity-60">02 / 05</span>
       <h2 className="mb-10 text-balance font-display text-4xl text-ink-headline sm:text-5xl">Why Raqm</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <article className="relative flex min-h-[340px] flex-col justify-between overflow-hidden rounded-outer bg-accent-primary p-7 text-surface sm:col-span-2 sm:p-10 lg:row-span-2 lg:min-h-[520px]">
+        <WobbleCard
+          containerClassName="bg-accent-primary text-surface sm:col-span-2 lg:row-span-2"
+          className="flex min-h-[340px] flex-col justify-between p-7 sm:min-h-0 sm:p-10 lg:min-h-[520px]"
+        >
           <svg aria-hidden="true" viewBox="0 0 200 200" className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 text-accent-deep opacity-20 sm:h-[26rem] sm:w-[26rem]">
             <circle cx="100" cy="100" r="80" fill="none" stroke="currentColor" strokeWidth="18" opacity="0.4" />
             <circle cx="100" cy="100" r="80" fill="none" stroke="currentColor" strokeWidth="18" strokeDasharray="357 503" strokeLinecap="round" transform="rotate(-90 100 100)" />
@@ -23,9 +27,9 @@ export function WhyRaqm() {
               SMS parsing happens on-device. No bank linking, no server ever sees your messages.
             </p>
           </div>
-        </article>
+        </WobbleCard>
 
-        <article className="flex min-h-[240px] flex-col justify-between rounded-outer bg-notice p-7 text-ink-headline sm:col-span-2 sm:p-8">
+        <WobbleCard containerClassName="bg-notice text-ink-headline sm:col-span-2" className="flex min-h-[240px] flex-col justify-between p-7 sm:p-8">
           <div className="flex items-baseline gap-4">
             <span className="font-display text-7xl leading-none sm:text-8xl">120+</span>
             <span className="max-w-[10rem] font-body text-sm font-medium leading-snug">banks, read the way they text you</span>
@@ -36,9 +40,9 @@ export function WhyRaqm() {
               SMS-first, UPI-aware categorization tuned for how Indian banks message you.
             </p>
           </div>
-        </article>
+        </WobbleCard>
 
-        <article className="flex min-h-[260px] flex-col justify-between rounded-outer bg-ink-headline p-7 text-surface">
+        <WobbleCard containerClassName="bg-ink-headline text-surface" className="flex min-h-[260px] flex-col justify-between p-7">
           <span className="font-display text-6xl leading-none">0 ads</span>
           <div className="mt-8">
             <h3 className="font-body text-lg font-semibold not-italic">Yours, not sold</h3>
@@ -46,9 +50,9 @@ export function WhyRaqm() {
               No data monetization. Your spending is not the product.
             </p>
           </div>
-        </article>
+        </WobbleCard>
 
-        <article className="glass-card-flat flex min-h-[260px] flex-col justify-between p-7">
+        <WobbleCard containerClassName="glass-card-flat" className="flex min-h-[260px] flex-col justify-between p-7">
           <div aria-hidden="true" className="rounded-inner border border-border-subtle bg-surface p-3">
             <div className="flex items-center justify-between gap-2">
               <span className="font-body text-sm font-semibold text-ink-headline">{loggedExample.merchant}</span>
@@ -65,7 +69,7 @@ export function WhyRaqm() {
               Transactions show up the moment they happen. You never type them in.
             </p>
           </div>
-        </article>
+        </WobbleCard>
       </div>
     </ScrollReveal>
   );
