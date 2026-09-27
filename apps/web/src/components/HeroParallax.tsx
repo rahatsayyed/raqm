@@ -19,14 +19,15 @@ export function HeroParallax() {
 
       mm.add('(prefers-reduced-motion: no-preference)', () => {
         const layers = [
-          { el: backRef.current, scrollShift: 50, mouseAmt: 6 },
-          { el: midRef.current, scrollShift: -80, mouseAmt: 16 },
-          { el: frontRef.current, scrollShift: 130, mouseAmt: 30 },
+          { el: backRef.current, scrollShift: 100, mouseAmt: 12, spin: 0 },
+          { el: midRef.current, scrollShift: -150, mouseAmt: 30, spin: 14 },
+          { el: frontRef.current, scrollShift: 240, mouseAmt: 56, spin: 0 },
         ] as const;
 
-        layers.forEach(({ el, scrollShift }) => {
+        layers.forEach(({ el, scrollShift, spin }) => {
           gsap.to(el, {
             y: scrollShift,
+            rotate: `+=${spin}`,
             ease: 'none',
             scrollTrigger: {
               trigger: containerRef.current,
@@ -69,17 +70,32 @@ export function HeroParallax() {
     <div ref={containerRef} aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
       <div
         ref={backRef}
-        className="absolute -right-16 -top-16 h-52 w-72 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--color-accent-primary)_22%,transparent)_0%,color-mix(in_srgb,var(--color-accent-primary)_6%,transparent)_45%,transparent_70%)] blur-[40px]"
+        className="absolute -right-24 -top-20 h-72 w-96 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--color-accent-primary)_24%,transparent)_0%,color-mix(in_srgb,var(--color-accent-primary)_7%,transparent)_45%,transparent_70%)] blur-[40px]"
         style={{ maskImage: 'radial-gradient(circle, black 45%, transparent 75%)', WebkitMaskImage: 'radial-gradient(circle, black 45%, transparent 75%)' }}
       />
       <div
         ref={midRef}
-        className="glass-card-flat absolute -right-2 top-10 h-28 w-40 rotate-6 bg-[color-mix(in_srgb,var(--color-notice)_20%,var(--glass-bg-flat))] opacity-40"
-      />
+        className="absolute left-[4%] top-[46%] hidden -rotate-6 items-center gap-3 rounded-[16px] border border-border-subtle bg-surface px-4 py-3 xl:flex"
+      >
+        <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[color-mix(in_srgb,var(--color-notice)_18%,white)] font-body text-sm font-semibold text-notice">
+          S
+        </span>
+        <span className="flex flex-col">
+          <span className="font-body text-sm font-semibold text-ink-headline">Swiggy</span>
+          <span className="font-body text-xs text-ink-label">Food · HDFC Credit Card</span>
+        </span>
+        <span className="ml-3 font-mono text-sm font-semibold text-ink-headline">−₹420</span>
+      </div>
       <div
         ref={frontRef}
-        className="glass-card-flat absolute right-24 -top-4 h-14 w-14 !rounded-full bg-[color-mix(in_srgb,var(--color-accent-primary)_26%,var(--glass-bg-flat))] opacity-60"
-      />
+        className="absolute right-[9%] top-24 hidden h-24 w-24 rotate-6 items-center justify-center rounded-full border border-border-subtle bg-surface xl:flex"
+      >
+        <svg viewBox="0 0 100 100" className="absolute inset-2 -rotate-90">
+          <circle cx="50" cy="50" r="40" fill="none" strokeWidth="9" className="stroke-surface-raised" />
+          <circle cx="50" cy="50" r="40" fill="none" strokeWidth="9" strokeLinecap="round" strokeDasharray="251.3" strokeDashoffset="72.9" className="stroke-accent-primary" />
+        </svg>
+        <span className="font-mono text-sm font-semibold text-ink-headline">71%</span>
+      </div>
     </div>
   );
 }
