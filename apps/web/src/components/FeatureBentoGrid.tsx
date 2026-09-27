@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollReveal } from './ScrollReveal';
 
@@ -50,18 +50,6 @@ const rows: FeatureRow[] = [
 
 const ROW_PADDING = 'px-6 py-9 sm:px-10 sm:py-10';
 
-function distMetric(x: number, y: number, x2: number, y2: number) {
-  const xDiff = x - x2;
-  const yDiff = y - y2;
-  return xDiff * xDiff + yDiff * yDiff;
-}
-
-function findClosestEdge(x: number, y: number, width: number, height: number) {
-  const topEdgeDist = distMetric(x, y, width / 2, 0);
-  const bottomEdgeDist = distMetric(x, y, width / 2, height);
-  return topEdgeDist < bottomEdgeDist ? 'top' : 'bottom';
-}
-
 function RowContent({ row, index, tone }: { row: FeatureRow; index: number; tone: 'light' | 'dark' }) {
   const dark = tone === 'dark';
   return (
@@ -99,61 +87,104 @@ function RowContent({ row, index, tone }: { row: FeatureRow; index: number; tone
   );
 }
 
-function Row({ row, index }: { row: FeatureRow; index: number }) {
-  const itemRef = useRef<HTMLLIElement>(null);
-  const fillRef = useRef<HTMLDivElement>(null);
+export function FeatureBentoGrid() {
+  const listRef = useRef<HTMLOListElement>(null);
+  const rowRefs = useRef<Array<HTMLLIElement | null>>([]);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const centerIndexRef = useRef(0);
+  const hoveringRef = useRef(false);
+  const revertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const moveOverlayTo = (index: number, animate = true) => {
+    const list = listRef.current;
+    const target = rowRefs.current[index];
+    const overlay = overlayRef.current;
+    if (!list || !target || !overlay) return;
+    const listRect = list.getBoundingClientRect();
+    const rect = target.getBoundingClientRect();
+    const top = rect.top - listRect.top;
+    setActiveIndex(index);
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    gsap.to(overlay, { top, height: rect.height, duration: animate && !reduced ? 0.6 : 0, ease: 'expo.out', overwrite: 'auto' });
+  };
 
   useLayoutEffect(() => {
-    gsap.set(fillRef.current, { yPercent: 101 });
+    moveOverlayTo(0, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const edgeFromEvent = (ev: React.MouseEvent<HTMLLIElement>) => {
-    const rect = itemRef.current!.getBoundingClientRect();
-    return findClosestEdge(ev.clientX - rect.left, ev.clientY - rect.top, rect.width, rect.height);
+  useEffect(() => {
+    let raf = 0;
+    const handleScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        if (hoveringRef.current) return;
+        const list = listRef.current;
+        if (!list) return;
+        const listRect = list.getBoundingClientRect();
+        if (listRect.bottom < 0 || listRect.top > window.innerHeight) return;
+        const viewportCenter = window.innerHeight / 2;
+        let closest = centerIndexRef.current;
+        let closestDist = Infinity;
+        rowRefs.current.forEach((el, i) => {
+          if (!el) return;
+          const rect = el.getBoundingClientRect();
+          const dist = Math.abs(rect.top + rect.height / 2 - viewportCenter);
+          if (dist < closestDist) {
+            closestDist = dist;
+            closest = i;
+          }
+        });
+        if (closest !== centerIndexRef.current) {
+          centerIndexRef.current = closest;
+          moveOverlayTo(closest);
+        }
+      });
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleRowEnter = (index: number) => {
+    if (revertTimeoutRef.current) clearTimeout(revertTimeoutRef.current);
+    hoveringRef.current = true;
+    moveOverlayTo(index);
   };
 
-  const handleMouseEnter = (ev: React.MouseEvent<HTMLLIElement>) => {
-    if (!fillRef.current) return;
-    const edge = edgeFromEvent(ev);
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    gsap
-      .timeline({ defaults: { duration: reduced ? 0 : 0.6, ease: 'expo' } })
-      .set(fillRef.current, { yPercent: edge === 'top' ? -101 : 101 })
-      .to(fillRef.current, { yPercent: 0 });
+  const handleRowLeave = () => {
+    hoveringRef.current = false;
+    revertTimeoutRef.current = setTimeout(() => {
+      if (!hoveringRef.current) moveOverlayTo(centerIndexRef.current);
+    }, 60);
   };
 
-  const handleMouseLeave = (ev: React.MouseEvent<HTMLLIElement>) => {
-    if (!fillRef.current) return;
-    const edge = edgeFromEvent(ev);
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    gsap
-      .timeline({ defaults: { duration: reduced ? 0 : 0.6, ease: 'expo' } })
-      .to(fillRef.current, { yPercent: edge === 'top' ? -101 : 101 });
-  };
-
-  return (
-    <li
-      ref={itemRef}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      className="relative overflow-hidden border-b border-border-subtle"
-    >
-      <RowContent row={row} index={index} tone="light" />
-      <div ref={fillRef} className="pointer-events-none absolute inset-0 bg-ink-headline">
-        <RowContent row={row} index={index} tone="dark" />
-      </div>
-    </li>
-  );
-}
-
-export function FeatureBentoGrid() {
   return (
     <ScrollReveal className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
       <span className="mb-3 block font-mono text-xs text-ink-label opacity-60">02 / 04</span>
       <h2 className="mb-10 text-balance font-display text-4xl text-ink-headline sm:text-5xl">Everything you need, free</h2>
-      <ol className="flex flex-col">
+      <ol ref={listRef} className="relative flex flex-col">
+        <div ref={overlayRef} className="pointer-events-none absolute inset-x-0 top-0 z-10 overflow-hidden bg-ink-headline">
+          <RowContent row={rows[activeIndex]} index={activeIndex} tone="dark" />
+        </div>
         {rows.map((row, index) => (
-          <Row key={row.title} row={row} index={index} />
+          <li
+            key={row.title}
+            ref={(el) => {
+              rowRefs.current[index] = el;
+            }}
+            onMouseEnter={() => handleRowEnter(index)}
+            onMouseLeave={handleRowLeave}
+            className="border-b border-border-subtle"
+          >
+            <RowContent row={row} index={index} tone="light" />
+          </li>
         ))}
       </ol>
     </ScrollReveal>
