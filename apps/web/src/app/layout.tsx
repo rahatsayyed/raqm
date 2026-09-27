@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { newsreader, instrumentSans, jetbrainsMono } from './fonts';
+import { BackgroundDepth } from '@/components/BackgroundDepth';
+import { SmoothScrollProvider } from '@/components/SmoothScrollProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -18,13 +20,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body
         className={`${newsreader.variable} ${instrumentSans.variable} ${jetbrainsMono.variable} antialiased`}
       >
+        <BackgroundDepth />
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-cta focus:bg-accent-primary focus:px-4 focus:py-2 focus:font-body focus:text-sm focus:font-medium focus:text-[var(--color-surface)]"
         >
           Skip to main content
         </a>
-        {children}
+        <SmoothScrollProvider>{children}</SmoothScrollProvider>
       </body>
     </html>
   );
