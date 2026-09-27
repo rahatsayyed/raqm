@@ -83,3 +83,30 @@ html.lenis, html.lenis body {
     animation-play-state: paused;
   }
 }
+
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-group(.morph) {
+  animation-duration: 420ms;
+}
+
+::view-transition-image-pair(.morph) {
+  animation-name: feature-morph-blur;
+}
+
+@keyframes feature-morph-blur {
+  30% {
+    filter: blur(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}

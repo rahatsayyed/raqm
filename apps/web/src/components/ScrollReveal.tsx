@@ -7,7 +7,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
-export function ScrollReveal({ children, className }: { children: React.ReactNode; className?: string }) {
+export function ScrollReveal({ children, className, id }: { children: React.ReactNode; className?: string; id?: string }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useGSAP(
@@ -38,7 +38,7 @@ export function ScrollReveal({ children, className }: { children: React.ReactNod
   );
 
   return (
-    <div ref={ref} className={className}>
+    <div ref={ref} id={id} className={className}>
       {children}
     </div>
   );

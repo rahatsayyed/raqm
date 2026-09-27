@@ -49,3 +49,48 @@ export const featureDeepDives: FeatureDeepDive[] = [
 export function getFeatureBySlug(slug: string): FeatureDeepDive | undefined {
   return featureDeepDives.find((feature) => feature.slug === slug);
 }
+
+export const FEATURE_CARD_VARIANTS = [
+  {
+    isDark: false,
+    bandBg: 'bg-surface border-border-subtle',
+    card: 'bg-surface border-border-subtle lg:mt-0',
+    title: 'text-ink-headline',
+    body: 'text-ink-body',
+    cta: 'text-accent-primary',
+    badgeLive: 'bg-accent-deep text-accent-primary',
+    badgeMuted: 'bg-surface text-ink-label',
+    panel: 'glass-card',
+  },
+  {
+    isDark: false,
+    bandBg: 'bg-surface-raised border-border-subtle',
+    card: 'bg-surface-raised border-border-subtle ring-[6px] ring-bg -mt-6 lg:-ml-12 lg:mt-12',
+    title: 'text-ink-headline',
+    body: 'text-ink-body',
+    cta: 'text-accent-primary',
+    badgeLive: 'bg-accent-deep text-accent-primary',
+    badgeMuted: 'bg-surface text-ink-label',
+    panel: 'glass-card',
+  },
+  {
+    isDark: true,
+    bandBg: 'bg-ink-headline border-ink-headline',
+    card: 'bg-ink-headline border-ink-headline ring-[6px] ring-bg -mt-6 lg:-ml-12 lg:mt-24',
+    title: 'text-surface',
+    body: 'text-[color-mix(in_srgb,var(--color-surface)_72%,transparent)]',
+    cta: 'text-accent-deep',
+    badgeLive: 'bg-accent-deep text-accent-primary',
+    badgeMuted: 'bg-[color-mix(in_srgb,var(--color-surface)_12%,transparent)] text-[color-mix(in_srgb,var(--color-surface)_75%,transparent)]',
+    panel: 'rounded-outer border border-[color-mix(in_srgb,var(--color-surface)_16%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_8%,transparent)]',
+  },
+] as const;
+
+export function getFeatureCardVariant(slug: string) {
+  const index = featureDeepDives.findIndex((feature) => feature.slug === slug);
+  return FEATURE_CARD_VARIANTS[index % FEATURE_CARD_VARIANTS.length];
+}
+
+export function featureViewTransitionName(slug: string) {
+  return `feature-card-${slug}`;
+}
