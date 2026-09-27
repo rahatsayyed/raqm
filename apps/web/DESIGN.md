@@ -172,9 +172,10 @@ titles, deep-dive page titles.
 titles (set upright, not italic, even though it inherits the `h1`/`h2`/
 `h3` italic rule where used directly on a heading element).
 **Numeric/Mono Font:** JetBrains Mono — the site's own copy reserves it
-for exactly one animated/emphasized numeric moment (the "**120+**" banks
-count in the Hero); see the Phone Mockup exception below for the one
-other place mono numbers appear.
+for exactly one emphasized numeric moment (the "**120+**" banks count in
+the Hero, a static figure, not animated); see the Phone Mockup exception
+below, and the `NN / 04` section markers, for the other places mono
+appears as chrome rather than content.
 
 **Character:** the same pairing the app uses — a serif italic display
 face supplies the one signature typographic gesture per view; a neutral
@@ -194,14 +195,17 @@ sans carries everything else without competing for attention.
   cards).
 - **Label** (400–500, 12–14px `text-xs`/`text-sm`, often at reduced
   opacity): section eyebrows, form labels, footer nav, status badges.
-- **Numeric signature** (600, 18px `text-lg`, JetBrains Mono): the "120+"
-  count in the Hero — the site's one intentional mono moment.
+- **Numeric signature** (600, 18px `text-lg`, JetBrains Mono): the static
+  "120+" count in the Hero — the site's one intentional mono content
+  moment.
 
 ### Named Rules
-**The One Signature Rule.** JetBrains Mono appears in exactly one place
-in the site's own chrome and copy (the "120+" banks-supported stat).
-Every other number and every other line of copy stays in Newsreader or
-Instrument Sans.
+**The One Signature Rule.** JetBrains Mono appears as content in exactly
+one place, the "120+" banks-supported stat (a static figure, not
+animated). It also appears as small chrome — the `NN / 04` section
+markers — which doesn't compete with the rule since it's wayfinding
+chrome, not a number in the copy. Every other number and every other
+line of copy stays in Newsreader or Instrument Sans.
 
 **The Recreated-UI Exception.** `PhoneMockup`'s internal numbers (₹42,680,
 71%, ₹17,320) are rendered in JetBrains Mono too, but this doesn't compete
@@ -216,8 +220,10 @@ Bento grid: variable card sizes, gapless/tight gutters, asymmetric —
 never a uniform 3-column grid (per spec §4 and the anti-slop bento
 guidance it cites). Deep-dive pages (`/features/[slug]`) follow the
 simpler template already fixed in spec §3 (header + status badge, 2–3
-paragraphs, one CSS/SVG-only supporting visual, repeated waitlist CTA,
-back-to-home link). Exactly how a given page's first viewport composes
+paragraphs, repeated waitlist CTA, back-to-home link). Spec §3's
+CSS/SVG-only supporting visual per deep-dive page is not yet built —
+the shipped template is text-and-CTA only. Exactly how a given page's
+first viewport composes
 this grammar (density, rhythm, hero structure) is that surface's own
 decision — see its brief under `.impeccable/surfaces/`.
 
@@ -340,8 +346,8 @@ hand-built phone silhouette (rounded `2.5rem` frame, pill notch, `9/19`
 aspect ratio) — not a photo, screenshot image, or illustration asset. It
 deliberately borrows the real app's own visual conventions (dark ink
 frame, JetBrains Mono for every number, a budget-ring built from a single
-SVG `<circle>` with animated `stroke-dasharray`/`stroke-dashoffset`)
-because it's standing in for the actual product UI. See the Typography
+SVG `<circle>` with a static `stroke-dasharray`/`stroke-dashoffset`, not
+animated) because it's standing in for the actual product UI. See the Typography
 section's Recreated-UI Exception for why its mono usage doesn't violate
 the site's own one-signature-moment rule.
 

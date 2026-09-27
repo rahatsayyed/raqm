@@ -26,16 +26,19 @@ different, quickly. Action: give an email to the waitlist.
 On-device SMS parsing (zero manual entry on Android), fully local processing,
 India/UPI-aware categorization, no ad-supported model — the spec's four
 "Why Raqm" bento points, real today, not aspirational. One JetBrains Mono
-numeric "signature" moment dramatizes the mechanism directly (an animated
-count, e.g. transactions parsed) rather than just claiming it in copy.
+numeric "signature" moment dramatizes the mechanism directly (the static
+"120+ banks supported" count) rather than just claiming it in copy.
 
 ## Constraints
 
 No comparison table, no competitor names (product-level, spec §2). No
-pricing, no CMS, no accounts, no direct app download link. Imagery stance
-confirmed this session: **CSS/SVG only** — no photography, no illustration,
-no device mockups. Brand tokens (colors, type, glass/bento grammar) are
-DESIGN.md's, not restated here.
+pricing, no CMS, no accounts, no direct app download link. Imagery stance:
+**CSS/SVG only** — no photography, no illustration. Superseded this build:
+`PhoneMockup`, a hand-built CSS/SVG recreation of the app's own Dashboard
+screen, ships in the Hero as DESIGN.md's one confirmed device-mockup
+exception (not a photo or image asset, and not a second exception to add
+to). Brand tokens (colors, type, glass/bento grammar) are DESIGN.md's, not
+restated here.
 
 ## Direction contract
 
@@ -53,10 +56,13 @@ STORY: A visitor lands, understands in one near-bare viewport that Raqm
 parses bank SMS on-device with zero effort, then scrolls into bento proof
 (why-Raqm, feature clusters, flagship strip) before being asked for an email.
 
-FIRST VIEWPORT: Centered headline + one-line subhead + waitlist input inside
-a single glass card, roughly 70% negative space, a ghosted proof-card corner
-hint at top-right. The primary CTA lives inside that one card; nothing else
-competes for attention.
+FIRST VIEWPORT (as shipped): Headline + subhead + waitlist input inside a
+single glass card, alongside `PhoneMockup` (the confirmed device-mockup
+exception) in a row layout at `lg` and up. A three-layer `HeroParallax`
+(scroll-scrubbed + pointer-follow blurred/glass shapes) sits behind the
+card rather than a static corner hint. The primary CTA still lives inside
+the one glass card; the parallax layers are decorative depth, not a second
+competing focal point.
 
 FORM: "Promise, then Proof" — the dealt lead (index 5) from
 `concept-seed --scope surface --mode persuade` (seed key `cc2fd076`),
