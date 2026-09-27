@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { featureDeepDives, getFeatureBySlug, getFeatureCardVariant, featureViewTransitionName } from '@/lib/features-data';
 import { WaitlistForm } from '@/components/WaitlistForm';
+import { ScrollToTop } from '@/components/ScrollToTop';
 
 export function generateStaticParams() {
   return featureDeepDives.map((feature) => ({ slug: feature.slug }));
@@ -41,8 +42,9 @@ export default async function FeaturePage({ params }: { params: Promise<{ slug: 
   return (
     <ViewTransition name={featureViewTransitionName(slug)} share="morph" default="none">
       <main id="main-content" className={`min-h-dvh px-4 pb-24 pt-10 sm:px-6 sm:pt-14 ${variant.bandBg}`}>
+        <ScrollToTop />
         <div className="mx-auto max-w-3xl">
-          <Link href="/#go-deeper" className={`mb-8 inline-block font-body text-sm opacity-70 hover:opacity-100 ${variant.title}`}>
+          <Link href="/" className={`mb-8 inline-block font-body text-sm opacity-70 hover:opacity-100 ${variant.title}`}>
             ← Back to Raqm
           </Link>
           <span className={`mb-4 block w-fit rounded-full px-3 py-1 font-body text-xs font-medium ${isLive ? variant.badgeLive : variant.badgeMuted}`}>

@@ -167,7 +167,7 @@ export function FeatureBentoGrid() {
 
   return (
     <ScrollReveal className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-      <span className="mb-3 block font-mono text-xs text-ink-label opacity-60">02 / 04</span>
+      <span className="mb-3 block font-mono text-xs text-ink-label opacity-60">03 / 05</span>
       <h2 className="mb-10 text-balance font-display text-4xl text-ink-headline sm:text-5xl">Everything you need, free</h2>
       <ol ref={listRef} className="relative flex flex-col">
         <div ref={overlayRef} className="pointer-events-none absolute inset-x-0 top-0 z-10 overflow-hidden bg-ink-headline">

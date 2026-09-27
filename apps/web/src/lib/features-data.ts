@@ -16,11 +16,52 @@ export interface FeatureDeepDive {
 
 export const featureDeepDives: FeatureDeepDive[] = [
   {
-    slug: 'split',
-    name: 'Split with friends',
+    slug: 'capture-organize',
+    name: 'Capture & organize',
     status: 'live',
     statusLabel: 'Live now',
-    tagline: 'Split a bill, track who owes what, stop chasing people from memory.',
+    tagline: 'Your bank already texts you. Raqm reads it, sorts it, and cleans up after itself.',
+    sections: [
+      {
+        heading: 'Every bank SMS, parsed on-device',
+        body: '120+ Indian and international banks. Amount, merchant, account, balance — extracted the moment the SMS arrives, nothing sent anywhere.',
+      },
+      {
+        heading: 'PDF statements for accounts that never text you',
+        body: 'Upload a bank or UPI statement PDF and get the same structured transactions SMS parsing gives you.',
+      },
+      {
+        heading: 'Cash, logged manually',
+        body: 'Nothing to parse for a cash expense — add it yourself in a few taps and it sits right alongside everything else.',
+      },
+      {
+        heading: 'Rename a merchant once, it sticks',
+        body: '“AMZN MKTP IN” becomes “Amazon” the first time you fix it, and every future transaction from that merchant follows.',
+      },
+      {
+        heading: 'Split one purchase across categories',
+        body: '₹500 at the supermarket that was really ₹300 groceries and ₹200 household? Split it across both, from one transaction.',
+      },
+      {
+        heading: 'Group related purchases into one entry',
+        body: 'Bundle a few small transactions into a folder — one summed entry, with a tap to expand the individual items.',
+      },
+      {
+        heading: 'It knows a transfer isn’t an expense',
+        body: 'A debit and credit within 24 hours, same amount, different accounts of yours — recognized as a self-transfer and kept out of your spending totals automatically.',
+      },
+      {
+        heading: 'Refunds, netted against the original spend',
+        body: 'A credit that matches a prior debit gets linked as a refund, so your category totals reflect what you actually kept, not the gross amount.',
+      },
+    ],
+  },
+  {
+    slug: 'split',
+    name: 'Split & settle',
+    status: 'live',
+    statusLabel: 'Live now',
+    tagline: 'Split a bill, track who owes what, and let the app notice when you’ve been paid back.',
     sections: [
       {
         heading: 'Split it your way',
@@ -39,8 +80,70 @@ export const featureDeepDives: FeatureDeepDive[] = [
         body: 'Raqm spots a friend’s payment automatically from your own SMS-parsed transactions and surfaces it as a candidate match. Confirm it in one tap.',
       },
       {
+        heading: 'Any two transactions, linked manually',
+        body: 'Gave a friend cash and got it back a week later? Link the two yourself and mark them settled — both drop out of your expense totals, same as a self-transfer.',
+      },
+      {
         heading: 'Never auto-settled without your say',
         body: 'Every match is a suggestion, not an action. Nothing moves until you approve it.',
+      },
+    ],
+  },
+  {
+    slug: 'smarter-budgets',
+    name: 'Smarter budgets',
+    status: 'live',
+    statusLabel: 'Live now',
+    tagline: 'A budget that adjusts to how you actually get paid, and tells you before you overspend.',
+    sections: [
+      {
+        heading: 'Safe-to-spend, not just a total',
+        body: 'A daily number that already accounts for what’s left in the period and what’s still budgeted — not just a running total of what you’ve spent.',
+      },
+      {
+        heading: 'Alerts before it’s too late',
+        body: 'A nudge at 80% of a category budget, and again the moment it’s exceeded. No surprise at month-end.',
+      },
+      {
+        heading: 'Your month starts when you get paid',
+        body: 'Set a custom pay-cycle day — the 25th, the 1st, whatever your salary date is. Every budget, alert, and month-over-month comparison follows it.',
+      },
+      {
+        heading: 'Unused budget can roll over',
+        body: 'Opt in per category: what you don’t spend this week carries into the next, instead of resetting to zero.',
+      },
+      {
+        heading: 'Subscriptions, flagged automatically',
+        body: 'The same merchant and amount recurring monthly gets flagged as a subscription — with a nudge to cancel the ones you forgot about.',
+      },
+    ],
+  },
+  {
+    slug: 'life-admin',
+    name: 'Life admin',
+    status: 'live',
+    statusLabel: 'Live now',
+    tagline: 'Notes, locations, lending, and grocery lists — the small stuff that adds up.',
+    sections: [
+      {
+        heading: 'A note and a place, on any transaction',
+        body: 'Add a free-text note, or let Raqm tag where a payment happened — both live right on the transaction, under “Other Info.”',
+      },
+      {
+        heading: 'Lending reminders that nudge, not nag',
+        body: 'Mark money you’ve lent, and Raqm follows up so you don’t have to be the one who remembers.',
+      },
+      {
+        heading: 'Grocery lists that track spend, not just items',
+        body: 'Named lists — Weekly Essentials, Monthly Staples — with a running estimated total as you add things.',
+      },
+      {
+        heading: 'It remembers what things cost last time',
+        body: 'Adding milk again? The last price you paid shows up as a placeholder. Accept it or type a new one.',
+      },
+      {
+        heading: 'Planned vs. actual, automatically',
+        body: 'When a supermarket transaction comes in, Raqm offers to link it to your most recent list — so you see what you planned to spend next to what you did.',
       },
     ],
   },
@@ -71,22 +174,30 @@ export const featureDeepDives: FeatureDeepDive[] = [
   },
   {
     slug: 'ai-insights',
-    name: 'AI-powered insights',
+    name: 'AI, on your terms',
     status: 'coming-soon',
     statusLabel: 'Coming soon - Plus',
-    tagline: 'Understand your spending without handing your financial life to a black box.',
+    tagline: 'Auto-categorization that gets smarter, spending insights, and a second opinion before you buy — without handing over your financial life.',
     sections: [
       {
         heading: 'Three fields leave your phone. Nothing else.',
         body: 'Only the amount, the category, and your own note are ever sent for processing. Never the merchant name, never your location, never the raw SMS.',
       },
       {
-        heading: 'Turned off by default',
-        body: 'It’s opt-in. You decide if and when insights turn on — nothing is analyzed until you say so.',
+        heading: 'Categorization that learns your edge cases',
+        body: 'Beyond merchant rules: an AI pass catches the ambiguous ones — a restaurant that’s really a work lunch, a store that sells three different kinds of things — and gets better at your specific spending over time.',
       },
       {
-        heading: 'Doesn’t replace what already works',
-        body: 'It’s additive: Raqm’s on-device SMS parsing keeps working exactly the same whether or not you turn this on. Turning it off loses you nothing you had before.',
+        heading: 'A monthly summary in plain language',
+        body: 'What changed, what’s trending up, where the month went — written out, not just charted.',
+      },
+      {
+        heading: '“Should I buy this?”, answered honestly',
+        body: 'A quick read on whether a purchase fits your current budget and goals before you make it, not after.',
+      },
+      {
+        heading: 'Turned off by default',
+        body: 'It’s opt-in. You decide if and when any of this turns on — nothing is analyzed until you say so, and Raqm’s on-device parsing keeps working exactly the same either way.',
       },
     ],
   },

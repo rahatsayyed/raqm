@@ -6,7 +6,7 @@ const loggedExample = SAMPLE_TRANSACTIONS[0];
 export function WhyRaqm() {
   return (
     <ScrollReveal className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-      <span className="mb-3 block font-mono text-xs text-ink-label opacity-60">01 / 04</span>
+      <span className="mb-3 block font-mono text-xs text-ink-label opacity-60">02 / 05</span>
       <h2 className="mb-10 text-balance font-display text-4xl text-ink-headline sm:text-5xl">Why Raqm</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <article className="relative flex min-h-[340px] flex-col justify-between overflow-hidden rounded-outer bg-accent-primary p-7 text-surface sm:col-span-2 sm:p-10 lg:row-span-2 lg:min-h-[520px]">

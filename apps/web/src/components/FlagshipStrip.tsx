@@ -11,6 +11,8 @@ import { featureDeepDives, FEATURE_CARD_VARIANTS, featureViewTransitionName } fr
 gsap.registerPlugin(ScrollTrigger);
 
 const COUNT = featureDeepDives.length;
+const LAST_FEATURE_KEY = 'raqm:lastFeature';
+const END_HOLD = 480;
 
 const CARD_SHAPES = [
   { w: 'w-[30rem]', h: 'h-[26rem]', tiltZ: -2.5, tiltY: 2, offsetY: 0 },
@@ -42,26 +44,43 @@ export function FlagshipStrip() {
           return;
         }
 
-        const tween = gsap.to(track, {
-          x: () => -getDistance(),
-          ease: 'none',
+        const tl = gsap.timeline({
           scrollTrigger: {
             trigger: pin,
             start: 'top top',
-            end: () => `+=${getDistance()}`,
+            end: () => `+=${getDistance() + END_HOLD}`,
             scrub: 1,
             pin: true,
             invalidateOnRefresh: true,
-            onUpdate: (self) => {
-              const index = Math.round(self.progress * (COUNT - 1));
+            onUpdate: () => {
+              const dist = getDistance();
+              const x = Number(gsap.getProperty(track, 'x')) || 0;
+              const fraction = dist > 0 ? gsap.utils.clamp(0, 1, -x / dist) : 0;
+              const index = Math.round(fraction * (COUNT - 1));
               if (counterRef.current) counterRef.current.textContent = counterLabel(index);
             },
           },
         });
 
+        tl.to(track, { x: () => -getDistance(), ease: 'none', duration: getDistance() }).to({}, { duration: END_HOLD });
+
+        let restoreTimeout: ReturnType<typeof setTimeout> | undefined;
+        const returningSlug = sessionStorage.getItem(LAST_FEATURE_KEY);
+        if (returningSlug) {
+          const index = Math.max(0, featureDeepDives.findIndex((feature) => feature.slug === returningSlug));
+          restoreTimeout = setTimeout(() => {
+            ScrollTrigger.refresh();
+            const st = tl.scrollTrigger;
+            if (!st) return;
+            st.scroll(st.start + (index / (COUNT - 1)) * getDistance());
+            sessionStorage.removeItem(LAST_FEATURE_KEY);
+          }, 0);
+        }
+
         return () => {
-          tween.scrollTrigger?.kill();
-          tween.kill();
+          clearTimeout(restoreTimeout);
+          tl.scrollTrigger?.kill();
+          tl.kill();
         };
       });
 
@@ -75,12 +94,12 @@ export function FlagshipStrip() {
   );
 
   return (
-    <div id="go-deeper" className="relative">
+    <div id="features" className="relative">
       <div ref={pinRef} className="relative h-[100vh] overflow-hidden motion-reduce:h-auto motion-reduce:overflow-x-auto">
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 mx-auto flex max-w-6xl items-end justify-between px-4 pt-12 sm:px-6 sm:pt-16">
           <div>
-            <span className="mb-3 block font-mono text-xs text-ink-label opacity-60">03 / 04</span>
-            <h2 className="text-balance font-display text-4xl text-ink-headline sm:text-5xl">Go deeper</h2>
+            <span className="mb-3 block font-mono text-xs text-ink-label opacity-60">04 / 05</span>
+            <h2 className="text-balance font-display text-4xl text-ink-headline sm:text-5xl">Features</h2>
           </div>
           <span ref={counterRef} className="font-mono text-sm text-ink-label">
             {counterLabel(0)}
@@ -99,6 +118,7 @@ export function FlagshipStrip() {
                 <Link
                   key={feature.slug}
                   href={`/features/${feature.slug}`}
+                  onClick={() => sessionStorage.setItem(LAST_FEATURE_KEY, feature.slug)}
                   className={`group flex shrink-0 flex-col ${shape.w} ${shape.h} motion-reduce:snap-center`}
                   style={{
                     transform: `translateY(${shape.offsetY}px) rotateZ(${shape.tiltZ}deg) rotateY(${shape.tiltY}deg)`,
