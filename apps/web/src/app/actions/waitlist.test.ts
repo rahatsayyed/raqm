@@ -15,4 +15,10 @@ describe('waitlistSignupAction', () => {
     const result = await waitlistSignupAction(null, formData);
     expect(result).toEqual({ status: 'success' });
   });
+
+  it('returns a graceful error instead of throwing when the Supabase client cannot be constructed', async () => {
+    const formData = formDataWith({ email: 'person@example.com', source: 'home_hero', company: '' });
+    const result = await waitlistSignupAction(null, formData);
+    expect(result).toEqual({ status: 'error', message: 'Something went wrong. Please try again.' });
+  });
 });
