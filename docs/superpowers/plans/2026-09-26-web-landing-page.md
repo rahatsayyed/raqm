@@ -336,7 +336,7 @@ SUPABASE_URL=
 SUPABASE_ANON_KEY=
 ```
 
-Do not create a real `.env.local` in this task — that requires a real Supabase project the human partner provisions (spec §8, open item). Note it in the final wrap-up (Task 13) if it's still missing.
+Do not create a real `.env.local` in this task — that requires a real Supabase project the human partner provisions (spec §8, open item). Note it in the final wrap-up (Task 17) if it's still missing.
 
 - [ ] **Step 4: Write the failing test for email validation**
 
@@ -1402,7 +1402,215 @@ Any defect found gets fixed in the file/task it belongs to (not patched inline h
 
 ---
 
-### Task 13: Impeccable document pass + final wrap-up
+## Addendum (post-Task-12): premium visual upgrade
+
+Added after the user reviewed the built site and judged it generic ("AI slop... overused bento and cards") despite Task 10's automated design-review approval. Research against 5 real reference sites (bharpai.app, gravity-design.de, ol.studio, mobbin.com, matteovincenti.com) identified the root cause and a prioritized fix list — see the ledger's "Post-Task-12" entry for the full research synthesis. Tasks 13-16 below implement it, in priority order, before the final Impeccable `document` pass (renumbered to Task 17) records the real, upgraded visual system.
+
+### Task 13: Background depth layer + Lenis smooth scroll
+
+**Files:**
+- Create: `apps/web/src/components/BackgroundDepth.tsx`
+- Create: `apps/web/src/components/SmoothScrollProvider.tsx`
+- Modify: `apps/web/src/app/layout.tsx`
+- Modify: `apps/web/src/app/globals.css`
+
+**Interfaces:**
+- Produces: `<BackgroundDepth />` (rendered once, fixed behind all content) and `<SmoothScrollProvider>` (wraps `{children}` in the root layout).
+
+**Why this is first:** every reference site's blur/glass surfaces read as premium because there's real depth/texture behind them. Raqm's `.glass-card` blur is currently near-invisible against a flat single-color background — this is the single highest-leverage fix.
+
+- [ ] **Step 1: Build the background depth layer**
+
+Create `apps/web/src/components/BackgroundDepth.tsx` — a fixed, full-viewport, `pointer-events-none`, `aria-hidden` layer sitting behind all page content (`z-index` below everything else, `position: fixed; inset: 0; z-index: -1`). Build it as 2-3 large soft radial gradients in the existing accent tones, positioned asymmetrically (not centered/uniform — matches the site's own asymmetric-bento discipline), e.g.:
+
+```tsx
+export function BackgroundDepth() {
+  return (
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+      <div className="absolute -left-1/4 -top-1/3 h-[60vw] w-[60vw] rounded-full bg-[radial-gradient(circle,var(--color-accent-deep)_0%,transparent_70%)] opacity-40 blur-3xl" />
+      <div className="absolute -right-1/3 top-1/3 h-[50vw] w-[50vw] rounded-full bg-[radial-gradient(circle,var(--color-accent-primary)_0%,transparent_70%)] opacity-[0.08] blur-3xl" />
+      <div className="absolute bottom-0 left-1/4 h-[45vw] w-[45vw] rounded-full bg-[radial-gradient(circle,var(--color-notice)_0%,transparent_70%)] opacity-[0.06] blur-3xl" />
+    </div>
+  );
+}
+```
+
+Adjust exact positions/sizes/opacities as needed so it reads as a subtle, always-present texture — strong enough that `.glass-card`'s blur has real content to distort, subtle enough that body text everywhere stays comfortably legible (spot-check contrast over the gradient's brightest point, not just over flat background). This must stay within the light-only, one-primary-accent discipline: the non-primary-accent blobs (notice color) are decoration, not a second "accent" in the sense the constraint means (never used on interactive/text elements).
+
+- [ ] **Step 2: Install and wire Lenis smooth scroll**
+
+```bash
+cd apps/web && npm install lenis
+```
+
+Create `apps/web/src/components/SmoothScrollProvider.tsx`:
+
+```tsx
+'use client';
+
+import { useEffect, useRef } from 'react';
+import Lenis from 'lenis';
+
+export function SmoothScrollProvider({ children }: { children: React.ReactNode }) {
+  const lenisRef = useRef<Lenis | null>(null);
+
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      return;
+    }
+
+    const lenis = new Lenis({ duration: 1.1, smoothWheel: true });
+    lenisRef.current = lenis;
+
+    function raf(time: number) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    const rafId = requestAnimationFrame(raf);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      lenis.destroy();
+      lenisRef.current = null;
+    };
+  }, []);
+
+  return <>{children}</>;
+}
+```
+
+Reduced motion disables Lenis entirely (falls back to native scroll) rather than trying to make inertia scrolling itself "reduced" — inertia/momentum scroll IS the motion effect here, there's no meaningful reduced variant of it.
+
+- [ ] **Step 3: Wire both into the root layout**
+
+Modify `apps/web/src/app/layout.tsx`: import and render `<BackgroundDepth />` as the first child of `<body>`, wrap the rest of `{children}` in `<SmoothScrollProvider>`.
+
+- [ ] **Step 4: Verify**
+
+```bash
+npm run web:build
+```
+
+Then a Chrome check: confirm the background gradients are visible but subtle, confirm `.glass-card` elements now show a visibly distorted/blurred backdrop (not a flat translucent rectangle), confirm scroll feels like it has inertia (not 1:1 native scroll) with reduced-motion off, and confirm scroll is instant/native with reduced-motion on (DevTools emulation).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/web/src/components/BackgroundDepth.tsx apps/web/src/components/SmoothScrollProvider.tsx apps/web/src/app/layout.tsx apps/web/src/app/globals.css apps/web/package.json apps/web/package-lock.json ../../package-lock.json
+git commit -m "feat(web): background depth layer + Lenis smooth scroll"
+```
+
+(Adjust the lockfile paths to whichever actually changed — root and/or `apps/web` — don't leave either dangling; this project has hit that exact mistake three times already this session.)
+
+---
+
+### Task 14: threejs-parallax depth on Hero
+
+**Files:**
+- Modify: `apps/web/src/components/Hero.tsx` (replace the static corner-hint `div` with a parallax layer)
+- Create: whatever the `threejs-parallax` skill's own workflow directs (likely a new component plus generated layer assets)
+
+**Constraint tension to resolve, don't ignore:** the `threejs-parallax` skill's own description calls for "layered transparent PNG assets." This project's surface brief locks Hero (and the site generally) to **CSS/SVG only — no photography, no illustration, no device mockups**. Read the skill's actual instructions first (`Skill(threejs-parallax)`) before writing any code — then make a real decision, don't silently pick one side:
+
+- If the skill's PNG layers can reasonably be **abstract, brand-colored gradient/shape blobs you generate yourself** (not photography, not illustration of people/objects/scenes — just soft depth shapes matching Task 13's background gradients), that satisfies the constraint's actual intent (no stock imagery, no decorative mascots) even though the asset format is PNG. Prefer this path.
+- If the skill fundamentally requires photographic or illustrative content to be worth using, **do not use it** — fall back to a pure CSS/GSAP ScrollTrigger multi-layer parallax instead (2-3 `.glass-card`-styled shapes at different `translateY` scroll-linked speeds via `gsap.to(..., { scrollTrigger: { scrub: true } })`), which is already fully within the existing toolset (`gsap`/`ScrollTrigger` from Task 11).
+
+Either way, this replaces Hero's current single static ghosted corner-hint (`apps/web/src/components/Hero.tsx`'s `pointer-events-none absolute -right-10 -top-6 ...` div) with something that has real scroll-linked or mouse-linked depth motion — that's the actual ask, not "use this specific library no matter what."
+
+- [ ] **Step 1: Read the skill, decide the approach, document the decision**
+
+Invoke `Skill(threejs-parallax)`. Read its actual requirements. Write a one-paragraph decision (which path above, and why) at the top of your eventual report — this is a real judgment call the task reviewer will scrutinize, not a rubber stamp.
+
+- [ ] **Step 2: Implement**
+
+Build whichever approach you chose. Keep it to Hero only for this task — don't add parallax everywhere yet. Preserve everything else Task 6 already established (the glass-card content wrapper, the copy, `WaitlistForm` usage) unchanged.
+
+- [ ] **Step 3: Verify**
+
+`npm run web:build` clean. Chrome check: confirm the new depth effect is visible and moves distinctly from the rest of the page on scroll (or on mouse move, if that's the mechanism chosen) — a static image that merely looks nicer isn't what this task is for. Confirm `prefers-reduced-motion: reduce` disables any scroll/mouse-linked motion here too (same discipline as Task 11).
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add apps/web/src/components/Hero.tsx <whatever else you created>
+git commit -m "feat(web): parallax depth layer on Hero"
+```
+
+---
+
+### Task 15: Technical/engineering chrome details + copy tightening
+
+**Files:**
+- Modify: `apps/web/src/components/Hero.tsx`, `WhyRaqm.tsx`, `Footer.tsx` (add small chrome details)
+- Modify: copy in `Hero.tsx`, `WhyRaqm.tsx`, `FeatureBentoGrid.tsx`, `FlagshipStrip.tsx`, `WaitlistSection.tsx` (tighten headlines/subheads)
+
+**Direction:** matteovincenti.com's recipe for a low-animation site still feeling expensive: small coordinate-style labels, thin crosshair marks, numbered section markers, generous whitespace. This fits Raqm's own DESIGN.md "engineered precision" language directly — it isn't a new aesthetic, it's making the existing one legible.
+
+- [ ] **Step 1: Add chrome details**
+
+Add small, low-opacity (`text-ink-label`, `opacity-40`-ish) `font-mono` markers to 2-3 sections — do not overdo this, 1 marker per section is plenty:
+- A numbered section marker at the top of each major section, e.g. `<span className="font-mono text-xs text-ink-label">01 / 05</span>` above "Why Raqm", `02 / 05` above the feature grid, etc. (count sections that actually exist: Hero isn't numbered since it's the entry point, then WhyRaqm/FeatureBentoGrid/FlagshipStrip/WaitlistSection get 01-04).
+- A small SVG crosshair mark (a plain `+` built from two thin `<line>`s, ~12px, `stroke="var(--color-ink-label)"`, low opacity) near Hero's corner-hint area or WhyRaqm's heading — one or two total, not scattered everywhere.
+
+- [ ] **Step 2: Tighten copy**
+
+Rewrite these strings for more direct, confident phrasing (matching bharpai.app's "One person creates. Everyone else just pays." directness — concrete, benefit-first, no vague marketing language):
+- Hero headline: keep "Know where your money goes. Automatically." (already direct) — but tighten the subhead from the current two-line sentence to something that reads in one confident breath. Propose: "Bank SMS in, spending clarity out. No linking, no typing, nothing sent anywhere."
+- WhyRaqm's four card bodies: keep their substance but cut any hedging words ("entirely," "actually") that dilute directness.
+- WaitlistSection heading "Get early access" is already direct — leave it.
+- Flagship strip taglines: tighten to single confident sentences if any currently run long.
+
+Use your own judgment for the exact final wording within these constraints (concrete, no competitor names, no fabricated claims) — this is real copywriting, not transcription.
+
+- [ ] **Step 3: Verify**
+
+`npm run web:build` clean. Chrome check: confirm chrome details read as subtle accents, not clutter; confirm no copy change introduces a false/unverifiable claim.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add apps/web/src/components
+git commit -m "feat(web): technical chrome details and tightened copy"
+```
+
+---
+
+### Task 16: CSS phone-mockup section (real product UI, not abstract cards)
+
+**Files:**
+- Create: `apps/web/src/components/PhoneMockup.tsx`
+- Modify: `apps/web/src/components/Hero.tsx` (or create a new section between Hero and WhyRaqm — implementer's call based on what actually looks right; document the choice)
+- Modify: `apps/web/src/app/page.tsx` if a new section is added rather than slotted into Hero
+
+**Direction:** bharpai.app's strongest technique — a real device mockup showing real product content, not another abstract card. Recreate (don't screenshot) a small, recognizable piece of Raqm's actual dashboard design, referencing `docs/superpowers/specs/2026-09-23-dashboard-prototype.html` (already-built prototype in this repo) for the real layout: a hero card showing a spend amount (e.g. "₹42,680" spent this month), a small donut/ring showing budget-used percentage, a "Remaining ₹17,320 of ₹60,000" line. This is CSS/SVG only — build it as markup, not an image.
+
+- [ ] **Step 1: Read the reference**
+
+Skim `docs/superpowers/specs/2026-09-23-dashboard-prototype.html`'s hero card markup/CSS (`.hero-ring`, `.hero-number`, `.hero-remaining` classes and surrounding structure) for the real layout to recreate at a smaller scale — this is evidence of what the real app actually looks like, not a template to copy verbatim (different fonts/colors apply here: Raqm's v3.0/onboarding tokens, not v2.0's).
+
+- [ ] **Step 2: Build the phone frame**
+
+Create `apps/web/src/components/PhoneMockup.tsx`: an outer bezel (`rounded-[2.5rem]` or similar, dark or `ink-headline`-toned frame, ~280px wide, a notch/camera-cutout detail at top), an inner "screen" area (`bg-surface`, clipped rounded corners) containing the recreated dashboard hero card (amount, donut ring via inline SVG `<circle>` with `stroke-dasharray`, remaining-budget line) using this site's actual tokens (`--color-accent-primary`, `font-mono` for the amount, etc.) — not raqm app's dark-mode v2.0 tokens.
+
+- [ ] **Step 3: Place it**
+
+Decide where it reads best — most likely inside or beside Hero's glass card (replacing or supplementing the corner-hint from Task 14), or as its own brief section right after Hero. Make the call based on what actually looks balanced once built; document which you chose and why.
+
+- [ ] **Step 4: Verify**
+
+`npm run web:build` clean. Chrome check at desktop and 375px: confirm the mockup renders proportionally, doesn't cause overflow at mobile width, and the donut ring/amount are legible.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/web/src/components/PhoneMockup.tsx apps/web/src/components/Hero.tsx apps/web/src/app/page.tsx
+git commit -m "feat(web): CSS phone-mockup showing real dashboard UI"
+```
+
+---
+
+### Task 17: Impeccable document pass + final wrap-up
 
 **Files:**
 - Modify: `apps/web/DESIGN.md` (seed → real, scan mode)
