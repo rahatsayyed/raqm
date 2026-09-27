@@ -1,13 +1,11 @@
 import { WaitlistForm } from './WaitlistForm';
 import { ScrollReveal } from './ScrollReveal';
+import { HeroParallax } from './HeroParallax';
 
 export function Hero() {
   return (
     <ScrollReveal className="relative mx-auto max-w-5xl overflow-hidden px-6 py-28 sm:py-36">
-      <div
-        aria-hidden="true"
-        className="glass-card pointer-events-none absolute -right-10 -top-6 h-36 w-56 rotate-6 opacity-30"
-      />
+      <HeroParallax />
       <div className="glass-card relative mx-auto flex max-w-2xl flex-col items-center gap-6 p-10 text-center sm:p-14">
         <h1 className="text-balance font-display text-4xl leading-tight text-ink-headline sm:text-5xl">
           Know where your money goes. Automatically.
