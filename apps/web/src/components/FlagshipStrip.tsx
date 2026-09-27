@@ -5,6 +5,7 @@ import { ScrollReveal } from './ScrollReveal';
 export function FlagshipStrip() {
   return (
     <ScrollReveal className="mx-auto max-w-5xl px-6 py-16">
+      <span className="mb-3 block font-mono text-xs text-ink-label opacity-40">03 / 04</span>
       <h2 className="mb-8 text-balance font-display text-2xl text-ink-headline sm:text-3xl">Go deeper</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:grid-rows-2">
         {featureDeepDives.map((feature, index) => (

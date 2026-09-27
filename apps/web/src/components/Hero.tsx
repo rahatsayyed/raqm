@@ -6,13 +6,16 @@ export function Hero() {
   return (
     <ScrollReveal className="relative mx-auto max-w-5xl overflow-hidden px-6 py-28 sm:py-36">
       <HeroParallax />
+      <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" className="absolute left-8 top-8 opacity-40">
+        <line x1="6" y1="0" x2="6" y2="12" stroke="var(--color-ink-label)" strokeWidth="1" />
+        <line x1="0" y1="6" x2="12" y2="6" stroke="var(--color-ink-label)" strokeWidth="1" />
+      </svg>
       <div className="glass-card relative mx-auto flex max-w-2xl flex-col items-center gap-6 p-10 text-center sm:p-14">
         <h1 className="text-balance font-display text-4xl leading-tight text-ink-headline sm:text-5xl">
           Know where your money goes. Automatically.
         </h1>
         <p className="max-w-xl font-body text-lg text-ink-body">
-          Raqm reads your bank SMS on your phone and turns it into a clear picture of your spending.
-          No bank linking, no manual entry, nothing sent to a server.
+          Bank SMS in, spending clarity out. No linking, no typing, nothing sent anywhere.
         </p>
         <WaitlistForm source="home_hero" />
         <p className="font-body text-sm text-ink-label">Your SMS never leaves your phone.</p>

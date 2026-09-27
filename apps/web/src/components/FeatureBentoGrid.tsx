@@ -47,6 +47,7 @@ const clusters: FeatureCluster[] = [
 export function FeatureBentoGrid() {
   return (
     <ScrollReveal className="mx-auto max-w-5xl px-6 py-16">
+      <span className="mb-3 block font-mono text-xs text-ink-label opacity-40">02 / 04</span>
       <h2 className="mb-8 text-balance font-display text-2xl text-ink-headline sm:text-3xl">
         Everything you need, free
       </h2>
