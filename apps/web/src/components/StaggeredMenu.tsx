@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useGSAP } from '@gsap/react';
 import Link from 'next/link';
 import gsap from 'gsap';
+import { lenisInstance } from './SmoothScrollProvider';
 
 export interface StaggeredMenuItem {
   label: string;
@@ -329,6 +330,25 @@ export function StaggeredMenu({
     }
   }, [playClose, animateIcon, animateColor, animateText, onMenuClose]);
 
+  const handleItemClick = useCallback(
+    (event: React.MouseEvent<HTMLAnchorElement>, link: string) => {
+      closeMenu();
+      if (link.startsWith('#')) {
+        const target = document.querySelector(link);
+        if (target) {
+          event.preventDefault();
+          history.pushState(null, '', link);
+          if (lenisInstance) {
+            lenisInstance.scrollTo(target as HTMLElement, { duration: 2.2 });
+          } else {
+            target.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      }
+    },
+    [closeMenu]
+  );
+
   useGSAP(
     () => {
       if (!closeOnClickAway || !open) return;
@@ -440,6 +460,7 @@ export function StaggeredMenu({
                   href={it.link}
                   aria-label={it.ariaLabel}
                   data-index={idx + 1}
+                  onClick={(event) => handleItemClick(event, it.link)}
                 >
                   <span className="sm-panel-itemLabel inline-block will-change-transform [transform-origin:50%_100%]">{it.label}</span>
                 </a>
