@@ -7,13 +7,15 @@ import { Footer } from '@/components/Footer';
 
 export default function HomePage() {
   return (
-    <main id="main-content">
-      <Hero />
-      <WhyRaqm />
-      <FeatureBentoGrid />
-      <FlagshipStrip />
-      <WaitlistSection />
+    <>
+      <main id="main-content">
+        <Hero />
+        <WhyRaqm />
+        <FeatureBentoGrid />
+        <FlagshipStrip />
+        <WaitlistSection />
+      </main>
       <Footer />
-    </main>
+    </>
   );
 }

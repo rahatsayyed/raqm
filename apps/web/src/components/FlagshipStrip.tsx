@@ -12,7 +12,7 @@ export function FlagshipStrip() {
           <Link
             key={feature.slug}
             href={`/features/${feature.slug}`}
-            className={`glass-card flex flex-col gap-2 p-6 transition-[transform,background-color,border-color] duration-150 hover:-translate-y-0.5 hover:border-accent-primary/30 hover:bg-[color-mix(in_srgb,var(--glass-bg),white_15%)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary active:translate-y-0 active:scale-[0.99] ${
+            className={`glass-card-flat flex flex-col gap-2 p-6 transition-[transform,background-color,border-color] duration-150 hover:-translate-y-0.5 hover:border-accent-primary/30 hover:bg-[color-mix(in_srgb,var(--glass-bg-flat),white_15%)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary active:translate-y-0 active:scale-[0.99] ${
               index === 0 ? 'sm:row-span-2' : ''
             }`}
           >

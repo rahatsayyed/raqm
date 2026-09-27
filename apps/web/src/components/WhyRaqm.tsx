@@ -42,7 +42,7 @@ export function WhyRaqm() {
       </h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2">
         {cards.map((card) => (
-          <div key={card.title} className={`glass-card p-6 ${card.span}`}>
+          <div key={card.title} className={`glass-card-flat p-6 ${card.span}`}>
             <h3 className="mb-2 font-body text-base font-semibold not-italic text-ink-headline">
               {card.title}
             </h3>

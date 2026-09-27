@@ -53,7 +53,7 @@ export function FeatureBentoGrid() {
       </h2>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4 lg:grid-rows-2">
         {clusters.map((cluster) => (
-          <div key={cluster.title} className={`glass-card p-6 ${cluster.span}`}>
+          <div key={cluster.title} className={`glass-card-flat p-6 ${cluster.span}`}>
             <h3 className="mb-3 font-body text-base font-semibold not-italic text-ink-headline">
               {cluster.title}
             </h3>

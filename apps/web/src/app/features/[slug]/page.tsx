@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { featureDeepDives, getFeatureBySlug } from '@/lib/features-data';
@@ -5,6 +6,24 @@ import { WaitlistForm } from '@/components/WaitlistForm';
 
 export function generateStaticParams() {
   return featureDeepDives.map((feature) => ({ slug: feature.slug }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const feature = getFeatureBySlug(slug);
+
+  if (!feature) {
+    return {};
+  }
+
+  return {
+    title: `${feature.name} · Raqm`,
+    description: feature.tagline,
+  };
 }
 
 export default async function FeaturePage({ params }: { params: Promise<{ slug: string }> }) {

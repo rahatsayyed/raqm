@@ -70,14 +70,15 @@ export function HeroParallax() {
       <div
         ref={backRef}
         className="absolute -right-16 -top-16 h-52 w-72 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--color-accent-primary)_22%,transparent)_0%,color-mix(in_srgb,var(--color-accent-primary)_6%,transparent)_45%,transparent_70%)] blur-[40px]"
+        style={{ maskImage: 'radial-gradient(circle, black 45%, transparent 75%)', WebkitMaskImage: 'radial-gradient(circle, black 45%, transparent 75%)' }}
       />
       <div
         ref={midRef}
-        className="glass-card absolute -right-2 top-10 h-28 w-40 rotate-6 bg-[color-mix(in_srgb,var(--color-notice)_20%,var(--glass-bg))] opacity-40"
+        className="glass-card-flat absolute -right-2 top-10 h-28 w-40 rotate-6 bg-[color-mix(in_srgb,var(--color-notice)_20%,var(--glass-bg-flat))] opacity-40"
       />
       <div
         ref={frontRef}
-        className="glass-card absolute right-24 -top-4 h-14 w-14 !rounded-full bg-[color-mix(in_srgb,var(--color-accent-primary)_26%,var(--glass-bg))] opacity-60"
+        className="glass-card-flat absolute right-24 -top-4 h-14 w-14 !rounded-full bg-[color-mix(in_srgb,var(--color-accent-primary)_26%,var(--glass-bg-flat))] opacity-60"
       />
     </div>
   );

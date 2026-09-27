@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { waitlistSignupAction } from '@/app/actions/waitlist';
 
@@ -19,6 +19,15 @@ function SubmitButton() {
 
 export function WaitlistForm({ source }: { source: string }) {
   const [state, formAction] = useActionState(waitlistSignupAction, null);
+  const [email, setEmail] = useState('');
+  const [lastState, setLastState] = useState(state);
+
+  if (state !== lastState) {
+    setLastState(state);
+    if (state?.status === 'success') {
+      setEmail('');
+    }
+  }
 
   return (
     <form action={formAction} className="flex w-full flex-col gap-3">
@@ -43,6 +52,8 @@ export function WaitlistForm({ source }: { source: string }) {
           autoComplete="email"
           spellCheck={false}
           placeholder="you@email.com"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
           className="min-w-0 flex-1 rounded-inner border border-[var(--color-border-subtle)] bg-surface px-4 py-4 font-body text-sm text-ink-headline placeholder:text-ink-body focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-primary"
         />
         <SubmitButton />
