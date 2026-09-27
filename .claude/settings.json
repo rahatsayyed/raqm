@@ -52,6 +52,7 @@
     "ecc@ecc": true,
     "taste-skill@taste-skill": true,
     "impeccable@impeccable": true,
-    "gsap-skills@gsap-skills": true
+    "gsap-skills@gsap-skills": true,
+    "hyperframes@claude-plugins-official": true
   }
 }
