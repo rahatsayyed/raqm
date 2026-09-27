@@ -4,13 +4,16 @@ import { useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { SAMPLE_DASHBOARD } from '@/lib/sample-transactions';
 
 gsap.registerPlugin(ScrollTrigger);
 
 export function HeroParallax() {
   const containerRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLDivElement>(null);
-  const midRef = useRef<HTMLDivElement>(null);
+  const swiggyRef = useRef<HTMLDivElement>(null);
+  const uberRef = useRef<HTMLDivElement>(null);
+  const salaryRef = useRef<HTMLDivElement>(null);
   const frontRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
@@ -20,7 +23,9 @@ export function HeroParallax() {
       mm.add('(prefers-reduced-motion: no-preference)', () => {
         const layers = [
           { el: backRef.current, scrollShift: 100, mouseAmt: 12, spin: 0 },
-          { el: midRef.current, scrollShift: -150, mouseAmt: 30, spin: 14 },
+          { el: swiggyRef.current, scrollShift: -150, mouseAmt: 30, spin: 14 },
+          { el: uberRef.current, scrollShift: -100, mouseAmt: 22, spin: -10 },
+          { el: salaryRef.current, scrollShift: 180, mouseAmt: 40, spin: 12 },
           { el: frontRef.current, scrollShift: 240, mouseAmt: 56, spin: 0 },
         ] as const;
 
@@ -58,7 +63,7 @@ export function HeroParallax() {
       });
 
       mm.add('(prefers-reduced-motion: reduce)', () => {
-        gsap.set([backRef.current, midRef.current, frontRef.current], { x: 0, y: 0 });
+        gsap.set([backRef.current, swiggyRef.current, uberRef.current, salaryRef.current, frontRef.current], { x: 0, y: 0 });
       });
 
       return () => mm.revert();
@@ -74,8 +79,8 @@ export function HeroParallax() {
         style={{ maskImage: 'radial-gradient(circle, black 45%, transparent 75%)', WebkitMaskImage: 'radial-gradient(circle, black 45%, transparent 75%)' }}
       />
       <div
-        ref={midRef}
-        className="absolute left-[4%] top-[46%] hidden -rotate-6 items-center gap-3 rounded-[16px] border border-border-subtle bg-surface px-4 py-3 xl:flex"
+        ref={swiggyRef}
+        className="absolute left-[4%] top-[51%] hidden -rotate-6 items-center gap-3 rounded-[16px] border border-border-subtle bg-surface px-4 py-3 xl:flex"
       >
         <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[color-mix(in_srgb,var(--color-notice)_18%,white)] font-body text-sm font-semibold text-notice">
           S
@@ -84,7 +89,33 @@ export function HeroParallax() {
           <span className="font-body text-sm font-semibold text-ink-headline">Swiggy</span>
           <span className="font-body text-xs text-ink-label">Food · HDFC Credit Card</span>
         </span>
-        <span className="ml-3 font-mono text-sm font-semibold text-ink-headline">−₹420</span>
+        <span className="ml-3 font-mono text-sm font-semibold text-ink-headline">₹420</span>
+      </div>
+      <div
+        ref={uberRef}
+        className="absolute left-[7%] top-[57%] hidden rotate-[5deg] items-center gap-3 rounded-[16px] border border-border-subtle bg-surface px-4 py-3 xl:flex"
+      >
+        <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[color-mix(in_srgb,var(--color-ink-label)_14%,white)] font-body text-sm font-semibold text-ink-body">
+          U
+        </span>
+        <span className="flex flex-col">
+          <span className="font-body text-sm font-semibold text-ink-headline">Uber</span>
+          <span className="font-body text-xs text-ink-label">Transport · HDFC Credit Card</span>
+        </span>
+        <span className="ml-3 font-mono text-sm font-semibold text-ink-headline">₹280</span>
+      </div>
+      <div
+        ref={salaryRef}
+        className="absolute left-[5%] top-[47%] hidden -rotate-3 items-center gap-3 rounded-[16px] border border-border-subtle bg-surface px-4 py-3 xl:flex"
+      >
+        <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[color-mix(in_srgb,var(--color-accent-primary)_16%,white)] font-body text-sm font-semibold text-accent-primary">
+          ₹
+        </span>
+        <span className="flex flex-col">
+          <span className="font-body text-sm font-semibold text-ink-headline">Salary</span>
+          <span className="font-body text-xs text-ink-label">Income · HDFC Savings</span>
+        </span>
+        <span className="ml-3 font-mono text-sm font-semibold text-accent-primary">{SAMPLE_DASHBOARD.earned}</span>
       </div>
       <div
         ref={frontRef}
