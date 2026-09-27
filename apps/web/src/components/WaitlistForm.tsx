@@ -4,10 +4,11 @@ import { useActionState, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { waitlistSignupAction } from '@/app/actions/waitlist';
 
-function SubmitButton() {
+function SubmitButton({ tone }: { tone: 'light' | 'dark' }) {
   const { pending } = useFormStatus();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const label = pending ? 'Joining…' : 'Get early access';
+  const isDark = tone === 'dark';
 
   const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
     const rect = buttonRef.current?.getBoundingClientRect();
@@ -22,12 +23,16 @@ function SubmitButton() {
       type="submit"
       disabled={pending}
       onPointerMove={handlePointerMove}
-      className="group relative shrink-0 overflow-hidden whitespace-nowrap rounded-cta bg-accent-primary px-6 py-4 font-body text-sm font-medium transition-transform duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary active:scale-[0.98] disabled:opacity-60 disabled:active:scale-100"
+      className={`group relative shrink-0 overflow-hidden whitespace-nowrap rounded-cta px-6 py-4 font-body text-sm font-medium transition-transform duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-[0.98] disabled:opacity-60 disabled:active:scale-100 ${
+        isDark ? 'bg-surface focus-visible:outline-surface' : 'bg-accent-primary focus-visible:outline-accent-primary'
+      }`}
     >
-      <span className="relative text-[var(--color-surface)]">{label}</span>
+      <span className={`relative ${isDark ? 'text-accent-primary' : 'text-[var(--color-surface)]'}`}>{label}</span>
       <span
         aria-hidden="true"
-        className="absolute inset-0 flex items-center justify-center bg-[var(--color-surface)] text-accent-primary opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+        className={`absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${
+          isDark ? 'bg-accent-primary text-surface' : 'bg-[var(--color-surface)] text-accent-primary'
+        }`}
         style={{ clipPath: 'circle(70px at var(--reveal-x, 50%) var(--reveal-y, 50%))' }}
       >
         {label}
@@ -36,7 +41,8 @@ function SubmitButton() {
   );
 }
 
-export function WaitlistForm({ source }: { source: string }) {
+export function WaitlistForm({ source, tone = 'light' }: { source: string; tone?: 'light' | 'dark' }) {
+  const isDark = tone === 'dark';
   const [state, formAction] = useActionState(waitlistSignupAction, null);
   const [email, setEmail] = useState('');
   const [lastState, setLastState] = useState(state);
@@ -75,16 +81,18 @@ export function WaitlistForm({ source }: { source: string }) {
           onChange={(event) => setEmail(event.target.value)}
           className="min-w-0 flex-1 rounded-inner border border-[var(--color-border-subtle)] bg-surface px-4 py-4 font-body text-sm text-ink-headline placeholder:text-ink-body focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-primary"
         />
-        <SubmitButton />
+        <SubmitButton tone={tone} />
       </div>
       <div aria-live="polite" className="w-full text-sm">
         {state?.status === 'success' && (
-          <p className="text-accent-primary">You’re on the list. We’ll email you at launch.</p>
+          <p className={isDark ? 'text-surface' : 'text-accent-primary'}>You’re on the list. We’ll email you at launch.</p>
         )}
-        {state?.status === 'duplicate' && <p className="text-ink-label">You’re already on the list.</p>}
-        {state?.status === 'invalid' && (
-          <p className="text-error-muted">That doesn’t look like a valid email.</p>
+        {state?.status === 'duplicate' && (
+          <p className={isDark ? 'text-[color-mix(in_srgb,var(--color-surface)_75%,transparent)]' : 'text-ink-label'}>
+            You’re already on the list.
+          </p>
         )}
+        {state?.status === 'invalid' && <p className="text-error-muted">That doesn’t look like a valid email.</p>}
         {state?.status === 'error' && <p className="text-error-muted">{state.message}</p>}
       </div>
     </form>

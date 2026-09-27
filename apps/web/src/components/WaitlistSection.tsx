@@ -9,34 +9,64 @@ import { ScrollReveal } from './ScrollReveal';
 
 gsap.registerPlugin(ScrollTrigger);
 
-export function WaitlistSection() {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const glowRef = useRef<HTMLDivElement>(null);
+const BOX_H = 320;
+const REST_Y = BOX_H;
+const MAX_RISE = 150;
+const VELOCITY_DIVISOR = 12;
+
+function WaveDivider({ sectionRef }: { sectionRef: React.RefObject<HTMLDivElement | null> }) {
+  const pathRef = useRef<SVGPathElement>(null);
+  const rise = useRef({ value: 0 });
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useGSAP(
     () => {
       const mm = gsap.matchMedia();
 
+      const applyRise = () => {
+        const midY = REST_Y - 2 * rise.current.value;
+        pathRef.current?.setAttribute('d', `M0,${REST_Y} Q600,${midY} 1200,${REST_Y} L1200,${BOX_H} L0,${BOX_H} Z`);
+      };
+
       mm.add('(prefers-reduced-motion: no-preference)', () => {
-        gsap.fromTo(
-          glowRef.current,
-          { scale: 0.3, opacity: 0.12 },
-          {
-            scale: 1,
-            opacity: 0.55,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: sectionRef.current,
-              start: 'top bottom',
-              end: 'top center',
-              scrub: true,
-            },
-          }
-        );
+        const st = ScrollTrigger.create({
+          trigger: sectionRef.current,
+          start: 'top bottom+=200',
+          end: 'bottom top',
+          onUpdate: (self) => {
+            const velocity = Math.abs(self.getVelocity());
+            const target = gsap.utils.clamp(0, MAX_RISE, velocity / VELOCITY_DIVISOR);
+
+            gsap.to(rise.current, {
+              value: target,
+              duration: 0.15,
+              ease: 'power2.out',
+              overwrite: true,
+              onUpdate: applyRise,
+            });
+
+            if (idleTimer.current) clearTimeout(idleTimer.current);
+            idleTimer.current = setTimeout(() => {
+              gsap.to(rise.current, {
+                value: 0,
+                duration: 1.2,
+                ease: 'elastic.out(1, 0.4)',
+                overwrite: true,
+                onUpdate: applyRise,
+              });
+            }, 100);
+          },
+        });
+
+        return () => {
+          if (idleTimer.current) clearTimeout(idleTimer.current);
+          st.kill();
+        };
       });
 
       mm.add('(prefers-reduced-motion: reduce)', () => {
-        gsap.set(glowRef.current, { scale: 1, opacity: 0.35 });
+        rise.current.value = 0;
+        applyRise();
       });
 
       return () => mm.revert();
@@ -45,20 +75,32 @@ export function WaitlistSection() {
   );
 
   return (
-    <div ref={sectionRef} className="relative overflow-hidden">
-      <div
-        ref={glowRef}
-        aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-0 h-[26rem] w-[26rem] -translate-x-1/2 -translate-y-1/3 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--color-accent-primary)_35%,transparent)_0%,transparent_70%)] blur-[60px]"
-      />
-      <ScrollReveal className="relative mx-auto max-w-3xl px-6 pb-20 pt-12 text-left sm:pt-16">
-        <div className="glass-card p-8 sm:p-12">
-          <span className="mb-3 block font-mono text-xs text-ink-label opacity-40">04 / 04</span>
-          <h2 className="mb-3 text-balance font-display text-2xl text-ink-headline sm:text-3xl">Get early access</h2>
-          <p className="mb-6 font-body text-base text-ink-body">
-            We’ll email you the moment Raqm is ready to install. Nothing else, no spam.
-          </p>
-          <WaitlistForm source="home_waitlist_section" />
+    <svg
+      aria-hidden="true"
+      viewBox={`0 0 1200 ${BOX_H}`}
+      preserveAspectRatio="none"
+      className="pointer-events-none absolute inset-x-0 z-0 w-full"
+      style={{ top: -BOX_H, height: BOX_H }}
+    >
+      <path ref={pathRef} d={`M0,${REST_Y} Q600,${REST_Y} 1200,${REST_Y} L1200,${BOX_H} L0,${BOX_H} Z`} fill="var(--color-accent-primary)" />
+    </svg>
+  );
+}
+
+export function WaitlistSection() {
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <div ref={sectionRef} className="relative mt-32 bg-accent-primary sm:mt-48">
+      <WaveDivider sectionRef={sectionRef} />
+      <ScrollReveal className="relative z-10 mx-auto max-w-3xl px-6 pb-20 pt-12 text-left sm:pt-16">
+        <span className="mb-3 block font-mono text-xs text-[color-mix(in_srgb,var(--color-surface)_60%,transparent)]">05 / 05</span>
+        <h2 className="mb-3 text-balance font-display text-4xl text-surface sm:text-5xl">Get early access</h2>
+        <p className="mb-8 max-w-md font-body text-base text-[color-mix(in_srgb,var(--color-surface)_82%,transparent)]">
+          We’ll email you the moment Raqm is ready to install. Nothing else, no spam.
+        </p>
+        <div className="rounded-outer border border-[color-mix(in_srgb,var(--color-surface)_16%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_8%,transparent)] p-8 sm:p-12">
+          <WaitlistForm source="home_waitlist_section" tone="dark" />
         </div>
       </ScrollReveal>
     </div>
