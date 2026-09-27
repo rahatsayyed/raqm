@@ -1,3 +1,7 @@
+'use client';
+
+import { useLayoutEffect, useRef } from 'react';
+import gsap from 'gsap';
 import { ScrollReveal } from './ScrollReveal';
 
 interface FeatureRow {
@@ -44,22 +48,36 @@ const rows: FeatureRow[] = [
   },
 ];
 
-function Row({ row, index, lead }: { row: FeatureRow; index: number; lead: boolean }) {
-  const muted = lead ? 'text-[color-mix(in_srgb,var(--color-surface)_55%,transparent)]' : 'text-ink-label';
+const ROW_PADDING = 'px-6 py-9 sm:px-10 sm:py-10';
+
+function distMetric(x: number, y: number, x2: number, y2: number) {
+  const xDiff = x - x2;
+  const yDiff = y - y2;
+  return xDiff * xDiff + yDiff * yDiff;
+}
+
+function findClosestEdge(x: number, y: number, width: number, height: number) {
+  const topEdgeDist = distMetric(x, y, width / 2, 0);
+  const bottomEdgeDist = distMetric(x, y, width / 2, height);
+  return topEdgeDist < bottomEdgeDist ? 'top' : 'bottom';
+}
+
+function RowContent({ row, index, tone }: { row: FeatureRow; index: number; tone: 'light' | 'dark' }) {
+  const dark = tone === 'dark';
   return (
-    <li
-      className={`grid grid-cols-[3.5rem_1fr] gap-x-4 gap-y-5 lg:grid-cols-[7rem_1fr_1.15fr] lg:gap-x-10 ${
-        lead
-          ? 'rounded-outer bg-ink-headline px-6 py-9 text-surface sm:px-10 sm:py-12'
-          : 'border-b border-border-subtle px-6 py-9 sm:px-10 sm:py-10'
-      }`}
-    >
-      <span className={`font-display text-5xl leading-none lg:text-7xl ${lead ? 'text-accent-deep' : 'text-accent-primary'}`}>
+    <div className={`grid grid-cols-[3.5rem_1fr] gap-x-4 gap-y-5 lg:grid-cols-[7rem_1fr_1.15fr] lg:gap-x-10 ${ROW_PADDING}`}>
+      <span className={`font-display text-5xl leading-none lg:text-7xl ${dark ? 'text-accent-deep' : 'text-accent-primary'}`}>
         {String(index + 1).padStart(2, '0')}
       </span>
       <div>
-        <span className={`font-body text-sm font-medium uppercase tracking-wider ${muted}`}>{row.title}</span>
-        <h3 className={`mt-2 max-w-md font-display text-3xl leading-[1.08] sm:text-4xl ${lead ? 'text-surface' : 'text-ink-headline'}`}>
+        <span
+          className={`font-body text-sm font-medium uppercase tracking-wider ${
+            dark ? 'text-[color-mix(in_srgb,var(--color-surface)_55%,transparent)]' : 'text-ink-label'
+          }`}
+        >
+          {row.title}
+        </span>
+        <h3 className={`mt-2 max-w-md font-display text-3xl leading-[1.08] sm:text-4xl ${dark ? 'text-surface' : 'text-ink-headline'}`}>
           {row.statement}
         </h3>
       </div>
@@ -68,7 +86,7 @@ function Row({ row, index, lead }: { row: FeatureRow; index: number; lead: boole
           <li
             key={item}
             className={`border-t py-2.5 font-body text-base first:border-t-0 first:pt-0 ${
-              lead
+              dark
                 ? 'border-[color-mix(in_srgb,var(--color-surface)_14%,transparent)] text-[color-mix(in_srgb,var(--color-surface)_85%,transparent)]'
                 : 'border-border-subtle text-ink-body'
             }`}
@@ -77,6 +95,53 @@ function Row({ row, index, lead }: { row: FeatureRow; index: number; lead: boole
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function Row({ row, index }: { row: FeatureRow; index: number }) {
+  const itemRef = useRef<HTMLLIElement>(null);
+  const fillRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    gsap.set(fillRef.current, { yPercent: 101 });
+  }, []);
+
+  const edgeFromEvent = (ev: React.MouseEvent<HTMLLIElement>) => {
+    const rect = itemRef.current!.getBoundingClientRect();
+    return findClosestEdge(ev.clientX - rect.left, ev.clientY - rect.top, rect.width, rect.height);
+  };
+
+  const handleMouseEnter = (ev: React.MouseEvent<HTMLLIElement>) => {
+    if (!fillRef.current) return;
+    const edge = edgeFromEvent(ev);
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    gsap
+      .timeline({ defaults: { duration: reduced ? 0 : 0.6, ease: 'expo' } })
+      .set(fillRef.current, { yPercent: edge === 'top' ? -101 : 101 })
+      .to(fillRef.current, { yPercent: 0 });
+  };
+
+  const handleMouseLeave = (ev: React.MouseEvent<HTMLLIElement>) => {
+    if (!fillRef.current) return;
+    const edge = edgeFromEvent(ev);
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    gsap
+      .timeline({ defaults: { duration: reduced ? 0 : 0.6, ease: 'expo' } })
+      .to(fillRef.current, { yPercent: edge === 'top' ? -101 : 101 });
+  };
+
+  return (
+    <li
+      ref={itemRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className="relative overflow-hidden border-b border-border-subtle"
+    >
+      <RowContent row={row} index={index} tone="light" />
+      <div ref={fillRef} className="pointer-events-none absolute inset-0 bg-ink-headline">
+        <RowContent row={row} index={index} tone="dark" />
+      </div>
     </li>
   );
 }
@@ -88,7 +153,7 @@ export function FeatureBentoGrid() {
       <h2 className="mb-10 text-balance font-display text-4xl text-ink-headline sm:text-5xl">Everything you need, free</h2>
       <ol className="flex flex-col">
         {rows.map((row, index) => (
-          <Row key={row.title} row={row} index={index} lead={index === 0} />
+          <Row key={row.title} row={row} index={index} />
         ))}
       </ol>
     </ScrollReveal>
