@@ -1,4 +1,4 @@
-const RING_RADIUS = 30;
+const RING_RADIUS = 29;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 const BUDGET_USED_PCT = 71;
 
@@ -6,11 +6,11 @@ export function PhoneMockup() {
   const dashOffset = RING_CIRCUMFERENCE * (1 - BUDGET_USED_PCT / 100);
 
   return (
-    <div className="relative mx-auto w-[280px] rounded-[2.5rem] border border-black/10 bg-ink-headline p-3 shadow-2xl">
+    <div className="relative mx-auto flex aspect-[9/19] w-[280px] flex-col rounded-[2.5rem] border border-black/10 bg-ink-headline p-3 shadow-2xl">
       <div className="absolute left-1/2 top-3 z-10 h-5 w-24 -translate-x-1/2 rounded-full bg-ink-headline">
         <div className="absolute right-3 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#2A2A24]" />
       </div>
-      <div className="relative overflow-hidden rounded-[2rem] bg-surface">
+      <div className="relative flex-1 overflow-hidden rounded-[2rem] bg-surface">
         <div className="flex items-center justify-between px-5 pb-2 pt-8">
           <span className="font-display text-sm text-ink-headline">Raqm</span>
           <div className="h-6 w-6 rounded-full bg-surface-raised" />
