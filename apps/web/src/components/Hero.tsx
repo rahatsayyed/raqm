@@ -6,7 +6,7 @@ import { TxTicker } from './TxTicker';
 export function Hero() {
   return (
     <>
-      <section className="relative overflow-hidden px-4 pb-16 pt-20 sm:px-6 sm:pb-20 sm:pt-28">
+      <section id="hero" className="relative overflow-hidden px-4 pb-16 pt-20 sm:px-6 sm:pb-20 sm:pt-28">
         <HeroParallax />
         <div className="relative mx-auto flex max-w-4xl flex-col items-center text-center">
           <span className="mb-8 inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface/70 px-4 py-2 font-body text-sm text-ink-body">

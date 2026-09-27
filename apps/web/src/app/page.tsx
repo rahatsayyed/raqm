@@ -1,3 +1,4 @@
+import { SiteHeader } from '@/components/SiteHeader';
 import { Hero } from '@/components/Hero';
 import { HowItWorks } from '@/components/HowItWorks';
 import { WhyRaqm } from '@/components/WhyRaqm';
@@ -9,6 +10,7 @@ import { Footer } from '@/components/Footer';
 export default function HomePage() {
   return (
     <>
+      <SiteHeader />
       <main id="main-content">
         <Hero />
         <HowItWorks />

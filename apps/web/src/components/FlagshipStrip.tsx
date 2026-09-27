@@ -15,9 +15,9 @@ const LAST_FEATURE_KEY = 'raqm:lastFeature';
 const END_HOLD = 480;
 
 const CARD_SHAPES = [
-  { w: 'w-[30rem]', h: 'h-[26rem]', tiltZ: -2.5, tiltY: 2, offsetY: 0 },
-  { w: 'w-[24rem]', h: 'h-[34rem]', tiltZ: 2.5, tiltY: -2, offsetY: 64 },
-  { w: 'w-[27rem]', h: 'h-[30rem]', tiltZ: -2, tiltY: 2, offsetY: 128 },
+  { w: 'w-[25.5rem]', h: 'h-[22.1rem]', tiltZ: -2.5, tiltY: 2, offsetY: 0 },
+  { w: 'w-[20.4rem]', h: 'h-[28.9rem]', tiltZ: 2.5, tiltY: -2, offsetY: 64 },
+  { w: 'w-[22.95rem]', h: 'h-[25.5rem]', tiltZ: -2, tiltY: 2, offsetY: 128 },
 ] as const;
 
 function counterLabel(index: number) {
@@ -108,7 +108,7 @@ export function FlagshipStrip() {
         <div className="flex h-full items-center" style={{ perspective: '1800px' }}>
           <div
             ref={trackRef}
-            className="flex items-center gap-10 pl-[max(1rem,calc((100vw-72rem)/2+1rem))] pr-16 motion-reduce:w-max motion-reduce:snap-x motion-reduce:pt-32"
+            className="flex items-center gap-6 pl-[max(1rem,calc((100vw-72rem)/2+1rem))] pr-16 motion-reduce:w-max motion-reduce:snap-x motion-reduce:pt-32"
           >
             {featureDeepDives.map((feature, index) => {
               const variant = FEATURE_CARD_VARIANTS[index % FEATURE_CARD_VARIANTS.length];
@@ -126,8 +126,11 @@ export function FlagshipStrip() {
                 >
                   <ViewTransition name={featureViewTransitionName(feature.slug)} share="morph" default="none">
                     <div
-                      className={`flex h-full flex-col rounded-[20px] border p-7 pb-9 shadow-[0_20px_45px_-20px_rgba(20,20,15,0.35)] transition-transform duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary group-hover:-translate-y-2 group-active:translate-y-0 group-active:scale-[0.99] sm:p-9 ${variant.bandBg}`}
+                      className={`relative flex h-full flex-col rounded-[20px] border p-7 pb-9 shadow-[0_20px_45px_-20px_rgba(20,20,15,0.35)] transition-transform duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary group-hover:-translate-y-2 group-active:translate-y-0 group-active:scale-[0.99] sm:p-9 ${variant.bandBg}`}
                     >
+                      <span className={`absolute right-5 top-5 font-mono text-xs opacity-50 ${variant.title}`}>
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
                       <span className={`w-fit rounded-full px-3 py-1 font-body text-xs font-medium ${isLive ? variant.badgeLive : variant.badgeMuted}`}>
                         {feature.statusLabel}
                       </span>

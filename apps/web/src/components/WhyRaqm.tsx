@@ -6,7 +6,7 @@ const loggedExample = SAMPLE_TRANSACTIONS[0];
 
 export function WhyRaqm() {
   return (
-    <ScrollReveal className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+    <ScrollReveal id="why-raqm" className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
       <span className="mb-3 block font-mono text-xs text-ink-label opacity-60">02 / 05</span>
       <h2 className="mb-10 text-balance font-display text-4xl text-ink-headline sm:text-5xl">Why Raqm</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

@@ -11,7 +11,8 @@ gsap.registerPlugin(ScrollTrigger);
 
 const BOX_H = 320;
 const REST_Y = BOX_H;
-const MAX_RISE = 150;
+const MAX_RISE_DESKTOP = 115;
+const MAX_RISE_MOBILE = 55;
 const VELOCITY_DIVISOR = 12;
 
 function WaveDivider({ sectionRef }: { sectionRef: React.RefObject<HTMLDivElement | null> }) {
@@ -28,46 +29,58 @@ function WaveDivider({ sectionRef }: { sectionRef: React.RefObject<HTMLDivElemen
         pathRef.current?.setAttribute('d', `M0,${REST_Y} Q600,${midY} 1200,${REST_Y} L1200,${BOX_H} L0,${BOX_H} Z`);
       };
 
-      mm.add('(prefers-reduced-motion: no-preference)', () => {
-        const st = ScrollTrigger.create({
-          trigger: sectionRef.current,
-          start: 'top bottom+=200',
-          end: 'bottom top',
-          onUpdate: (self) => {
-            const velocity = Math.abs(self.getVelocity());
-            const target = gsap.utils.clamp(0, MAX_RISE, velocity / VELOCITY_DIVISOR);
+      mm.add(
+        {
+          isMobile: '(max-width: 639px)',
+          isDesktop: '(min-width: 640px)',
+          reduceMotion: '(prefers-reduced-motion: reduce)',
+        },
+        (context) => {
+          const { isMobile, reduceMotion } = context.conditions as { isMobile: boolean; reduceMotion: boolean };
 
-            gsap.to(rise.current, {
-              value: target,
-              duration: 0.15,
-              ease: 'power2.out',
-              overwrite: true,
-              onUpdate: applyRise,
-            });
+          if (reduceMotion) {
+            rise.current.value = 0;
+            applyRise();
+            return;
+          }
 
-            if (idleTimer.current) clearTimeout(idleTimer.current);
-            idleTimer.current = setTimeout(() => {
+          const maxRise = isMobile ? MAX_RISE_MOBILE : MAX_RISE_DESKTOP;
+
+          const st = ScrollTrigger.create({
+            trigger: sectionRef.current,
+            start: 'top bottom+=200',
+            end: 'bottom top',
+            onUpdate: (self) => {
+              const velocity = Math.abs(self.getVelocity());
+              const target = gsap.utils.clamp(0, maxRise, velocity / VELOCITY_DIVISOR);
+
               gsap.to(rise.current, {
-                value: 0,
-                duration: 1.2,
-                ease: 'elastic.out(1, 0.4)',
+                value: target,
+                duration: 0.15,
+                ease: 'power2.out',
                 overwrite: true,
                 onUpdate: applyRise,
               });
-            }, 100);
-          },
-        });
 
-        return () => {
-          if (idleTimer.current) clearTimeout(idleTimer.current);
-          st.kill();
-        };
-      });
+              if (idleTimer.current) clearTimeout(idleTimer.current);
+              idleTimer.current = setTimeout(() => {
+                gsap.to(rise.current, {
+                  value: 0,
+                  duration: 1.2,
+                  ease: 'elastic.out(1, 0.4)',
+                  overwrite: true,
+                  onUpdate: applyRise,
+                });
+              }, 100);
+            },
+          });
 
-      mm.add('(prefers-reduced-motion: reduce)', () => {
-        rise.current.value = 0;
-        applyRise();
-      });
+          return () => {
+            if (idleTimer.current) clearTimeout(idleTimer.current);
+            st.kill();
+          };
+        }
+      );
 
       return () => mm.revert();
     },
@@ -91,7 +104,7 @@ export function WaitlistSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div ref={sectionRef} className="relative mt-32 bg-accent-primary sm:mt-48">
+    <div id="waitlist" ref={sectionRef} className="relative mt-32 bg-accent-primary sm:mt-48">
       <WaveDivider sectionRef={sectionRef} />
       <ScrollReveal className="relative z-10 mx-auto max-w-3xl px-6 pb-20 pt-12 text-left sm:pt-16">
         <span className="mb-3 block font-mono text-xs text-[color-mix(in_srgb,var(--color-surface)_60%,transparent)]">05 / 05</span>
