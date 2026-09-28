@@ -18,7 +18,7 @@ describe('waitlistSignupAction', () => {
 
   it('returns a graceful error instead of throwing when the Supabase client cannot be constructed', async () => {
     vi.stubEnv('SUPABASE_URL', '');
-    vi.stubEnv('SUPABASE_ANON_KEY', '');
+    vi.stubEnv('SUPABASE_PUBLISHABLE_KEY', '');
     const formData = formDataWith({ email: 'person@example.com', source: 'home_hero', company: '' });
     const result = await waitlistSignupAction(null, formData);
     expect(result).toEqual({ status: 'error', message: 'Something went wrong. Please try again.' });
