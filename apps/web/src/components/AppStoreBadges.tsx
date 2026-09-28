@@ -1,3 +1,5 @@
+import { scrollToHash } from './SmoothScrollProvider';
+
 const SCAN_STEPS = [
   { number: 1, text: "Open your phone's camera app" },
   { number: 2, text: 'Point the camera at the QR code' },
@@ -32,7 +34,14 @@ function StoreBadge({
   blurb: string;
 }) {
   return (
-    <a href="#waitlist" className="group relative inline-flex focus-visible:outline-none">
+    <a
+      href="#waitlist"
+      onClick={(event) => {
+        event.preventDefault();
+        scrollToHash('#waitlist');
+      }}
+      className="group relative inline-flex focus-visible:outline-none"
+    >
       <span className="inline-flex items-center gap-3 rounded-md bg-ink-headline px-5 py-3 text-surface transition-transform duration-150 active:scale-[0.98] group-focus-visible:outline group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-accent-primary">
         <Icon className="size-5 shrink-0" />
         <span className="flex flex-col items-start leading-tight">

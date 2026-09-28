@@ -9,6 +9,18 @@ gsap.registerPlugin(ScrollTrigger);
 
 export let lenisInstance: Lenis | null = null;
 
+export function scrollToHash(hash: string) {
+  const target = document.querySelector(hash);
+  if (!target) return;
+
+  history.pushState(null, '', hash);
+  if (lenisInstance) {
+    lenisInstance.scrollTo(target as HTMLElement, { duration: 2.2 });
+  } else {
+    target.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
 export function SmoothScrollProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;

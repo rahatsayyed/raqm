@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useGSAP } from '@gsap/react';
 import Link from 'next/link';
 import gsap from 'gsap';
-import { lenisInstance } from './SmoothScrollProvider';
+import { scrollToHash } from './SmoothScrollProvider';
 
 export interface StaggeredMenuItem {
   label: string;
@@ -337,17 +337,9 @@ export function StaggeredMenu({
   const handleItemClick = useCallback(
     (event: React.MouseEvent<HTMLAnchorElement>, link: string) => {
       closeMenu();
-      if (link.startsWith('#')) {
-        const target = document.querySelector(link);
-        if (target) {
-          event.preventDefault();
-          history.pushState(null, '', link);
-          if (lenisInstance) {
-            lenisInstance.scrollTo(target as HTMLElement, { duration: 2.2 });
-          } else {
-            target.scrollIntoView({ behavior: 'smooth' });
-          }
-        }
+      if (link.startsWith('#') && document.querySelector(link)) {
+        event.preventDefault();
+        scrollToHash(link);
       }
     },
     [closeMenu]
