@@ -5,6 +5,7 @@ import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SAMPLE_CATEGORIES, SAMPLE_DASHBOARD, SAMPLE_TRANSACTIONS, type SampleCategory } from '@/lib/sample-transactions';
+import { lenisInstance } from '@/components/SmoothScrollProvider';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -310,14 +311,39 @@ export function HowItWorksPhone() {
           scrollTrigger: { trigger: pin, start: 'top 85%', once: true },
         });
 
-        const tl = gsap.timeline({
-          scrollTrigger: {
-            trigger: pin,
-            start: 'top top',
-            end: () => `+=${window.innerHeight * STEP_COUNT * (STEP_VH / 100)}`,
-            scrub: 1,
-            pin: true,
-            invalidateOnRefresh: true,
+        const tl = gsap.timeline({ paused: true });
+
+        // Separate ScrollTrigger (no scrub) so forward/backward scroll can be handled asymmetrically below.
+        const st = ScrollTrigger.create({
+          trigger: pin,
+          start: 'top top',
+          end: () => `+=${window.innerHeight * STEP_COUNT * (STEP_VH / 100)}`,
+          pin: true,
+          invalidateOnRefresh: true,
+          onUpdate: (self) => {
+            // Scrolling down catches the mockup up to scroll position; scrolling up skips the frozen
+            // pin distance instantly (self-limiting: progress is already 0 after the jump, so this
+            // only fires once per upward gesture) instead of making the user scroll through it unseen.
+            if (self.direction === 1) {
+              gsap.to(tl, { progress: self.progress, duration: 1, ease: 'none', overwrite: true });
+            } else if (self.progress > 0) {
+              gsap.killTweensOf(tl);
+              tl.progress(0);
+              setActive(0);
+              // Lenis owns the actual scroll position (see SmoothScrollProvider); calling the native
+              // self.scroll() here fights Lenis's own rAF-driven target and flickers, so reposition
+              // through Lenis instead when it's active.
+              if (lenisInstance) {
+                lenisInstance.scrollTo(self.start, { immediate: true, force: true });
+              } else {
+                self.scroll(self.start);
+              }
+            }
+          },
+          onLeaveBack: () => {
+            gsap.killTweensOf(tl);
+            tl.progress(0);
+            setActive(0);
           },
         });
 
@@ -408,7 +434,7 @@ export function HowItWorksPhone() {
         tl.to(phoneRef.current, { rotateY: 3, rotateX: -1.5, duration: tl.duration() }, 0);
 
         return () => {
-          tl.scrollTrigger?.kill();
+          st.kill();
           tl.kill();
         };
       });
