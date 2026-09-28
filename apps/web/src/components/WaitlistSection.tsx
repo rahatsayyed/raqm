@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -15,13 +15,15 @@ const MAX_RISE_DESKTOP = 115;
 const MAX_RISE_MOBILE = 55;
 const VELOCITY_DIVISOR = 12;
 
-function WaveDivider({ sectionRef }: { sectionRef: React.RefObject<HTMLDivElement | null> }) {
+function WaveDivider({ sectionEl }: { sectionEl: HTMLDivElement | null }) {
   const pathRef = useRef<SVGPathElement>(null);
   const rise = useRef({ value: 0 });
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useGSAP(
     () => {
+      if (!sectionEl) return;
+
       const mm = gsap.matchMedia();
 
       const applyRise = () => {
@@ -47,7 +49,7 @@ function WaveDivider({ sectionRef }: { sectionRef: React.RefObject<HTMLDivElemen
           const maxRise = isMobile ? MAX_RISE_MOBILE : MAX_RISE_DESKTOP;
 
           const st = ScrollTrigger.create({
-            trigger: sectionRef.current,
+            trigger: sectionEl,
             start: 'top bottom+=200',
             end: 'bottom top',
             onUpdate: (self) => {
@@ -84,7 +86,7 @@ function WaveDivider({ sectionRef }: { sectionRef: React.RefObject<HTMLDivElemen
 
       return () => mm.revert();
     },
-    { scope: sectionRef }
+    { scope: sectionEl ?? undefined, dependencies: [sectionEl] }
   );
 
   return (
@@ -101,11 +103,11 @@ function WaveDivider({ sectionRef }: { sectionRef: React.RefObject<HTMLDivElemen
 }
 
 export function WaitlistSection() {
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const [sectionEl, setSectionEl] = useState<HTMLDivElement | null>(null);
 
   return (
-    <div id="waitlist" ref={sectionRef} className="relative mt-32 bg-accent-primary sm:mt-48">
-      <WaveDivider sectionRef={sectionRef} />
+    <div id="waitlist" ref={setSectionEl} className="relative mt-32 bg-accent-primary sm:mt-48">
+      <WaveDivider sectionEl={sectionEl} />
       <ScrollReveal className="relative z-10 mx-auto max-w-3xl px-6 pb-20 pt-12 text-left sm:pt-16">
         <span className="mb-3 block font-mono text-xs text-[color-mix(in_srgb,var(--color-surface)_60%,transparent)]">05 / 05</span>
         <h2 className="mb-3 text-balance font-display text-4xl text-surface sm:text-5xl">Get early access</h2>
