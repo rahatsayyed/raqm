@@ -1,6 +1,5 @@
 import { WaitlistForm } from './WaitlistForm';
 import { HeroParallax } from './HeroParallax';
-import { ProductSheet } from './ProductSheet';
 import { TxTicker } from './TxTicker';
 
 export function Hero() {
@@ -37,7 +36,6 @@ export function Hero() {
         </div>
       </section>
       <TxTicker />
-      <ProductSheet />
     </>
   );
 }
