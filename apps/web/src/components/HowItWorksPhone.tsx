@@ -39,12 +39,12 @@ function stripSign(amount: string) {
 }
 
 const STEPS = [
-  { number: '01', caption: 'Payment happens', body: `${tx.source} texts you the moment you spend, nothing new to do.` },
-  { number: '02', caption: 'Raqm reads it', body: 'Parsed on-device, instantly. The message never leaves your phone.' },
-  { number: '03', caption: 'Upgraded, instantly', body: 'Merchant, category and budget impact, recognized before you unlock.' },
-  { number: '04', caption: 'Add a note, a tag', body: 'Type it once and it stays filed with the spend.' },
-  { number: '05', caption: 'Tagged with place', body: 'Raqm remembers where it happened, automatically.' },
-  { number: '06', caption: 'Always in view', body: "Spend, budgets, and what's safe to spend today, one glance." },
+  { number: '01', caption: 'Payment happens' },
+  { number: '02', caption: 'Raqm reads it' },
+  { number: '03', caption: 'Upgraded, instantly' },
+  { number: '04', caption: 'Add a note, a tag' },
+  { number: '05', caption: 'Tagged with place' },
+  { number: '06', caption: 'Always in view' },
 ] as const;
 
 const STEP_COUNT = STEPS.length;
@@ -231,6 +231,7 @@ function MiniKeyboard({
 
 export function HowItWorksPhone() {
   const pinRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLDivElement>(null);
   const phoneRef = useRef<HTMLDivElement>(null);
   const screenARef = useRef<HTMLDivElement>(null);
   const bannerRef = useRef<HTMLDivElement>(null);
@@ -297,6 +298,14 @@ export function HowItWorksPhone() {
           dots.forEach((dot, i) => gsap.to(dot, { width: i <= index ? '100%' : '0%', duration: 0.3, overwrite: true }));
         };
         setActive(0);
+
+        gsap.from(headingRef.current, {
+          opacity: 0,
+          y: 24,
+          duration: 0.6,
+          ease: 'power2.out',
+          scrollTrigger: { trigger: pin, start: 'top 85%', once: true },
+        });
 
         // One-time tilt-in as the phone arrives; clearProps drops the inline transform once
         // done so it can't act as a containing block for the fixed-position pin that follows.
@@ -460,6 +469,14 @@ export function HowItWorksPhone() {
         style={{ perspective: '1600px' }}
       >
         <div className="flex w-full flex-col items-center px-4">
+          <div ref={headingRef} className="mb-8 w-full max-w-6xl sm:mb-10">
+            <span className="mb-3 block font-mono text-xs text-ink-label opacity-60">01 / 05</span>
+            <h2 className="mb-4 text-balance font-display text-4xl text-ink-headline sm:text-5xl">How it works</h2>
+            <p className="max-w-xl font-body text-base text-ink-body sm:text-lg">
+              One SMS, quietly upgraded. Follow a single spend from notification to dashboard.
+            </p>
+          </div>
+
           <div
             ref={phoneRef}
             className="relative aspect-[9/19.5] w-[84vw] max-w-[330px] rounded-[2.6rem] bg-ink-headline p-[3px] shadow-[0_30px_60px_-20px_rgba(20,20,15,0.35)] sm:w-[345px]"
@@ -698,20 +715,17 @@ export function HowItWorksPhone() {
             </div>
           </div>
 
-          <div className="relative mt-8 h-24 w-full max-w-md text-center sm:h-20 motion-reduce:mt-10 motion-reduce:h-auto motion-reduce:max-w-xl">
-            <div className="motion-reduce:relative motion-reduce:mb-10 motion-reduce:last:mb-0" />
+          <div className="relative mt-3 h-9 w-full max-w-md text-center sm:h-8 motion-reduce:mt-4 motion-reduce:h-auto motion-reduce:max-w-xl">
             {STEPS.map((step, i) => (
-              <div
+              <h3
                 key={step.number}
                 ref={(el) => {
                   captionRefs.current[i] = el;
                 }}
-                className="absolute inset-0 motion-reduce:relative motion-reduce:mb-8"
+                className="absolute inset-0 font-display text-2xl text-ink-headline sm:text-3xl motion-reduce:relative motion-reduce:mb-3 motion-reduce:last:mb-0"
               >
-                <span className="font-mono text-xs text-accent-primary">{step.number}</span>
-                <h3 className="mt-1.5 font-display text-2xl text-ink-headline sm:text-3xl">{step.caption}</h3>
-                <p className="mx-auto mt-1.5 max-w-xs font-body text-sm text-ink-body">{step.body}</p>
-              </div>
+                {step.caption}
+              </h3>
             ))}
           </div>
         </div>
