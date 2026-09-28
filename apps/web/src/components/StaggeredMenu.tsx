@@ -10,6 +10,7 @@ export interface StaggeredMenuItem {
   label: string;
   ariaLabel: string;
   link: string;
+  previewImage?: string;
 }
 
 export interface StaggeredMenuSocialItem {
@@ -504,14 +505,17 @@ export function StaggeredMenu({
       >
         <div className="flex-1 flex flex-col gap-5">
           <ul
-            className="sm-panel-list list-none m-0 p-0 flex flex-col gap-2 data-[numbering]:[counter-reset:smItem] group/list"
+            className="sm-panel-list list-none m-0 p-0 flex flex-col data-[numbering]:[counter-reset:smItem] group/list [&:has(.sm-panel-item:hover)_.sm-panel-item:not(:hover)]:opacity-40"
             role="list"
             data-numbering={displayItemNumbering || undefined}
           >
             {items.map((it, idx) => (
-              <li className="relative overflow-hidden leading-none" key={it.label + idx}>
+              <li
+                className="group/item relative overflow-hidden leading-none border-b border-border-subtle py-2 last:border-b-0"
+                key={it.label + idx}
+              >
                 <a
-                  className="sm-panel-item relative text-ink-headline font-display text-[2.75rem] cursor-pointer leading-none transition-colors duration-[250ms] inline-block no-underline pr-[1.4em] hover:text-[var(--sm-accent,var(--color-accent-primary))] group-data-[numbering]/list:after:[counter-increment:smItem] group-data-[numbering]/list:after:content-[counter(smItem,decimal-leading-zero)] group-data-[numbering]/list:after:absolute group-data-[numbering]/list:after:top-[0.15em] group-data-[numbering]/list:after:right-[1.6em] group-data-[numbering]/list:after:font-mono group-data-[numbering]/list:after:not-italic group-data-[numbering]/list:after:text-[14px] group-data-[numbering]/list:after:font-normal group-data-[numbering]/list:after:text-[var(--sm-accent,var(--color-accent-primary))] group-data-[numbering]/list:after:tracking-normal group-data-[numbering]/list:after:pointer-events-none group-data-[numbering]/list:after:select-none group-data-[numbering]/list:after:opacity-[var(--sm-num-opacity,0)]"
+                  className="sm-panel-item relative text-ink-headline font-display text-[2.75rem] cursor-pointer leading-none transition-[color,opacity] duration-[250ms] inline-block no-underline pr-[1.4em] hover:text-[var(--sm-accent,var(--color-accent-primary))] group-data-[numbering]/list:after:[counter-increment:smItem] group-data-[numbering]/list:after:content-[counter(smItem,decimal-leading-zero)] group-data-[numbering]/list:after:absolute group-data-[numbering]/list:after:top-[0.15em] group-data-[numbering]/list:after:right-[1.6em] group-data-[numbering]/list:after:font-mono group-data-[numbering]/list:after:not-italic group-data-[numbering]/list:after:text-[14px] group-data-[numbering]/list:after:font-normal group-data-[numbering]/list:after:text-[var(--sm-accent,var(--color-accent-primary))] group-data-[numbering]/list:after:tracking-normal group-data-[numbering]/list:after:pointer-events-none group-data-[numbering]/list:after:select-none group-data-[numbering]/list:after:opacity-[var(--sm-num-opacity,0)]"
                   href={it.link}
                   aria-label={it.ariaLabel}
                   data-index={idx + 1}
@@ -519,6 +523,20 @@ export function StaggeredMenu({
                 >
                   <span className="sm-panel-itemLabel inline-block will-change-transform [transform-origin:50%_100%]">{it.label}</span>
                 </a>
+                <span
+                  className="pointer-events-none absolute right-6 top-1/2 h-10 w-14 -translate-y-1/2 translate-x-2 scale-95 overflow-hidden rounded-sm opacity-0 transition-[opacity,transform] duration-300 ease-out group-hover/item:translate-x-0 group-hover/item:scale-100 group-hover/item:opacity-100"
+                  aria-hidden="true"
+                >
+                  {it.previewImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={it.previewImage} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span
+                      className="block h-full w-full"
+                      style={{ background: `color-mix(in srgb, var(--sm-accent, var(--color-accent-primary)) ${22 + (idx % 4) * 14}%, transparent)` }}
+                    />
+                  )}
+                </span>
               </li>
             ))}
           </ul>
