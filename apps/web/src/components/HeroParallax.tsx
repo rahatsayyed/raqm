@@ -80,7 +80,7 @@ export function HeroParallax() {
       />
       <div
         ref={swiggyRef}
-        className="absolute left-[4%] top-[51%] hidden -rotate-6 items-center gap-3 rounded-[16px] border border-border-subtle bg-surface px-4 py-3 xl:flex"
+        className="absolute left-[4%] top-[51%] hidden -rotate-6 items-center gap-3 rounded-sm border border-border-subtle bg-surface px-4 py-3 xl:flex"
       >
         <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[color-mix(in_srgb,var(--color-notice)_18%,white)] font-body text-sm font-semibold text-notice">
           S
@@ -93,7 +93,7 @@ export function HeroParallax() {
       </div>
       <div
         ref={uberRef}
-        className="absolute left-[7%] top-[57%] hidden rotate-[5deg] items-center gap-3 rounded-[16px] border border-border-subtle bg-surface px-4 py-3 xl:flex"
+        className="absolute left-[7%] top-[57%] hidden rotate-[5deg] items-center gap-3 rounded-sm border border-border-subtle bg-surface px-4 py-3 xl:flex"
       >
         <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[color-mix(in_srgb,var(--color-ink-label)_14%,white)] font-body text-sm font-semibold text-ink-body">
           U
@@ -106,7 +106,7 @@ export function HeroParallax() {
       </div>
       <div
         ref={salaryRef}
-        className="absolute left-[5%] top-[47%] hidden -rotate-3 items-center gap-3 rounded-[16px] border border-border-subtle bg-surface px-4 py-3 xl:flex"
+        className="absolute left-[5%] top-[47%] hidden -rotate-3 items-center gap-3 rounded-sm border border-border-subtle bg-surface px-4 py-3 xl:flex"
       >
         <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[color-mix(in_srgb,var(--color-accent-primary)_16%,white)] font-body text-sm font-semibold text-accent-primary">
           ₹

@@ -1,8 +1,37 @@
+'use client';
+
+import { useRef } from 'react';
+import { useGSAP } from '@gsap/react';
+import gsap from 'gsap';
 import { AppStoreBadges } from './AppStoreBadges';
 import { HeroParallax } from './HeroParallax';
 import { TxTicker } from './TxTicker';
 
 export function Hero() {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const lineRef = useRef<HTMLSpanElement>(null);
+
+  useGSAP(() => {
+    const title = titleRef.current;
+    const line = lineRef.current;
+    if (!title || !line) return;
+
+    const mm = gsap.matchMedia();
+
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      const restWidth = line.getBoundingClientRect().width;
+      const titleWidth = title.getBoundingClientRect().width;
+
+      gsap.set(line, { width: 2 });
+      gsap
+        .timeline({ delay: 0.2, onComplete: () => gsap.set(line, { clearProps: 'width' }) })
+        .to(line, { width: titleWidth, duration: 0.9, ease: 'power2.out' })
+        .to(line, { width: restWidth, duration: 0.8, ease: 'power2.inOut' }, '+=0.1');
+    });
+
+    return () => mm.revert();
+  });
+
   return (
     <>
       <section id="hero" className="relative overflow-hidden px-4 pb-16 pt-20 sm:px-6 sm:pb-20 sm:pt-28">
@@ -15,12 +44,15 @@ export function Hero() {
             </svg>
              Waitlist is open
           </span>
-          <h1 className="font-display text-[3.4rem] leading-[0.95] tracking-tight text-ink-headline sm:text-8xl lg:text-[8.5rem]">
+          <h1
+            ref={titleRef}
+            className="font-display text-[3.4rem] leading-[0.95] tracking-tight text-ink-headline sm:text-8xl lg:text-[8.5rem]"
+          >
             <span className="block">Every spend.</span>
             <span className="block">Zero typing.</span>
           </h1>
           <div aria-hidden="true" className="mt-9 flex gap-4 sm:mt-11 sm:gap-6">
-            <span className="h-0.5 w-24 bg-black sm:w-36" />
+            <span ref={lineRef} className="h-px w-24 rounded-full bg-black sm:w-36" />
           </div>
           <p className="mt-9 max-w-xl font-body text-lg text-ink-body sm:mt-11 sm:text-xl">
             Type it, say it, snap a statement, or just do nothing - Raqm logs it for you. Nothing ever leaves your
