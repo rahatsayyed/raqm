@@ -70,6 +70,9 @@ export function StaggeredMenu({
   const toggleBtnRef = useRef<HTMLButtonElement>(null);
   const busyRef = useRef(false);
   const itemEntranceTweenRef = useRef<gsap.core.Tween | null>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const headerVisibleRef = useRef(true);
+  const lastScrollYRef = useRef(0);
 
   useGSAP(
     () => {
@@ -351,6 +354,57 @@ export function StaggeredMenu({
 
   useGSAP(
     () => {
+      const header = headerRef.current;
+      if (!header) return;
+
+      if (open) {
+        headerVisibleRef.current = true;
+        gsap.to(header, { yPercent: 0, duration: 0.3, ease: 'power3.out', overwrite: 'auto' });
+      }
+    },
+    { dependencies: [open] }
+  );
+
+  useGSAP(
+    () => {
+      const header = headerRef.current;
+      if (!header) return;
+
+      lastScrollYRef.current = window.scrollY;
+
+      const handleScroll = () => {
+        if (openRef.current) {
+          lastScrollYRef.current = window.scrollY;
+          return;
+        }
+
+        const currentY = window.scrollY;
+        const delta = currentY - lastScrollYRef.current;
+
+        if (currentY <= 8) {
+          if (!headerVisibleRef.current) {
+            headerVisibleRef.current = true;
+            gsap.to(header, { yPercent: 0, duration: 0.4, ease: 'power3.out', overwrite: 'auto' });
+          }
+        } else if (delta > 4 && headerVisibleRef.current) {
+          headerVisibleRef.current = false;
+          gsap.to(header, { yPercent: -130, duration: 0.35, ease: 'power3.inOut', overwrite: 'auto' });
+        } else if (delta < -4 && !headerVisibleRef.current) {
+          headerVisibleRef.current = true;
+          gsap.to(header, { yPercent: 0, duration: 0.4, ease: 'power3.out', overwrite: 'auto' });
+        }
+
+        lastScrollYRef.current = currentY;
+      };
+
+      window.addEventListener('scroll', handleScroll, { passive: true });
+      return () => window.removeEventListener('scroll', handleScroll);
+    },
+    { dependencies: [] }
+  );
+
+  useGSAP(
+    () => {
       if (!closeOnClickAway || !open) return;
 
       const handleClickOutside = (event: MouseEvent) => {
@@ -384,7 +438,7 @@ export function StaggeredMenu({
     >
       <div
         ref={preLayersRef}
-        className="absolute top-0 inset-x-0 lg:inset-x-auto lg:right-0 group-data-[position=left]:lg:right-auto group-data-[position=left]:lg:left-0 bottom-0 w-full lg:w-[clamp(280px,38vw,440px)] pointer-events-none z-5 opacity-0"
+        className="absolute top-0 inset-x-0 lg:inset-x-auto lg:right-0 group-data-[position=left]:lg:right-auto group-data-[position=left]:lg:left-0 bottom-0 w-full lg:w-[clamp(280px,38vw,560px)] pointer-events-none z-5 opacity-0"
         aria-hidden="true"
       >
         {(() => {
@@ -404,7 +458,8 @@ export function StaggeredMenu({
         })()}
       </div>
       <header
-        className="absolute top-0 left-0 w-full flex items-center justify-between py-6 px-8 bg-transparent pointer-events-none z-20"
+        ref={headerRef}
+        className="absolute top-0 left-0 w-full flex items-center justify-between py-6 px-8 bg-transparent pointer-events-none z-20 will-change-transform lg:right-0 lg:mx-auto lg:max-w-214.25"
         aria-label="Main navigation header"
       >
         <Link href="/" className="flex items-center text-ink-headline no-underline select-none pointer-events-auto" aria-label="Raqm home">
@@ -444,7 +499,7 @@ export function StaggeredMenu({
       <aside
         id="staggered-menu-panel"
         ref={panelRef}
-        className="absolute top-0 inset-x-0 lg:inset-x-auto lg:right-0 group-data-[position=left]:lg:right-auto group-data-[position=left]:lg:left-0 w-full lg:w-[clamp(280px,38vw,440px)] h-full bg-surface flex flex-col pt-28 px-10 pb-10 overflow-y-auto z-10 pointer-events-auto opacity-0"
+        className="absolute top-0 inset-x-0 lg:inset-x-auto lg:right-0 group-data-[position=left]:lg:right-auto group-data-[position=left]:lg:left-0 w-full lg:w-[clamp(280px,38vw,560px)] h-full bg-surface flex flex-col pt-28 px-10 pb-10 overflow-y-auto z-10 pointer-events-auto opacity-0"
         aria-hidden={!open}
       >
         <div className="flex-1 flex flex-col gap-5">
