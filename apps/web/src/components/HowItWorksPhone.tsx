@@ -38,12 +38,12 @@ function stripSign(amount: string) {
 }
 
 const STEPS = [
-  { number: '01', caption: 'Payment happens', body: `${tx.source} texts you the moment you spend — nothing new to do.` },
+  { number: '01', caption: 'Payment happens', body: `${tx.source} texts you the moment you spend, nothing new to do.` },
   { number: '02', caption: 'Raqm reads it', body: 'Parsed on-device, instantly. The message never leaves your phone.' },
-  { number: '03', caption: 'Upgraded, instantly', body: 'Merchant, category and budget impact — recognized before you unlock.' },
+  { number: '03', caption: 'Upgraded, instantly', body: 'Merchant, category and budget impact, recognized before you unlock.' },
   { number: '04', caption: 'Add a note, a tag', body: 'Type it once and it stays filed with the spend.' },
   { number: '05', caption: 'Tagged with place', body: 'Raqm remembers where it happened, automatically.' },
-  { number: '06', caption: 'Always in view', body: "Spend, budgets, and what's safe to spend today — one glance." },
+  { number: '06', caption: 'Always in view', body: "Spend, budgets, and what's safe to spend today, one glance." },
 ] as const;
 
 const STEP_COUNT = STEPS.length;
@@ -495,7 +495,7 @@ export function HowItWorksPhone() {
                   </div>
 
                   <p className="pointer-events-none absolute bottom-6 left-0 right-0 px-8 text-center font-body text-[11px] leading-snug text-ink-label/70">
-                    Notifications keep coming through as normal — Raqm just quietly upgrades them.
+                    Notifications keep coming through as normal. Raqm just quietly upgrades them.
                   </p>
                 </div>
 

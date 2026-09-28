@@ -24,7 +24,7 @@ export const featureDeepDives: FeatureDeepDive[] = [
     sections: [
       {
         heading: 'Every bank SMS, parsed on-device',
-        body: '120+ Indian and international banks. Amount, merchant, account, balance — extracted the moment the SMS arrives, nothing sent anywhere.',
+        body: '120+ Indian and international banks. Amount, merchant, account, balance, extracted the moment the SMS arrives, nothing sent anywhere.',
       },
       {
         heading: 'PDF statements for accounts that never text you',
@@ -32,7 +32,7 @@ export const featureDeepDives: FeatureDeepDive[] = [
       },
       {
         heading: 'Cash, logged manually',
-        body: 'Nothing to parse for a cash expense — add it yourself in a few taps and it sits right alongside everything else.',
+        body: 'Nothing to parse for a cash expense. Add it yourself in a few taps and it sits right alongside everything else.',
       },
       {
         heading: 'Rename a merchant once, it sticks',
@@ -44,11 +44,11 @@ export const featureDeepDives: FeatureDeepDive[] = [
       },
       {
         heading: 'Group related purchases into one entry',
-        body: 'Bundle a few small transactions into a folder — one summed entry, with a tap to expand the individual items.',
+        body: 'Bundle a few small transactions into a folder, one summed entry, with a tap to expand the individual items.',
       },
       {
         heading: 'It knows a transfer isn’t an expense',
-        body: 'A debit and credit within 24 hours, same amount, different accounts of yours — recognized as a self-transfer and kept out of your spending totals automatically.',
+        body: 'A debit and credit within 24 hours, same amount, different accounts of yours, recognized as a self-transfer and kept out of your spending totals automatically.',
       },
       {
         heading: 'Refunds, netted against the original spend',
@@ -69,11 +69,11 @@ export const featureDeepDives: FeatureDeepDive[] = [
       },
       {
         heading: 'Circles remember your people',
-        body: 'Save a reusable list of who’s in — flatmates, the trip group, the weekend crew — so you never re-pick the same names every time.',
+        body: 'Save a reusable list of who’s in: flatmates, the trip group, the weekend crew, so you never re-pick the same names every time.',
       },
       {
         heading: 'A link does the asking',
-        body: 'Generate a prefilled UPI payment link and hand it over. Paying you back is one tap in their own UPI app — no manual amount typing, no “how much do I owe again?”',
+        body: 'Generate a prefilled UPI payment link and hand it over. Paying you back is one tap in their own UPI app: no manual amount typing, no “how much do I owe again?”',
       },
       {
         heading: 'It recognizes when you’ve been paid',
@@ -81,7 +81,7 @@ export const featureDeepDives: FeatureDeepDive[] = [
       },
       {
         heading: 'Any two transactions, linked manually',
-        body: 'Gave a friend cash and got it back a week later? Link the two yourself and mark them settled — both drop out of your expense totals, same as a self-transfer.',
+        body: 'Gave a friend cash and got it back a week later? Link the two yourself and mark them settled, both drop out of your expense totals, same as a self-transfer.',
       },
       {
         heading: 'Never auto-settled without your say',
@@ -98,7 +98,7 @@ export const featureDeepDives: FeatureDeepDive[] = [
     sections: [
       {
         heading: 'Safe-to-spend, not just a total',
-        body: 'A daily number that already accounts for what’s left in the period and what’s still budgeted — not just a running total of what you’ve spent.',
+        body: 'A daily number that already accounts for what’s left in the period and what’s still budgeted, not just a running total of what you’ve spent.',
       },
       {
         heading: 'Alerts before it’s too late',
@@ -106,7 +106,7 @@ export const featureDeepDives: FeatureDeepDive[] = [
       },
       {
         heading: 'Your month starts when you get paid',
-        body: 'Set a custom pay-cycle day — the 25th, the 1st, whatever your salary date is. Every budget, alert, and month-over-month comparison follows it.',
+        body: 'Set a custom pay-cycle day: the 25th, the 1st, whatever your salary date is. Every budget, alert, and month-over-month comparison follows it.',
       },
       {
         heading: 'Unused budget can roll over',
@@ -114,7 +114,7 @@ export const featureDeepDives: FeatureDeepDive[] = [
       },
       {
         heading: 'Subscriptions, flagged automatically',
-        body: 'The same merchant and amount recurring monthly gets flagged as a subscription — with a nudge to cancel the ones you forgot about.',
+        body: 'The same merchant and amount recurring monthly gets flagged as a subscription, with a nudge to cancel the ones you forgot about.',
       },
     ],
   },
@@ -123,11 +123,11 @@ export const featureDeepDives: FeatureDeepDive[] = [
     name: 'Life admin',
     status: 'live',
     statusLabel: 'Live now',
-    tagline: 'Notes, locations, lending, and grocery lists — the small stuff that adds up.',
+    tagline: 'Notes, locations, lending, and grocery lists: the small stuff that adds up.',
     sections: [
       {
         heading: 'A note and a place, on any transaction',
-        body: 'Add a free-text note, or let Raqm tag where a payment happened — both live right on the transaction, under “Other Info.”',
+        body: 'Add a free-text note, or let Raqm tag where a payment happened, both live right on the transaction, under “Other Info.”',
       },
       {
         heading: 'Lending reminders that nudge, not nag',
@@ -135,7 +135,7 @@ export const featureDeepDives: FeatureDeepDive[] = [
       },
       {
         heading: 'Grocery lists that track spend, not just items',
-        body: 'Named lists — Weekly Essentials, Monthly Staples — with a running estimated total as you add things.',
+        body: 'Named lists (Weekly Essentials, Monthly Staples) with a running estimated total as you add things.',
       },
       {
         heading: 'It remembers what things cost last time',
@@ -143,7 +143,7 @@ export const featureDeepDives: FeatureDeepDive[] = [
       },
       {
         heading: 'Planned vs. actual, automatically',
-        body: 'When a supermarket transaction comes in, Raqm offers to link it to your most recent list — so you see what you planned to spend next to what you did.',
+        body: 'When a supermarket transaction comes in, Raqm offers to link it to your most recent list, so you see what you planned to spend next to what you did.',
       },
     ],
   },
@@ -156,7 +156,7 @@ export const featureDeepDives: FeatureDeepDive[] = [
     sections: [
       {
         heading: 'Share only what you choose',
-        body: 'Pick exactly which accounts to share — say, only your joint SBI account — and everything else stays private on your device, the way Raqm already works today.',
+        body: 'Pick exactly which accounts to share (say, only your joint SBI account) and everything else stays private on your device, the way Raqm already works today.',
       },
       {
         heading: 'Not a shared inbox for your whole financial life',
@@ -164,7 +164,7 @@ export const featureDeepDives: FeatureDeepDive[] = [
       },
       {
         heading: 'Encrypted before it leaves your phone',
-        body: 'Sync between devices is end-to-end encrypted. The server relays data it cannot read — not a policy promise, a property of how it’s built.',
+        body: 'Sync between devices is end-to-end encrypted. The server relays data it cannot read: not a policy promise, a property of how it’s built.',
       },
       {
         heading: 'Built for two, not a crowd',
@@ -177,7 +177,7 @@ export const featureDeepDives: FeatureDeepDive[] = [
     name: 'AI, on your terms',
     status: 'coming-soon',
     statusLabel: 'Coming soon - Plus',
-    tagline: 'Auto-categorization that gets smarter, spending insights, and a second opinion before you buy — without handing over your financial life.',
+    tagline: 'Auto-categorization that gets smarter, spending insights, and a second opinion before you buy, without handing over your financial life.',
     sections: [
       {
         heading: 'Three fields leave your phone. Nothing else.',
@@ -185,11 +185,11 @@ export const featureDeepDives: FeatureDeepDive[] = [
       },
       {
         heading: 'Categorization that learns your edge cases',
-        body: 'Beyond merchant rules: an AI pass catches the ambiguous ones — a restaurant that’s really a work lunch, a store that sells three different kinds of things — and gets better at your specific spending over time.',
+        body: 'Beyond merchant rules: an AI pass catches the ambiguous ones (a restaurant that’s really a work lunch, a store that sells three different kinds of things) and gets better at your specific spending over time.',
       },
       {
         heading: 'A monthly summary in plain language',
-        body: 'What changed, what’s trending up, where the month went — written out, not just charted.',
+        body: 'What changed, what’s trending up, where the month went, written out, not just charted.',
       },
       {
         heading: '“Should I buy this?”, answered honestly',
@@ -197,7 +197,7 @@ export const featureDeepDives: FeatureDeepDive[] = [
       },
       {
         heading: 'Turned off by default',
-        body: 'It’s opt-in. You decide if and when any of this turns on — nothing is analyzed until you say so, and Raqm’s on-device parsing keeps working exactly the same either way.',
+        body: 'It’s opt-in. You decide if and when any of this turns on, nothing is analyzed until you say so, and Raqm’s on-device parsing keeps working exactly the same either way.',
       },
     ],
   },
