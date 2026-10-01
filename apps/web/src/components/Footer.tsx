@@ -11,7 +11,7 @@ export function Footer() {
             On-device. Nothing you don’t choose to share ever leaves your phone.
           </p>
         </div>
-        <nav className="flex flex-wrap gap-4">
+        <nav className="grid grid-cols-[repeat(3,auto)] justify-start gap-x-8 gap-y-1">
           {featureDeepDives.map((feature) => (
             <Link
               key={feature.slug}

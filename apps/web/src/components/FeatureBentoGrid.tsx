@@ -49,8 +49,10 @@ const rows: FeatureRow[] = [
 ];
 
 const ROW_PADDING = 'px-6 py-9 sm:px-10 sm:py-10';
+// Must match ROW_EXPAND_MS below — JS tracks this CSS transition's duration.
+const ROW_EXPAND_DURATION_CLASS = 'duration-700 ease-in-out';
 
-function RowContent({ row, index, tone }: { row: FeatureRow; index: number; tone: 'light' | 'dark' }) {
+function RowContent({ row, index, tone, isActive }: { row: FeatureRow; index: number; tone: 'light' | 'dark'; isActive: boolean }) {
   const dark = tone === 'dark';
   return (
     <div className={`grid grid-cols-[3.5rem_1fr] gap-x-4 gap-y-5 lg:grid-cols-[7rem_1fr_1.15fr] lg:gap-x-10 ${ROW_PADDING}`}>
@@ -69,23 +71,33 @@ function RowContent({ row, index, tone }: { row: FeatureRow; index: number; tone
           {row.statement}
         </h3>
       </div>
-      <ul className="col-span-2 flex flex-col lg:col-span-1 lg:pt-1">
-        {row.items.map((item) => (
-          <li
-            key={item}
-            className={`border-t py-2.5 font-body text-base first:border-t-0 first:pt-0 ${
-              dark
-                ? 'border-[color-mix(in_srgb,var(--color-surface)_14%,transparent)] text-[color-mix(in_srgb,var(--color-surface)_85%,transparent)]'
-                : 'border-border-subtle text-ink-body'
-            }`}
-          >
-            {item}
-          </li>
-        ))}
-      </ul>
+      <div
+        className={`col-span-2 grid transition-[grid-template-rows] ${ROW_EXPAND_DURATION_CLASS} motion-reduce:transition-none lg:col-span-1 sm:grid-rows-[1fr] ${
+          isActive ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        }`}
+      >
+        <ul className="flex flex-col overflow-hidden lg:pt-1">
+          {row.items.map((item) => (
+            <li
+              key={item}
+              className={`border-t py-2.5 font-body text-base first:border-t-0 first:pt-0 ${
+                dark
+                  ? 'border-[color-mix(in_srgb,var(--color-surface)_14%,transparent)] text-[color-mix(in_srgb,var(--color-surface)_85%,transparent)]'
+                  : 'border-border-subtle text-ink-body'
+              }`}
+            >
+              {item}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
+
+const MOBILE_QUERY = '(max-width: 639px)';
+const HOVER_CAPABLE_QUERY = '(hover: hover) and (pointer: fine)';
+const ROW_EXPAND_MS = 700;
 
 export function FeatureBentoGrid() {
   const listRef = useRef<HTMLOListElement>(null);
@@ -94,20 +106,73 @@ export function FeatureBentoGrid() {
   const centerIndexRef = useRef(0);
   const hoveringRef = useRef(false);
   const revertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const transitionLockedUntilRef = useRef(0);
+  const activeIndexRef = useRef(0);
+  const overlayChaseRef = useRef<{ top: number; height: number } | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+
+  activeIndexRef.current = activeIndex;
 
   const moveOverlayTo = (index: number, animate = true) => {
     const list = listRef.current;
     const target = rowRefs.current[index];
     const overlay = overlayRef.current;
     if (!list || !target || !overlay) return;
-    const listRect = list.getBoundingClientRect();
-    const rect = target.getBoundingClientRect();
-    const top = rect.top - listRect.top;
     setActiveIndex(index);
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    gsap.to(overlay, { top, height: rect.height, duration: animate && !reduced ? 0.6 : 0, ease: 'expo.out', overwrite: 'auto' });
+    const isMobile = window.matchMedia(MOBILE_QUERY).matches;
+
+    if (isMobile) {
+      // Mobile rows resize (expand/collapse) via CSS; the chase loop below eases the overlay toward the live target instead of snapping here.
+      if (!animate) overlayChaseRef.current = null;
+      return;
+    }
+
+    const listRect = list.getBoundingClientRect();
+    const rect = target.getBoundingClientRect();
+    gsap.to(overlay, {
+      top: rect.top - listRect.top,
+      height: rect.height,
+      duration: animate && !reduced ? 0.6 : 0,
+      ease: 'expo.out',
+      overwrite: 'auto',
+    });
   };
+
+  // Mobile only: continuously ease the overlay toward the active row's live (possibly still-expanding/collapsing) rect,
+  // so a row switch glides from wherever the overlay currently sits instead of snapping to the new row's half-transitioned geometry.
+  useEffect(() => {
+    let raf = 0;
+    let lastTime = performance.now();
+    const CHASE_TAU_MS = 120;
+    const tick = (now: number) => {
+      raf = requestAnimationFrame(tick);
+      const dt = now - lastTime;
+      lastTime = now;
+      if (!window.matchMedia(MOBILE_QUERY).matches) return;
+      const list = listRef.current;
+      const target = rowRefs.current[activeIndexRef.current];
+      const overlay = overlayRef.current;
+      if (!list || !target || !overlay) return;
+      const listRect = list.getBoundingClientRect();
+      const rect = target.getBoundingClientRect();
+      const nextTarget = { top: rect.top - listRect.top, height: rect.height };
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const current = overlayChaseRef.current;
+      if (!current || reduced) {
+        overlayChaseRef.current = nextTarget;
+      } else {
+        const factor = 1 - Math.exp(-dt / CHASE_TAU_MS);
+        overlayChaseRef.current = {
+          top: current.top + (nextTarget.top - current.top) * factor,
+          height: current.height + (nextTarget.height - current.height) * factor,
+        };
+      }
+      gsap.set(overlay, overlayChaseRef.current);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   useLayoutEffect(() => {
     moveOverlayTo(0, false);
@@ -121,6 +186,7 @@ export function FeatureBentoGrid() {
       raf = requestAnimationFrame(() => {
         raf = 0;
         if (hoveringRef.current) return;
+        if (performance.now() < transitionLockedUntilRef.current) return;
         const list = listRef.current;
         if (!list) return;
         const listRect = list.getBoundingClientRect();
@@ -139,6 +205,10 @@ export function FeatureBentoGrid() {
         });
         if (closest !== centerIndexRef.current) {
           centerIndexRef.current = closest;
+          // The row transition itself reflows the list for ROW_EXPAND_MS; lock out reclassification so that reflow can't flap `closest` mid-transition.
+          if (window.matchMedia(MOBILE_QUERY).matches) {
+            transitionLockedUntilRef.current = performance.now() + ROW_EXPAND_MS + 80;
+          }
           moveOverlayTo(closest);
         }
       });
@@ -153,12 +223,14 @@ export function FeatureBentoGrid() {
   }, []);
 
   const handleRowEnter = (index: number) => {
+    if (!window.matchMedia(HOVER_CAPABLE_QUERY).matches) return;
     if (revertTimeoutRef.current) clearTimeout(revertTimeoutRef.current);
     hoveringRef.current = true;
     moveOverlayTo(index);
   };
 
   const handleRowLeave = () => {
+    if (!window.matchMedia(HOVER_CAPABLE_QUERY).matches) return;
     hoveringRef.current = false;
     revertTimeoutRef.current = setTimeout(() => {
       if (!hoveringRef.current) moveOverlayTo(centerIndexRef.current);
@@ -169,9 +241,9 @@ export function FeatureBentoGrid() {
     <ScrollReveal id="everything-free" className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
       <span className="mb-3 block font-mono text-xs text-ink-label opacity-60">03 / 05</span>
       <h2 className="mb-10 text-balance font-display text-4xl text-ink-headline sm:text-5xl">Everything you need, free</h2>
-      <ol ref={listRef} className="relative flex flex-col">
+      <ol ref={listRef} className="relative flex flex-col [overflow-anchor:none]">
         <div ref={overlayRef} className="pointer-events-none absolute inset-x-0 top-0 z-10 overflow-hidden bg-ink-headline">
-          <RowContent row={rows[activeIndex]} index={activeIndex} tone="dark" />
+          <RowContent row={rows[activeIndex]} index={activeIndex} tone="dark" isActive />
         </div>
         {rows.map((row, index) => (
           <li
@@ -183,7 +255,7 @@ export function FeatureBentoGrid() {
             onMouseLeave={handleRowLeave}
             className="border-b border-border-subtle"
           >
-            <RowContent row={row} index={index} tone="light" />
+            <RowContent row={row} index={index} tone="light" isActive={index === activeIndex} />
           </li>
         ))}
       </ol>
