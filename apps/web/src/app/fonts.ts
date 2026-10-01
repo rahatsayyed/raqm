@@ -22,9 +22,7 @@ export const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
 });
 
-// Scoped to the FlagshipStripVertical feature-name headings only — a close free match for
-// hauntedbouldercity.com's self-hosted "Display" condensed-grotesk face (bold, upright, all-caps).
-// Not part of DESIGN.md's type system; doesn't replace Newsreader as the site's display font.
+// Scoped to FlagshipStripVertical's feature-name headings — a free match for the reference site's display face.
 export const anton = Anton({
   subsets: ['latin'],
   weight: ['400'],

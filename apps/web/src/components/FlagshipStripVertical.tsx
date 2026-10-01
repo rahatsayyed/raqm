@@ -3,23 +3,19 @@
 import { ViewTransition } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { featureDeepDives, featureViewTransitionName } from '@/lib/features-data';
 import { ScrollReveal } from './ScrollReveal';
-import { anton } from '@/app/fonts';
+import { lenisInstance } from './SmoothScrollProvider';
+
+gsap.registerPlugin(ScrollTrigger);
 
 const LAST_FEATURE_KEY = 'raqm:lastFeature';
 const HOVER_CAPABLE_QUERY = '(hover: hover) and (pointer: fine)';
-// Ghost-outline/solid-fill mechanics (stroke width, -16px/0 offset, the 0.65s plain-ease toggle, the
-// 52%-viewport/40%-row-height focus anchor) copied from hauntedbouldercity.com's "YOU'LL LEARN ABOUT"
-// section, incl. its zigzag column stagger on desktop; colors inverted from their cream-on-dark to
-// ink-on-light for legibility here. That reference uses plain `ease` for this repeatable toggle, not
-// the entrance-reveal's cubic-bezier — the two are different animations there, kept separate here too.
-// not-italic: the reference's reveal type is upright; keeping Raqm's italic font-display here made the
-// text-stroke ghost outline visibly drift from the solid glyph position (the slanted left-bearing doesn't
-// stroke identically to the fill) — upright avoids that mismatch.
+// Ghost-outline/solid-fill reveal and the 52%/40% scroll-focus anchor are copied from hauntedbouldercity.com's "YOU'LL LEARN ABOUT" section.
 const GHOST_STROKE = '[-webkit-text-stroke-color:color-mix(in_srgb,var(--color-ink-headline)_30%,transparent)]';
-// Local gutter between the accent bar (absolute left-0) and the heading content — constant across
-// breakpoints, independent of the grid stagger (which shifts the whole row, not this inner gap).
+// Local gutter between the accent bar (absolute left-0) and the heading — independent of the grid stagger below.
 const GUTTER = 'pl-8';
 
 export function FlagshipStripVertical() {
@@ -83,16 +79,34 @@ export function FlagshipStripVertical() {
     };
   }, []);
 
-  // Restore scroll position to the feature the visitor was last viewing.
+  // Restore scroll position and active color to the feature the visitor was last viewing.
   useEffect(() => {
     const returningSlug = sessionStorage.getItem(LAST_FEATURE_KEY);
     if (!returningSlug) return;
     const index = featureDeepDives.findIndex((feature) => feature.slug === returningSlug);
     sessionStorage.removeItem(LAST_FEATURE_KEY);
     if (index < 0) return;
-    requestAnimationFrame(() => {
-      rowRefs.current[index]?.scrollIntoView({ block: 'center' });
-    });
+    centerIndexRef.current = index;
+    setActiveIndex(index);
+    // setTimeout(0), not rAF, and deliberately no cleanup/clearTimeout: other sections' GSAP pins
+    // haven't inserted their spacer height yet on mount, and StrictMode's dev-mode double-invoke
+    // already clears sessionStorage on its first pass — a cleanup here would cancel the one restore.
+    setTimeout(() => {
+      ScrollTrigger.refresh();
+      const el = rowRefs.current[index];
+      if (!el) return;
+      // Same target scrollIntoView({ block: 'center' }) would compute, handed to Lenis to keep it in sync.
+      const rect = el.getBoundingClientRect();
+      const targetY = window.scrollY + rect.top - (window.innerHeight - rect.height) / 2;
+      if (lenisInstance) {
+        // Lenis persists across navigations with a stale content-height limit from the shorter deep-dive
+        // page; without resize() it clamps targetY down to that limit instead of reaching this row.
+        lenisInstance.resize();
+        lenisInstance.scrollTo(targetY, { immediate: true });
+      } else {
+        el.scrollIntoView({ block: 'center' });
+      }
+    }, 0);
   }, []);
 
   return (
@@ -103,8 +117,7 @@ export function FlagshipStripVertical() {
         {featureDeepDives.map((feature, index) => {
           const isActive = index === activeIndex;
           const isLive = feature.status === 'live';
-          // Zigzag stagger (hauntedbouldercity.com's `.topic:nth-child(2n)` on a 12-col grid): every other
-          // row starts two columns further right, desktop-only — collapses to a plain stack below `lg`.
+          // Zigzag stagger (reference's `.topic:nth-child(2n)`): even rows shift right on desktop only.
           const isStaggered = index % 2 === 1;
           return (
             <li
@@ -119,7 +132,7 @@ export function FlagshipStripVertical() {
               <Link
                 href={`/features/${feature.slug}`}
                 onClick={() => sessionStorage.setItem(LAST_FEATURE_KEY, feature.slug)}
-                className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary"
+                className="block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-primary"
               >
                 <ViewTransition name={featureViewTransitionName(feature.slug)} share="morph" default="none">
                   <div className={`relative py-9 ${GUTTER} pr-4 sm:py-12 sm:pr-6`}>
@@ -130,16 +143,9 @@ export function FlagshipStripVertical() {
                     />
                     <div className="flex items-center gap-3">
                       <span className="font-mono text-xs text-accent-primary sm:text-sm">{String(index + 1).padStart(2, '0')} /</span>
-                      <span
-                        className={`w-fit rounded-full px-3 py-1 font-body text-xs font-medium ${
-                          isLive ? 'bg-accent-deep text-accent-primary' : 'bg-surface-raised text-ink-label'
-                        }`}
-                      >
-                        {feature.statusLabel}
-                      </span>
                     </div>
                     <h3
-                      className={`not-italic uppercase mt-2 font-[family-name:var(--font-anton)] text-4xl leading-[1.04] tracking-normal transition-[color,-webkit-text-stroke-color,transform] duration-[650ms] ease-[ease] -translate-x-4 group-hover:translate-x-0 sm:text-6xl lg:text-8xl [-webkit-text-stroke-width:1px] ${GHOST_STROKE} motion-reduce:transition-none motion-reduce:translate-x-0 ${
+                      className={`not-italic uppercase mt-2 font-[family-name:var(--font-anton)] text-4xl leading-[1.04] tracking-normal transition-[color,-webkit-text-stroke-color] duration-[650ms] ease-[ease] sm:text-6xl lg:text-8xl [-webkit-text-stroke-width:1px] ${GHOST_STROKE} motion-reduce:transition-none ${
                         isActive ? 'text-ink-headline [-webkit-text-stroke-color:transparent]' : 'text-transparent'
                       }`}
                     >
