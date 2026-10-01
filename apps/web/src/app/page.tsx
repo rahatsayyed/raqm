@@ -3,7 +3,7 @@ import { Hero } from '@/components/Hero';
 import { HowItWorks } from '@/components/HowItWorks';
 import { WhyRaqm } from '@/components/WhyRaqm';
 import { FeatureBentoGrid } from '@/components/FeatureBentoGrid';
-import { FlagshipStrip } from '@/components/FlagshipStrip';
+import { FlagshipStripVertical } from '@/components/FlagshipStripVertical';
 import { WaitlistSection } from '@/components/WaitlistSection';
 import { Footer } from '@/components/Footer';
 
@@ -16,7 +16,7 @@ export default function HomePage() {
         <HowItWorks />
         <WhyRaqm />
         <FeatureBentoGrid />
-        <FlagshipStrip />
+        <FlagshipStripVertical />
         <WaitlistSection />
       </main>
       <Footer />
