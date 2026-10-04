@@ -10,6 +10,8 @@ import { ScrollReveal } from './ScrollReveal';
 gsap.registerPlugin(ScrollTrigger);
 
 const BOX_H = 320;
+const BELOW_H = 140;
+const TOTAL_H = BOX_H + BELOW_H;
 const REST_Y = BOX_H;
 const MAX_RISE_DESKTOP = 115;
 const MAX_RISE_MOBILE = 55;
@@ -28,7 +30,7 @@ function WaveDivider({ sectionEl }: { sectionEl: HTMLDivElement | null }) {
 
       const applyRise = () => {
         const midY = REST_Y - 2 * rise.current.value;
-        pathRef.current?.setAttribute('d', `M0,${REST_Y} Q600,${midY} 1200,${REST_Y} L1200,${BOX_H} L0,${BOX_H} Z`);
+        pathRef.current?.setAttribute('d', `M0,${REST_Y} Q600,${midY} 1200,${REST_Y} L1200,${TOTAL_H} L0,${TOTAL_H} Z`);
       };
 
       mm.add(
@@ -53,8 +55,8 @@ function WaveDivider({ sectionEl }: { sectionEl: HTMLDivElement | null }) {
             start: 'top bottom+=200',
             end: 'bottom top',
             onUpdate: (self) => {
-              const velocity = Math.abs(self.getVelocity());
-              const target = gsap.utils.clamp(0, maxRise, velocity / VELOCITY_DIVISOR);
+              const velocity = self.getVelocity();
+              const target = gsap.utils.clamp(-maxRise, maxRise, velocity / VELOCITY_DIVISOR);
 
               gsap.to(rise.current, {
                 value: target,
@@ -92,12 +94,12 @@ function WaveDivider({ sectionEl }: { sectionEl: HTMLDivElement | null }) {
   return (
     <svg
       aria-hidden="true"
-      viewBox={`0 0 1200 ${BOX_H}`}
+      viewBox={`0 0 1200 ${TOTAL_H}`}
       preserveAspectRatio="none"
       className="pointer-events-none absolute inset-x-0 z-0 w-full"
-      style={{ top: -BOX_H, height: BOX_H }}
+      style={{ top: -BOX_H, height: TOTAL_H }}
     >
-      <path ref={pathRef} d={`M0,${REST_Y} Q600,${REST_Y} 1200,${REST_Y} L1200,${BOX_H} L0,${BOX_H} Z`} fill="var(--color-accent-primary)" />
+      <path ref={pathRef} d={`M0,${REST_Y} Q600,${REST_Y} 1200,${REST_Y} L1200,${TOTAL_H} L0,${TOTAL_H} Z`} fill="var(--color-accent-primary)" />
     </svg>
   );
 }
@@ -106,7 +108,9 @@ export function WaitlistSection() {
   const [sectionEl, setSectionEl] = useState<HTMLDivElement | null>(null);
 
   return (
-    <div id="waitlist" ref={setSectionEl} className="relative mt-32 bg-accent-primary sm:mt-48">
+    <div id="waitlist" ref={setSectionEl} className="relative mt-32 sm:mt-48">
+      {/* fills below the wave zone so a downward dip can reveal the page bg above it */}
+      <div className="absolute inset-x-0 bottom-0 z-0 bg-accent-primary" style={{ top: BELOW_H }} />
       <WaveDivider sectionEl={sectionEl} />
       <ScrollReveal className="relative z-10 mx-auto max-w-3xl px-6 pb-20 pt-12 text-left sm:pt-16">
         <span className="mb-3 block font-mono text-xs text-[color-mix(in_srgb,var(--color-surface)_60%,transparent)]">05 / 05</span>
