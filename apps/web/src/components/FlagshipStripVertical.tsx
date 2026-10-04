@@ -17,10 +17,14 @@ const HOVER_CAPABLE_QUERY = '(hover: hover) and (pointer: fine)';
 const GHOST_STROKE = '[-webkit-text-stroke-color:color-mix(in_srgb,var(--color-ink-headline)_30%,transparent)]';
 // Local gutter between the accent bar (absolute left-0) and the heading — independent of the grid stagger below.
 const GUTTER = 'pl-8';
+// Edge blur: a HEADING (not its row) blurs only while its own center sits in the top/bottom 10% of the viewport.
+const EDGE_BAND = 0.1;
+const EDGE_BLUR_PX = 2;
 
 export function FlagshipStripVertical() {
   const listRef = useRef<HTMLOListElement>(null);
   const rowRefs = useRef<Array<HTMLLIElement | null>>([]);
+  const headingRefs = useRef<Array<HTMLHeadingElement | null>>([]);
   const centerIndexRef = useRef(0);
   const hoveringRef = useRef(false);
   const revertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -41,41 +45,100 @@ export function FlagshipStripVertical() {
     }, 60);
   };
 
+  const headingQuickToRef = useRef<Array<((value: number) => void) | null>>([]);
+  const activeIndexAnimRef = useRef<number | null>(null);
+
   useEffect(() => {
-    let raf = 0;
-    const handleScroll = () => {
-      if (raf) return;
-      raf = requestAnimationFrame(() => {
-        raf = 0;
-        if (hoveringRef.current) return;
-        const list = listRef.current;
-        if (!list) return;
-        const listRect = list.getBoundingClientRect();
-        if (listRect.bottom < 0 || listRect.top > window.innerHeight) return;
-        // 52%/40% (not a plain 50/50 center match) is hauntedbouldercity.com's own focus anchor for this list.
-        const focus = window.innerHeight * 0.52;
-        let closest = centerIndexRef.current;
-        let closestDist = Infinity;
-        rowRefs.current.forEach((el, i) => {
-          if (!el) return;
-          const rect = el.getBoundingClientRect();
-          const dist = Math.abs(rect.top + rect.height * 0.4 - focus);
-          if (dist < closestDist) {
-            closestDist = dist;
-            closest = i;
+    // quickTo (not a CSS transition) because activeIndex can flip on every scroll frame — a CSS transition toggled that fast restarts its eased curve from near-zero velocity each time, reading as stutter instead of one continuous glide.
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prevIndex = activeIndexAnimRef.current;
+    activeIndexAnimRef.current = activeIndex;
+    if (prevIndex === null) {
+      headingRefs.current.forEach((heading, i) => {
+        if (!heading) return;
+        headingQuickToRef.current[i] = gsap.quickTo(heading, 'x', { duration: 0.9, ease: 'power2.out' });
+        gsap.set(heading, { x: reduceMotion || i === activeIndex ? 0 : -16 });
+      });
+      return;
+    }
+    if (prevIndex === activeIndex || reduceMotion) return;
+    headingQuickToRef.current[prevIndex]?.(-16);
+    headingQuickToRef.current[activeIndex]?.(0);
+  }, [activeIndex]);
+
+  useEffect(() => {
+    return () => {
+      headingRefs.current.forEach((heading) => heading && gsap.killTweensOf(heading));
+    };
+  }, []);
+
+  useEffect(() => {
+    // Recompute runs through gsap.ticker (same clock SmoothScrollProvider drives Lenis/ScrollTrigger with)
+    // so it's frame-synced with the rest of the page's motion — but only on frames following an actual
+    // scroll, via the dirty flag. Running the body (and its unconditional style.filter writes) on every
+    // single tick forever, including while idle, fought the CSS transition on these same elements.
+    let dirty = true;
+    const lastFilter: Array<string> = [];
+    const run = () => {
+      if (hoveringRef.current) return;
+      const list = listRef.current;
+      if (!list) return;
+      const listRect = list.getBoundingClientRect();
+      if (listRect.bottom < 0 || listRect.top > window.innerHeight) return;
+      // 52%/40% (not a plain 50/50 center match) is hauntedbouldercity.com's own focus anchor for this list.
+      const focus = window.innerHeight * 0.52;
+      let closest = centerIndexRef.current;
+      let closestDist = Infinity;
+      rowRefs.current.forEach((el, i) => {
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const dist = Math.abs(rect.top + rect.height * 0.4 - focus);
+        if (dist < closestDist) {
+          closestDist = dist;
+          closest = i;
+        }
+      });
+      if (closest !== centerIndexRef.current) {
+        centerIndexRef.current = closest;
+        setActiveIndex(closest);
+      }
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      headingRefs.current.forEach((heading, i) => {
+        if (!heading) return;
+        let next = '';
+        if (!reduceMotion) {
+          // Measured off the heading itself, not its (much taller) row — otherwise the fraction tracks a
+          // point 100-200px off from where the text actually sits, and the blur band drifts into the middle.
+          const rect = heading.getBoundingClientRect();
+          const fraction = (rect.top + rect.height / 2) / window.innerHeight;
+          let blur = 0;
+          if (fraction < EDGE_BAND) {
+            blur = EDGE_BLUR_PX * Math.min(1, Math.max(0, 1 - fraction / EDGE_BAND));
+          } else if (fraction > 1 - EDGE_BAND) {
+            blur = EDGE_BLUR_PX * Math.min(1, Math.max(0, (fraction - (1 - EDGE_BAND)) / EDGE_BAND));
           }
-        });
-        if (closest !== centerIndexRef.current) {
-          centerIndexRef.current = closest;
-          setActiveIndex(closest);
+          next = blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : '';
+        }
+        if (lastFilter[i] !== next) {
+          lastFilter[i] = next;
+          heading.style.filter = next;
         }
       });
     };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
+    const markDirty = () => {
+      dirty = true;
+    };
+    const tick = () => {
+      if (!dirty) return;
+      dirty = false;
+      run();
+    };
+    window.addEventListener('scroll', markDirty, { passive: true });
+    gsap.ticker.add(tick);
+    run();
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', markDirty);
+      gsap.ticker.remove(tick);
     };
   }, []);
 
@@ -145,11 +208,19 @@ export function FlagshipStripVertical() {
                       <span className="font-mono text-xs text-accent-primary sm:text-sm">{String(index + 1).padStart(2, '0')} /</span>
                     </div>
                     <h3
-                      className={`not-italic uppercase mt-2 font-[family-name:var(--font-anton)] text-4xl leading-[1.04] tracking-normal transition-[color,-webkit-text-stroke-color] duration-[650ms] ease-[ease] sm:text-6xl lg:text-8xl [-webkit-text-stroke-width:1px] ${GHOST_STROKE} motion-reduce:transition-none ${
-                        isActive ? 'text-ink-headline [-webkit-text-stroke-color:transparent]' : 'text-transparent'
-                      }`}
+                      ref={(el) => {
+                        headingRefs.current[index] = el;
+                      }}
+                      className="not-italic uppercase mt-2 font-[family-name:var(--font-anton)] text-4xl leading-[1.04] tracking-normal sm:text-6xl lg:text-8xl [will-change:transform]"
                     >
-                      {feature.name}
+                      {/* Split from the h3 so this span's paint-heavy stroke-color repaint can't block the h3's transform compositing. */}
+                      <span
+                        className={`[-webkit-text-stroke-width:1px] ${GHOST_STROKE} [transition:color_900ms_cubic-bezier(0.4,0,0.2,1),-webkit-text-stroke-color_900ms_cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none ${
+                          isActive ? 'text-ink-headline [-webkit-text-stroke-color:transparent]' : 'text-transparent'
+                        }`}
+                      >
+                        {feature.name}
+                      </span>
                     </h3>
                     <p className="mt-4 max-w-xl font-body text-base text-ink-body sm:text-lg">{feature.tagline}</p>
                     <span className="mt-5 inline-block font-body text-sm font-medium text-accent-primary">Read more →</span>
