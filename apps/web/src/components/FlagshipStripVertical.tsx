@@ -27,6 +27,8 @@ export function FlagshipStripVertical() {
   const headingRefs = useRef<Array<HTMLHeadingElement | null>>([]);
   const centerIndexRef = useRef(0);
   const hoveringRef = useRef(false);
+  const hoveredIndexRef = useRef<number | null>(null);
+  const mousePosRef = useRef({ x: -1, y: -1 });
   const revertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -34,12 +36,14 @@ export function FlagshipStripVertical() {
     if (!window.matchMedia(HOVER_CAPABLE_QUERY).matches) return;
     if (revertTimeoutRef.current) clearTimeout(revertTimeoutRef.current);
     hoveringRef.current = true;
+    hoveredIndexRef.current = index;
     setActiveIndex(index);
   };
 
   const handleRowLeave = () => {
     if (!window.matchMedia(HOVER_CAPABLE_QUERY).matches) return;
     hoveringRef.current = false;
+    hoveredIndexRef.current = null;
     revertTimeoutRef.current = setTimeout(() => {
       if (!hoveringRef.current) setActiveIndex(centerIndexRef.current);
     }, 60);
@@ -80,7 +84,17 @@ export function FlagshipStripVertical() {
     let dirty = true;
     const lastFilter: Array<string> = [];
     const run = () => {
-      if (hoveringRef.current) return;
+      if (hoveringRef.current) {
+        // mouseleave never fires when scroll (not cursor movement) carries the hovered row away — check the cursor's last known position against the row's current rect instead of trusting the stale flag forever.
+        const hoveredEl = hoveredIndexRef.current !== null ? rowRefs.current[hoveredIndexRef.current] : null;
+        const { x, y } = mousePosRef.current;
+        const r = hoveredEl?.getBoundingClientRect();
+        const stillOver = r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+        if (stillOver) return;
+        hoveringRef.current = false;
+        hoveredIndexRef.current = null;
+        if (revertTimeoutRef.current) clearTimeout(revertTimeoutRef.current);
+      }
       const list = listRef.current;
       if (!list) return;
       const listRect = list.getBoundingClientRect();
@@ -128,16 +142,21 @@ export function FlagshipStripVertical() {
     const markDirty = () => {
       dirty = true;
     };
+    const trackMouse = (e: MouseEvent) => {
+      mousePosRef.current = { x: e.clientX, y: e.clientY };
+    };
     const tick = () => {
       if (!dirty) return;
       dirty = false;
       run();
     };
     window.addEventListener('scroll', markDirty, { passive: true });
+    window.addEventListener('mousemove', trackMouse, { passive: true });
     gsap.ticker.add(tick);
     run();
     return () => {
       window.removeEventListener('scroll', markDirty);
+      window.removeEventListener('mousemove', trackMouse);
       gsap.ticker.remove(tick);
     };
   }, []);
