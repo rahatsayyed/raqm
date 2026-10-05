@@ -36,6 +36,7 @@ import {
   getReminders,
   getDismissedMismatchKeys,
   dismissMismatchKey,
+  getFailedSms,
 } from "../../db/database";
 import { countsTowardTotals } from "../../services/txIntelligence";
 import { detectBalanceMismatches, type BalanceMismatch } from "../../services/balanceIntegrity";
@@ -54,6 +55,7 @@ import {
   SectionHeader,
   TransactionRow,
   BalanceMismatchStack,
+  NeedsAttentionCard,
   ObligationCard,
 } from "../../components/dashboard";
 import { AccountLiquidityCard } from "../../components/AccountLiquidityCard";
@@ -195,6 +197,7 @@ export function DashboardScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [dismissedMismatchKeys, setDismissedMismatchKeys] = useState<Set<string>>(new Set());
+  const [failedSmsCount, setFailedSmsCount] = useState(0);
   const [manualUpdateTarget, setManualUpdateTarget] = useState<BalanceMismatch | null>(null);
   const groceriesCategoryId = useMemo(
     () => categories.find((c) => c.name === "Groceries")?.id ?? null,
@@ -227,6 +230,7 @@ export function DashboardScreen() {
     useCallback(() => {
       loadReminders();
       getDismissedMismatchKeys().then(setDismissedMismatchKeys);
+      getFailedSms().then((rows) => setFailedSmsCount(rows.length));
     }, [loadReminders]),
   );
 
@@ -814,6 +818,14 @@ export function DashboardScreen() {
             ))
           )}
         </View>
+
+        {failedSmsCount > 0 && (
+          <NeedsAttentionCard
+            message={`${failedSmsCount} bank ${failedSmsCount === 1 ? "message" : "messages"} couldn't be read, so ${failedSmsCount === 1 ? "it isn't" : "they aren't"} in your transactions.`}
+            ctaLabel="REVIEW MESSAGES"
+            onPressCta={() => navigation.navigate("NeedsAttention")}
+          />
+        )}
 
         {/* Needs attention — balance mismatch: a gap between the bank-reported balance
           and what our transaction history predicts, usually a missed/unparsed SMS.

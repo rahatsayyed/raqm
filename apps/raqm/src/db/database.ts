@@ -613,6 +613,28 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 20) {
+    await database.runAsync(`BEGIN`);
+    try {
+      await database.runAsync(
+        `CREATE TABLE IF NOT EXISTS failed_sms (
+           id INTEGER PRIMARY KEY AUTOINCREMENT,
+           sender TEXT NOT NULL,
+           body TEXT NOT NULL,
+           timestamp INTEGER NOT NULL,
+           created_at INTEGER NOT NULL,
+           dismissed_at INTEGER,
+           UNIQUE (sender, timestamp, body)
+         )`,
+      );
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (20)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -1089,6 +1111,40 @@ export async function recordUnsupportedNotification(entry: UnsupportedNotificati
     e.packageName === entry.packageName && e.title === entry.title && e.text === entry.text;
   const next = [...existing.filter((e) => !isSame(e)), entry].slice(-UNSUPPORTED_NOTIFICATIONS_MAX);
   await setSetting(UNSUPPORTED_NOTIFICATIONS_KEY, JSON.stringify(next));
+}
+
+export interface FailedSms {
+  id: number;
+  sender: string;
+  body: string;
+  timestamp: number;
+}
+
+/** Returns true only when the message is new — a dismissed or already-recorded row returns false. */
+export async function recordFailedSms(sender: string, body: string, timestamp: number): Promise<boolean> {
+  const database = await getDb();
+  const res = await database.runAsync(
+    `INSERT OR IGNORE INTO failed_sms (sender, body, timestamp, created_at) VALUES (?, ?, ?, ?)`,
+    [sender, body, timestamp, Date.now()],
+  );
+  return res.changes > 0;
+}
+
+export async function getFailedSms(): Promise<FailedSms[]> {
+  const database = await getDb();
+  return database.getAllAsync<FailedSms>(
+    `SELECT id, sender, body, timestamp FROM failed_sms WHERE dismissed_at IS NULL ORDER BY timestamp DESC`,
+  );
+}
+
+export async function dismissFailedSms(id: number): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`UPDATE failed_sms SET dismissed_at = ? WHERE id = ?`, [Date.now(), id]);
+}
+
+export async function dismissAllFailedSms(): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`UPDATE failed_sms SET dismissed_at = ? WHERE dismissed_at IS NULL`, [Date.now()]);
 }
 
 // ── Plan 2: TxRecord CRUD ─────────────────────────────────────────────────────
