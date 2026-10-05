@@ -95,7 +95,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
       const map = new Map<string, number>();
       for (const tx of list) {
         const isCredit = tx.type === TransactionType.INCOME || tx.type === TransactionType.CREDIT;
-        const name = tx.merchant || accountLabel(tx.bankName, tx.accountLast4, accountLabels);
+        const name = tx.merchantDisplay || accountLabel(tx.bankName, tx.accountLast4, accountLabels);
         if (isCredit && (tx.linkType === 'refund' || tx.linkType === 'split_payment')) {
           map.set(name, (map.get(name) ?? 0) - tx.amount);
         } else if (tx.type === TransactionType.EXPENSE) {
@@ -108,7 +108,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
       const map = new Map<string, number>();
       for (const tx of list) {
         if (tx.type !== TransactionType.EXPENSE) continue;
-        const name = tx.merchant || accountLabel(tx.bankName, tx.accountLast4, accountLabels);
+        const name = tx.merchantDisplay || accountLabel(tx.bankName, tx.accountLast4, accountLabels);
         map.set(name, (map.get(name) ?? 0) + 1);
       }
       return map;
@@ -393,7 +393,7 @@ export function AnalyticsScreen({ navigation }: MainTabScreenProps<'Analytics'>)
           recent.map((tx) => (
             <TransactionRow
               key={tx.id}
-              merchant={tx.merchant || accountLabel(tx.bankName, tx.accountLast4, accountLabels)}
+              merchant={tx.merchantDisplay || accountLabel(tx.bankName, tx.accountLast4, accountLabels)}
               categoryName={categoryName(tx.categoryId)}
               dateLabel={shortDate(tx.timestamp)}
               timeLabel={shortTime(tx.timestamp)}

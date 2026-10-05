@@ -7,6 +7,7 @@ import { useAppStore } from '../store/appStore';
 import { useTxStore } from '../store/txStore';
 import { runDetectionJobs, matchSplitPayments } from '../services/txIntelligence';
 import { checkAndSendReminders } from '../services/splitReminders';
+import { checkSubscriptionNudges } from '../services/subscriptionNudges';
 import { navigationRef } from './navigationRef';
 import { syncDiscoveredAccounts, getSetting } from '../db/database';
 import { initNotifications, attachNotificationHandlers, scheduleSummaries } from '../notifications/notifications';
@@ -91,6 +92,7 @@ export function AppNavigator() {
         // delay app launch. matchSplitPayments (above) still runs first so reminders see
         // up-to-date participant statuses.
         timed('startup.splitReminders', checkAndSendReminders);
+        timed('startup.subscriptionNudges', checkSubscriptionNudges);
         useTxStore.getState().refresh();
       } catch (e) {
         logEvent('startup.failed', e instanceof Error ? e.message : String(e));

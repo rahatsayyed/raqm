@@ -309,7 +309,7 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
         {linkedTx ? (
           <View className="flex-row items-center justify-between bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-[12px]">
             <View className="flex-1">
-              <Text className="font-inter text-body-sm text-on-surface" numberOfLines={1}>{linkedTx.merchant ?? linkedTx.bankName}</Text>
+              <Text className="font-inter text-body-sm text-on-surface" numberOfLines={1}>{linkedTx.merchantDisplay ?? linkedTx.bankName}</Text>
               <Text className="font-mono text-body-sm text-on-surface-variant">{formatAmount(linkedTx.amount)}</Text>
             </View>
             <TouchableOpacity className="ml-sm" onPress={() => setSourceTxId(null)}>
@@ -462,12 +462,12 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
                 setSourceTxId(t.id);
                 setAmount(String(t.amount));
                 totalTouchedRef.current = true;
-                if (!title.trim()) setTitle(t.merchant ?? t.bankName ?? '');
+                if (!title.trim()) setTitle(t.merchantDisplay ?? t.bankName ?? '');
                 setLinkSheetVisible(false);
               }}
             >
               <View>
-                <Text className="font-inter text-body-sm text-on-surface">{t.merchant ?? t.bankName}</Text>
+                <Text className="font-inter text-body-sm text-on-surface">{t.merchantDisplay ?? t.bankName}</Text>
                 <Text className="font-inter text-body-sm text-on-surface-variant">{new Date(t.timestamp).toLocaleDateString()}</Text>
               </View>
               <Text className="font-mono text-body-sm text-on-surface">{formatAmount(t.amount)}</Text>

@@ -36,6 +36,7 @@ import {
   addSubcategory,
   deleteSubcategory,
   updateTx as dbUpdateTx,
+  setMerchantAlias,
 } from "../../db/database";
 import type { Category, Subcategory, TxRecord } from "../../db/database";
 import { TransactionType } from "@rahatsayyed/bank-sms-parser";
@@ -604,7 +605,7 @@ export function TransactionDetailScreen({
           activeOpacity={0.7}
         >
           <Text className="font-Inter text-xl text-on-surface mt-xs">
-            {tx.merchant || accountLabel(tx.bankName, tx.accountLast4, accountLabels)}
+            {tx.merchantDisplay || accountLabel(tx.bankName, tx.accountLast4, accountLabels)}
           </Text>
         </TouchableOpacity>
 <TouchableOpacity
@@ -860,7 +861,7 @@ export function TransactionDetailScreen({
             <View className="bg-surface-container-low rounded-md border border-border-subtle mb-lg overflow-hidden">
               <View className="p-md gap-sm">
                 <Text className="font-inter-medium text-insight-reading text-ink-headline">
-                  {partner.merchant || accountLabel(partner.bankName, partner.accountLast4, accountLabels)}
+                  {partner.merchantDisplay || accountLabel(partner.bankName, partner.accountLast4, accountLabels)}
                 </Text>
                 <Text className="font-inter text-supporting-text text-ink-body">
                   Type: {tx.linkType}
@@ -931,7 +932,7 @@ export function TransactionDetailScreen({
           setActionsVisible(false);
           navigation.navigate('SplitCreate', {
             sourceTxId: tx.id,
-            prefillTitle: tx.merchant ?? undefined,
+            prefillTitle: tx.merchantDisplay ?? undefined,
             prefillAmount: tx.amount,
           });
         }}
@@ -981,10 +982,15 @@ export function TransactionDetailScreen({
       <MerchantSheet
         visible={merchantSheetVisible}
         onClose={() => setMerchantSheetVisible(false)}
-        initialValue={tx.merchant ?? ""}
-        onConfirm={(merchant) => {
-          updateTx(tx.id, { merchant: merchant || null });
+        initialValue={tx.merchantDisplay ?? ""}
+        onConfirm={async (name) => {
           setMerchantSheetVisible(false);
+          if (tx.merchant) {
+            await setMerchantAlias(tx.merchant, name);
+            await refreshStore();
+          } else {
+            updateTx(tx.id, { merchant: name || null });
+          }
         }}
       />
 
@@ -1866,7 +1872,7 @@ function LinkPicker({
                   className="font-inter text-body-standard text-on-surface"
                   numberOfLines={1}
                 >
-                  {item.merchant || accountLabel(item.bankName, item.accountLast4, accountLabels)} ·{" "}
+                  {item.merchantDisplay || accountLabel(item.bankName, item.accountLast4, accountLabels)} ·{" "}
                   {formatAmount(item.amount, item.currency)}
                 </Text>
               </TouchableOpacity>
@@ -1950,7 +1956,7 @@ function GroupPicker({
                       className="font-inter text-body-standard text-on-surface"
                       numberOfLines={1}
                     >
-                      {item.merchant || accountLabel(item.bankName, item.accountLast4, accountLabels)} ·{" "}
+                      {item.merchantDisplay || accountLabel(item.bankName, item.accountLast4, accountLabels)} ·{" "}
                       {formatAmount(item.amount, item.currency)}
                     </Text>
                   </TouchableOpacity>

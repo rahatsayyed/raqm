@@ -4,7 +4,7 @@ import type { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { formatAmount } from './format';
 
 function describe(tx: TxRecord): string {
-  return `${formatAmount(tx.amount, tx.currency)}${tx.merchant ? ` · ${tx.merchant}` : ''}`;
+  return `${formatAmount(tx.amount, tx.currency)}${tx.merchantDisplay ? ` · ${tx.merchantDisplay}` : ''}`;
 }
 
 /** Resolves false when the user says the entry already exists; true when safe or confirmed to add. */

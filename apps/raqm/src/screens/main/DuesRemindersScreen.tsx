@@ -92,10 +92,10 @@ export function DuesRemindersScreen({ navigation }: MainStackScreenProps<'DuesRe
   // "Cancelled" only stops future charges from this merchant counting toward budgets —
   // it doesn't touch past transactions or the recurring-detection flag itself, which
   // will naturally stop resurfacing this merchant once ~90 days pass with no new charge.
-  const handleMarkCancelled = (merchant: string) => {
+  const handleMarkCancelled = (merchant: string, label: string = merchant) => {
     Alert.alert(
       'Still using this?',
-      `Mark "${merchant}" as cancelled? Future charges from this merchant will stop counting toward your budgets.`,
+      `Mark "${label}" as cancelled? Future charges from this merchant will stop counting toward your budgets.`,
       [
         { text: 'Still using it', style: 'cancel' },
         {
@@ -103,7 +103,7 @@ export function DuesRemindersScreen({ navigation }: MainStackScreenProps<'DuesRe
           style: 'destructive',
           onPress: async () => {
             await upsertMerchantPrivacyRule(null, merchant, false, true);
-            Alert.alert('Done', `${merchant} won't count toward budgets anymore.`);
+            Alert.alert('Done', `${label} won't count toward budgets anymore.`);
           },
         },
       ],
@@ -152,7 +152,7 @@ export function DuesRemindersScreen({ navigation }: MainStackScreenProps<'DuesRe
             </View>
             <Text className="font-mono-medium text-body-sm text-on-surface">{formatAmount(d.amount, d.currency ?? currency)}</Text>
             {d.source === 'detected' && (
-              <TouchableOpacity hitSlop={8} onPress={() => handleMarkCancelled(d.name)}>
+              <TouchableOpacity hitSlop={8} onPress={() => handleMarkCancelled(d.rawMerchant ?? d.name, d.name)}>
                 <Text className="font-inter-medium text-label-sm text-primary">Cancel?</Text>
               </TouchableOpacity>
             )}

@@ -14,6 +14,7 @@ export interface DueItem {
   amount: number;
   dueTs: number;
   currency?: string | null;
+  rawMerchant?: string;
   source: 'detected' | 'manual' | 'split';
   reminderId?: number;
   splitId?: number;
@@ -43,7 +44,7 @@ export function detectRecurringDues(txs: TxRecord[], futureWindowMs: number): Du
     const dueTs = latest.timestamp + medianGap;
 
     if (dueTs > now - OVERDUE_GRACE_MS && dueTs < now + futureWindowMs) {
-      items.push({ key: `detected|${key}`, name: latest.merchant!, amount: latest.amount, dueTs, currency: latest.currency, source: 'detected' });
+      items.push({ key: `detected|${key}`, name: latest.merchantDisplay ?? latest.merchant!, amount: latest.amount, dueTs, currency: latest.currency, rawMerchant: latest.merchant!, source: 'detected' });
     }
   }
   return items;
