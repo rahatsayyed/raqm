@@ -14,9 +14,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const BUTTON_WINDOW_MS = 30 * DAY_MS; // More → Re-scan
 
 // Serialize scan operations so two scans can't interleave their read→insert windows.
-let scanInFlight: Promise<RescanResult> | null = null;
+let scanInFlight: Promise<unknown> | null = null;
 
-function serialize(op: () => Promise<RescanResult>): Promise<RescanResult> {
+function serialize<T>(op: () => Promise<T>): Promise<T> {
   const run = (scanInFlight ?? Promise.resolve(null)).catch(() => null).then(op);
   scanInFlight = run;
   // .finally() returns a new derived promise that also rejects when `run` does; it's used
@@ -82,6 +82,19 @@ export function rescanTransactions(
     onProgress?.(result.found);
     return result;
   });
+}
+
+/** Detection after a bulk import; fire-and-forget, serialized with scans, never throws. */
+export function runPostImportDetection(): Promise<void> {
+  return serialize(async () => {
+    try {
+      await runDetectionJobs();
+      await matchSplitPayments();
+    } catch (e) {
+      logEvent('import.detection.failed', e instanceof Error ? e.message : String(e));
+    }
+    await useTxStore.getState().refresh();
+  }).catch(() => {});
 }
 
 /** More → Re-scan SMS with a user-picked [from, to] range. */
