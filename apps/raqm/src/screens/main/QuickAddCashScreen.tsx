@@ -99,17 +99,15 @@ export function QuickAddCashScreen({ route, navigation }: MainStackScreenProps<'
         Platform.OS === 'ios'
           ? 'Enable Dictation and download your language in Settings > General > Keyboard, then try again.'
           : 'Download your language for offline speech in Android settings, then try again.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Open settings',
-            onPress: () =>
-              (Platform.OS === 'ios'
-                ? Linking.openSettings()
-                : Linking.sendIntent('android.settings.VOICE_INPUT_SETTINGS')
-              ).catch(() => {}),
-          },
-        ],
+        Platform.OS === 'ios'
+          ? [{ text: 'OK' }]
+          : [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Open settings',
+                onPress: () => Linking.sendIntent('android.settings.VOICE_INPUT_SETTINGS').catch(() => {}),
+              },
+            ],
       );
     else showToast('Voice input failed');
   };
@@ -131,7 +129,12 @@ export function QuickAddCashScreen({ route, navigation }: MainStackScreenProps<'
       }
       if (unmounted.current || voiceAborted.current) return;
       if (!granted) {
-        showToast('Microphone permission needed');
+        if (Platform.OS === 'ios')
+          Alert.alert('Permission needed', 'Allow Speech Recognition and the Microphone for Raqm in Settings to use voice.', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open settings', onPress: () => Linking.openSettings().catch(() => {}) },
+          ]);
+        else showToast('Microphone permission needed');
         return;
       }
       const transcript = await startVoiceCapture();

@@ -89,7 +89,7 @@ export function sendSms(phoneNumber: string, message: string): Promise<void> {
   return native.sendSms(phoneNumber, message);
 }
 
-/** True only on Android 13+ with an on-device recognizer; false elsewhere, never cloud. */
+/** True only when an on-device recognizer is available (Android 13+ / iOS on-device model); never cloud. */
 export function isVoiceAvailable(): boolean {
   return native.isVoiceAvailable?.() ?? false;
 }
