@@ -7,7 +7,6 @@ import {
   Modal,
   Pressable,
   FlatList,
-  Linking,
   Switch,
   Keyboard,
   useWindowDimensions,
@@ -16,6 +15,7 @@ import {
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { KeyboardAwareScrollView } from "../../components/KeyboardAwareScrollView";
+import { LocationMap } from "../../components/LocationMap";
 import { Colors, Spacing } from "../../theme";
 import { MainStackScreenProps } from "../../navigation/types";
 import { useTxStore } from "../../store/txStore";
@@ -800,22 +800,7 @@ export function TransactionDetailScreen({
                 <Text className="font-inter-semibold text-[10px] leading-[14px] tracking-[0.55px] text-[#bdcac099] mb-xs">
                   LOCATION
                 </Text>
-                <View className="flex-row justify-between items-center">
-                  <Text className="font-mono text-[13px] leading-[20px] text-on-surface-variant">
-                    {tx.lat.toFixed(4)}, {tx.lng.toFixed(4)}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() =>
-                      Linking.openURL(
-                        `geo:${tx.lat},${tx.lng}?q=${tx.lat},${tx.lng}`,
-                      )
-                    }
-                  >
-                    <Text className="font-inter text-supporting-text text-primary">
-                      Open in Maps
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                <LocationMap lat={tx.lat} lng={tx.lng} />
               </>
             )}
           </View>
