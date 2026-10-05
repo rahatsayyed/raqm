@@ -7,6 +7,7 @@ import { useTxStore } from '../../store/txStore';
 import { getCategories } from '../../db/database';
 import type { Category } from '../../db/database';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
+import { confirmNotDuplicate } from '../../utils/confirmDuplicate';
 
 /**
  * The single destination for every "quick add" entry point — the launcher shortcut,
@@ -65,12 +66,17 @@ export function QuickAddCashScreen({ route, navigation }: MainStackScreenProps<'
     if (!canSave || saving) return;
     setSaving(true);
     try {
+      const now = Date.now();
+      if (!(await confirmNotDuplicate(parsedAmount, TransactionType.EXPENSE, now))) {
+        close();
+        return;
+      }
       await addTx({
         amount: parsedAmount,
         type: TransactionType.EXPENSE,
         merchant: merchant.trim() || null,
         bankName: 'Cash',
-        timestamp: Date.now(),
+        timestamp: now,
         categoryId,
         subcategoryId: subcategoryId ?? null,
         notes: notes.trim() || null,

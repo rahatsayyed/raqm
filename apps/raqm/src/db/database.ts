@@ -1734,13 +1734,42 @@ export interface GpayPdfImportResult {
   unchanged: number;
 }
 
+export async function findSameDayAmountMatch(
+  amount: number,
+  type: TransactionType,
+  timestamp: number,
+  options?: { includeDeleted?: boolean; excludeIds?: Set<number>; reference?: string | null },
+): Promise<TxRecord | null> {
+  const dayStart = new Date(timestamp);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+
+  const deletedClause = options?.includeDeleted ? '' : 'AND deleted_at IS NULL';
+  const database = await getDb();
+  const rows = await database.getAllAsync<Record<string, unknown>>(
+    `SELECT * FROM transactions
+     WHERE amount = ? AND type = ? ${deletedClause} AND timestamp >= ? AND timestamp < ?
+     ORDER BY id`,
+    amount,
+    type,
+    dayStart.getTime(),
+    dayEnd.getTime(),
+  );
+  const ref = options?.reference;
+  const match = rows
+    .map(rowToTxRecord)
+    .find((r) => !options?.excludeIds?.has(r.id) && !(ref && r.reference && r.reference !== ref));
+  return match ?? null;
+}
+
 /**
  * Applies parsed Google Pay statement rows (see services/imports/gpayPdf.ts). Dedup is
  * reference-first, not fuzzy: the PDF's "UPI Transaction ID" is the same NPCI RRN the bank
  * SMS parser already extracts into ParsedTransaction.reference (see UPI_REF in
  * CompiledPatterns.ts), so an exact reference+amount+type match is a reliable identity check —
- * no amount/day fuzzy-matching (unlike the Axio CSV importer, which has no reference number
- * to key on).
+ * with a one-to-one same-amount/type/day fallback (soft-deleted rows included) when the
+ * reference misses.
  *
  * On a match, the existing row's merchant is overwritten with the PDF's fuller name (the PDF
  * always has the complete payee name; SMS text is often truncated) — category/notes/tags are
@@ -1763,6 +1792,7 @@ export async function applyGpayPdfImport(rows: GpayPdfRow[]): Promise<GpayPdfImp
   let inserted = 0;
   let merchantsUpdated = 0;
   let unchanged = 0;
+  const claimed = new Set<number>();
 
   await database.runAsync('BEGIN');
   try {
@@ -1771,12 +1801,24 @@ export async function applyGpayPdfImport(rows: GpayPdfRow[]): Promise<GpayPdfImp
 
       const match = await findTxByReference(row.reference, row.amount, row.type, row.timestamp);
       if (match) {
+        claimed.add(match.id);
         if (match.merchant !== row.merchant) {
           await database.runAsync(`UPDATE transactions SET merchant = ? WHERE id = ?`, row.merchant, match.id);
           merchantsUpdated++;
         } else {
           unchanged++;
         }
+        continue;
+      }
+
+      const sameDay = await findSameDayAmountMatch(row.amount, row.type, row.timestamp, {
+        includeDeleted: true,
+        excludeIds: claimed,
+        reference: row.reference,
+      });
+      if (sameDay) {
+        claimed.add(sameDay.id);
+        unchanged++;
         continue;
       }
 
@@ -1795,7 +1837,7 @@ export async function applyGpayPdfImport(rows: GpayPdfRow[]): Promise<GpayPdfImp
       const { categoryId, subcategoryId } = await categorizeParsedTx(parsedTx, ruleCache, majorityCache);
       const autoTags = getAutoTags(row.merchant);
 
-      await database.runAsync(
+      const res = await database.runAsync(
         `INSERT INTO transactions
            (amount, type, merchant, bankName, accountLast4, timestamp, balance, currency, isFromCard,
             category_id, subcategory_id, tags, reference, is_manual, source)
@@ -1811,6 +1853,7 @@ export async function applyGpayPdfImport(rows: GpayPdfRow[]): Promise<GpayPdfImp
         autoTags.length > 0 ? JSON.stringify(autoTags) : null,
         row.reference,
       );
+      claimed.add(res.lastInsertRowId);
       inserted++;
     }
     await database.runAsync('COMMIT');
