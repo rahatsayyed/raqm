@@ -128,7 +128,12 @@ export function MainNavigator({ launchDeepLink = null }: { launchDeepLink?: Laun
         }
       />
       <Stack.Screen name="AddTransaction" component={AddTransactionScreen} options={{ animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="QuickAddCash" component={QuickAddCashScreen} options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen
+        name="QuickAddCash"
+        component={QuickAddCashScreen}
+        options={{ animation: 'slide_from_bottom' }}
+        initialParams={launchDeepLink?.startVoice ? { startVoice: true } : undefined}
+      />
       <Stack.Screen name="EditTransaction" component={EditTransactionScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="CategoryPicker" component={CategoryPickerScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="AccountDetail" component={AccountDetailScreen} options={{ animation: 'slide_from_right' }} />

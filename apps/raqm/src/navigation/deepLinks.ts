@@ -60,7 +60,7 @@ export function attachDeepLinkHandler(
         if (typeof link!.openTransaction === 'number') {
           navRef.navigate('TransactionDetail', { transactionId: link!.openTransaction });
         } else if (link!.openQuickAdd) {
-          navRef.navigate('QuickAddCash');
+          navRef.navigate('QuickAddCash', link!.startVoice ? { startVoice: true } : undefined);
         }
       });
     };

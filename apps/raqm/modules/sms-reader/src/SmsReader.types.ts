@@ -13,6 +13,7 @@ export interface InstalledApp {
 export type LaunchDeepLink = {
   openQuickAdd: boolean;
   openTransaction: number | null;
+  startVoice?: boolean;
 };
 
 export type VoiceErrorCode =

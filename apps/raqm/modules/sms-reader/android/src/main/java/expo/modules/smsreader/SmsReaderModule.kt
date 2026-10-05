@@ -158,13 +158,16 @@ class SmsReaderModule : Module() {
       val activity = appContext.currentActivity ?: return@Function null
       val intent = activity.intent ?: return@Function null
       val quickAdd = intent.getBooleanExtra(QuickAdd.EXTRA_OPEN_QUICK_ADD, false)
+      val startVoice = intent.getBooleanExtra(QuickAdd.EXTRA_START_VOICE, false)
       val txId = intent.getIntExtra(QuickAdd.EXTRA_OPEN_TRANSACTION, -1)
       if (!quickAdd && txId == -1) return@Function null
       intent.removeExtra(QuickAdd.EXTRA_OPEN_QUICK_ADD)
+      intent.removeExtra(QuickAdd.EXTRA_START_VOICE)
       intent.removeExtra(QuickAdd.EXTRA_OPEN_TRANSACTION)
       mapOf(
         "openQuickAdd" to quickAdd,
         "openTransaction" to if (txId == -1) null else txId,
+        "startVoice" to startVoice,
       )
     }
 
