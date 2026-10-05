@@ -8,7 +8,7 @@ import { useTxStore } from '../../store/txStore';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../../navigation/types';
-import { rescanTransactionsRange } from '../../services/rescan';
+import { rescanTransactionsRange, runPostImportDetection } from '../../services/rescan';
 import { buildMonthlySummary, exportCsv, exportPdf } from '../../services/export';
 import { shareDiagnosticLogs } from '../../services/diagnosticLogs';
 import { RescanModal } from '../../components/RescanModal';
@@ -220,6 +220,7 @@ export function MoreScreen() {
               try {
                 const { inserted, duplicates } = await insertCsvRows(rows);
                 await useTxStore.getState().refresh();
+                if (inserted > 0) void runPostImportDetection();
                 Alert.alert(
                   'Import complete',
                   `${inserted} transaction${inserted === 1 ? '' : 's'} added` +

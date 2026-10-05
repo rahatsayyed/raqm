@@ -11,6 +11,7 @@ import {
   type Category,
 } from '../../db/database';
 import { useTxStore } from '../../store/txStore';
+import { runPostImportDetection } from '../../services/rescan';
 
 type Step = 'idle' | 'unmapped-categories' | 'preview' | 'importing';
 
@@ -167,6 +168,7 @@ export function AxioImportScreen({ navigation }: MainStackScreenProps<'AxioImpor
           conflictPolicy,
         });
         await useTxStore.getState().refresh();
+        if (inserted > 0) void runPostImportDetection();
         Alert.alert(
           'Import complete',
           `${updated} transaction${updated === 1 ? '' : 's'} updated, ${inserted} new transaction${inserted === 1 ? '' : 's'} added.`,

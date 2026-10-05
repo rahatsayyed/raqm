@@ -4,6 +4,7 @@ import { File } from 'expo-file-system';
 import { parseGpayPdf, type GpayPdfRow } from '../../services/imports/gpayPdf';
 import { applyGpayPdfImport } from '../../db/database';
 import { useTxStore } from '../../store/txStore';
+import { runPostImportDetection } from '../../services/rescan';
 import type { MainStackScreenProps, OnboardingScreenProps } from '../../navigation/types';
 
 type Step = 'idle' | 'preview' | 'importing';
@@ -61,6 +62,7 @@ export function GPayPdfImportScreen({ navigation }: GPayPdfImportScreenProps) {
     try {
       const { inserted, merchantsUpdated } = await applyGpayPdfImport(rows);
       await useTxStore.getState().refresh();
+      if (inserted > 0) void runPostImportDetection();
       Alert.alert(
         'Import complete',
         `${inserted} new transaction${inserted === 1 ? '' : 's'} added, ${merchantsUpdated} merchant name${merchantsUpdated === 1 ? '' : 's'} upgraded.`,
