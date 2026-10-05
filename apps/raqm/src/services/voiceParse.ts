@@ -98,7 +98,7 @@ export function parseVoiceTx(text: string): VoiceTx {
     text
       .toLowerCase()
       .replace(/₹/g, ' rs ')
-      .replace(/(\d),(?=\d{3})/g, '$1')
+      .replace(/(\d),(?=\d)/g, '$1')
       .match(/\d+(?:\.\d+)?|[a-z]+/g) ?? [];
 
   const candidates: Candidate[] = [];

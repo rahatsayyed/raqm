@@ -48,8 +48,7 @@ export type MainStackParamList = {
   More: undefined;
   TransactionDetail: { transactionId: number };
   AddTransaction: { pickedCategoryId?: number; pickedSubcategoryId?: number } | undefined;
-  // Reached only from the launcher shortcut, the Quick Settings tile, and the
-  // home-screen widgets (see src/navigation/deepLinks.ts). Params are undefined on entry except optional startVoice (open already listening).
+  // Reached from shortcut/tile/widgets (deepLinks.ts); only optional startVoice is set on entry.
   QuickAddCash: { pickedCategoryId?: number; pickedSubcategoryId?: number; startVoice?: boolean } | undefined;
   EditTransaction: {
     transactionId: number;

@@ -41,6 +41,7 @@ export function QuickAddCashScreen({ route, navigation }: MainStackScreenProps<'
   const voiceBusy = useRef(false);
   const unmounted = useRef(false);
   const voiceAborted = useRef(false);
+  const permissionPending = useRef(false);
   const [voiceSupported] = useState(() => isVoiceAvailable());
   const [listening, setListening] = useState(false);
   const [partial, setPartial] = useState('');
@@ -107,7 +108,13 @@ export function QuickAddCashScreen({ route, navigation }: MainStackScreenProps<'
     setPartial('');
     const sub = addVoicePartialListener((e) => setPartial(e.text));
     try {
-      const granted = await requestRecordAudioPermission();
+      permissionPending.current = true;
+      let granted: boolean;
+      try {
+        granted = await requestRecordAudioPermission();
+      } finally {
+        permissionPending.current = false;
+      }
       if (unmounted.current || voiceAborted.current) return;
       if (!granted) {
         ToastAndroid.show('Microphone permission needed', ToastAndroid.SHORT);
@@ -143,8 +150,16 @@ export function QuickAddCashScreen({ route, navigation }: MainStackScreenProps<'
   }, []);
 
   useEffect(() => {
+    const unsub = navigation.addListener('blur', () => {
+      if (!permissionPending.current) voiceAborted.current = true;
+      cancelVoiceCapture().catch(() => {});
+    });
+    return unsub;
+  }, [navigation]);
+
+  useEffect(() => {
     const sub = AppState.addEventListener('change', (s) => {
-      if (s === 'active') return;
+      if (s === 'active' || permissionPending.current) return;
       voiceAborted.current = true;
       cancelVoiceCapture().catch(() => {});
     });
