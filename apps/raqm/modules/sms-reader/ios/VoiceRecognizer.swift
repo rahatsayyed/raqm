@@ -2,14 +2,19 @@ import AVFoundation
 import Foundation
 import Speech
 
+private enum VoiceError: Error {
+  case badFormat
+}
+
 final class VoiceRecognizer {
   private static let watchdogSeconds: TimeInterval = 20
+  private static let endAudioFallbackSeconds: TimeInterval = 3
   private static let noSpeechSeconds: TimeInterval = 8
   private static let pauseSeconds: TimeInterval = 1.5
 
   private let onPartial: (String) -> Void
   private let queue = DispatchQueue.main
-  private let engine = AVAudioEngine()
+  private var engine: AVAudioEngine?
   private var recognizer: SFSpeechRecognizer?
   private var request: SFSpeechAudioBufferRecognitionRequest?
   private var task: SFSpeechRecognitionTask?
@@ -78,18 +83,20 @@ final class VoiceRecognizer {
     try session.setCategory(.record, mode: .measurement, options: .duckOthers)
     try session.setActive(true, options: .notifyOthersOnDeactivation)
     #endif
+    let eng = AVAudioEngine()
+    let format = eng.inputNode.outputFormat(forBus: 0)
+    guard format.sampleRate > 0, format.channelCount > 0 else { throw VoiceError.badFormat }
     let req = SFSpeechAudioBufferRecognitionRequest()
     req.shouldReportPartialResults = true
     req.requiresOnDeviceRecognition = true
     request = req
     recognizer = r
-    let input = engine.inputNode
-    input.removeTap(onBus: 0)
-    input.installTap(onBus: 0, bufferSize: 1024, format: input.outputFormat(forBus: 0)) { [weak req] buffer, _ in
+    engine = eng
+    eng.inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak req] buffer, _ in
       req?.append(buffer)
     }
-    engine.prepare()
-    try engine.start()
+    eng.prepare()
+    try eng.start()
     task = r.recognitionTask(with: req) { [weak self] result, error in
       self?.queue.async { self?.handle(id, result, error) }
     }
@@ -105,7 +112,7 @@ final class VoiceRecognizer {
         finish(id, text.isEmpty ? nil : text, text.isEmpty ? "NO_MATCH" : nil)
         return
       }
-      if !text.isEmpty {
+      if !text.isEmpty && text != lastPartial {
         lastPartial = text
         armWatchdog(id)
         armEndpoint(id, after: VoiceRecognizer.pauseSeconds, hadSpeech: true)
@@ -113,24 +120,37 @@ final class VoiceRecognizer {
       }
       return
     }
-    if error != nil {
+    if let error = error {
       if !lastPartial.isEmpty {
         finish(id, lastPartial, nil)
       } else {
-        // 1110 is "No speech detected"
-        finish(id, nil, (error as NSError?)?.code == 1110 ? "NO_MATCH" : "ERROR")
+        finish(id, nil, VoiceRecognizer.mapError(error))
       }
     }
   }
 
-  private func armWatchdog(_ id: Int) {
+  private static func mapError(_ error: Error) -> String {
+    let ns = error as NSError
+    NSLog("VoiceRecognizer error %@ %ld", ns.domain, ns.code)
+    switch (ns.domain, ns.code) {
+    case ("kLSRErrorDomain", 102), ("kLSRErrorDomain", 201):
+      return "OFFLINE_PACK_MISSING"
+    case ("kAFAssistantErrorDomain", 1110):
+      return "NO_MATCH"
+    default:
+      return "ERROR"
+    }
+  }
+
+  private func armWatchdog(_ id: Int, seconds: TimeInterval = VoiceRecognizer.watchdogSeconds) {
     watchdog?.cancel()
     let item = DispatchWorkItem { [weak self] in
       guard let self = self else { return }
-      self.finish(id, nil, "ERROR")
+      let text = self.lastPartial
+      self.finish(id, text.isEmpty ? nil : text, text.isEmpty ? "ERROR" : nil)
     }
     watchdog = item
-    queue.asyncAfter(deadline: .now() + VoiceRecognizer.watchdogSeconds, execute: item)
+    queue.asyncAfter(deadline: .now() + seconds, execute: item)
   }
 
   private func armEndpoint(_ id: Int, after seconds: TimeInterval, hadSpeech: Bool) {
@@ -138,13 +158,22 @@ final class VoiceRecognizer {
     let item = DispatchWorkItem { [weak self] in
       guard let self = self, id == self.sessionId, self.onDone != nil else { return }
       if hadSpeech {
+        self.stopCapture()
         self.request?.endAudio()
+        self.armWatchdog(id, seconds: VoiceRecognizer.endAudioFallbackSeconds)
       } else {
         self.finish(id, nil, "NO_MATCH")
       }
     }
     endpoint = item
     queue.asyncAfter(deadline: .now() + seconds, execute: item)
+  }
+
+  private func stopCapture() {
+    guard let eng = engine else { return }
+    if eng.isRunning { eng.stop() }
+    eng.inputNode.removeTap(onBus: 0)
+    engine = nil
   }
 
   private func finish(_ id: Int, _ transcript: String?, _ code: String?) {
@@ -159,8 +188,7 @@ final class VoiceRecognizer {
   }
 
   private func teardown() {
-    if engine.isRunning { engine.stop() }
-    engine.inputNode.removeTap(onBus: 0)
+    stopCapture()
     request?.endAudio()
     task?.cancel()
     task = nil
