@@ -16,6 +16,13 @@ const SCALES: Record<string, number> = {
   k: 1000, thousand: 1000, lakh: 100000, lac: 100000, crore: 10000000,
 };
 const PREPOSITIONS = new Set(['at', 'on', 'for', 'to', 'from']);
+const CURRENCY = new Set(['rs', 'rupees', 'rupee', 'inr']);
+const AMOUNT_LEAD = new Set(['for', 'worth', 'of']);
+// Protects merchant names that look like numbers from being parsed as amounts.
+const MERCHANT_ALIASES = [
+  { pattern: /\b(?:7|seven)[\s-]*eleven\b/g, token: 'zzseveneleven', label: '7-eleven' },
+  { pattern: /\bone[\s-]*mg\b/g, token: 'zzonemg', label: '1mg' },
+];
 const FILLER = new Set([
   'spent', 'paid', 'pay', 'bought', 'buy', 'at', 'on', 'for', 'to', 'from', 'in', 'of', 'the',
   'a', 'an', 'rupees', 'rupee', 'rs', 'inr', 'only', 'and', 'using', 'with',
@@ -94,9 +101,12 @@ function parseWords(tokens: string[], i: number): Candidate | null {
 const titleCase = (s: string) => s.replace(/\b[a-z]/g, (c) => c.toUpperCase());
 
 export function parseVoiceTx(text: string): VoiceTx {
+  const lowered = MERCHANT_ALIASES.reduce(
+    (s, a) => s.replace(a.pattern, ` ${a.token} `),
+    text.toLowerCase(),
+  );
   const tokens =
-    text
-      .toLowerCase()
+    lowered
       .replace(/₹/g, ' rs ')
       .replace(/(\d),(?=\d)/g, '$1')
       .match(/\d+(?:\.\d+)?|[a-z]+/g) ?? [];
@@ -109,9 +119,29 @@ export function parseVoiceTx(text: string): VoiceTx {
       i = c.end - 1;
     }
   }
-  const picked = candidates.find((c) => c.digits) ?? candidates[candidates.length - 1] ?? null;
+  const rank = (c: Candidate) => {
+    const before = tokens[c.start - 1];
+    const after = tokens[c.end];
+    if ((before && CURRENCY.has(before)) || (after && CURRENCY.has(after))) return 0;
+    if (before && AMOUNT_LEAD.has(before)) return 1;
+    if (after === undefined || PREPOSITIONS.has(after)) return 2;
+    return 3;
+  };
+  let picked: Candidate | null = null;
+  for (const c of candidates) {
+    if (!picked) {
+      picked = c;
+      continue;
+    }
+    const dr = rank(c) - rank(picked);
+    const better =
+      dr !== 0 ? dr < 0 : c.digits === picked.digits ? !c.digits : c.digits && !picked.digits;
+    if (better) picked = c;
+  }
 
-  const rest = tokens.filter((_, idx) => !picked || idx < picked.start || idx >= picked.end);
+  const rest = tokens.filter(
+    (w, idx) => (!picked || idx < picked.start || idx >= picked.end) && !/^\d/.test(w),
+  );
   let lastPrep = -1;
   rest.forEach((w, idx) => {
     if (PREPOSITIONS.has(w)) lastPrep = idx;
@@ -120,9 +150,12 @@ export function parseVoiceTx(text: string): VoiceTx {
   const clean = (ws: string[]) => ws.filter((w) => !FILLER.has(w) && !isNumberWord(w));
   const merchantWords = clean(afterPrep).length ? clean(afterPrep) : clean(rest);
 
+  const restore = (ws: string[]) =>
+    ws.map((w) => MERCHANT_ALIASES.find((a) => a.token === w)?.label ?? w);
+
   return {
     amount: picked ? picked.value : null,
-    merchant: titleCase(merchantWords.join(' ')),
-    categoryText: rest.filter((w) => !FILLER.has(w)).join(' '),
+    merchant: titleCase(restore(merchantWords).join(' ')),
+    categoryText: restore(rest.filter((w) => !FILLER.has(w))).join(' '),
   };
 }
