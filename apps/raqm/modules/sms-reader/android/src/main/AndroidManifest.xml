@@ -72,6 +72,16 @@
         <action android:name="android.service.quicksettings.action.QS_TILE" />
       </intent-filter>
     </service>
+    <service
+      android:name=".VoiceTileService"
+      android:label="Voice cash spend"
+      android:icon="@drawable/ic_tile_mic"
+      android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="android.service.quicksettings.action.QS_TILE" />
+      </intent-filter>
+    </service>
 
     <!-- Widget appearance settings (opacity, wallpaper-color match). Launched by the system
          via each widget XML's android:configure — the launcher (a different package) starts

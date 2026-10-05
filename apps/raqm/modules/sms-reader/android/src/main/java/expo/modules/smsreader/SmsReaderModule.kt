@@ -72,6 +72,17 @@ class SmsReaderModule : Module() {
             .build()
           ShortcutManagerCompat.pushDynamicShortcut(context, shortcut)
         }
+        val voiceIntent = QuickAdd.mainActivityIntent(context, quickAdd = true, startVoice = true)
+          ?.apply { action = Intent.ACTION_VIEW }
+        if (voiceIntent != null) {
+          val voiceShortcut = ShortcutInfoCompat.Builder(context, "quick_add_voice")
+            .setShortLabel("Voice cash spend")
+            .setLongLabel("Voice cash spend")
+            .setIcon(IconCompat.createWithResource(context, R.drawable.ic_add_voice))
+            .setIntent(voiceIntent)
+            .build()
+          ShortcutManagerCompat.pushDynamicShortcut(context, voiceShortcut)
+        }
       } catch (e: Exception) {
         DiagnosticLog.write(context, "error.caught", "pushDynamicShortcut: ${e.message}")
       }
