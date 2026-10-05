@@ -11,6 +11,8 @@ import {
   Keyboard,
   useWindowDimensions,
   Animated,
+  Alert,
+  ToastAndroid,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,6 +25,8 @@ import {
   getCategories,
   getSubcategories,
   getTxById,
+  getSplitUsageForTx,
+  detachTxFromSplits,
   splitTx,
   linkTxs,
   unlinkTxs,
@@ -148,6 +152,7 @@ export function TransactionDetailScreen({
   const [amountSheetVisible, setAmountSheetVisible] = useState(false);
   const [merchantSheetVisible, setMerchantSheetVisible] = useState(false);
   const [splitVisible, setSplitVisible] = useState(false);
+  const [splitUsedAsSource, setSplitUsedAsSource] = useState(false);
   const [linkVisible, setLinkVisible] = useState(false);
   const [groupVisible, setGroupVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -175,6 +180,14 @@ export function TransactionDetailScreen({
   updateTxRef.current = updateTx;
 
   const tx = snapshot ?? storeTx ?? fallbackTx;
+
+  const txIdForSplit = tx?.id;
+  useEffect(() => {
+    if (txIdForSplit == null) return;
+    getSplitUsageForTx(txIdForSplit)
+      .then((u) => setSplitUsedAsSource(u.some((x) => x.role === 'source')))
+      .catch(() => {});
+  }, [txIdForSplit]);
 
   useEffect(() => {
     if (!tx) return;
@@ -452,15 +465,47 @@ export function TransactionDetailScreen({
     updateTx(tx.id, { tags: next });
   };
 
-  const handleDelete = () => {
-    setActionsVisible(false);
+  const deleteGuardRef = useRef(false);
+
+  const performDelete = async () => {
+    try {
+      await detachTxFromSplits(tx.id);
+    } catch {
+      ToastAndroid.show("Couldn't update the linked split, transaction not deleted", ToastAndroid.LONG);
+      deleteGuardRef.current = false;
+      return;
+    }
     setSnapshot(tx);
     setDeleting(true);
     removeTx(tx.id);
+    deleteGuardRef.current = false;
     deleteTimerRef.current = setTimeout(() => {
       deleteTimerRef.current = null;
       navigation.goBack();
     }, 5000);
+  };
+
+  const handleDelete = async () => {
+    setActionsVisible(false);
+    if (deleteGuardRef.current) return;
+    deleteGuardRef.current = true;
+    const usage = await getSplitUsageForTx(tx.id).catch(() => []);
+    const settled = usage.find((u) => u.settled);
+    if (!settled) {
+      performDelete();
+      return;
+    }
+    Alert.alert(
+      'Delete linked transaction?',
+      settled.role === 'source'
+        ? `This is the expense for the settled split "${settled.splitTitle}". Deleting it detaches the split from it.`
+        : `This payment settled a participant in "${settled.splitTitle}". Deleting it unmarks that settlement.`,
+      [
+        { text: 'Cancel', style: 'cancel', onPress: () => { deleteGuardRef.current = false; } },
+        { text: 'Delete', style: 'destructive', onPress: performDelete },
+      ],
+      { onDismiss: () => { deleteGuardRef.current = false; } },
+    );
   };
 
   const toggleRecurring = () => {
@@ -868,7 +913,7 @@ export function TransactionDetailScreen({
         canSplit={!tx.isSplitChild}
         canLink={!tx.linkType}
         canGroup={tx.groupId == null}
-        canSplitWithFriends={!tx.isSplitChild}
+        canSplitWithFriends={!tx.isSplitChild && !splitUsedAsSource}
         recurring={tx.recurring}
         onSplit={() => {
           setActionsVisible(false);

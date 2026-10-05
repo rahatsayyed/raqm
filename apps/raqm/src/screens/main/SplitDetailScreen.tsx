@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ToastAndroid, Share } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ToastAndroid, Share, Alert } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 import { useFocusEffect } from '@react-navigation/native';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { MainStackScreenProps } from '../../navigation/types';
@@ -11,9 +12,8 @@ import {
   unsettleSplitParticipant,
   deleteSplit,
   getSetting,
-  linkTxs,
-  unlinkTxs,
-  getTxById,
+  linkSplitPayment,
+  SPLIT_CASH_TAG,
   updateSplitReminderSettings,
 } from '../../db/database';
 import type { Split, SplitParticipant } from '../../db/database';
@@ -31,23 +31,8 @@ const CADENCE_OPTIONS: { label: string; days: number | null }[] = [
   { label: 'Weekly', days: 7 },
 ];
 
-/**
- * `linkTxs` supports only ONE partner per transaction (single link_type/link_partner_id
- * columns) — so on a split with 2+ non-self participants, settling a second participant's
- * payment would silently clobber the first participant's already-established link. This is
- * the documented safety valve (not a fix for the underlying single-partner limitation): skip
- * linking, but let the caller still record the participant's own status.
- */
 async function linkSplitPaymentIfSafe(sourceTxId: number, targetTxId: number): Promise<void> {
-  const source = await getTxById(sourceTxId);
-  if (source?.linkPartnerId != null && source.linkPartnerId !== targetTxId) {
-    ToastAndroid.show(
-      "Marked as paid. Only one payment per split can be netted against the original expense right now.",
-      ToastAndroid.LONG,
-    );
-    return;
-  }
-  await linkTxs(sourceTxId, targetTxId, 'split_payment');
+  await linkSplitPayment(targetTxId, sourceTxId);
 }
 
 function statusLabel(status: SplitParticipant['status']): string {
@@ -73,6 +58,7 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
   const allTxs = useTxStore((s) => s.txs);
   const addTx = useTxStore((s) => s.add);
   const [reminderSaving, setReminderSaving] = useState(false);
+  const [qrTarget, setQrTarget] = useState<{ name: string; remaining: number } | null>(null);
 
   const incomingCandidates = useMemo(() => {
     // Capped to what's actually still owed — linking a bigger unrelated credit would net
@@ -102,19 +88,20 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
   const toggleSettled = async (p: SplitParticipant) => {
     if (rowActionInFlight) return;
     if (p.status === 'settled') {
-      setRowActionInFlight(true);
-      try {
-        // Unmarking reverses the netting: if this participant's payment was linked
-        // to the original expense, unlink it too — otherwise the expense keeps
-        // being silently netted against a credit the user just said "isn't settled".
-        const matchedTxId = await unsettleSplitParticipant(p.id);
-        if (matchedTxId != null) {
-          await unlinkTxs(matchedTxId);
+      const unsettle = async () => {
+        setRowActionInFlight(true);
+        try {
+          await unsettleSplitParticipant(p.id);
+          load();
+        } finally {
+          setRowActionInFlight(false);
         }
-        load();
-      } finally {
-        setRowActionInFlight(false);
-      }
+      };
+      Alert.alert(
+        'Unmark as settled?',
+        `This reverts ${p.name}'s payment and removes any cash transaction created for it.`,
+        [{ text: 'Cancel', style: 'cancel' }, { text: 'Unmark', style: 'destructive', onPress: unsettle }],
+      );
       return;
     }
     if (split!.sourceTxId == null || p.isSelf) {
@@ -163,7 +150,21 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
     }
   };
 
-  const removeSplit = async () => {
+  const removeSplit = () => {
+    if (deleteInFlight) return;
+    const hasPayments = split?.status === 'settled' || participants.some((p) => p.paidAmount > 0);
+    if (!hasPayments) {
+      doRemoveSplit();
+      return;
+    }
+    Alert.alert(
+      'Delete this split?',
+      'Recorded payments will be unlinked and any cash transactions created for them removed.',
+      [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: doRemoveSplit }],
+    );
+  };
+
+  const doRemoveSplit = async () => {
     if (deleteInFlight) return;
     setDeleteInFlight(true);
     try {
@@ -252,6 +253,10 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
                   className="flex-1 py-[8px] items-center bg-surface rounded-lg border border-outline-variant"
                   onPress={() => {
                     const remaining = item.shareAmount - item.paidAmount;
+                    if (liveUpiId) {
+                      setQrTarget({ name: item.name, remaining });
+                      return;
+                    }
                     const upiLine = liveUpiId
                       ? ` Pay here: ${buildUpiLink({ upiId: liveUpiId, payeeName: split.title, amount: remaining, note: split.title })}`
                       : '';
@@ -389,8 +394,8 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
                   timestamp: Date.now(),
                   categoryId: null,
                   subcategoryId: null,
-                  notes: null,
-                  tags: [],
+                  notes: `Split settlement: ${settleSheetParticipant.name} paid cash for ${split!.title}`,
+                  tags: [SPLIT_CASH_TAG],
                   isManual: true,
                 });
                 await confirmSplitParticipantPayment(settleSheetParticipant.id, cashTxId, remaining);
@@ -410,6 +415,34 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
             <Text className="font-inter-medium text-body-md text-on-surface">Received as cash</Text>
           </TouchableOpacity>
         </View>
+      </BottomSheet>
+
+      <BottomSheet visible={qrTarget != null && liveUpiId != null} onClose={() => setQrTarget(null)}>
+        {qrTarget && liveUpiId && (
+          <View className="px-container-margin pb-lg items-center">
+            <Text className="font-inter-bold text-title-md text-on-surface mb-xs">
+              {qrTarget.name} owes {formatAmount(qrTarget.remaining)}
+            </Text>
+            <Text className="font-inter text-body-sm text-on-surface-variant mb-md">Scan with any UPI app to pay {liveUpiId}</Text>
+            <View className="bg-white p-md rounded-xl">
+              <QRCode
+                value={buildUpiLink({ upiId: liveUpiId, payeeName: split.title, amount: qrTarget.remaining, note: split.title })}
+                size={200}
+              />
+            </View>
+            <TouchableOpacity
+              className="mt-md self-stretch py-md items-center bg-primary rounded-xl"
+              onPress={() => {
+                const link = buildUpiLink({ upiId: liveUpiId, payeeName: split.title, amount: qrTarget.remaining, note: split.title });
+                const descLine = split.description ? ` (${split.description})` : '';
+                const message = `Hi ${qrTarget.name}, for ${split.title}${descLine} you owe ${formatAmount(qrTarget.remaining)}. Pay here: ${link}`;
+                Share.share({ message }).catch(() => {});
+              }}
+            >
+              <Text className="font-inter-medium text-body-md text-on-primary">Share message</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </BottomSheet>
     </View>
   );

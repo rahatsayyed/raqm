@@ -5,7 +5,7 @@ import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollVie
 import { MainStackScreenProps } from '../../navigation/types';
 import { pickContact } from '../../utils/contacts';
 import { computeEqualSharesInclusive, computePercentageShares, computeShareWeightAmounts, redistributeUnpinned } from '../../utils/splitShares';
-import { getSplitCircles, getSplitCircleMembers } from '../../db/database';
+import { getSplitCircles, getSplitCircleMembers, getSplitSourceTxIds, getSetting, setSetting } from '../../db/database';
 import type { SplitCircle, SplitCircleMember } from '../../db/database';
 import { formatAmount } from '../../utils/format';
 import { useTxStore } from '../../store/txStore';
@@ -43,14 +43,19 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
   // otherwise the user can pick one below (or leave it unlinked).
   const [sourceTxId, setSourceTxId] = useState<number | null>(route.params?.sourceTxId ?? null);
   const [linkSheetVisible, setLinkSheetVisible] = useState(false);
+  const [usedSourceTxIds, setUsedSourceTxIds] = useState<Set<number>>(new Set());
+  const totalTouchedRef = useRef(!!route.params?.prefillAmount);
+  const [upiMissing, setUpiMissing] = useState(false);
+  const [upiDraft, setUpiDraft] = useState('');
+  const [upiSaving, setUpiSaving] = useState(false);
   const linkedTx = useMemo(() => allTxs.find((t) => t.id === sourceTxId) ?? null, [allTxs, sourceTxId]);
   const expenseCandidates = useMemo(
     () =>
       allTxs
-        .filter((t) => isDebitType(t.type))
+        .filter((t) => isDebitType(t.type) && !usedSourceTxIds.has(t.id))
         .sort((a, b) => b.timestamp - a.timestamp)
         .slice(0, 20),
-    [allTxs],
+    [allTxs, usedSourceTxIds],
   );
   const [participants, setParticipants] = useState<Participant[]>([
     { name: 'You', phoneNumber: null, shareAmount: 0, shareText: '', fromCircleId: null, isSelf: true },
@@ -62,6 +67,8 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
   useEffect(() => {
     const t = setTimeout(() => titleRef.current?.focus(), 80);
     getSplitCircles().then(setCircles);
+    getSplitSourceTxIds().then((ids) => setUsedSourceTxIds(new Set(ids)));
+    getSetting('upi_id').then((id) => setUpiMissing(!id));
     return () => clearTimeout(t);
   }, []);
 
@@ -82,6 +89,19 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
   // Shares mode has no `pinned` map to react to — typing a weight only
   // touches shareText, so the effect needs its own signal to know a weight
   // changed. Joining every row's shareText gives it one.
+  const upiValid = /^[\w.\-]{2,}@[A-Za-z]{2,}$/.test(upiDraft.trim());
+  const saveUpi = async () => {
+    if (!upiValid || upiSaving) return;
+    setUpiSaving(true);
+    try {
+      await setSetting('upi_id', upiDraft.trim());
+      setUpiMissing(false);
+      ToastAndroid.show('UPI ID saved', ToastAndroid.SHORT);
+    } finally {
+      setUpiSaving(false);
+    }
+  };
+
   const sharesKey = mode === 'shares' ? participants.map((p) => p.shareText).join(',') : '';
 
   // Re-derive shares whenever the total, participant count, mode, pins, or
@@ -204,11 +224,13 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
     }
     const raw = parseFloat(text) || 0;
     const value = mode === 'percentage' ? Math.round(raw * 100) / 100 : raw;
-    setPinned((prev) => {
-      const next = new Map(prev);
-      next.set(index, value);
-      return next;
-    });
+    const nextPinned = new Map(pinned);
+    nextPinned.set(index, value);
+    setPinned(nextPinned);
+    if (mode === 'exact' && !totalTouchedRef.current) {
+      const sum = Array.from(nextPinned.values()).reduce((a, v) => a + v, 0);
+      setAmount(sum > 0 ? String(Math.round(sum * 100) / 100) : '');
+    }
     setParticipants((prev) => prev.map((p, i) => (i === index ? { ...p, shareText: text } : p)));
   };
 
@@ -266,7 +288,10 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
           placeholder="0"
           placeholderTextColor={Colors.outline}
           value={amount}
-          onChangeText={setAmount}
+          onChangeText={(v) => {
+            totalTouchedRef.current = true;
+            setAmount(v);
+          }}
           keyboardType="decimal-pad"
         />
 
@@ -387,6 +412,33 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
           </View>
         )}
 
+        {upiMissing && (
+          <View className="mt-xl bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-md">
+            <Text className="font-inter-medium text-body-md text-on-surface">Add your UPI ID</Text>
+            <Text className="font-inter text-body-sm text-on-surface-variant mt-xs">
+              Friends get a pay link and QR for it. You can skip this and add it later.
+            </Text>
+            <View className="flex-row items-center mt-sm">
+              <TextInput
+                className="flex-1 font-inter text-body-sm text-on-surface bg-surface rounded-lg border border-outline-variant px-sm py-[8px]"
+                placeholder="name@bank"
+                placeholderTextColor={Colors.outline}
+                value={upiDraft}
+                onChangeText={setUpiDraft}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                className={`ml-sm px-md py-[8px] bg-primary rounded-lg ${!upiValid || upiSaving ? 'opacity-40' : ''}`}
+                disabled={!upiValid || upiSaving}
+                onPress={saveUpi}
+              >
+                <Text className="font-inter-medium text-body-sm text-on-primary">Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         <TouchableOpacity
           className={`mt-xl py-md items-center bg-primary rounded-xl ${!canSave ? 'opacity-40' : ''}`}
           onPress={goToReview}
@@ -408,6 +460,9 @@ export function SplitCreateScreen({ route, navigation }: MainStackScreenProps<'S
               className="flex-row items-center justify-between py-[10px] px-sm rounded-lg"
               onPress={() => {
                 setSourceTxId(t.id);
+                setAmount(String(t.amount));
+                totalTouchedRef.current = true;
+                if (!title.trim()) setTitle(t.merchant ?? t.bankName ?? '');
                 setLinkSheetVisible(false);
               }}
             >
