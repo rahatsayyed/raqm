@@ -175,6 +175,7 @@ export function TransactionDetailScreen({
   const [fallbackChecked, setFallbackChecked] = useState(false);
 
   const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deleteGuardRef = useRef(false);
   const notesDraftRef = useRef("");
   const savedNotesRef = useRef<string | null>(null);
   const updateTxRef = useRef(updateTx);
@@ -465,8 +466,6 @@ export function TransactionDetailScreen({
     setTagsDraft(next);
     updateTx(tx.id, { tags: next });
   };
-
-  const deleteGuardRef = useRef(false);
 
   const performDelete = async () => {
     try {
