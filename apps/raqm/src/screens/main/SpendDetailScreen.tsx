@@ -182,10 +182,8 @@ export function SpendDetailScreen({ route, navigation }: MainStackScreenProps<'S
         (tx.bankName !== accountFilter.bankName || (tx.accountLast4 ?? '') !== (accountFilter.last4 ?? ''))
       )
         return false;
-      // Merchant filter matches the exact tx.merchant string of an existing transaction
-      // (not free text) — the picker lists real merchant values, so exact match is correct
-      // and avoids partial-match false positives that a search box would invite.
-      if (merchantFilter != null && tx.merchant !== merchantFilter) return false;
+      // Exact match on raw or custom display name, not free text
+      if (merchantFilter != null && tx.merchant !== merchantFilter && tx.merchantDisplay !== merchantFilter) return false;
       return true;
     },
     [categoryFilter, accountFilter, merchantFilter],
@@ -321,12 +319,12 @@ export function SpendDetailScreen({ route, navigation }: MainStackScreenProps<'S
         const partner = tx.linkPartnerId != null ? byId.get(tx.linkPartnerId) : undefined;
         const cat = partner?.categoryId ?? tx.categoryId;
         if (cat !== categoryFilter) continue;
-        const merchant = partner?.merchant || tx.merchant || 'Unknown';
+        const merchant = partner?.merchantDisplay || tx.merchantDisplay || 'Unknown';
         byMerchant.set(merchant, (byMerchant.get(merchant) ?? 0) - tx.amount);
         continue;
       }
       if (!isExpense(tx) || tx.categoryId !== categoryFilter) continue;
-      const merchant = tx.merchant || 'Unknown';
+      const merchant = tx.merchantDisplay || 'Unknown';
       byMerchant.set(merchant, (byMerchant.get(merchant) ?? 0) + tx.amount);
     }
     return buildBreakdownRows(byMerchant);
@@ -363,7 +361,7 @@ export function SpendDetailScreen({ route, navigation }: MainStackScreenProps<'S
     for (const tx of txs) {
       if (tx.deletedAt || !tx.merchant) continue;
       if (tx.timestamp < activeBounds.from || tx.timestamp > activeBounds.to) continue;
-      set.add(tx.merchant);
+      set.add(tx.merchantDisplay ?? tx.merchant);
     }
     return Array.from(set).sort();
   }, [txs, activeBounds]);

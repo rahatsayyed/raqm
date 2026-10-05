@@ -732,7 +732,7 @@ export function TransactionDetailScreen({
               <TouchableOpacity
                 className="flex-row items-center gap-[2px] self-start mt-md"
                 onPress={() =>
-                  navigation.navigate("SpendDetail", { filterType: "merchant", merchant: tx.merchant! })
+                  navigation.navigate("SpendDetail", { filterType: "merchant", merchant: tx.merchantDisplay ?? tx.merchant! })
                 }
                 hitSlop={4}
               >
@@ -1623,6 +1623,9 @@ function MerchantSheet({
           value={name}
           onChangeText={setName}
         />
+        <Text className="font-inter text-annotation text-on-surface-variant">
+          Applies to all past and future transactions from this merchant. Clear it to restore the original name.
+        </Text>
         <TouchableOpacity
           className="bg-primary rounded-lg py-[10px] items-center mt-md"
           onPress={() => onConfirm(name.trim())}
