@@ -2928,10 +2928,13 @@ export async function unlinkTxs(aId: number): Promise<void> {
       aId,
     );
     if (a.linkPartnerId != null) {
-      await database.runAsync(
-        `UPDATE transactions SET link_type = NULL, link_partner_id = NULL, link_settled = 0 WHERE id = ?`,
-        a.linkPartnerId,
-      );
+      const partner = await getTxById(a.linkPartnerId);
+      if (partner?.linkPartnerId === aId) {
+        await database.runAsync(
+          `UPDATE transactions SET link_type = NULL, link_partner_id = NULL, link_settled = 0 WHERE id = ?`,
+          a.linkPartnerId,
+        );
+      }
     }
     await database.runAsync('COMMIT');
   } catch (e) {
@@ -3410,6 +3413,13 @@ export async function addSplitWithParticipants(
   const database = await getDb();
   try {
     await database.runAsync('BEGIN');
+    if (input.sourceTxId != null) {
+      const existing = await database.getFirstAsync<{ id: number }>(
+        `SELECT id FROM splits WHERE source_tx_id = ?`,
+        input.sourceTxId,
+      );
+      if (existing) throw new Error('This transaction is already linked to another split');
+    }
     const result = await database.runAsync(
       `INSERT INTO splits (title, total_amount, source_tx_id, creator_upi_id, status, description, auto_remind_enabled, remind_interval_days, created_at)
        VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?)`,
@@ -3448,17 +3458,18 @@ export async function addSplitWithParticipants(
 
 export async function deleteSplit(id: number): Promise<void> {
   const database = await getDb();
-  // Unlink every participant's matched transaction BEFORE deleting rows — otherwise the
-  // transaction keeps link_type: 'split_payment' pointing at a split that no longer exists,
-  // and the original expense keeps being silently netted against it.
-  const participants = await getSplitParticipants(id);
-  for (const p of participants) {
-    if (p.matchedTxId != null) {
-      await unlinkTxs(p.matchedTxId);
-    }
-  }
   try {
     await database.runAsync('BEGIN');
+    const txIds = await database.getAllAsync<{ tx_id: number }>(
+      `SELECT DISTINCT tx_id FROM split_payments WHERE participant_id IN (SELECT id FROM split_participants WHERE split_id = ?)`,
+      id,
+    );
+    for (const { tx_id } of txIds) await releaseTxInTx(database, tx_id);
+    const matched = await database.getAllAsync<{ matched_tx_id: number }>(
+      `SELECT matched_tx_id FROM split_participants WHERE split_id = ? AND matched_tx_id IS NOT NULL`,
+      id,
+    );
+    for (const { matched_tx_id } of matched) await releaseTxInTx(database, matched_tx_id);
     await database.runAsync(
       `DELETE FROM split_payments WHERE participant_id IN (SELECT id FROM split_participants WHERE split_id = ?)`,
       id,
@@ -3470,6 +3481,107 @@ export async function deleteSplit(id: number): Promise<void> {
     await database.runAsync('ROLLBACK');
     throw e;
   }
+}
+
+/** Nets a payment credit against the split's source expense without touching the expense row, so many payments can net one expense. */
+export async function linkSplitPayment(creditId: number, sourceTxId: number): Promise<void> {
+  if (creditId === sourceTxId) return;
+  const database = await getDb();
+  await database.runAsync(
+    `UPDATE transactions SET link_type = 'split_payment', link_partner_id = ?, link_settled = 0 WHERE id = ? AND (link_partner_id IS NULL OR link_type = 'split_payment')`,
+    sourceTxId,
+    creditId,
+  );
+}
+
+export const SPLIT_CASH_TAG = 'split-settlement';
+
+async function releaseTxInTx(database: SQLite.SQLiteDatabase, txId: number): Promise<void> {
+  const tx = await getTxById(txId);
+  if (!tx) return;
+  await database.runAsync(
+    `UPDATE transactions SET link_type = NULL, link_partner_id = NULL, link_settled = 0 WHERE id = ? AND link_type = 'split_payment'`,
+    txId,
+  );
+  await database.runAsync(
+    `UPDATE transactions SET link_type = NULL, link_partner_id = NULL, link_settled = 0 WHERE link_partner_id = ? AND link_type = 'split_payment'`,
+    txId,
+  );
+  if (tx.isManual && tx.bankName === 'Cash' && tx.tags.includes(SPLIT_CASH_TAG)) {
+    await database.runAsync(`UPDATE transactions SET deleted_at = ? WHERE id = ?`, Date.now(), txId);
+  }
+}
+
+/** Unlinks a payment credit and soft-deletes it if Raqm auto-created it as a cash settlement. */
+export async function releaseSplitPaymentTx(txId: number): Promise<void> {
+  const database = await getDb();
+  try {
+    await database.runAsync('BEGIN');
+    await releaseTxInTx(database, txId);
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+}
+
+export interface TxSplitUsage {
+  splitId: number;
+  splitTitle: string;
+  settled: boolean;
+  role: 'source' | 'payment';
+  participantId: number | null;
+}
+
+export async function getSplitUsageForTx(txId: number): Promise<TxSplitUsage[]> {
+  const database = await getDb();
+  const asSource = await database.getAllAsync<{ id: number; title: string; status: string }>(
+    `SELECT id, title, status FROM splits WHERE source_tx_id = ?`,
+    txId,
+  );
+  const asPayment = await database.getAllAsync<{ id: number; title: string; status: string; pid: number }>(
+    `SELECT s.id, s.title, s.status, sp.participant_id AS pid
+     FROM split_payments sp
+     JOIN split_participants p ON p.id = sp.participant_id
+     JOIN splits s ON s.id = p.split_id
+     WHERE sp.tx_id = ?`,
+    txId,
+  );
+  return [
+    ...asSource.map((r) => ({ splitId: r.id, splitTitle: r.title, settled: r.status === 'settled', role: 'source' as const, participantId: null })),
+    ...asPayment.map((r) => ({ splitId: r.id, splitTitle: r.title, settled: r.status === 'settled', role: 'payment' as const, participantId: r.pid })),
+  ];
+}
+
+/** Call before soft-deleting a tx: reverts payments it settled and detaches it as a split's source. */
+export async function detachTxFromSplits(txId: number): Promise<void> {
+  const usage = await getSplitUsageForTx(txId);
+  const database = await getDb();
+  try {
+    await database.runAsync('BEGIN');
+    for (const u of usage) {
+      if (u.role === 'payment' && u.participantId != null) {
+        await unsettleInTx(database, u.participantId);
+      }
+    }
+    await database.runAsync(
+      `UPDATE transactions SET link_type = NULL, link_partner_id = NULL, link_settled = 0 WHERE link_partner_id = ? AND link_type = 'split_payment'`,
+      txId,
+    );
+    await database.runAsync(`UPDATE splits SET source_tx_id = NULL WHERE source_tx_id = ?`, txId);
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+}
+
+export async function getSplitSourceTxIds(): Promise<number[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{ source_tx_id: number }>(
+    `SELECT source_tx_id FROM splits WHERE source_tx_id IS NOT NULL`,
+  );
+  return rows.map((r) => r.source_tx_id);
 }
 
 export async function getSplitParticipants(splitId: number): Promise<SplitParticipant[]> {
@@ -3597,27 +3709,39 @@ export async function confirmSplitParticipantPayment(id: number, txId: number, a
 
 /** Reverses a settlement entirely (back to unpaid, zero paid) rather than just the latest
  * payment — undoing "which of several partial payments" would need per-payment UI this
- * feature doesn't have yet. Returns the tx that was linked, if any, so the caller can unlink it. */
-export async function unsettleSplitParticipant(id: number): Promise<number | null> {
-  const database = await getDb();
+ * feature doesn't have yet. Releases every payment tx it had (unlink, plus delete auto-created cash credits). */
+async function unsettleInTx(database: SQLite.SQLiteDatabase, id: number): Promise<number | null> {
   const participant = await database.getFirstAsync<{ matched_tx_id: number | null; split_id: number }>(
     `SELECT matched_tx_id, split_id FROM split_participants WHERE id = ?`,
     id,
   );
+  const paidTxIds = (
+    await database.getAllAsync<{ tx_id: number }>(`SELECT tx_id FROM split_payments WHERE participant_id = ?`, id)
+  ).map((r) => r.tx_id);
+  if (participant?.matched_tx_id != null && !paidTxIds.includes(participant.matched_tx_id)) {
+    paidTxIds.push(participant.matched_tx_id);
+  }
+  await database.runAsync(`DELETE FROM split_payments WHERE participant_id = ?`, id);
+  await database.runAsync(
+    `UPDATE split_participants SET status = 'unpaid', paid_amount = 0, matched_tx_id = NULL WHERE id = ?`,
+    id,
+  );
+  if (participant) await cascadeSplitStatus(database, participant.split_id);
+  for (const txId of paidTxIds) await releaseTxInTx(database, txId);
+  return participant?.matched_tx_id ?? null;
+}
+
+export async function unsettleSplitParticipant(id: number): Promise<number | null> {
+  const database = await getDb();
   try {
     await database.runAsync('BEGIN');
-    await database.runAsync(`DELETE FROM split_payments WHERE participant_id = ?`, id);
-    await database.runAsync(
-      `UPDATE split_participants SET status = 'unpaid', paid_amount = 0, matched_tx_id = NULL WHERE id = ?`,
-      id,
-    );
-    if (participant) await cascadeSplitStatus(database, participant.split_id);
+    const matched = await unsettleInTx(database, id);
     await database.runAsync('COMMIT');
+    return matched;
   } catch (e) {
     await database.runAsync('ROLLBACK');
     throw e;
   }
-  return participant?.matched_tx_id ?? null;
 }
 
 export async function updateSplitReminderSettings(
