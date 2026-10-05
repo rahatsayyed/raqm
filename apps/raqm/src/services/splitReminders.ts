@@ -48,7 +48,7 @@ export async function sendReminderNow(
       splitTitle: split.title,
       description: split.description,
       participantName: participant.name,
-      shareAmount: participant.shareAmount,
+      shareAmount: participant.shareAmount - participant.paidAmount,
       upiId: upiId ?? null,
     });
     await sendSms(participant.phoneNumber, message);
@@ -77,7 +77,7 @@ export async function checkAndSendReminders(): Promise<void> {
     for (const split of openSplits) {
       const participants = await getSplitParticipants(split.id);
       for (const p of participants) {
-        if (p.isSelf || p.status !== 'unpaid' || !p.phoneNumber) continue;
+        if (p.isSelf || (p.status !== 'unpaid' && p.status !== 'partial') || !p.phoneNumber) continue;
         // remindIntervalDays === null means "every app open" — no throttle.
         // Otherwise, only send once the configured number of days has passed
         // since this participant's last reminder (or if never reminded).

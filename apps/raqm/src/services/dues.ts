@@ -61,7 +61,7 @@ export function splitDues(splits: Split[], participantsBySplit: Map<number, Spli
     const participants = participantsBySplit.get(split.id) ?? [];
     const outstanding = participants.filter((p) => !p.isSelf && p.status !== 'settled');
     if (outstanding.length === 0) continue;
-    const amount = outstanding.reduce((s, p) => s + p.shareAmount, 0);
+    const amount = outstanding.reduce((s, p) => s + (p.shareAmount - p.paidAmount), 0);
     items.push({
       key: `split|${split.id}`,
       name: split.title,

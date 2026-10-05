@@ -613,6 +613,32 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  // Partial split settlement: a participant can now pay back their share across more than
+  // one credit (e.g. 500 of a 900 share today, 400 later) instead of one all-or-nothing match.
+  if (current < 20) {
+    await database.runAsync(`BEGIN`);
+    try {
+      await database.runAsync(`ALTER TABLE split_participants ADD COLUMN paid_amount REAL NOT NULL DEFAULT 0`);
+      await database.runAsync(
+        `CREATE TABLE IF NOT EXISTS split_payments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          participant_id INTEGER NOT NULL REFERENCES split_participants(id),
+          tx_id INTEGER NOT NULL REFERENCES transactions(id),
+          amount REAL NOT NULL,
+          created_at INTEGER NOT NULL
+        )`,
+      );
+      await database.runAsync(
+        `CREATE INDEX IF NOT EXISTS idx_split_payments_participant_id ON split_payments(participant_id)`,
+      );
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (20)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -3249,8 +3275,9 @@ export type SplitParticipant = {
   name: string;
   phoneNumber: string | null;
   shareAmount: number;
-  status: 'unpaid' | 'attention' | 'settled';
+  status: 'unpaid' | 'attention' | 'settled' | 'partial';
   matchedTxId: number | null;
+  paidAmount: number;
   createdAt: number;
   lastRemindedAt: number | null;
   isSelf: boolean;
@@ -3278,8 +3305,9 @@ function rowToSplitParticipant(row: Record<string, unknown>): SplitParticipant {
     name: row.name as string,
     phoneNumber: (row.phone_number as string | null) ?? null,
     shareAmount: row.share_amount as number,
-    status: row.status as 'unpaid' | 'attention' | 'settled',
+    status: row.status as 'unpaid' | 'attention' | 'settled' | 'partial',
     matchedTxId: (row.matched_tx_id as number | null) ?? null,
+    paidAmount: (row.paid_amount as number | null) ?? 0,
     createdAt: row.created_at as number,
     lastRemindedAt: (row.last_reminded_at as number | null) ?? null,
     isSelf: (row.is_self as number | null) ? true : false,
@@ -3388,6 +3416,10 @@ export async function deleteSplit(id: number): Promise<void> {
   }
   try {
     await database.runAsync('BEGIN');
+    await database.runAsync(
+      `DELETE FROM split_payments WHERE participant_id IN (SELECT id FROM split_participants WHERE split_id = ?)`,
+      id,
+    );
     await database.runAsync(`DELETE FROM split_participants WHERE split_id = ?`, id);
     await database.runAsync(`DELETE FROM splits WHERE id = ?`, id);
     await database.runAsync('COMMIT');
@@ -3425,7 +3457,32 @@ export async function addSplitParticipant(
 
 export async function deleteSplitParticipant(id: number): Promise<void> {
   const database = await getDb();
-  await database.runAsync(`DELETE FROM split_participants WHERE id = ?`, id);
+  try {
+    await database.runAsync('BEGIN');
+    await database.runAsync(`DELETE FROM split_payments WHERE participant_id = ?`, id);
+    await database.runAsync(`DELETE FROM split_participants WHERE id = ?`, id);
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+}
+
+/** Every tx_id already recorded as a confirmed partial/full payment, across all participants —
+ * the detector must never hand one of these out again, even after matchedTxId moves on. */
+export async function getSplitPaymentTxIds(): Promise<number[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{ tx_id: number }>(`SELECT tx_id FROM split_payments`);
+  return rows.map((r) => r.tx_id);
+}
+
+async function cascadeSplitStatus(database: SQLite.SQLiteDatabase, splitId: number): Promise<void> {
+  const remaining = await database.getFirstAsync<{ c: number }>(
+    `SELECT COUNT(*) as c FROM split_participants WHERE split_id = ? AND status != 'settled' AND is_self = 0`,
+    splitId,
+  );
+  const newStatus = (remaining?.c ?? 1) === 0 ? 'settled' : 'open';
+  await database.runAsync(`UPDATE splits SET status = ? WHERE id = ?`, newStatus, splitId);
 }
 
 export async function setSplitParticipantLastReminded(id: number, timestamp: number): Promise<void> {
@@ -3435,7 +3492,7 @@ export async function setSplitParticipantLastReminded(id: number, timestamp: num
 
 export async function setSplitParticipantStatus(
   id: number,
-  status: 'unpaid' | 'attention' | 'settled',
+  status: 'unpaid' | 'attention' | 'settled' | 'partial',
   matchedTxId: number | null,
 ): Promise<void> {
   const database = await getDb();
@@ -3451,19 +3508,73 @@ export async function setSplitParticipantStatus(
       `SELECT split_id FROM split_participants WHERE id = ?`,
       id,
     );
-    if (row) {
-      const remaining = await database.getFirstAsync<{ c: number }>(
-        `SELECT COUNT(*) as c FROM split_participants WHERE split_id = ? AND status != 'settled' AND is_self = 0`,
-        row.split_id,
-      );
-      const newStatus = (remaining?.c ?? 1) === 0 ? 'settled' : 'open';
-      await database.runAsync(`UPDATE splits SET status = ? WHERE id = ?`, newStatus, row.split_id);
-    }
+    if (row) await cascadeSplitStatus(database, row.split_id);
     await database.runAsync('COMMIT');
   } catch (e) {
     await database.runAsync('ROLLBACK');
     throw e;
   }
+}
+
+/** Records a confirmed (user-approved) payment of `amount` via `txId` towards a participant's
+ * share — may be the whole share or just part of it; a second call later tops up the rest.
+ * Never over-fills: `amount` is expected to already be capped to what's left (see callers). */
+export async function confirmSplitParticipantPayment(id: number, txId: number, amount: number): Promise<void> {
+  const database = await getDb();
+  try {
+    await database.runAsync('BEGIN');
+    const participant = await database.getFirstAsync<{ share_amount: number; paid_amount: number; split_id: number }>(
+      `SELECT share_amount, paid_amount, split_id FROM split_participants WHERE id = ?`,
+      id,
+    );
+    if (!participant) throw new Error(`split participant ${id} not found`);
+    await database.runAsync(
+      `INSERT INTO split_payments (participant_id, tx_id, amount, created_at) VALUES (?, ?, ?, ?)`,
+      id,
+      txId,
+      amount,
+      Date.now(),
+    );
+    const paidAmount = participant.paid_amount + amount;
+    const status = paidAmount >= participant.share_amount ? 'settled' : 'partial';
+    await database.runAsync(
+      `UPDATE split_participants SET status = ?, paid_amount = ?, matched_tx_id = ? WHERE id = ?`,
+      status,
+      paidAmount,
+      txId,
+      id,
+    );
+    await cascadeSplitStatus(database, participant.split_id);
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+}
+
+/** Reverses a settlement entirely (back to unpaid, zero paid) rather than just the latest
+ * payment — undoing "which of several partial payments" would need per-payment UI this
+ * feature doesn't have yet. Returns the tx that was linked, if any, so the caller can unlink it. */
+export async function unsettleSplitParticipant(id: number): Promise<number | null> {
+  const database = await getDb();
+  const participant = await database.getFirstAsync<{ matched_tx_id: number | null; split_id: number }>(
+    `SELECT matched_tx_id, split_id FROM split_participants WHERE id = ?`,
+    id,
+  );
+  try {
+    await database.runAsync('BEGIN');
+    await database.runAsync(`DELETE FROM split_payments WHERE participant_id = ?`, id);
+    await database.runAsync(
+      `UPDATE split_participants SET status = 'unpaid', paid_amount = 0, matched_tx_id = NULL WHERE id = ?`,
+      id,
+    );
+    if (participant) await cascadeSplitStatus(database, participant.split_id);
+    await database.runAsync('COMMIT');
+  } catch (e) {
+    await database.runAsync('ROLLBACK');
+    throw e;
+  }
+  return participant?.matched_tx_id ?? null;
 }
 
 export async function updateSplitReminderSettings(

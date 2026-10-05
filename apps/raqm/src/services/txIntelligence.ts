@@ -5,6 +5,7 @@ import {
   getSplits,
   getSplitParticipants,
   setSplitParticipantStatus,
+  getSplitPaymentTxIds,
 } from '../db/database';
 import type { TxRecord } from '../db/database';
 import { pairSelfTransfers, pairRefunds, computeRecurringIds, isCreditType } from './txIntelligenceCore';
@@ -57,17 +58,11 @@ export async function detectSubscriptions(txs?: TxRecord[]): Promise<number> {
   return updated;
 }
 
-/**
- * Looks for an incoming credit transaction matching an open participant's share —
- * a friend paying the user via UPI shows up as a credit SMS on the user's own
- * phone. A match only ever sets status to 'attention', never 'settled': two
- * participants owing the same amount, or an unrelated credit of the same size,
- * are real collision risks the user must confirm or reject (see SplitDetailScreen).
- * Amount-bucketed (a Map, not a nested scan) to stay ~O(n), matching
- * pairSelfTransfers' documented performance requirement. Catches its own errors —
- * runDetectionJobs re-throws on failure, and this must never abort the rest of
- * app startup or a rescan because of a Split-specific bug.
- */
+/** Matches incoming credits against what's left of each open participant's share (shareAmount
+ * minus paidAmount so prior installments count), falling back to a smaller unclaimed credit as
+ * a plausible partial payment when nothing covers the full remainder; always lands on
+ * 'attention' for the user to confirm, never auto-settles. Never throws — a Split-specific bug
+ * here must not abort the rest of app startup or a rescan. */
 export async function matchSplitPayments(): Promise<void> {
   try {
     const txs = await loadTxRecords();
@@ -87,10 +82,11 @@ export async function matchSplitPayments(): Promise<void> {
       participantsBySplit.set(split.id, await getSplitParticipants(split.id));
     }
 
-    // A credit already claimed as some OTHER participant's matchedTxId (from a prior run)
-    // must not be handed out again this run, same as one claimed earlier in this same loop —
-    // both are tracked in one Set so a single credit is never matched to two participants.
-    const claimedTxIds = new Set<number>();
+    // A credit already claimed as some OTHER participant's matchedTxId (from a prior run), or
+    // already recorded as a confirmed payment (possibly for a participant whose matchedTxId has
+    // since moved on to a later installment), must not be handed out again this run — both are
+    // tracked in one Set so a single credit is never matched to two participants.
+    const claimedTxIds = new Set<number>(await getSplitPaymentTxIds());
     for (const split of splits) {
       for (const participant of participantsBySplit.get(split.id) ?? []) {
         if ((participant.status === 'attention' || participant.status === 'settled') && participant.matchedTxId != null) {
@@ -99,13 +95,24 @@ export async function matchSplitPayments(): Promise<void> {
       }
     }
 
+    // Sorted once per run, not re-sorted per participant, so the partial-credit fallback
+    // below stays one O(n log n) pass instead of O(participants × credits log credits).
+    const creditsByTimestampAsc = [...credits].sort((a, b) => a.timestamp - b.timestamp);
+
     for (const split of openSplits) {
       const participants = participantsBySplit.get(split.id) ?? [];
       for (const participant of participants) {
-        if (participant.status !== 'unpaid' || participant.isSelf) continue;
-        const bucket = creditsByAmount.get(participant.shareAmount);
-        if (!bucket) continue;
-        const candidate = bucket.find((c) => c.timestamp >= split.createdAt && !claimedTxIds.has(c.id));
+        if (participant.isSelf) continue;
+        if (participant.status !== 'unpaid' && participant.status !== 'partial') continue;
+        // Rounded to cents — plain float subtraction can miss an exact bucket match
+        // (e.g. 900 - 500.50 isn't bit-identical to a stored 399.5).
+        const remaining = Math.round((participant.shareAmount - participant.paidAmount) * 100) / 100;
+        if (remaining <= 0) continue;
+        const bucket = creditsByAmount.get(remaining);
+        const exactMatch = bucket?.find((c) => c.timestamp >= split.createdAt && !claimedTxIds.has(c.id));
+        const candidate = exactMatch ?? creditsByTimestampAsc.find(
+          (c) => c.amount < remaining && c.timestamp >= split.createdAt && !claimedTxIds.has(c.id),
+        );
         if (!candidate) continue;
         claimedTxIds.add(candidate.id);
         await setSplitParticipantStatus(participant.id, 'attention', candidate.id);

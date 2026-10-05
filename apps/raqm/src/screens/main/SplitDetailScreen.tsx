@@ -7,6 +7,8 @@ import {
   getSplit,
   getSplitParticipants,
   setSplitParticipantStatus,
+  confirmSplitParticipantPayment,
+  unsettleSplitParticipant,
   deleteSplit,
   getSetting,
   linkTxs,
@@ -51,6 +53,7 @@ async function linkSplitPaymentIfSafe(sourceTxId: number, targetTxId: number): P
 function statusLabel(status: SplitParticipant['status']): string {
   if (status === 'settled') return 'Settled';
   if (status === 'attention') return 'Needs review';
+  if (status === 'partial') return 'Partially paid';
   return 'Unpaid';
 }
 
@@ -66,18 +69,22 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
   const [settleSheetParticipant, setSettleSheetParticipant] = useState<SplitParticipant | null>(null);
   const [selectedTxId, setSelectedTxId] = useState<number | null>(null);
   const [settling, setSettling] = useState(false);
+  const [rowActionInFlight, setRowActionInFlight] = useState(false);
   const allTxs = useTxStore((s) => s.txs);
   const addTx = useTxStore((s) => s.add);
   const [reminderSaving, setReminderSaving] = useState(false);
 
-  const incomingCandidates = useMemo(
-    () =>
-      allTxs
-        .filter((t) => isCreditType(t.type) && t.linkPartnerId == null)
-        .sort((a, b) => b.timestamp - a.timestamp)
-        .slice(0, 20),
-    [allTxs],
-  );
+  const incomingCandidates = useMemo(() => {
+    // Capped to what's actually still owed — linking a bigger unrelated credit would net
+    // its full amount against the expense's category, overstating what this payment covered.
+    const remaining = settleSheetParticipant
+      ? settleSheetParticipant.shareAmount - settleSheetParticipant.paidAmount
+      : null;
+    return allTxs
+      .filter((t) => isCreditType(t.type) && t.linkPartnerId == null && (remaining == null || t.amount <= remaining))
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 20);
+  }, [allTxs, settleSheetParticipant]);
 
   const load = useCallback(() => {
     getSplit(splitId).then(setSplit);
@@ -93,24 +100,34 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
   );
 
   const toggleSettled = async (p: SplitParticipant) => {
+    if (rowActionInFlight) return;
     if (p.status === 'settled') {
-      // Unmarking reverses the netting: if this participant's payment was linked
-      // to the original expense, unlink it too — otherwise the expense keeps
-      // being silently netted against a credit the user just said "isn't settled".
-      const matchedTxId = p.matchedTxId;
-      await setSplitParticipantStatus(p.id, 'unpaid', null);
-      if (matchedTxId != null) {
-        await unlinkTxs(matchedTxId);
+      setRowActionInFlight(true);
+      try {
+        // Unmarking reverses the netting: if this participant's payment was linked
+        // to the original expense, unlink it too — otherwise the expense keeps
+        // being silently netted against a credit the user just said "isn't settled".
+        const matchedTxId = await unsettleSplitParticipant(p.id);
+        if (matchedTxId != null) {
+          await unlinkTxs(matchedTxId);
+        }
+        load();
+      } finally {
+        setRowActionInFlight(false);
       }
-      load();
       return;
     }
     if (split!.sourceTxId == null || p.isSelf) {
-      // Unlinked split, or the "You" row: purely informational, no netting —
-      // "You" never owes/pays a settlement, so it must never open the sheet
-      // (which would fabricate a credit netting the user's own share out).
-      await setSplitParticipantStatus(p.id, 'settled', null);
-      load();
+      setRowActionInFlight(true);
+      try {
+        // Unlinked split, or the "You" row: purely informational, no netting —
+        // "You" never owes/pays a settlement, so it must never open the sheet
+        // (which would fabricate a credit netting the user's own share out).
+        await setSplitParticipantStatus(p.id, 'settled', null);
+        load();
+      } finally {
+        setRowActionInFlight(false);
+      }
       return;
     }
     setSelectedTxId(null);
@@ -220,20 +237,26 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
               <View>
                 <Text className="font-inter-medium text-body-md text-on-surface">{item.isSelf ? 'You' : item.name}</Text>
                 <Text className="font-inter text-body-sm text-on-surface-variant">{statusLabel(item.status)}</Text>
+                {item.status === 'partial' && (
+                  <Text className="font-mono text-body-sm text-on-surface-variant">
+                    {formatAmount(item.paidAmount)} received · {formatAmount(item.shareAmount - item.paidAmount)} pending
+                  </Text>
+                )}
               </View>
               <Text className="font-mono text-body-md text-on-surface">{formatAmount(item.shareAmount)}</Text>
             </TouchableOpacity>
 
-            {item.status === 'unpaid' && !item.isSelf && (
+            {(item.status === 'unpaid' || item.status === 'partial') && !item.isSelf && (
               <View className="flex-row gap-sm mt-sm">
                 <TouchableOpacity
                   className="flex-1 py-[8px] items-center bg-surface rounded-lg border border-outline-variant"
                   onPress={() => {
+                    const remaining = item.shareAmount - item.paidAmount;
                     const upiLine = liveUpiId
-                      ? ` Pay here: ${buildUpiLink({ upiId: liveUpiId, payeeName: split.title, amount: item.shareAmount, note: split.title })}`
+                      ? ` Pay here: ${buildUpiLink({ upiId: liveUpiId, payeeName: split.title, amount: remaining, note: split.title })}`
                       : '';
                     const descLine = split.description ? ` (${split.description})` : '';
-                    const message = `Hi ${item.name}, for ${split.title}${descLine} you owe ${formatAmount(item.shareAmount)}.${upiLine}`;
+                    const message = `Hi ${item.name}, for ${split.title}${descLine} you owe ${formatAmount(remaining)}.${upiLine}`;
                     // The system share sheet, not a whatsapp:// deep link — lets the user pick
                     // WhatsApp, Telegram, SMS, or anything else installed, and needs no Android
                     // package-visibility <queries> declaration (unlike a scheme-specific link).
@@ -257,22 +280,39 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
             {item.status === 'attention' && !item.isSelf && (
               <View className="flex-row gap-sm mt-sm">
                 <TouchableOpacity
-                  className="flex-1 py-[8px] items-center bg-primary rounded-lg"
+                  className={`flex-1 py-[8px] items-center bg-primary rounded-lg ${rowActionInFlight ? 'opacity-40' : ''}`}
+                  disabled={rowActionInFlight}
                   onPress={async () => {
-                    await setSplitParticipantStatus(item.id, 'settled', item.matchedTxId);
-                    if (split.sourceTxId != null && item.matchedTxId != null) {
-                      await linkSplitPaymentIfSafe(split.sourceTxId, item.matchedTxId);
+                    if (item.matchedTxId == null || rowActionInFlight) return;
+                    setRowActionInFlight(true);
+                    try {
+                      const remaining = item.shareAmount - item.paidAmount;
+                      const matchedTx = allTxs.find((t) => t.id === item.matchedTxId);
+                      const amount = Math.min(matchedTx?.amount ?? remaining, remaining);
+                      await confirmSplitParticipantPayment(item.id, item.matchedTxId, amount);
+                      if (split.sourceTxId != null) {
+                        await linkSplitPaymentIfSafe(split.sourceTxId, item.matchedTxId);
+                      }
+                      load();
+                    } finally {
+                      setRowActionInFlight(false);
                     }
-                    load();
                   }}
                 >
                   <Text className="font-inter-medium text-body-sm text-on-primary">Confirm paid</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  className="flex-1 py-[8px] items-center bg-surface rounded-lg border border-outline-variant"
+                  className={`flex-1 py-[8px] items-center bg-surface rounded-lg border border-outline-variant ${rowActionInFlight ? 'opacity-40' : ''}`}
+                  disabled={rowActionInFlight}
                   onPress={async () => {
-                    await setSplitParticipantStatus(item.id, 'unpaid', null);
-                    load();
+                    if (rowActionInFlight) return;
+                    setRowActionInFlight(true);
+                    try {
+                      await setSplitParticipantStatus(item.id, item.paidAmount > 0 ? 'partial' : 'unpaid', null);
+                      load();
+                    } finally {
+                      setRowActionInFlight(false);
+                    }
                   }}
                 >
                   <Text className="font-inter-medium text-body-sm text-on-surface">Not this one</Text>
@@ -286,6 +326,11 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
       <BottomSheet visible={settleSheetParticipant != null} onClose={() => setSettleSheetParticipant(null)}>
         <View className="px-container-margin pb-lg">
           <Text className="font-inter-bold text-title-md text-on-surface mb-md">Mark as settled</Text>
+          {settleSheetParticipant && settleSheetParticipant.paidAmount > 0 && (
+            <Text className="font-mono text-label-sm text-on-surface-variant mb-sm">
+              {formatAmount(settleSheetParticipant.shareAmount - settleSheetParticipant.paidAmount)} still pending
+            </Text>
+          )}
           <Text className="font-mono text-label-sm text-on-surface-variant mb-sm">Pick the incoming payment</Text>
           {incomingCandidates.map((t) => (
             <TouchableOpacity
@@ -307,7 +352,10 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
               if (!settleSheetParticipant || selectedTxId == null || settling) return;
               setSettling(true);
               try {
-                await setSplitParticipantStatus(settleSheetParticipant.id, 'settled', selectedTxId);
+                const remaining = settleSheetParticipant.shareAmount - settleSheetParticipant.paidAmount;
+                const chosenTx = incomingCandidates.find((t) => t.id === selectedTxId);
+                const amount = Math.min(chosenTx?.amount ?? remaining, remaining);
+                await confirmSplitParticipantPayment(settleSheetParticipant.id, selectedTxId, amount);
                 if (split!.sourceTxId != null) {
                   await linkSplitPaymentIfSafe(split!.sourceTxId, selectedTxId);
                 }
@@ -332,8 +380,9 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
               if (!settleSheetParticipant || settling) return;
               setSettling(true);
               try {
+                const remaining = settleSheetParticipant.shareAmount - settleSheetParticipant.paidAmount;
                 const cashTxId = await addTx({
-                  amount: settleSheetParticipant.shareAmount,
+                  amount: remaining,
                   type: TransactionType.CREDIT,
                   merchant: split!.title,
                   bankName: 'Cash',
@@ -344,7 +393,7 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
                   tags: [],
                   isManual: true,
                 });
-                await setSplitParticipantStatus(settleSheetParticipant.id, 'settled', cashTxId);
+                await confirmSplitParticipantPayment(settleSheetParticipant.id, cashTxId, remaining);
                 if (split!.sourceTxId != null) {
                   await linkSplitPaymentIfSafe(split!.sourceTxId, cashTxId);
                 }
