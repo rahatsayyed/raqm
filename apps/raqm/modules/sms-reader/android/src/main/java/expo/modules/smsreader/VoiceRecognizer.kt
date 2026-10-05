@@ -18,6 +18,14 @@ class VoiceRecognizer(
   private var recognizer: SpeechRecognizer? = null
   private var onDone: ((String?, String?) -> Unit)? = null
 
+  // Settles a stalled session so onDone can't stay set and block later starts with BUSY.
+  private val watchdog = Runnable { finish(null, "ERROR") }
+
+  private fun armWatchdog() {
+    main.removeCallbacks(watchdog)
+    main.postDelayed(watchdog, WATCHDOG_MS)
+  }
+
   fun isAvailable(): Boolean = try {
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
       SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
@@ -25,21 +33,30 @@ class VoiceRecognizer(
     false
   }
 
+  private fun reject(done: (String?, String?) -> Unit, code: String) {
+    try {
+      done(null, code)
+    } catch (e: Exception) {
+      DiagnosticLog.write(context, "error.caught", "voice.reject: ${e.message}")
+    }
+  }
+
   fun start(done: (String?, String?) -> Unit) {
     main.post {
+      if (onDone != null) {
+        reject(done, "BUSY")
+        return@post
+      }
+      if (!isAvailable()) {
+        reject(done, "UNSUPPORTED")
+        return@post
+      }
       try {
-        if (onDone != null) {
-          done(null, "BUSY")
-          return@post
-        }
-        if (!isAvailable()) {
-          done(null, "UNSUPPORTED")
-          return@post
-        }
         onDone = done
         val r = SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
         recognizer = r
-        r.setRecognitionListener(listener)
+        r.setRecognitionListener(sessionListener(r))
+        armWatchdog()
         r.startListening(
           Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -60,6 +77,7 @@ class VoiceRecognizer(
   }
 
   private fun finish(transcript: String?, code: String?) {
+    main.removeCallbacks(watchdog)
     val cb = onDone ?: return
     onDone = null
     try {
@@ -86,7 +104,8 @@ class VoiceRecognizer(
   private fun firstResult(bundle: Bundle?): String? =
     bundle?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.trim()
 
-  private val listener = object : RecognitionListener {
+  // Callbacks from a destroyed recognizer are ignored so they can't finish a newer session.
+  private fun sessionListener(r: SpeechRecognizer) = object : RecognitionListener {
     override fun onReadyForSpeech(params: Bundle?) {}
     override fun onBeginningOfSpeech() {}
     override fun onRmsChanged(rmsdB: Float) {}
@@ -96,6 +115,7 @@ class VoiceRecognizer(
 
     override fun onError(error: Int) {
       try {
+        if (recognizer !== r) return
         finish(null, errorCode(error))
       } catch (e: Exception) {
         DiagnosticLog.write(context, "error.caught", "voice.onError: ${e.message}")
@@ -104,6 +124,7 @@ class VoiceRecognizer(
 
     override fun onResults(results: Bundle?) {
       try {
+        if (recognizer !== r) return
         val text = firstResult(results)
         if (text.isNullOrBlank()) finish(null, "NO_MATCH") else finish(text, null)
       } catch (e: Exception) {
@@ -113,10 +134,16 @@ class VoiceRecognizer(
 
     override fun onPartialResults(partialResults: Bundle?) {
       try {
+        if (recognizer !== r) return
+        armWatchdog()
         firstResult(partialResults)?.takeIf { it.isNotBlank() }?.let(onPartial)
       } catch (e: Exception) {
         DiagnosticLog.write(context, "error.caught", "voice.onPartial: ${e.message}")
       }
     }
+  }
+
+  private companion object {
+    const val WATCHDOG_MS = 20_000L
   }
 }
