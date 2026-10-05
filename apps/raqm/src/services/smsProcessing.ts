@@ -1,6 +1,7 @@
 import { BankParserFactory, TransactionType, type ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
 import { useTxStore } from '../store/txStore';
-import { postTxNotification, cancelTxNotification } from '../notifications/notifications';
+import { postTxNotification, cancelTxNotification, postParseFailureNotification } from '../notifications/notifications';
+import { captureParseFailure } from './parseFailures';
 import { accountLabel } from '../utils/accountLabel';
 import { getCategories, linkTxs, getTxById } from '../db/database';
 import { findSelfTransferPartner } from './txIntelligence';
@@ -104,7 +105,17 @@ export async function postParsedTxNotification(
 export async function processIncomingSms(data: { body: string; sender: string; timestamp: number }): Promise<ProcessedSms | null> {
   const tx = BankParserFactory.parse(data.body, data.sender, data.timestamp);
   logEvent('sms.parsed', tx ? `success bank=${tx.bankName} type=${tx.type}` : 'failed');
-  if (!tx) return null;
+  if (!tx) {
+    try {
+      if (await captureParseFailure(data.sender, data.body, data.timestamp)) {
+        await postParseFailureNotification(data.sender);
+        logEvent('notif.posted', 'parse-failure');
+      }
+    } catch (e) {
+      logEvent('parse.failure.capture', `failed ${e instanceof Error ? e.message : String(e)}`);
+    }
+    return null;
+  }
 
   const id = await useTxStore.getState().addParsedWithLocation(tx);
   if (id === null) return null; // duplicate, reference-duplicate, or a hidden account — see insertParsedTx

@@ -89,6 +89,7 @@ export type MainStackParamList = {
   Rules: { section?: 'category' | 'merchant' | 'amount' | 'word_match' | 'privacy' } | undefined;
   ManageAccounts: undefined;
   SmsInbox: undefined;
+  NeedsAttention: undefined;
   SmsThread: { key: string };
   CategoryOverview: undefined;
   SpendDetail:

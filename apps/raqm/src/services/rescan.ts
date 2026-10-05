@@ -5,6 +5,7 @@ import { insertParsedTxs, getScannedIdentitiesSince } from '../db/database';
 import { useTxStore } from '../store/txStore';
 import { runDetectionJobs, matchSplitPayments } from './txIntelligence';
 import { logEvent } from './logger';
+import { captureParseFailure } from './parseFailures';
 
 export interface RescanResult {
   found: number;
@@ -47,7 +48,10 @@ async function scanMissing(from: number, to: number = Date.now()): Promise<Resca
     for (const msg of messages) {
       if (!BankParserFactory.isKnownBankSender(msg.sender)) continue; // S5
       const tx = BankParserFactory.parse(msg.body, msg.sender, msg.timestamp);
-      if (!tx) continue;
+      if (!tx) {
+        await captureParseFailure(msg.sender, msg.body, msg.timestamp).catch(() => false);
+        continue;
+      }
       const identity = `${tx.bankName}|${tx.amount}|${tx.timestamp}`;
       if (seen.has(identity)) continue; // already present (or user-deleted) — skip
       seen.add(identity); // also dedupes repeats within this batch

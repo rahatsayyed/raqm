@@ -90,6 +90,18 @@ export async function postBudgetAlert(title: string, body: string): Promise<void
   });
 }
 
+/** Posts the "couldn't read a bank SMS" alert; tapping it opens the Needs Attention screen. */
+export async function postParseFailureNotification(sender: string): Promise<void> {
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'Couldn\'t read a bank message',
+      body: `A message from ${sender} looks like a transaction but wasn't parsed. Tap to review.`,
+      data: { screen: 'NeedsAttention' },
+    },
+    trigger: null,
+  });
+}
+
 /**
  * Wires up the single global notification-response listener — for the notifications actually
  * still posted through expo-notifications (budget alerts, daily/weekly/monthly summaries; see
@@ -138,13 +150,15 @@ export function attachNotificationHandlers(
   };
 
   const handleResponse = (response: NotificationResponse) => {
-    const data = response.notification.request.content.data as { txId?: number };
+    const data = response.notification.request.content.data as { txId?: number; screen?: string };
 
     if (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
       const proceed = () => {
         if (!useAppStore.getState().isOnboardingComplete) return;
         navigateWhenReady(() => {
-          if (typeof data.txId === 'number') {
+          if (data.screen === 'NeedsAttention') {
+            navRef.navigate('NeedsAttention');
+          } else if (typeof data.txId === 'number') {
             navRef.navigate('TransactionDetail', { transactionId: data.txId });
           } else {
             navRef.navigate('Tabs');
