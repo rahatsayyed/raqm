@@ -8,6 +8,7 @@ import { getCategories } from '../../db/database';
 import type { Category } from '../../db/database';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { isCreditType } from '../../services/txIntelligence';
+import { confirmNotDuplicate } from '../../utils/confirmDuplicate';
 
 function fmtDate(ts: number): string {
   return new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -70,6 +71,10 @@ export function AddTransactionScreen({ route, navigation }: MainStackScreenProps
     if (!canSave || saving) return;
     setSaving(true);
     try {
+      if (!(await confirmNotDuplicate(parsedAmount, type, date.getTime()))) {
+        navigation.goBack();
+        return;
+      }
       await addTx({
         amount: parsedAmount,
         type,
