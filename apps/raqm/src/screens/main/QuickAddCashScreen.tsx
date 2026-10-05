@@ -39,6 +39,8 @@ export function QuickAddCashScreen({ route, navigation }: MainStackScreenProps<'
   const [categoryLabel, setCategoryLabel] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const voiceBusy = useRef(false);
+  const unmounted = useRef(false);
+  const voiceAborted = useRef(false);
   const [voiceSupported] = useState(() => isVoiceAvailable());
   const [listening, setListening] = useState(false);
   const [partial, setPartial] = useState('');
@@ -92,7 +94,7 @@ export function QuickAddCashScreen({ route, navigation }: MainStackScreenProps<'
     else if (code === 'OFFLINE_PACK_MISSING')
       Alert.alert('Offline speech pack needed', 'Download your language for offline speech in Android settings, then try again.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Open settings', onPress: () => Linking.sendIntent('android.settings.VOICE_INPUT_SETTINGS') },
+        { text: 'Open settings', onPress: () => Linking.sendIntent('android.settings.VOICE_INPUT_SETTINGS').catch(() => {}) },
       ]);
     else ToastAndroid.show('Voice input failed', ToastAndroid.SHORT);
   };
@@ -100,22 +102,29 @@ export function QuickAddCashScreen({ route, navigation }: MainStackScreenProps<'
   const startVoice = async () => {
     if (voiceBusy.current) return;
     voiceBusy.current = true;
+    voiceAborted.current = false;
     setListening(true);
     setPartial('');
     const sub = addVoicePartialListener((e) => setPartial(e.text));
     try {
-      if (!(await requestRecordAudioPermission())) {
+      const granted = await requestRecordAudioPermission();
+      if (unmounted.current || voiceAborted.current) return;
+      if (!granted) {
         ToastAndroid.show('Microphone permission needed', ToastAndroid.SHORT);
         return;
       }
-      await applyTranscript(await startVoiceCapture());
+      const transcript = await startVoiceCapture();
+      if (unmounted.current) return;
+      await applyTranscript(transcript);
     } catch (e) {
-      handleVoiceError(e);
+      if (!unmounted.current) handleVoiceError(e);
     } finally {
       sub.remove();
       voiceBusy.current = false;
-      setListening(false);
-      setPartial('');
+      if (!unmounted.current) {
+        setListening(false);
+        setPartial('');
+      }
     }
   };
 
@@ -129,12 +138,15 @@ export function QuickAddCashScreen({ route, navigation }: MainStackScreenProps<'
   }, [route.params?.startVoice]);
 
   useEffect(() => () => {
+    unmounted.current = true;
     cancelVoiceCapture().catch(() => {});
   }, []);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (s) => {
-      if (s !== 'active') cancelVoiceCapture().catch(() => {});
+      if (s === 'active') return;
+      voiceAborted.current = true;
+      cancelVoiceCapture().catch(() => {});
     });
     return () => sub.remove();
   }, []);
