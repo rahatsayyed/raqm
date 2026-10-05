@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, AppState, Linking, View, Text, TextInput, TouchableOpacity, ToastAndroid } from 'react-native';
+import { Alert, AppState, Linking, Platform, View, Text, TextInput, TouchableOpacity, ToastAndroid } from 'react-native';
 import { Colors, Spacing } from '../../theme';
 import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollView';
 import { MainStackScreenProps } from '../../navigation/types';
@@ -17,6 +17,7 @@ import {
 import type { VoiceErrorCode } from '../../../modules/sms-reader/src/SmsReader.types';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { confirmNotDuplicate } from '../../utils/confirmDuplicate';
+import { showToast } from '../../utils/toast';
 
 /**
  * The single destination for every "quick add" entry point — the launcher shortcut,
@@ -77,7 +78,7 @@ export function QuickAddCashScreen({ route, navigation }: MainStackScreenProps<'
     const parsed = parseVoiceTx(transcript);
     if (parsed.amount == null) {
       setNotes((n) => n || transcript);
-      ToastAndroid.show("Didn't catch an amount", ToastAndroid.SHORT);
+      showToast("Didn't catch an amount");
       return;
     }
     setAmount(String(parsed.amount));
@@ -91,13 +92,26 @@ export function QuickAddCashScreen({ route, navigation }: MainStackScreenProps<'
   const handleVoiceError = (e: unknown) => {
     const code = ((e as { code?: string })?.code ?? 'ERROR') as VoiceErrorCode;
     if (code === 'CANCELLED') return;
-    if (code === 'NO_MATCH') ToastAndroid.show("Didn't catch that, try again", ToastAndroid.SHORT);
+    if (code === 'NO_MATCH') showToast("Didn't catch that, try again");
     else if (code === 'OFFLINE_PACK_MISSING')
-      Alert.alert('Offline speech pack needed', 'Download your language for offline speech in Android settings, then try again.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Open settings', onPress: () => Linking.sendIntent('android.settings.VOICE_INPUT_SETTINGS').catch(() => {}) },
-      ]);
-    else ToastAndroid.show('Voice input failed', ToastAndroid.SHORT);
+      Alert.alert(
+        'Offline speech pack needed',
+        Platform.OS === 'ios'
+          ? 'Enable Dictation and download your language in Settings > General > Keyboard, then try again.'
+          : 'Download your language for offline speech in Android settings, then try again.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Open settings',
+            onPress: () =>
+              (Platform.OS === 'ios'
+                ? Linking.openSettings()
+                : Linking.sendIntent('android.settings.VOICE_INPUT_SETTINGS')
+              ).catch(() => {}),
+          },
+        ],
+      );
+    else showToast('Voice input failed');
   };
 
   const startVoice = async () => {
@@ -117,7 +131,7 @@ export function QuickAddCashScreen({ route, navigation }: MainStackScreenProps<'
       }
       if (unmounted.current || voiceAborted.current) return;
       if (!granted) {
-        ToastAndroid.show('Microphone permission needed', ToastAndroid.SHORT);
+        showToast('Microphone permission needed');
         return;
       }
       const transcript = await startVoiceCapture();

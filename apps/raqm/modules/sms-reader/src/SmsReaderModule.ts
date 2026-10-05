@@ -106,3 +106,8 @@ export function cancelVoiceCapture(): Promise<void> {
 export function addVoicePartialListener(listener: (e: { text: string }) => void): EventSubscription {
   return native.addListener('voicePartial', listener);
 }
+
+/** iOS only: asks for Speech and Microphone access together; false if either is denied. */
+export function requestVoicePermission(): Promise<boolean> {
+  return native.requestVoicePermission?.() ?? Promise.resolve(false);
+}
