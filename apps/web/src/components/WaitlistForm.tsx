@@ -79,7 +79,7 @@ export function WaitlistForm({ source, tone = 'light' }: { source: string; tone?
           placeholder="you@email.com"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="min-w-0 flex-1 rounded-inner border border-[var(--color-border-subtle)] bg-surface px-4 py-4 font-body text-sm text-ink-headline placeholder:text-ink-body focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-primary"
+          className="min-w-0 flex-1 rounded-inner border border-[var(--color-border-subtle)] bg-surface px-4 py-4 font-body text-base text-ink-headline placeholder:text-ink-body focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-primary"
         />
         <SubmitButton tone={tone} />
       </div>

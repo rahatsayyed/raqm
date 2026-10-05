@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGSAP } from '@gsap/react';
 import Link from 'next/link';
 import gsap from 'gsap';
-import { scrollToHash } from './SmoothScrollProvider';
+import { lenisInstance, scrollToHash } from './SmoothScrollProvider';
 
 export interface StaggeredMenuItem {
   label: string;
@@ -334,6 +334,18 @@ export function StaggeredMenu({
     }
   }, [playClose, animateIcon, animateColor, animateText, onMenuClose]);
 
+  useEffect(() => {
+    if (!open) return;
+    lenisInstance?.stop();
+    const root = document.documentElement;
+    const prevOverflow = root.style.overflow;
+    root.style.overflow = 'hidden';
+    return () => {
+      root.style.overflow = prevOverflow;
+      lenisInstance?.start();
+    };
+  }, [open]);
+
   const handleItemClick = useCallback(
     (event: React.MouseEvent<HTMLAnchorElement>, link: string) => {
       closeMenu();
@@ -423,7 +435,7 @@ export function StaggeredMenu({
     <div
       ref={rootRef}
       className={`group z-40 pointer-events-none ${
-        isFixed ? 'fixed inset-0 w-screen h-screen overflow-hidden' : 'relative w-full h-full'
+        isFixed ? 'fixed inset-0 w-full h-dvh overflow-hidden' : 'relative w-full h-full'
       }`}
       style={{ ['--sm-accent' as string]: accentColor }}
       data-position={position}
@@ -455,12 +467,12 @@ export function StaggeredMenu({
         className="absolute top-0 left-0 w-full flex items-center justify-between py-6 px-8 bg-transparent pointer-events-none z-20 will-change-transform lg:right-0 lg:mx-auto lg:max-w-214.25"
         aria-label="Main navigation header"
       >
-        <Link href="/" className="flex items-center text-ink-headline no-underline select-none pointer-events-auto" aria-label="Raqm home">
+        <Link href="/" className="flex items-center py-2 text-ink-headline no-underline select-none pointer-events-auto" aria-label="Raqm home">
           <span className="font-display text-lg">Raqm</span>
         </Link>
         <button
           ref={toggleBtnRef}
-          className="relative inline-flex items-center gap-[0.3rem] bg-transparent border-0 cursor-pointer text-ink-headline font-medium leading-none overflow-visible pointer-events-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-primary focus-visible:outline-offset-4 focus-visible:rounded"
+          className="relative inline-flex min-h-11 min-w-11 items-center justify-end gap-[0.3rem] bg-transparent border-0 cursor-pointer text-ink-headline font-medium leading-none overflow-visible pointer-events-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-primary focus-visible:outline-offset-4 focus-visible:rounded"
           aria-label={open ? 'Close menu' : 'Open menu'}
           aria-expanded={open}
           aria-controls="staggered-menu-panel"
@@ -492,7 +504,7 @@ export function StaggeredMenu({
       <aside
         id="staggered-menu-panel"
         ref={panelRef}
-        className="absolute top-0 inset-x-0 lg:inset-x-auto lg:right-0 group-data-[position=left]:lg:right-auto group-data-[position=left]:lg:left-0 w-full lg:w-[clamp(280px,38vw,560px)] h-full bg-surface flex flex-col pt-28 px-10 pb-10 overflow-y-auto z-10 pointer-events-auto opacity-0"
+        className="absolute top-0 inset-x-0 lg:inset-x-auto lg:right-0 group-data-[position=left]:lg:right-auto group-data-[position=left]:lg:left-0 w-full lg:w-[clamp(280px,38vw,560px)] h-full bg-surface flex flex-col pt-28 px-10 pb-10 overflow-y-auto overscroll-contain z-10 pointer-events-auto opacity-0"
         aria-hidden={!open}
       >
         <div className="flex-1 flex flex-col gap-5">

@@ -16,7 +16,7 @@ export function Footer() {
             <Link
               key={feature.slug}
               href={`/features/${feature.slug}`}
-              className="rounded-dot font-body text-sm text-[color-mix(in_srgb,var(--color-surface)_82%,transparent)] transition-colors duration-150 hover:text-accent-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-surface"
+              className="inline-block rounded-dot py-3 font-body text-sm text-[color-mix(in_srgb,var(--color-surface)_82%,transparent)] transition-colors duration-150 hover:text-accent-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-surface"
             >
               {feature.name}
             </Link>
