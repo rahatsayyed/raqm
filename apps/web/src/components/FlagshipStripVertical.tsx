@@ -7,6 +7,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { featureDeepDives, featureViewTransitionName } from '@/lib/features-data';
 import { FeatureDoodles } from './FeatureDoodles';
+import { FeatureNotes } from './FeatureNotes';
 import { ScrollReveal } from './ScrollReveal';
 import { lenisInstance } from './SmoothScrollProvider';
 
@@ -220,6 +221,7 @@ export function FlagshipStripVertical() {
               >
                 <ViewTransition name={featureViewTransitionName(feature.slug)} share="morph" default="none">
                   <div className={`relative py-9 ${GUTTER} pr-4 sm:py-12 sm:pr-6`}>
+                    <FeatureNotes index={index} active={isActive} />
                     <span
                       className={`pointer-events-none absolute left-0 top-1 w-0.5 bg-accent-primary transition-[height,opacity] duration-700 ease-in-out ${
                         isActive ? 'h-[calc(100%-0.5rem)] opacity-100' : 'h-6 opacity-30'

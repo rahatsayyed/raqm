@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { newsreader, instrumentSans, jetbrainsMono, anton } from './fonts';
+import { newsreader, instrumentSans, jetbrainsMono, anton, caveat } from './fonts';
 import { BackgroundDepth } from '@/components/BackgroundDepth';
 import { SmoothScrollProvider } from '@/components/SmoothScrollProvider';
 import './globals.css';
@@ -18,7 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body
-        className={`${newsreader.variable} ${instrumentSans.variable} ${jetbrainsMono.variable} ${anton.variable} antialiased`}
+        className={`${newsreader.variable} ${instrumentSans.variable} ${jetbrainsMono.variable} ${anton.variable} ${caveat.variable} antialiased`}
       >
         <BackgroundDepth />
         <a

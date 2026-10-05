@@ -1,4 +1,4 @@
-import { Newsreader, Instrument_Sans, JetBrains_Mono, Anton } from 'next/font/google';
+import { Newsreader, Instrument_Sans, JetBrains_Mono, Anton, Caveat } from 'next/font/google';
 
 export const newsreader = Newsreader({
   subsets: ['latin'],
@@ -27,5 +27,13 @@ export const anton = Anton({
   subsets: ['latin'],
   weight: ['400'],
   variable: '--font-anton',
+  display: 'swap',
+});
+
+// Margin-note handwriting for the grey feature scribbles behind FlagshipStripVertical.
+export const caveat = Caveat({
+  subsets: ['latin'],
+  weight: ['400'],
+  variable: '--font-caveat',
   display: 'swap',
 });
