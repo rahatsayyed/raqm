@@ -6,6 +6,7 @@ import Link from 'next/link';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { featureDeepDives, featureViewTransitionName } from '@/lib/features-data';
+import { FeatureDoodles } from './FeatureDoodles';
 import { ScrollReveal } from './ScrollReveal';
 import { lenisInstance } from './SmoothScrollProvider';
 
@@ -196,6 +197,7 @@ export function FlagshipStripVertical() {
       <span className="mb-3 block font-mono text-xs text-ink-label opacity-60">04 / 05</span>
       <h2 className="mb-10 text-balance font-display text-4xl text-ink-headline sm:text-5xl">Features</h2>
       <ol ref={listRef} className="relative flex flex-col [overflow-anchor:none] lg:grid lg:grid-cols-12 lg:gap-x-8">
+        <FeatureDoodles activeIndex={activeIndex} />
         {featureDeepDives.map((feature, index) => {
           const isActive = index === activeIndex;
           const isLive = feature.status === 'live';
@@ -209,7 +211,7 @@ export function FlagshipStripVertical() {
               }}
               onMouseEnter={() => handleRowEnter(index)}
               onMouseLeave={handleRowLeave}
-              className={`border-b border-border-subtle lg:col-span-10 lg:border-b-0 ${isStaggered ? 'lg:col-start-3' : 'lg:col-start-1'}`}
+              className={`relative z-10 lg:col-span-10 ${isStaggered ? 'lg:col-start-3' : 'lg:col-start-1'}`}
             >
               <Link
                 href={`/features/${feature.slug}`}
