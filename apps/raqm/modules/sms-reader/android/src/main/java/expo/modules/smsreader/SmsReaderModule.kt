@@ -12,6 +12,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
+import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.smsreader.widget.WidgetRefresh
@@ -23,10 +24,19 @@ class SmsReaderModule : Module() {
   // only a real screen-off (device locked) should force re-authentication on next foreground.
   private var screenOffReceiver: BroadcastReceiver? = null
 
+  private var voice: VoiceRecognizer? = null
+
+  private fun voiceRecognizer(): VoiceRecognizer? {
+    val context = appContext.reactContext ?: return null
+    return voice ?: VoiceRecognizer(context) { text ->
+      sendEvent("voicePartial", mapOf("text" to text))
+    }.also { voice = it }
+  }
+
   override fun definition() = ModuleDefinition {
     Name("SmsReader")
 
-    Events("screenLocked")
+    Events("screenLocked", "voicePartial")
 
     OnCreate {
       val context = appContext.reactContext ?: return@OnCreate
@@ -62,6 +72,17 @@ class SmsReaderModule : Module() {
             .build()
           ShortcutManagerCompat.pushDynamicShortcut(context, shortcut)
         }
+        val voiceIntent = QuickAdd.mainActivityIntent(context, quickAdd = true, startVoice = true)
+          ?.apply { action = Intent.ACTION_VIEW }
+        if (voiceIntent != null) {
+          val voiceShortcut = ShortcutInfoCompat.Builder(context, "quick_add_voice")
+            .setShortLabel("Voice cash spend")
+            .setLongLabel("Voice cash spend")
+            .setIcon(IconCompat.createWithResource(context, R.drawable.ic_add_voice))
+            .setIntent(voiceIntent)
+            .build()
+          ShortcutManagerCompat.pushDynamicShortcut(context, voiceShortcut)
+        }
       } catch (e: Exception) {
         DiagnosticLog.write(context, "error.caught", "pushDynamicShortcut: ${e.message}")
       }
@@ -75,6 +96,8 @@ class SmsReaderModule : Module() {
           // Already unregistered (e.g. context torn down first) — safe to ignore.
         }
       }
+      voice?.cancel()
+      voice = null
       screenOffReceiver = null
     }
 
@@ -146,14 +169,36 @@ class SmsReaderModule : Module() {
       val activity = appContext.currentActivity ?: return@Function null
       val intent = activity.intent ?: return@Function null
       val quickAdd = intent.getBooleanExtra(QuickAdd.EXTRA_OPEN_QUICK_ADD, false)
+      val startVoice = intent.getBooleanExtra(QuickAdd.EXTRA_START_VOICE, false)
       val txId = intent.getIntExtra(QuickAdd.EXTRA_OPEN_TRANSACTION, -1)
       if (!quickAdd && txId == -1) return@Function null
       intent.removeExtra(QuickAdd.EXTRA_OPEN_QUICK_ADD)
+      intent.removeExtra(QuickAdd.EXTRA_START_VOICE)
       intent.removeExtra(QuickAdd.EXTRA_OPEN_TRANSACTION)
       mapOf(
         "openQuickAdd" to quickAdd,
         "openTransaction" to if (txId == -1) null else txId,
+        "startVoice" to startVoice,
       )
+    }
+
+    Function("isVoiceAvailable") {
+      voiceRecognizer()?.isAvailable() ?: false
+    }
+
+    AsyncFunction("startVoiceCapture") { promise: Promise ->
+      val v = voiceRecognizer()
+      if (v == null) {
+        promise.reject("ERROR", "No React context", null)
+        return@AsyncFunction
+      }
+      v.start { text, code ->
+        if (text != null) promise.resolve(text) else promise.reject(code ?: "ERROR", code ?: "ERROR", null)
+      }
+    }
+
+    AsyncFunction("cancelVoiceCapture") {
+      voice?.cancel()
     }
 
     // Mirrors the user's app-picker selection into SharedPreferences, where

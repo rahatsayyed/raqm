@@ -25,7 +25,7 @@ export function AppNavigator() {
   // drain() gets a chance to run (that one now just finds nothing left and no-ops on cold
   // start; it's still needed for warm start via the AppState listener). See MainNavigator's
   // initialRouteFor for why this replaces the old "mount Home, then navigate()" flash.
-  const [launchDeepLink] = useState(() => {
+  const [launchDeepLink, setLaunchDeepLink] = useState(() => {
     try {
       return consumeLaunchDeepLink();
     } catch {
@@ -110,6 +110,11 @@ export function AppNavigator() {
       unsub();
     };
   }, []);
+
+  useEffect(() => {
+    // Clear after MainNavigator's first render so initialParams never merge into later navigates.
+    if (ready && isOnboardingComplete) setLaunchDeepLink(null);
+  }, [ready, isOnboardingComplete]);
 
   useEffect(() => {
     if (isOnboardingComplete) {

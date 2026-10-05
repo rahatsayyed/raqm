@@ -13,4 +13,14 @@ export interface InstalledApp {
 export type LaunchDeepLink = {
   openQuickAdd: boolean;
   openTransaction: number | null;
+  startVoice?: boolean;
 };
+
+export type VoiceErrorCode =
+  | 'NO_PERMISSION'
+  | 'OFFLINE_PACK_MISSING'
+  | 'NO_MATCH'
+  | 'CANCELLED'
+  | 'BUSY'
+  | 'UNSUPPORTED'
+  | 'ERROR';

@@ -72,6 +72,16 @@
         <action android:name="android.service.quicksettings.action.QS_TILE" />
       </intent-filter>
     </service>
+    <service
+      android:name=".VoiceTileService"
+      android:label="Voice cash spend"
+      android:icon="@drawable/ic_tile_mic"
+      android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="android.service.quicksettings.action.QS_TILE" />
+      </intent-filter>
+    </service>
 
     <!-- Widget appearance settings (opacity, wallpaper-color match). Launched by the system
          via each widget XML's android:configure — the launcher (a different package) starts
@@ -100,6 +110,16 @@
       <meta-data
         android:name="android.appwidget.provider"
         android:resource="@xml/widget_add_transaction_info" />
+    </receiver>
+    <receiver
+      android:name=".widget.VoiceWidgetReceiver"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/widget_voice_info" />
     </receiver>
 
     <receiver

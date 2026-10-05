@@ -1,13 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ToastAndroid } from 'react-native';
+import { Alert, AppState, Linking, Platform, View, Text, TextInput, TouchableOpacity, ToastAndroid } from 'react-native';
 import { Colors, Spacing } from '../../theme';
 import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollView';
 import { MainStackScreenProps } from '../../navigation/types';
 import { useTxStore } from '../../store/txStore';
-import { getCategories } from '../../db/database';
-import type { Category } from '../../db/database';
+import { cn } from '../../utils/cn';
+import { getCategories, getCategoryRuleForMerchant, getWordMatchCategoryForMerchant } from '../../db/database';
+import { parseVoiceTx } from '../../services/voiceParse';
+import { requestRecordAudioPermission } from '../../utils/permissions';
+import {
+  addVoicePartialListener,
+  cancelVoiceCapture,
+  isVoiceAvailable,
+  startVoiceCapture,
+} from '../../../modules/sms-reader/src/SmsReaderModule';
+import type { VoiceErrorCode } from '../../../modules/sms-reader/src/SmsReader.types';
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import { confirmNotDuplicate } from '../../utils/confirmDuplicate';
+import { showToast } from '../../utils/toast';
 
 /**
  * The single destination for every "quick add" entry point — the launcher shortcut,
@@ -29,6 +39,13 @@ export function QuickAddCashScreen({ route, navigation }: MainStackScreenProps<'
   const [subcategoryId, setSubcategoryId] = useState<number | undefined>(undefined);
   const [categoryLabel, setCategoryLabel] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const voiceBusy = useRef(false);
+  const unmounted = useRef(false);
+  const voiceAborted = useRef(false);
+  const permissionPending = useRef(false);
+  const [voiceSupported] = useState(() => isVoiceAvailable());
+  const [listening, setListening] = useState(false);
+  const [partial, setPartial] = useState('');
 
   const parsedAmount = parseFloat(amount);
   const canSave = !Number.isNaN(parsedAmount) && parsedAmount > 0;
@@ -45,14 +62,126 @@ export function QuickAddCashScreen({ route, navigation }: MainStackScreenProps<'
     const pickedSubcategoryId = route.params?.pickedSubcategoryId;
     if (pickedCategoryId == null) return;
 
-    setCategoryId(pickedCategoryId);
-    setSubcategoryId(pickedSubcategoryId);
-    getCategories().then((categories: Category[]) => {
-      const cat = categories.find((c) => c.id === pickedCategoryId);
-      setCategoryLabel(cat ? `${cat.emoji} ${cat.name}` : null);
-    });
+    applyCategory(pickedCategoryId, pickedSubcategoryId ?? null);
     navigation.setParams({ pickedCategoryId: undefined, pickedSubcategoryId: undefined });
   }, [route.params?.pickedCategoryId, route.params?.pickedSubcategoryId]);
+
+  const applyCategory = async (id: number, sub: number | null) => {
+    setCategoryId(id);
+    setSubcategoryId(sub ?? undefined);
+    const categories = await getCategories();
+    const cat = categories.find((c) => c.id === id);
+    setCategoryLabel(cat ? `${cat.emoji} ${cat.name}` : null);
+  };
+
+  const applyTranscript = async (transcript: string) => {
+    const parsed = parseVoiceTx(transcript);
+    if (parsed.amount == null) {
+      setNotes((n) => n || transcript);
+      showToast("Didn't catch an amount");
+      return;
+    }
+    setAmount(String(parsed.amount));
+    if (parsed.merchant) setMerchant(parsed.merchant);
+    const hit =
+      (parsed.merchant ? await getCategoryRuleForMerchant(parsed.merchant) : null) ??
+      (await getWordMatchCategoryForMerchant(parsed.categoryText));
+    if (hit) await applyCategory(hit.categoryId, hit.subcategoryId);
+  };
+
+  const handleVoiceError = (e: unknown) => {
+    const code = ((e as { code?: string })?.code ?? 'ERROR') as VoiceErrorCode;
+    if (code === 'CANCELLED') return;
+    if (code === 'NO_MATCH') showToast("Didn't catch that, try again");
+    else if (code === 'OFFLINE_PACK_MISSING')
+      Alert.alert(
+        'Offline speech pack needed',
+        Platform.OS === 'ios'
+          ? 'Enable Dictation and download your language in Settings > General > Keyboard, then try again.'
+          : 'Download your language for offline speech in Android settings, then try again.',
+        Platform.OS === 'ios'
+          ? [{ text: 'OK' }]
+          : [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Open settings',
+                onPress: () => Linking.sendIntent('android.settings.VOICE_INPUT_SETTINGS').catch(() => {}),
+              },
+            ],
+      );
+    else showToast('Voice input failed');
+  };
+
+  const startVoice = async () => {
+    if (voiceBusy.current) return;
+    voiceBusy.current = true;
+    voiceAborted.current = false;
+    setListening(true);
+    setPartial('');
+    const sub = addVoicePartialListener((e) => setPartial(e.text));
+    try {
+      permissionPending.current = true;
+      let granted: boolean;
+      try {
+        granted = await requestRecordAudioPermission();
+      } finally {
+        permissionPending.current = false;
+      }
+      if (unmounted.current || voiceAborted.current) return;
+      if (!granted) {
+        if (Platform.OS === 'ios')
+          Alert.alert('Permission needed', 'Allow Speech Recognition and the Microphone for Raqm in Settings to use voice.', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open settings', onPress: () => Linking.openSettings().catch(() => {}) },
+          ]);
+        else showToast('Microphone permission needed');
+        return;
+      }
+      const transcript = await startVoiceCapture();
+      if (unmounted.current) return;
+      await applyTranscript(transcript);
+    } catch (e) {
+      if (!unmounted.current) handleVoiceError(e);
+    } finally {
+      sub.remove();
+      voiceBusy.current = false;
+      if (!unmounted.current) {
+        setListening(false);
+        setPartial('');
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!route.params?.startVoice || !voiceSupported) return;
+    const t = setTimeout(() => {
+      startVoice();
+      navigation.setParams({ startVoice: undefined });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [route.params?.startVoice]);
+
+  useEffect(() => () => {
+    unmounted.current = true;
+    cancelVoiceCapture().catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const unsub = navigation.addListener('blur', () => {
+      if (!permissionPending.current) voiceAborted.current = true;
+      cancelVoiceCapture().catch(() => {});
+    });
+    return unsub;
+  }, [navigation]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active' || permissionPending.current) return;
+      voiceAborted.current = true;
+      cancelVoiceCapture().catch(() => {});
+    });
+    return () => sub.remove();
+  }, []);
 
   const close = () => {
     // Cold start via shortcut/tile/widget leaves nothing to pop back to — land on the tabs
@@ -107,7 +236,25 @@ export function QuickAddCashScreen({ route, navigation }: MainStackScreenProps<'
         extraScrollHeight={Spacing.lg}
         keyboardShouldPersistTaps="handled"
       >
-        <Text className="font-mono text-label-sm text-on-surface-variant mt-lg mb-sm">Amount</Text>
+        <View className="flex-row items-center justify-between mt-lg mb-sm">
+          <Text className="font-mono text-label-sm text-on-surface-variant">Amount</Text>
+          {voiceSupported ? (
+            <TouchableOpacity
+              onPress={startVoice}
+              disabled={listening}
+              accessibilityLabel="Speak a transaction"
+              className={cn(
+                'flex-row items-center rounded-full border border-outline-variant px-md py-[6px]',
+                listening && 'opacity-60',
+              )}
+            >
+              <Text className="font-inter-medium text-body-md text-primary">{listening ? 'Listening…' : '🎤 Speak'}</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+        {listening && partial ? (
+          <Text className="font-inter text-body-md text-on-surface-variant mb-sm">{partial}</Text>
+        ) : null}
         <TextInput
           ref={amountRef}
           className="font-mono-medium text-numeric-lg text-on-surface bg-surface-container-lowest rounded-xl border border-outline-variant px-md py-md"

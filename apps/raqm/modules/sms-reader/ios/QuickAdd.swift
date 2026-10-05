@@ -7,10 +7,12 @@ import UIKit
 /// SmsReaderModule.consumeLaunchDeepLink() on mount and on every foreground.
 enum QuickAdd {
   static let shortcutType = "com.raqm.quickAddCash"
+  static let voiceShortcutType = "com.raqm.quickAddVoice"
 
   struct Pending {
     var openQuickAdd: Bool
     var openTransaction: Int?
+    var startVoice: Bool = false
   }
 
   /// Set by the AppDelegate subscriber when a shortcut is tapped (cold or warm launch),
@@ -20,19 +22,31 @@ enum QuickAdd {
   /// Dynamic (not Info.plist-static) shortcut, so it needs no build-time plist entry —
   /// mirrors Android's ShortcutManagerCompat.pushDynamicShortcut, re-set on every launch.
   static func registerShortcut() {
-    let icon = UIApplicationShortcutIcon(systemImageName: "plus.circle")
-    let item = UIApplicationShortcutItem(
+    let cash = UIApplicationShortcutItem(
       type: shortcutType,
       localizedTitle: "Add Cash Spend",
       localizedSubtitle: nil,
-      icon: icon
+      icon: UIApplicationShortcutIcon(systemImageName: "plus.circle")
     )
-    UIApplication.shared.shortcutItems = [item]
+    let voice = UIApplicationShortcutItem(
+      type: voiceShortcutType,
+      localizedTitle: "Voice cash spend",
+      localizedSubtitle: nil,
+      icon: UIApplicationShortcutIcon(systemImageName: "mic.circle")
+    )
+    UIApplication.shared.shortcutItems = [cash, voice]
   }
 
   static func handle(_ item: UIApplicationShortcutItem) -> Bool {
-    guard item.type == shortcutType else { return false }
-    pending = Pending(openQuickAdd: true, openTransaction: nil)
-    return true
+    switch item.type {
+    case shortcutType:
+      pending = Pending(openQuickAdd: true, openTransaction: nil)
+      return true
+    case voiceShortcutType:
+      pending = Pending(openQuickAdd: true, openTransaction: nil, startVoice: true)
+      return true
+    default:
+      return false
+    }
   }
 }

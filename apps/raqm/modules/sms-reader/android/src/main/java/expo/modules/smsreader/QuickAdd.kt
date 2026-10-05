@@ -16,6 +16,7 @@ import android.content.Intent
 object QuickAdd {
   const val EXTRA_OPEN_QUICK_ADD = "openQuickAdd"
   const val EXTRA_OPEN_TRANSACTION = "openTransaction"
+  const val EXTRA_START_VOICE = "startVoice"
 
   /**
    * The launcher-activity intent carrying the deep-link extras. Glance's `actionStartActivity`
@@ -27,6 +28,7 @@ object QuickAdd {
     context: Context,
     quickAdd: Boolean,
     transactionId: Int? = null,
+    startVoice: Boolean = false,
   ): Intent? {
     val intent = try {
       context.packageManager.getLaunchIntentForPackage(context.packageName)
@@ -35,7 +37,8 @@ object QuickAdd {
     } ?: return null
 
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-    if (quickAdd) intent.putExtra(EXTRA_OPEN_QUICK_ADD, true)
+    if (quickAdd || startVoice) intent.putExtra(EXTRA_OPEN_QUICK_ADD, true)
+    if (startVoice) intent.putExtra(EXTRA_START_VOICE, true)
     if (transactionId != null) intent.putExtra(EXTRA_OPEN_TRANSACTION, transactionId)
     return intent
   }
@@ -51,8 +54,9 @@ object QuickAdd {
     requestCode: Int,
     quickAdd: Boolean,
     transactionId: Int? = null,
+    startVoice: Boolean = false,
   ): PendingIntent? {
-    val intent = mainActivityIntent(context, quickAdd, transactionId) ?: return null
+    val intent = mainActivityIntent(context, quickAdd, transactionId, startVoice) ?: return null
 
     return try {
       PendingIntent.getActivity(

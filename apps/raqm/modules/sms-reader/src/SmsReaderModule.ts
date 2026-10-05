@@ -88,3 +88,26 @@ export function refreshWidgets(): Promise<void> {
 export function sendSms(phoneNumber: string, message: string): Promise<void> {
   return native.sendSms(phoneNumber, message);
 }
+
+/** True only when an on-device recognizer is available (Android 13+ / iOS on-device model); never cloud. */
+export function isVoiceAvailable(): boolean {
+  return native.isVoiceAvailable?.() ?? false;
+}
+
+/** Resolves with the final transcript; rejects with a VoiceErrorCode as `error.code`. */
+export function startVoiceCapture(): Promise<string> {
+  return native.startVoiceCapture();
+}
+
+export function cancelVoiceCapture(): Promise<void> {
+  return native.cancelVoiceCapture?.() ?? Promise.resolve();
+}
+
+export function addVoicePartialListener(listener: (e: { text: string }) => void): EventSubscription {
+  return native.addListener('voicePartial', listener);
+}
+
+/** iOS only: asks for Speech and Microphone access together; false if either is denied. */
+export function requestVoicePermission(): Promise<boolean> {
+  return native.requestVoicePermission?.() ?? Promise.resolve(false);
+}
