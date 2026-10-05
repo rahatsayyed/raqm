@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import gsap from 'gsap';
 import { MorphSVGPlugin } from 'gsap/MorphSVGPlugin';
 
@@ -100,7 +100,14 @@ const SCENES: Array<{ paths: string[]; sparks: string[] }> = [
   },
 ];
 
-export function FeatureDoodles({ activeIndex }: { activeIndex: number }): ReactNode {
+export function FeatureDoodles({
+  activeIndex,
+  rowRefs,
+}: {
+  activeIndex: number;
+  rowRefs: RefObject<Array<HTMLLIElement | null>>;
+}): ReactNode {
+  const layerRef = useRef<HTMLDivElement>(null);
   const inkRef = useRef<SVGPathElement>(null);
   const sparkRef = useRef<SVGPathElement>(null);
   const mountedRef = useRef(false);
@@ -133,12 +140,31 @@ export function FeatureDoodles({ activeIndex }: { activeIndex: number }): ReactN
     };
   }, []);
 
+  useEffect(() => {
+    const layer = layerRef.current;
+    const list = layer?.parentElement;
+    if (!layer || !list) return;
+    // Layer spans first-row center to last-row center so the sticky doodle enters and leaves with those cards.
+    const measure = () => {
+      const first = rowRefs.current[0];
+      const last = rowRefs.current[rowRefs.current.length - 1];
+      if (!first || !last) return;
+      layer.style.top = `${first.offsetTop + first.offsetHeight / 2}px`;
+      layer.style.bottom = `${list.offsetHeight - (last.offsetTop + last.offsetHeight / 2)}px`;
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(list);
+    rowRefs.current.forEach((row) => row && observer.observe(row));
+    return () => observer.disconnect();
+  }, [rowRefs]);
+
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
-      <div className="sticky top-0 flex h-[100svh] items-center justify-end pt-[4svh] lg:pt-0">
+    <div ref={layerRef} aria-hidden className="pointer-events-none absolute inset-x-0 z-0">
+      <div className="sticky top-[54svh] h-0 lg:top-[50svh]">
         <svg
           viewBox="0 0 400 400"
-          className="aspect-square w-[min(62vw,250px)] -mr-3 overflow-visible opacity-[0.18] sm:mr-0 sm:w-[min(48vw,340px)] sm:opacity-[0.18] lg:w-[min(30vw,420px)] lg:opacity-[0.3] xl:-mr-24"
+          className="absolute right-0 top-0 aspect-square w-[min(62vw,250px)] -translate-y-1/2 -right-3 overflow-visible opacity-[0.18] sm:right-0 sm:w-[min(48vw,340px)] sm:opacity-[0.18] lg:w-[min(30vw,420px)] lg:opacity-[0.3] xl:-right-24"
         >
           <path ref={inkRef} d={SCENES[0].paths.join(' ')} {...STROKE} stroke={INK} />
           <path ref={sparkRef} d={SCENES[0].sparks.join(' ')} {...STROKE} stroke={SPARK} />

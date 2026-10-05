@@ -197,8 +197,8 @@ export function FlagshipStripVertical() {
     <ScrollReveal id="features" className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
       <span className="mb-3 block font-mono text-xs text-ink-label opacity-60">04 / 05</span>
       <h2 className="mb-10 text-balance font-display text-4xl text-ink-headline sm:text-5xl">Features</h2>
-      <ol ref={listRef} className="relative flex flex-col [overflow-anchor:none] lg:grid lg:grid-cols-12 lg:gap-x-8">
-        <FeatureDoodles activeIndex={activeIndex} />
+      <ol ref={listRef} className="relative flex flex-col gap-6 [overflow-anchor:none] lg:grid lg:grid-cols-12 lg:gap-x-8">
+        <FeatureDoodles activeIndex={activeIndex} rowRefs={rowRefs} />
         {featureDeepDives.map((feature, index) => {
           const isActive = index === activeIndex;
           const isLive = feature.status === 'live';
