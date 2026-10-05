@@ -95,7 +95,7 @@ export function DeletedTransactionsScreen({ navigation }: MainStackScreenProps<'
     ({ item: tx }: { item: TxRecord }) => (
       <DeletedTxRow
         id={tx.id}
-        merchant={tx.merchant || accountLabel(tx.bankName, tx.accountLast4, accountLabels)}
+        merchant={tx.merchantDisplay || accountLabel(tx.bankName, tx.accountLast4, accountLabels)}
         dateLabel={formatDate(tx.timestamp)}
         deletedDateLabel={tx.deletedAt ? formatDate(tx.deletedAt) : '—'}
         amountLabel={formatAmount(tx.amount, tx.currency)}

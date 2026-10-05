@@ -170,6 +170,7 @@ export function TransactionsScreen() {
     return sorted.filter(
       tx =>
         (tx.merchant ?? '').toLowerCase().includes(q) ||
+        (tx.merchantDisplay ?? '').toLowerCase().includes(q) ||
         tx.bankName.toLowerCase().includes(q) ||
         accountLabel(tx.bankName, tx.accountLast4, accountLabels).toLowerCase().includes(q),
     );
@@ -533,7 +534,7 @@ const TxRow = memo(function TxRow({
         <Icon color={credit ? Colors.primary : Colors.onSurfaceVariant} size={20} />
       </View>
       <View className="flex-1">
-        <Text className="font-inter text-body-standard text-on-surface" numberOfLines={1}>{tx.merchant || bankLabel}</Text>
+        <Text className="font-inter text-body-standard text-on-surface" numberOfLines={1}>{tx.merchantDisplay || bankLabel}</Text>
         <Text className="font-inter text-annotation mt-[2px]" numberOfLines={1}>
           {categoryName
             ? <Text className="text-ink-label">{categoryName}</Text>

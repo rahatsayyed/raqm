@@ -639,6 +639,24 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 21) {
+    await database.runAsync(`BEGIN`);
+    try {
+      await database.runAsync(
+        `CREATE TABLE IF NOT EXISTS merchant_aliases (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          raw_key TEXT NOT NULL UNIQUE,
+          display_name TEXT NOT NULL
+        )`,
+      );
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (21)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -688,6 +706,7 @@ export interface TxRecord {
   amount: number;
   type: TransactionType;
   merchant: string | null;
+  merchantDisplay: string | null;
   bankName: string;
   accountLast4: string | null;
   timestamp: number;
@@ -797,6 +816,7 @@ function rowToTxRecord(row: Record<string, unknown>): TxRecord {
     amount: row.amount as number,
     type: row.type as TransactionType,
     merchant: (row.merchant as string | null) ?? null,
+    merchantDisplay: (row.merchant as string | null) ?? null,
     bankName: row.bankName as string,
     accountLast4: (row.accountLast4 as string | null) ?? null,
     timestamp: row.timestamp as number,
@@ -962,7 +982,8 @@ export async function loadDeletedTxRecords(): Promise<TxRecord[]> {
   const rows = await database.getAllAsync<Record<string, unknown>>(
     'SELECT * FROM transactions WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC',
   );
-  return rows.map(rowToTxRecord);
+  const aliases = await getMerchantAliasMap();
+  return rows.map((r) => withMerchantAlias(rowToTxRecord(r), aliases));
 }
 
 /** Soft-deletes every live transaction of an account (recoverable via the Deleted screen). */
@@ -1135,7 +1156,8 @@ export async function loadTxRecords(): Promise<TxRecord[]> {
      )
      ORDER BY timestamp DESC`,
   );
-  return rows.map(rowToTxRecord);
+  const aliases = await getMerchantAliasMap();
+  return rows.map((r) => withMerchantAlias(rowToTxRecord(r), aliases));
 }
 
 export async function getTxById(id: number): Promise<TxRecord | null> {
@@ -1144,7 +1166,40 @@ export async function getTxById(id: number): Promise<TxRecord | null> {
     `SELECT * FROM transactions WHERE id = ?`,
     id,
   );
-  return row ? rowToTxRecord(row) : null;
+  if (!row) return null;
+  return withMerchantAlias(rowToTxRecord(row), await getMerchantAliasMap());
+}
+
+function withMerchantAlias(tx: TxRecord, aliases: Map<string, string>): TxRecord {
+  if (!tx.merchant) return tx;
+  const alias = aliases.get(normalizeMerchantKey(tx.merchant));
+  return alias ? { ...tx, merchantDisplay: alias } : tx;
+}
+
+export async function getMerchantAliasMap(): Promise<Map<string, string>> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{ raw_key: string; display_name: string }>(
+    `SELECT raw_key, display_name FROM merchant_aliases`,
+  );
+  return new Map(rows.map((r) => [r.raw_key, r.display_name]));
+}
+
+// Empty name removes the alias; the raw merchant on transactions is never rewritten.
+export async function setMerchantAlias(rawMerchant: string, displayName: string): Promise<void> {
+  const database = await getDb();
+  const key = normalizeMerchantKey(rawMerchant);
+  const name = displayName.trim();
+  if (!key) return;
+  if (!name || normalizeMerchantKey(name) === key) {
+    await database.runAsync(`DELETE FROM merchant_aliases WHERE raw_key = ?`, key);
+    return;
+  }
+  await database.runAsync(
+    `INSERT INTO merchant_aliases (raw_key, display_name) VALUES (?, ?)
+     ON CONFLICT(raw_key) DO UPDATE SET display_name = excluded.display_name`,
+    key,
+    name,
+  );
 }
 
 export async function insertTx(input: NewTxInput): Promise<number> {

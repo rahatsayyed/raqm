@@ -5,21 +5,25 @@ import { Colors } from '../../theme';
 import { MainStackScreenProps } from '../../navigation/types';
 import { getSetting, setSetting } from '../../db/database';
 import { scheduleSummaries } from '../../notifications/notifications';
+import { SUB_NUDGES_SETTING } from '../../services/subscriptionNudges';
 
 export function NotificationSettingsScreen({ navigation }: MainStackScreenProps<'NotificationSettings'>) {
   const [notifDaily, setNotifDaily] = useState(true);
   const [notifWeekly, setNotifWeekly] = useState(true);
   const [notifMonthly, setNotifMonthly] = useState(true);
+  const [notifSubNudges, setNotifSubNudges] = useState(true);
 
   const reload = useCallback(async () => {
-    const [daily, weekly, monthly] = await Promise.all([
+    const [daily, weekly, monthly, subNudges] = await Promise.all([
       getSetting('notif_daily'),
       getSetting('notif_weekly'),
       getSetting('notif_monthly'),
+      getSetting(SUB_NUDGES_SETTING),
     ]);
     setNotifDaily(daily !== '0');
     setNotifWeekly(weekly !== '0');
     setNotifMonthly(monthly !== '0');
+    setNotifSubNudges(subNudges !== '0');
   }, []);
 
   // This screen stays mounted beneath pushed screens, so re-read on focus rather than mount
@@ -68,6 +72,18 @@ export function NotificationSettingsScreen({ navigation }: MainStackScreenProps<
             <Switch
               value={notifMonthly}
               onValueChange={(v) => onToggleNotif('notif_monthly', v, setNotifMonthly)}
+              trackColor={{ true: Colors.primary, false: Colors.surfaceVariant }}
+            />
+          </View>
+          <View className="h-[1px] bg-outline-variant" />
+          <View className="flex-row justify-between items-center py-[10px]">
+            <Text className="font-inter text-body-standard text-on-surface">Subscription renewal nudges</Text>
+            <Switch
+              value={notifSubNudges}
+              onValueChange={(v) => {
+                setNotifSubNudges(v);
+                setSetting(SUB_NUDGES_SETTING, v ? '1' : '0');
+              }}
               trackColor={{ true: Colors.primary, false: Colors.surfaceVariant }}
             />
           </View>

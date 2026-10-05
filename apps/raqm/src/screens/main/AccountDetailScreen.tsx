@@ -311,7 +311,7 @@ function AccountTxRow({
         <Text className="text-[16px] font-inter-bold" style={{ color }}>{debit ? '↓' : '↑'}</Text>
       </View>
       <View className="flex-1">
-        <Text className="font-inter-medium text-body-sm text-on-surface" numberOfLines={1}>{tx.merchant || bankLabel}</Text>
+        <Text className="font-inter-medium text-body-sm text-on-surface" numberOfLines={1}>{tx.merchantDisplay || bankLabel}</Text>
         <Text className="font-mono text-label-sm tracking-[0px] text-on-surface-variant mt-[2px]">{formatDate(tx.timestamp)}</Text>
       </View>
       <Text className="font-mono text-[15px] leading-[20px]" style={{ color }}>{debit ? '-' : '+'}{formatAmount(tx.amount, currency)}</Text>

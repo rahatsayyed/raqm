@@ -767,7 +767,7 @@ const SpendTxRow = React.memo(function SpendTxRow({ tx, onPressId }: { tx: TxRec
       onPress={onPress}
     >
       <View className="flex-1">
-        <Text className="font-inter-medium text-body-sm text-on-surface" numberOfLines={1}>{tx.merchant || accountLabel(tx.bankName, tx.accountLast4, accountLabels)}</Text>
+        <Text className="font-inter-medium text-body-sm text-on-surface" numberOfLines={1}>{tx.merchantDisplay || accountLabel(tx.bankName, tx.accountLast4, accountLabels)}</Text>
         <Text className="font-mono text-label-sm tracking-[0px] text-on-surface-variant mt-[2px]">{formatDate(tx.timestamp)}</Text>
       </View>
       <Text className="font-mono text-[15px] leading-[20px]" style={{ color }}>

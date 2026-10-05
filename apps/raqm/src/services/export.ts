@@ -120,7 +120,7 @@ export async function exportCsv(): Promise<void> {
     new Date(tx.timestamp).toISOString(),
     String(tx.amount),
     tx.type,
-    tx.merchant ?? '',
+    tx.merchantDisplay ?? '',
     tx.bankName,
     tx.accountLast4 ?? '',
     tx.categoryId != null ? (categoryById.get(tx.categoryId) ?? '') : '',
@@ -171,7 +171,7 @@ export async function exportPdf(ref: Date): Promise<void> {
     .map(tx => `
       <tr>
         <td>${new Date(tx.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
-        <td>${escapeHtml(tx.merchant ?? tx.bankName)}</td>
+        <td>${escapeHtml(tx.merchantDisplay ?? tx.bankName)}</td>
         <td>${escapeHtml(tx.type)}</td>
         <td style="text-align:right">${formatAmount(tx.amount, tx.currency)}</td>
       </tr>

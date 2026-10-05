@@ -344,7 +344,7 @@ export function SplitDetailScreen({ route, navigation }: MainStackScreenProps<'S
               onPress={() => setSelectedTxId(t.id)}
             >
               <View>
-                <Text className="font-inter text-body-sm text-on-surface">{t.merchant ?? t.bankName}</Text>
+                <Text className="font-inter text-body-sm text-on-surface">{t.merchantDisplay ?? t.bankName}</Text>
                 <Text className="font-inter text-body-sm text-on-surface-variant">{new Date(t.timestamp).toLocaleDateString()}</Text>
               </View>
               <Text className="font-mono text-body-sm text-on-surface">{formatAmount(t.amount)}</Text>

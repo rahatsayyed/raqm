@@ -301,7 +301,7 @@ export function DashboardScreen() {
     const sign = isDebit(top.type) ? "-" : "+";
     const txBankLabel = accountLabel(top.bankName, top.accountLast4, accountLabels);
     const label = top.merchant
-      ? `${sign}₹${top.amount.toLocaleString("en-IN")} · ${top.merchant}`
+      ? `${sign}₹${top.amount.toLocaleString("en-IN")} · ${top.merchantDisplay}`
       : `New transaction from ${txBankLabel}`;
     setNewTxLabel(label);
 
@@ -798,7 +798,7 @@ export function DashboardScreen() {
             recent.map((tx) => (
               <TransactionRow
                 key={tx.id}
-                merchant={tx.merchant || accountLabel(tx.bankName, tx.accountLast4, accountLabels)}
+                merchant={tx.merchantDisplay || accountLabel(tx.bankName, tx.accountLast4, accountLabels)}
                 categoryName={categoryName(tx.categoryId)}
                 dateLabel={shortDate(tx.timestamp)}
                 timeLabel={shortTime(tx.timestamp)}
