@@ -51,7 +51,7 @@ export type MainStackParamList = {
   // Reached only from the launcher shortcut, the Quick Settings tile, and the
   // home-screen widgets (see src/navigation/deepLinks.ts). Params are always
   // undefined on entry; the category round-trip re-enters it via popTo(..., merge).
-  QuickAddCash: { pickedCategoryId?: number; pickedSubcategoryId?: number } | undefined;
+  QuickAddCash: { pickedCategoryId?: number; pickedSubcategoryId?: number; startVoice?: boolean } | undefined;
   EditTransaction: {
     transactionId: number;
     pickedCategoryId?: number;
