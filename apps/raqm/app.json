@@ -28,7 +28,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.raqm.money"
+      "bundleIdentifier": "com.raqm.money",
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Raqm uses on-device speech recognition to turn what you say into a cash transaction. Audio never leaves your phone.",
+        "NSMicrophoneUsageDescription": "Raqm listens through the microphone only while you tap Speak to log a cash spend."
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
