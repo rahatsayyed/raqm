@@ -8,3 +8,10 @@ export async function requestSendSmsPermission(): Promise<boolean> {
   const result = await PermissionsAndroid.request('android.permission.SEND_SMS');
   return result === PermissionsAndroid.RESULTS.GRANTED;
 }
+
+export async function requestRecordAudioPermission(): Promise<boolean> {
+  const alreadyGranted = await PermissionsAndroid.check('android.permission.RECORD_AUDIO');
+  if (alreadyGranted) return true;
+  const result = await PermissionsAndroid.request('android.permission.RECORD_AUDIO');
+  return result === PermissionsAndroid.RESULTS.GRANTED;
+}

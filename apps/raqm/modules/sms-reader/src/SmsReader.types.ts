@@ -14,3 +14,12 @@ export type LaunchDeepLink = {
   openQuickAdd: boolean;
   openTransaction: number | null;
 };
+
+export type VoiceErrorCode =
+  | 'NO_PERMISSION'
+  | 'OFFLINE_PACK_MISSING'
+  | 'NO_MATCH'
+  | 'CANCELLED'
+  | 'BUSY'
+  | 'UNSUPPORTED'
+  | 'ERROR';

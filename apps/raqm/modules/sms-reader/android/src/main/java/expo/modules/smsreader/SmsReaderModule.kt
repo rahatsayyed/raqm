@@ -12,6 +12,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
+import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.smsreader.widget.WidgetRefresh
@@ -23,10 +24,19 @@ class SmsReaderModule : Module() {
   // only a real screen-off (device locked) should force re-authentication on next foreground.
   private var screenOffReceiver: BroadcastReceiver? = null
 
+  private var voice: VoiceRecognizer? = null
+
+  private fun voiceRecognizer(): VoiceRecognizer? {
+    val context = appContext.reactContext ?: return null
+    return voice ?: VoiceRecognizer(context) { text ->
+      sendEvent("voicePartial", mapOf("text" to text))
+    }.also { voice = it }
+  }
+
   override fun definition() = ModuleDefinition {
     Name("SmsReader")
 
-    Events("screenLocked")
+    Events("screenLocked", "voicePartial")
 
     OnCreate {
       val context = appContext.reactContext ?: return@OnCreate
@@ -75,6 +85,8 @@ class SmsReaderModule : Module() {
           // Already unregistered (e.g. context torn down first) — safe to ignore.
         }
       }
+      voice?.cancel()
+      voice = null
       screenOffReceiver = null
     }
 
@@ -154,6 +166,25 @@ class SmsReaderModule : Module() {
         "openQuickAdd" to quickAdd,
         "openTransaction" to if (txId == -1) null else txId,
       )
+    }
+
+    Function("isVoiceAvailable") {
+      voiceRecognizer()?.isAvailable() ?: false
+    }
+
+    AsyncFunction("startVoiceCapture") { promise: Promise ->
+      val v = voiceRecognizer()
+      if (v == null) {
+        promise.reject("ERROR", "No React context", null)
+        return@AsyncFunction
+      }
+      v.start { text, code ->
+        if (text != null) promise.resolve(text) else promise.reject(code ?: "ERROR", code ?: "ERROR", null)
+      }
+    }
+
+    AsyncFunction("cancelVoiceCapture") {
+      voice?.cancel()
     }
 
     // Mirrors the user's app-picker selection into SharedPreferences, where

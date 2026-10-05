@@ -88,3 +88,21 @@ export function refreshWidgets(): Promise<void> {
 export function sendSms(phoneNumber: string, message: string): Promise<void> {
   return native.sendSms(phoneNumber, message);
 }
+
+/** True only on Android 13+ with an on-device recognizer; false elsewhere, never cloud. */
+export function isVoiceAvailable(): boolean {
+  return native.isVoiceAvailable?.() ?? false;
+}
+
+/** Resolves with the final transcript; rejects with a VoiceErrorCode as `error.code`. */
+export function startVoiceCapture(): Promise<string> {
+  return native.startVoiceCapture();
+}
+
+export function cancelVoiceCapture(): Promise<void> {
+  return native.cancelVoiceCapture?.() ?? Promise.resolve();
+}
+
+export function addVoicePartialListener(listener: (e: { text: string }) => void): EventSubscription {
+  return native.addListener('voicePartial', listener);
+}
