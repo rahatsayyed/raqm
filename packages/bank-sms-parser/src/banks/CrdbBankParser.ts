@@ -75,6 +75,13 @@ export class CrdbBankParser extends BankParser {
       if (amount !== null) return amount;
     }
 
+    // LUKU token form: the TOTAL line wins over the Cost/VAT/EWURA/REA figures.
+    const totalMatch = message.match(/TOTAL\s+TZS\s*([0-9][0-9,]*(?:\.\d{1,2})?)/i);
+    if (totalMatch !== null) {
+      const amount = this.parseAmountLocal(totalMatch[1]);
+      if (amount !== null) return amount;
+    }
+
     // "TZS 50000.00" (with space) or "TZS40000" (no space).
     const tzsPattern = /TZS\s*([0-9][0-9,]*(?:\.\d{1,2})?)/gi;
     // Use the FIRST TZS amount that is not the balance.
@@ -142,13 +149,18 @@ export class CrdbBankParser extends BankParser {
       return 'ATM Withdrawal';
     }
 
-    // Mobile money send (Swahili): "... kwenda NAME phonenumber".
-    // Recipient is the name after "kwenda" up to a trailing phone number.
-    const kwendaPattern = /kwenda\s+(.+?)(?:\s+\d{6,})?$/i;
+    // Recipient stops at the first digit or label; "kwenda LIPA <merchant>" drops the LIPA prefix.
+    const kwendaPattern =
+      /kwenda\s+(?:LIPA\s+)?(.+?)(?=\s+(?:\d|[0-9X*]{4,}|AC\b|A\/C\b|Risiti\b|REF\b|Balance\b|Bal\b)|[.,]|$)/i;
     const kwendaMatch = message.match(kwendaPattern);
     if (kwendaMatch !== null) {
-      const merchant = kwendaMatch[1].trim();
-      if (merchant.length > 0) return merchant;
+      const merchant = kwendaMatch[1].trim().replace(/[.,]+$/, '').trim();
+      if (merchant.length > 0 && merchant.toLowerCase() !== 'akaunti yako') return merchant;
+    }
+
+    // LUKU token forms carry no merchant name, only a TOKEN.
+    if (/Malipo yamekamilika/i.test(message) && (/TOKEN/i.test(message) || /KWH/i.test(message))) {
+      return 'LUKU';
     }
 
     // Bill payment / utility (Swahili): "Malipo yamekamilika TOTAL TZS 2000".
@@ -164,6 +176,24 @@ export class CrdbBankParser extends BankParser {
     }
 
     return null;
+  }
+
+  protected extractReference(message: string): string | null {
+    const risiti = message.match(/Risiti:\s*([A-Za-z0-9-]+)/i);
+    if (risiti !== null) return risiti[1].trim();
+
+    const generic = super.extractReference(message);
+    if (generic !== null) return generic;
+
+    const kumb = message.match(/KUMB:\s*([A-Za-z0-9]+)/i);
+    if (kumb !== null) return kumb[1].trim();
+
+    return null;
+  }
+
+  protected detectIsCard(message: string): boolean {
+    if (/\bCard:?\s*[0-9*X]{4,}/i.test(message)) return true;
+    return super.detectIsCard(message);
   }
 
   protected extractBalance(message: string): number | null {

@@ -24,6 +24,7 @@ export class HuntingtonBankParser extends BankParser {
   canHandle(sender: string): boolean {
     const upperSender = sender.toUpperCase();
     return (
+      upperSender === '446622' ||
       upperSender.includes('HUNTINGTON') ||
       upperSender === 'HUNTINGTON BANK' ||
       /^[A-Z]{2}-HUNTINGTON-[A-Z]$/.test(upperSender)

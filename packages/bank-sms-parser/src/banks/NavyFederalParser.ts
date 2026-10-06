@@ -18,6 +18,7 @@ export class NavyFederalParser extends BankParser {
     const upperSender = sender.toUpperCase();
     return (
       upperSender === 'NFCU' ||
+      upperSender === '21398' ||
       upperSender === 'NAVYFED' ||
       upperSender.includes('NAVY FEDERAL') ||
       upperSender.includes('NAVYFEDERAL') ||
@@ -30,6 +31,7 @@ export class NavyFederalParser extends BankParser {
     const patterns = [
       /Transaction for \$([0-9,]+(?:\.[0-9]{2})?)\s+was approved/i,
       /Transaction for \$([0-9,]+(?:\.[0-9]{2})?)\s+was declined/i,
+      /\$([0-9,]+(?:\.[0-9]{2})?)\s+was withdrawn/i,
       /for \$([0-9,]+(?:\.[0-9]{2})?)\s+was approved/i,
       /for \$([0-9,]+(?:\.[0-9]{2})?)\s+was declined/i,
     ];
@@ -75,6 +77,9 @@ export class NavyFederalParser extends BankParser {
     if (lowerMessage.includes('was approved')) {
       return TransactionType.EXPENSE;
     }
+    if (lowerMessage.includes('was withdrawn')) {
+      return TransactionType.EXPENSE;
+    }
     if (lowerMessage.includes('was declined')) {
       return null; // Don't track declined transactions
     }
@@ -95,6 +100,7 @@ export class NavyFederalParser extends BankParser {
 
     // Pattern: "on debit card xxxx" or "on credit card xxxx"
     const patterns = [
+      /acct\.?\s+end\.?\s+in\s+(\d{4})/i,
       /on debit card (\d{4})/i,
       /on credit card (\d{4})/i,
       /(?:debit|credit) card (\d{4})/i,
@@ -108,6 +114,15 @@ export class NavyFederalParser extends BankParser {
     }
 
     return null;
+  }
+
+  extractBalance(message: string): number | null {
+    const match = message.match(/available balance is \$([0-9,]+(?:\.[0-9]{2})?)/i);
+    if (match) {
+      const parsed = parseFloat(match[1].replace(/,/g, ''));
+      return isNaN(parsed) ? null : parsed;
+    }
+    return super.extractBalance(message);
   }
 
   isTransactionMessage(message: string): boolean {

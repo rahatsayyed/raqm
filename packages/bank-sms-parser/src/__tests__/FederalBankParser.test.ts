@@ -39,3 +39,23 @@ describe('FederalBankParser', () => {
     expect(result).toBeNull();
   });
 });
+
+describe('FederalBankParser FEDSMS and receipts', () => {
+  test('FEDSMS sender is handled', () => {
+    expect(parser.canHandle('AX-FEDSMS-S')).toBe(true);
+    const r = parser.parse(
+      'Rs 34.51 debited via UPI on 08-05-2025 13:48:03 to VPA shop@okaxis.Ref No 512345678901.-Federal Bank',
+      'AX-FEDSMS-S', TS
+    );
+    expect(r!.amount).toBe(34.51);
+    expect(r!.type).toBe(TransactionType.EXPENSE);
+  });
+
+  test('outgoing NEFT delivery receipt is not double counted', () => {
+    const r = parser.parse(
+      'Acme Traders has received Rs 500.00 from your A/c XXXX1234 via NEFT. Ref no. N123456789. -Federal Bank',
+      'AX-FEDBNK-S', TS
+    );
+    expect(r).toBeNull();
+  });
+});

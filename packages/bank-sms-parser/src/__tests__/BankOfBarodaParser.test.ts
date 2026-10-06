@@ -39,3 +39,13 @@ describe('BankOfBarodaParser', () => {
     expect(result).toBeNull();
   });
 });
+
+describe('BankOfBarodaParser card bill confirmation', () => {
+  test('BOBCARD payment-received notice is skipped', () => {
+    const r = parser.parse(
+      'Payment of Rs 5,000.00 received for your BOBCARD ending 1234 on 05-10-2026. Thank you.',
+      'VM-BOBCRD-S', TS
+    );
+    expect(r).toBeNull();
+  });
+});

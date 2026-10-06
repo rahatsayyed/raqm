@@ -39,3 +39,18 @@ describe('IndusIndBankParser', () => {
     expect(result).toBeNull();
   });
 });
+
+describe('IndusIndBankParser card refunds', () => {
+  test('credit card refund keeps the brand as merchant', () => {
+    const r = parser.parse(
+      'Your refund of INR 250.00 from Swiggy Limited Banga has been credited to your IndusInd Bank Credit Card XX1234 and adjusted against the outstanding on your card account.',
+      'VM-INDUSB-S', TS
+    );
+    expect(r).not.toBeNull();
+    expect(r!.amount).toBe(250);
+    expect(r!.type).toBe(TransactionType.INCOME);
+    expect(r!.merchant).toBe('Swiggy');
+    expect(r!.isFromCard).toBe(true);
+    expect(r!.accountLast4).toBe('1234');
+  });
+});

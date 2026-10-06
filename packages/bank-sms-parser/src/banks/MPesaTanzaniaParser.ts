@@ -1,26 +1,23 @@
 import { BankParser } from '../core/BankParser';
 import { ParsedTransaction, TransactionType } from '../core/types';
 
-/**
- * Parser for M-Pesa Tanzania (Vodacom) mobile money SMS messages
- *
- * Handles formats like:
- * - "SGR1234567 Confirmed. You have received TZS 50,000.00 from JOHN DOE (255754XXXXXX)"
- * - "SGR9876543 Confirmed. TZS 20,000.00 sent to JANE SMITH (255762XXXXXX)"
- * - "SGR5544332 Confirmed. TZS 15,000.00 paid to SUPERMARKET X (Merchant ID: 556677)"
- * - "SGR1122334 Confirmed. TZS 10,000.00 paid to LUKU for account 1423XXXXXXX. Token: ..."
- *
- * Key patterns:
- * - Transaction ID: 10 character alphanumeric starting with SGR (e.g., SGR1234567)
- * - Status: "Confirmed." at start after transaction ID
- * - Balance: "New M-Pesa balance is TZS X"
- * - Currency: TZS (Tanzanian Shilling)
- *
- * Note: This is distinct from Kenya M-Pesa which uses KES currency
- * Country: Tanzania
- */
-export class MPesaTanzaniaParser extends BankParser {
+const CUR = '(?:TZS|Tshs|Tsh)';
+const AMT = '([0-9,]+(?:\\.[0-9]{1,2})?)';
+const CURRENCY_REGEX = new RegExp(CUR, 'i');
 
+const AMOUNT_PATTERNS = [
+  new RegExp(`Umepokea\\s+${CUR}\\s*${AMT}`, 'i'),
+  new RegExp(`received(?:\\s+a\\s+payment\\s+of)?\\s+${CUR}\\s*${AMT}`, 'i'),
+  new RegExp(`Withdraw\\s+${CUR}\\s*${AMT}`, 'i'),
+  new RegExp(`${CUR}\\s*${AMT}\\s+(?:sent|paid)\\s+to`, 'i'),
+  new RegExp(`${CUR}\\s*${AMT}\\s+has\\s+been\\s+deducted`, 'i'),
+  new RegExp(`${CUR}\\s*${AMT}`, 'i'),
+];
+
+const AMOUNT_TAIL = `${CUR}\\s*[0-9,]+(?:\\.[0-9]{1,2})?`;
+
+// Sender IDs are shared with Kenya M-Pesa; differentiation is by Tsh/TZS currency in the body.
+export class MPesaTanzaniaParser extends BankParser {
   getBankName(): string {
     return 'M-Pesa Tanzania';
   }
@@ -29,9 +26,13 @@ export class MPesaTanzaniaParser extends BankParser {
     return 'TZS';
   }
 
+  // Wallet SMS carry no stable per-account number, so never mint a last4.
+  protected extractAccountLast4(_message: string): string | null {
+    return null;
+  }
+
   canHandle(sender: string): boolean {
     const normalizedSender = sender.toUpperCase();
-    // M-Pesa Tanzania uses same sender IDs but we differentiate by content
     return normalizedSender.includes('MPESA') ||
       normalizedSender.includes('M-PESA') ||
       normalizedSender === 'MPESA' ||
@@ -39,185 +40,142 @@ export class MPesaTanzaniaParser extends BankParser {
       normalizedSender.includes('VODACOM');
   }
 
-  /**
-   * Override parse to check for TZS currency (Tanzania)
-   * This helps differentiate from Kenya M-Pesa which uses KES
-   */
   parse(smsBody: string, sender: string, timestamp: number): ParsedTransaction | null {
-    // Only parse if message contains TZS (Tanzanian Shilling)
-    // This differentiates from Kenya M-Pesa which uses Ksh/KES
-    if (!smsBody.toLowerCase().includes('tzs')) {
-      return null;
-    }
+    if (!CURRENCY_REGEX.test(smsBody)) return null;
 
-    return super.parse(smsBody, sender, timestamp);
+    if (this.isThinReceiptDuplicate(smsBody)) return null;
+
+    const parsed = super.parse(smsBody, sender, timestamp);
+    if (parsed === null) return null;
+
+    // Reference-based hash dedups the English/Swahili TIPS twins that share a transaction id.
+    const reference = parsed.reference;
+    if (reference && reference.trim().length > 0) {
+      return { ...parsed, transactionHash: `mpesa-tz:${reference}` };
+    }
+    return parsed;
   }
 
-  extractAmount(message: string): number | null {
-    // Pattern 1: "TZS 50,000.00" with space
-    const tzsSpacePattern = /TZS\s+([0-9,]+(?:\.[0-9]{2})?)/i;
-    const spaceMatch = message.match(tzsSpacePattern);
-    if (spaceMatch) {
-      const amountStr = spaceMatch[1].replace(/,/g, '');
-      const amount = parseFloat(amountStr);
-      if (!isNaN(amount)) {
-        return amount;
+  // "<NAME> has received Tsh ..." with no balance is a spurious echo of an outbound transfer.
+  private isThinReceiptDuplicate(message: string): boolean {
+    return message.toLowerCase().includes('has received') && this.extractBalance(message) === null;
+  }
+
+  protected extractAmount(message: string): number | null {
+    for (const pattern of AMOUNT_PATTERNS) {
+      const match = message.match(pattern);
+      if (match) {
+        const parsed = parseFloat(match[1].replace(/,/g, ''));
+        return isNaN(parsed) ? null : parsed;
       }
     }
+    return null;
+  }
 
-    // Pattern 2: "TZS50,000.00" without space
-    const tzsNoSpacePattern = /TZS([0-9,]+(?:\.[0-9]{2})?)/i;
-    const noSpaceMatch = message.match(tzsNoSpacePattern);
-    if (noSpaceMatch) {
-      const amountStr = noSpaceMatch[1].replace(/,/g, '');
-      const amount = parseFloat(amountStr);
-      if (!isNaN(amount)) {
-        return amount;
+  protected extractTransactionType(message: string): TransactionType | null {
+    const lower = message.toLowerCase();
+
+    if (lower.includes('umepokea')) return TransactionType.INCOME;
+    if (lower.includes('you have received')) return TransactionType.INCOME;
+    if (lower.includes('received a payment')) return TransactionType.INCOME;
+    if (lower.includes('received tsh')) return TransactionType.INCOME;
+    if (lower.includes('received tzs')) return TransactionType.INCOME;
+
+    if (lower.includes('sent to')) return TransactionType.EXPENSE;
+    if (lower.includes('paid to')) return TransactionType.EXPENSE;
+    if (lower.includes('withdraw')) return TransactionType.EXPENSE;
+    if (lower.includes('deducted')) return TransactionType.EXPENSE;
+
+    return null;
+  }
+
+  protected extractMerchant(message: string, _sender: string): string | null {
+    if (new RegExp(`Withdraw\\s+${CUR}`, 'i').test(message)) return 'Agent Withdrawal';
+
+    const repayment = message.match(/repayment of\s+(.+?)\s+service/i);
+    if (repayment) {
+      const merchant = repayment[1].trim();
+      if (this.isValidMerchantName(merchant)) return merchant;
+    }
+
+    const candidates: Array<{ regex: RegExp; post?: (s: string) => string }> = [
+      { regex: /sent to business\s+(.+?)(?:\s+on\s+\d|\s+for\s+account|\s+Total\s+fee|$)/i },
+      { regex: /sent to\s+(.+?)\s+for\s+account/i },
+      { regex: /sent to\s+(.+?)(?:\s*\(|\s+on\s+\d|\s+Total\s+fee|$)/i },
+      { regex: /paid to\s+(.+?)(?:\s+for\s+account|\s+on\s+\d|\s*\(Merchant|\s+and\s+charged|$)/i },
+      {
+        regex: new RegExp(`received\\s+a\\s+payment\\s+of\\s+${AMOUNT_TAIL}\\s+from\\s+(.+?)(?:\\s+on\\s+\\d|$)`, 'i'),
+        post: (s) => s.trim().replace(/^\d+\s*-\s*/, '').trim(),
+      },
+      { regex: /kutoka\s+(.+?)(?:\s*,|\s+Akaunti|\s+tarehe|$)/i },
+      {
+        regex: new RegExp(`received\\s+${AMOUNT_TAIL}\\s+from\\s+(.+?)(?:\\s*\\(|\\s+on\\s+\\d|$)`, 'i'),
+      },
+    ];
+
+    for (const { regex, post } of candidates) {
+      const match = message.match(regex);
+      if (match) {
+        const raw = post ? post(match[1]) : match[1];
+        const merchant = this.cleanTzMerchant(raw);
+        if (this.isValidMerchantName(merchant)) return merchant;
       }
     }
 
     return null;
   }
 
-  extractTransactionType(message: string): TransactionType | null {
-    const lowerMessage = message.toLowerCase();
+  protected extractBalance(message: string): number | null {
+    const match = message.match(
+      new RegExp(`(?:New M-Pesa balance is|Balance is)\\s+${CUR}\\s*([0-9,]+(?:\\.[0-9]{1,2})?)`, 'i')
+    );
+    if (match) {
+      const parsed = parseFloat(match[1].replace(/,/g, ''));
+      return isNaN(parsed) ? null : parsed;
+    }
+    return null;
+  }
 
-    // Received money = income
-    if (
-      lowerMessage.includes('you have received') ||
-      lowerMessage.includes('received tsh') ||
-      lowerMessage.includes('received tzs')
-    ) {
-      return TransactionType.INCOME;
-    }
+  protected extractReference(message: string): string | null {
+    const txnId = message.match(/^\s*([A-Z0-9]{8,12})\s+(?:Confirmed|confirmed|imethibitishwa)/i);
+    if (txnId) return txnId[1];
 
-    // Sent/paid money = expense
-    if (lowerMessage.includes('sent to')) {
-      return TransactionType.EXPENSE;
-    }
-    if (lowerMessage.includes('paid to')) {
-      return TransactionType.EXPENSE;
-    }
-    if (lowerMessage.includes('withdrawn')) {
-      return TransactionType.EXPENSE;
-    }
+    const tips = message.match(/TIPS\s+Reference[:\s]+([A-Z0-9]+)/i);
+    if (tips) return tips[1];
 
     return null;
   }
 
-  extractMerchant(message: string, sender: string): string | null {
-    // Pattern 1: "received TZS X from NAME (phone)"
-    const fromPattern = /from\s+([A-Z][A-Za-z\s]+?)(?:\s*\(|$)/i;
-    const fromMatch = message.match(fromPattern);
-    if (fromMatch) {
-      const merchant = this.cleanMerchantName(fromMatch[1].trim());
-      if (this.isValidMerchantName(merchant)) {
-        return merchant;
-      }
-    }
+  protected isTransactionMessage(message: string): boolean {
+    const lower = message.toLowerCase();
 
-    // Pattern 2: "sent to NAME (phone)" or "TZS X sent to NAME"
-    const sentToPattern = /sent to\s+([A-Z][A-Za-z\s]+?)(?:\s*\(|$)/i;
-    const sentToMatch = message.match(sentToPattern);
-    if (sentToMatch) {
-      const merchant = this.cleanMerchantName(sentToMatch[1].trim());
-      if (this.isValidMerchantName(merchant)) {
-        return merchant;
-      }
-    }
+    if (!lower.includes('confirmed') && !lower.includes('imethibitishwa')) return false;
+    if (!CURRENCY_REGEX.test(message)) return false;
 
-    // Pattern 3: "paid to MERCHANT (Merchant ID: X)"
-    const paidToMerchantPattern = /paid to\s+([A-Za-z0-9\s]+?)(?:\s*\(Merchant|\s+on|\s*$)/i;
-    const paidToMatch = message.match(paidToMerchantPattern);
-    if (paidToMatch) {
-      const merchant = this.cleanMerchantName(paidToMatch[1].trim());
-      if (this.isValidMerchantName(merchant)) {
-        return merchant;
-      }
-    }
-
-    // Pattern 4: "paid to LUKU for account X" (utility payment)
-    const utilityPattern = /paid to\s+(\w+)\s+for\s+account/i;
-    const utilityMatch = message.match(utilityPattern);
-    if (utilityMatch) {
-      return utilityMatch[1].trim();
-    }
-
-    return null;
-  }
-
-  extractBalance(message: string): number | null {
-    // Pattern: "New M-Pesa balance is TZS 150,000.00"
-    const balancePattern = /New M-Pesa balance is TZS\s*([0-9,]+(?:\.[0-9]{2})?)/i;
-    const balanceMatch = message.match(balancePattern);
-    if (balanceMatch) {
-      const balanceStr = balanceMatch[1].replace(/,/g, '');
-      const balance = parseFloat(balanceStr);
-      if (!isNaN(balance)) {
-        return balance;
-      }
-    }
-
-    return null;
-  }
-
-  extractReference(message: string): string | null {
-    // Pattern 1: Transaction ID at start (10-char alphanumeric, typically starts with SGR)
-    // e.g., "SGR1234567 Confirmed"
-    const txnIdPattern = /^([A-Z0-9]{10})\s+Confirmed/i;
-    const txnIdMatch = message.match(txnIdPattern);
-    if (txnIdMatch) {
-      return txnIdMatch[1];
-    }
-
-    // Pattern 2: Alternative pattern without space
-    const txnIdAltPattern = /^([A-Z0-9]{10})\s+Confirmed\./i;
-    const txnIdAltMatch = message.match(txnIdAltPattern);
-    if (txnIdAltMatch) {
-      return txnIdAltMatch[1];
-    }
-
-    // Pattern 3: TIPS Reference for inter-operator transfers
-    const tipsPattern = /TIPS\s+Reference[:\s]+([A-Z0-9]+)/i;
-    const tipsMatch = message.match(tipsPattern);
-    if (tipsMatch) {
-      return tipsMatch[1];
-    }
-
-    return null;
-  }
-
-  isTransactionMessage(message: string): boolean {
-    const lowerMessage = message.toLowerCase();
-
-    // Must contain "Confirmed" (M-Pesa Tanzania standard)
-    if (!lowerMessage.includes('confirmed')) {
-      return false;
-    }
-
-    // Must contain TZS currency indicator
-    if (!lowerMessage.includes('tzs')) {
-      return false;
-    }
-
-    // Must contain transaction keywords
     const transactionKeywords = [
+      'umepokea',
       'received',
       'sent to',
       'paid to',
-      'withdrawn',
+      'withdraw',
+      'deducted',
       'new m-pesa balance',
+      'balance is',
     ];
 
-    return transactionKeywords.some(keyword => lowerMessage.includes(keyword));
+    return transactionKeywords.some((keyword) => lower.includes(keyword));
   }
 
-  cleanMerchantName(merchant: string): string {
-    return merchant
-      .replace(/\s*\(.*?\)\s*$/, '')    // Remove trailing parentheses
-      .replace(/\s+on\s+\d{4}.*/, '')   // Remove date suffix
-      .replace(/\s+at\s+\d{2}:\d{2}.*/, '') // Remove time suffix
-      .replace(/\s*-\s*$/, '')          // Remove trailing dash
+  private cleanTzMerchant(raw: string): string {
+    return raw
+      .replace(/\s*\(.*?\)\s*$/, '')
+      .replace(/\s+on\s+\d.*/i, '')
+      .replace(/\s+tarehe\s+\d.*/i, '')
+      .replace(/\s+for\s+account.*/i, '')
+      .replace(/\s+Total\s+fee.*/i, '')
+      .replace(/\s*,.*$/, '')
+      .replace(/\.\s*$/, '')
+      .replace(/\s*-\s*$/, '')
       .trim();
   }
 }

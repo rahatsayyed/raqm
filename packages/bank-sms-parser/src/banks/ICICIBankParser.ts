@@ -113,7 +113,7 @@ export class ICICIBankParser extends BaseIndianBankParser {
    */
   private extractCurrencyFromMessage(message: string): string | null {
     // Pattern for "USD 11.80 spent" format
-    const currencySpentPattern = /([A-Z]{3})\s+[0-9,]+(?:\.\d{2})?\s+spent/i;
+    const currencySpentPattern = /([A-Z]{3})\s+(?:[0-9,]+(?:\.\d{1,2})?|\.\d{1,2})\s+spent/i;
     const match = message.match(currencySpentPattern);
     if (match) {
       const currency = match[1].toUpperCase();
@@ -146,7 +146,7 @@ export class ICICIBankParser extends BaseIndianBankParser {
 
   extractAmount(message: string): number | null {
     // Pattern 1: Multi-currency support - "USD 11.80 spent" or "EUR 50.00 spent"
-    const multiCurrencySpentPattern = /[A-Z]{3}\s+([0-9,]+(?:\.\d{2})?)\s+spent/i;
+    const multiCurrencySpentPattern = /[A-Z]{3}\s+((?:[0-9,]+(?:\.\d{1,2})?|\.\d{1,2}))\s+spent/i;
     const multiCurrencyMatch = message.match(multiCurrencySpentPattern);
     if (multiCurrencyMatch) {
       const amount = parseFloat(multiCurrencyMatch[1].replace(/,/g, ''));
@@ -155,7 +155,7 @@ export class ICICIBankParser extends BaseIndianBankParser {
     }
 
     // Pattern 2: "Rs xxx.xx spent" or "INR xxx.xx spent" (for INR card transactions)
-    const inrSpentPattern = /(?:Rs\.?|INR)\s+([0-9,]+(?:\.\d{2})?)\s+spent/i;
+    const inrSpentPattern = /(?:Rs\.?|INR)\s+((?:[0-9,]+(?:\.\d{1,2})?|\.\d{1,2}))\s+spent/i;
     const inrSpentMatch = message.match(inrSpentPattern);
     if (inrSpentMatch) {
       const amount = parseFloat(inrSpentMatch[1].replace(/,/g, ''));
@@ -211,6 +211,15 @@ export class ICICIBankParser extends BaseIndianBankParser {
       return 'NEFT Transfer';
     }
 
+    // Incoming NEFT credit: "Info NEFT-<refcode>-<PAYER NAME>"
+    const neftCreditMatch = message.match(/Info\s+NEFT-[A-Za-z0-9]+-(.+?)(?:\.|$)/i);
+    if (neftCreditMatch) {
+      const merchant = this.cleanMerchantName(neftCreditMatch[1].trim());
+      if (this.isValidMerchantName(merchant)) {
+        return merchant;
+      }
+    }
+
     // Pattern 1: Salary transactions - "Info INF*...*...* SAL ..."
     // Example: "Info INF*000169831922*IQBO SAL FE"
     const salaryPattern = /Info\s+INF\*[^*]+\*[^*]*SAL[^.]*/i;
@@ -226,6 +235,19 @@ export class ICICIBankParser extends BaseIndianBankParser {
         message.toLowerCase().includes('cash wdl') ||
         message.toLowerCase().includes('nfscash')) {
       return 'Cash Withdrawal';
+    }
+
+    if (/\bCAM\*[A-Za-z0-9]+\*?/i.test(message)) {
+      return 'ATM Withdrawal';
+    }
+
+    // Biller name ends at ".", the "Avl/Avb Bal" clause, or end of segment
+    const infoBilMatch = message.match(/InfoBIL\*(.+?)(?=\.|\s*Av[bl]\s*Bal|$)/i);
+    if (infoBilMatch) {
+      const merchant = this.cleanMerchantName(infoBilMatch[1].trim());
+      if (this.isValidMerchantName(merchant)) {
+        return merchant;
+      }
     }
 
     // Pattern 3: Card transactions - "on DD-Mon-YY at MERCHANT NAME. Avl" or "on DD-Mon-YY on MERCHANT NAME"

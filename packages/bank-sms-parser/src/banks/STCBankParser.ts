@@ -1,5 +1,11 @@
 import { BankParser } from '../core/BankParser';
+import { FinancialMessageFields, TransferDirection } from '../core/FinancialMessageFields';
+import { FinancialMessageSafety } from '../core/FinancialMessageSafety';
+import { SaudiTransactionMessageGuards } from '../core/SaudiTransactionMessageGuards';
 import { ParsedTransaction, TransactionType } from '../core/types';
+
+const INLINE_AMOUNT = /\bAmount\s*:?\s*([0-9][0-9,]*(?:\.\d{1,2})?)\s*(?:SAR|SR)\b/i;
+const RCS_PURCHASE_AMOUNT = /(?:online\s+)?purchase\s+transaction\s+amount\s+([0-9][0-9,]*(?:\.\d{1,2})?)\s*(?:SAR|SR)\b/i;
 
 /**
  * Parser for STC Bank (Saudi Arabia).
@@ -29,38 +35,60 @@ export class STCBankParser extends BankParser {
     return normalized.includes('STCBANK') || normalized === 'STC' || normalized === 'STCPAY';
   }
 
+  parse(smsBody: string, sender: string, timestamp: number): ParsedTransaction | null {
+    if (this.isGenericStcSender(sender) && this.isClearlyTelecomOnlyMessage(smsBody)) return null;
+    return super.parse(smsBody, sender, timestamp);
+  }
+
   protected extractAmount(message: string): number | null {
+    const labelled = FinancialMessageFields.sarAmount(message, ['Amount']);
+    if (labelled !== null) return labelled;
+
+    const rcsMatch = message.match(RCS_PURCHASE_AMOUNT);
+    if (rcsMatch) return this.toAmount(rcsMatch[1]);
+    const inlineMatch = message.match(INLINE_AMOUNT);
+    if (inlineMatch) return this.toAmount(inlineMatch[1]);
+
     // "Amount: 3 SAR" or "Amount:3 SAR" or "Amount: 3.50 SAR"
-    const amountPattern = /Amount\s*:?\s*([0-9,]+(?:\.\d{1,2})?)\s*SAR/i;
-    const amountMatch = message.match(amountPattern);
-    if (amountMatch) {
-      const parsed = parseFloat(amountMatch[1].replace(/,/g, ''));
-      if (!isNaN(parsed)) {
-        return parsed;
-      }
-    }
+    const amountMatch = message.match(/\bAmount\s*:?\s*([0-9,]+(?:\.\d{1,2})?)\s*(?:SAR|SR)\b/i);
+    if (amountMatch) return this.toAmount(amountMatch[1]);
 
     // "SAR 3.00" fallback
-    const sarFirstPattern = /SAR\s+([0-9,]+(?:\.\d{1,2})?)/i;
-    const sarMatch = message.match(sarFirstPattern);
-    if (sarMatch) {
-      const parsed = parseFloat(sarMatch[1].replace(/,/g, ''));
-      if (!isNaN(parsed)) {
-        return parsed;
-      }
-    }
+    const sarMatch = message.match(/\b(?:SAR|SR)\s+([0-9,]+(?:\.\d{1,2})?)/i);
+    if (sarMatch) return this.toAmount(sarMatch[1]);
 
     return null;
   }
 
+  private toAmount(raw: string): number | null {
+    const parsed = parseFloat(raw.replace(/,/g, ''));
+    return isNaN(parsed) ? null : parsed;
+  }
+
   protected extractTransactionType(message: string): TransactionType | null {
     const lower = message.toLowerCase();
+    if (lower.includes('adding money to account') || lower.includes('wallet top') ||
+      (lower.includes('apple pay') && lower.includes('funding'))) {
+      return TransactionType.TRANSFER;
+    }
+    if (lower.includes('refund') || lower.includes('reversal') || lower.includes('reverse transaction')) {
+      return TransactionType.INCOME;
+    }
+    if (lower.includes('internal transfer')) {
+      switch (FinancialMessageFields.transferDirection(message)) {
+        case TransferDirection.OUTGOING: return TransactionType.EXPENSE;
+        case TransferDirection.INCOMING: return TransactionType.INCOME;
+        default: return TransactionType.TRANSFER;
+      }
+    }
+    if (lower.includes('sarie') && (lower.includes('outward') || lower.includes('outgoing'))) {
+      return TransactionType.EXPENSE;
+    }
     if (lower.includes('purchase')) return TransactionType.EXPENSE;
     if (lower.includes('withdrawal') || lower.includes('withdraw')) return TransactionType.EXPENSE;
     if (lower.includes('payment')) return TransactionType.EXPENSE;
     if (lower.includes('debit')) return TransactionType.EXPENSE;
     if (lower.includes('transfer out') || lower.includes('sent to')) return TransactionType.EXPENSE;
-    if (lower.includes('refund')) return TransactionType.INCOME;
     if (lower.includes('deposit')) return TransactionType.INCOME;
     if (lower.includes('credit') && !lower.includes('credit card')) return TransactionType.INCOME;
     if (lower.includes('received')) return TransactionType.INCOME;
@@ -120,12 +148,10 @@ export class STCBankParser extends BankParser {
     const lower = message.toLowerCase();
 
     if (
-      lower.includes('otp') ||
-      lower.includes('verification code') ||
-      lower.includes('one time password')
-    ) {
-      return false;
-    }
+      SaudiTransactionMessageGuards.isDeclinedOrFailed(message) ||
+      SaudiTransactionMessageGuards.isPromotionalOrOperationalNotice(message) ||
+      FinancialMessageSafety.isSecurityCode(message)
+    ) return false;
 
     const keywords = [
       'purchase',
@@ -137,9 +163,24 @@ export class STCBankParser extends BankParser {
       'deposit',
       'debit',
       'credit',
-      'sar',
+      'sar', 'sr',
     ];
     return keywords.some((kw) => lower.includes(kw));
+  }
+
+  private isGenericStcSender(sender: string): boolean {
+    return sender.toUpperCase().replace(/[\s\-_]/g, '') === 'STC';
+  }
+
+  private isClearlyTelecomOnlyMessage(message: string): boolean {
+    const lower = message.toLowerCase();
+    const sawa = lower.includes('sawa');
+    const telecomContext = lower.includes('sawa balance') ||
+      lower.includes('mobile balance') || lower.includes('telecom balance') ||
+      lower.includes('recharge') || lower.includes('mobile service') ||
+      lower.includes('data package') || lower.includes('service credit');
+    return (lower.includes('vat refund') && (sawa || telecomContext)) ||
+      (sawa && telecomContext);
   }
 }
 

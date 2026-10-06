@@ -23,7 +23,7 @@ export class ChaseBankParser extends BankParser {
   canHandle(sender: string): boolean {
     const normalized = sender.toUpperCase();
     return normalized === '24273' ||
-      normalized.includes('CHASE');
+      (normalized.includes('CHASE') && !normalized.includes('CHASEUK'));
   }
 
   extractAmount(message: string): number | null {

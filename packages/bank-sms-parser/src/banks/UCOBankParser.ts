@@ -10,6 +10,17 @@ import { ParsedTransaction, TransactionType } from '../core/types';
  *
  * Sender patterns: XX-UCOBNK-S (where XX can be any two letters)
  */
+const AMOUNT = String.raw`(\d[\d,]*(?:\.\d{1,2})?|\.\d{1,2})`;
+const DEBIT_CREDIT_AMOUNT = new RegExp(String.raw`(?:debited|credited)\s+with\s+Rs\.?\s*${AMOUNT}`, 'i');
+const ANY_AMOUNT = new RegExp(String.raw`Rs\.?\s*${AMOUNT}`, 'i');
+const BALANCE_CLAUSE = /Avl\s+Bal|Available\s+Balance/i;
+
+function toAmount(raw: string): number | null {
+  const cleaned = raw.replace(/,/g, '');
+  const parsed = parseFloat(cleaned.startsWith('.') ? `0${cleaned}` : cleaned);
+  return isNaN(parsed) ? null : parsed;
+}
+
 export class UCOBankParser extends BankParser {
 
   getBankName(): string {
@@ -31,19 +42,15 @@ export class UCOBankParser extends BankParser {
   }
 
   protected extractAmount(message: string): number | null {
-    // UCO Bank format: "Rs.2000.00" or "Rs.2,000.00"
-    const amountPattern = /Rs\.?\s*([0-9,]+(?:\.\d{2})?)/i;
-    const match = message.match(amountPattern);
-    if (match) {
-      const amount = match[1].replace(/,/g, '');
-      const parsed = parseFloat(amount);
-      if (!isNaN(parsed)) {
-        return parsed;
-      }
-    }
+    const dc = message.match(DEBIT_CREDIT_AMOUNT);
+    if (dc) return toAmount(dc[1]);
 
-    // Fall back to base class patterns
-    return super.extractAmount(message);
+    const balIdx = message.search(BALANCE_CLAUSE);
+    const beforeBalance = balIdx >= 0 ? message.substring(0, balIdx) : message;
+    const any = beforeBalance.match(ANY_AMOUNT);
+    if (any) return toAmount(any[1]);
+
+    return super.extractAmount(beforeBalance);
   }
 
   protected extractTransactionType(message: string): TransactionType | null {
@@ -99,7 +106,7 @@ export class UCOBankParser extends BankParser {
   protected extractBalance(message: string): number | null {
     // UCO Bank format: "Avl Bal Rs.11111.11"
     const balancePatterns = [
-      /Avl\s+Bal\s+Rs\.?\s*([0-9,]+(?:\.\d{2})?)/i,
+      /Avl\s+Bal(?:\s+in\s+your\s+A\/c\s+is)?\s*[:.]?\s*Rs\.?\s*([0-9,]+(?:\.\d{2})?)/i,
       /Available\s+Balance\s+Rs\.?\s*([0-9,]+(?:\.\d{2})?)/i,
       /Balance[:.]?\s*Rs\.?\s*([0-9,]+(?:\.\d{2})?)/i,
     ];

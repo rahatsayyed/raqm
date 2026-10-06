@@ -29,6 +29,21 @@ export class KotakBankParser extends BankParser {
   }
 
   protected extractMerchant(message: string, sender: string): string | null {
+    const refundMerchantPattern = /(?:INR|Rs\.?|₹)\s*[0-9,]+(?:\.\d{2})?\s+from\s+(.+?)\s+refunded\b/i;
+    const refundMatch = message.match(refundMerchantPattern);
+    if (refundMatch) {
+      const merchant = this.cleanMerchantName(refundMatch[1].trim());
+      if (merchant.length > 0) return merchant;
+    }
+
+    // Stop at the trailer clause; names carry their own periods ("Mr. John Doe")
+    const neftFromPattern = /via\s+NEFT\s+from\s+(?:beneficiary\s+)?(.+?)\s*(?:\.\s*(?:UTR|Ref|Avl|Bal|Not|Call|Info)\b|\.?\s*$)/i;
+    const neftMatch = message.match(neftFromPattern);
+    if (neftMatch) {
+      const merchant = this.cleanMerchantName(neftMatch[1].trim());
+      if (merchant.length > 0) return merchant;
+    }
+
     // IMPS credit from mobile: "linked to mobile xNNNN"
     const mobileLinkedPattern = /linked\s+to\s+mobile\s+([xX*]+\d{2,})/i;
     const mobileLinkedMatch = message.match(mobileLinkedPattern);
@@ -296,38 +311,16 @@ export class KotakBankParser extends BankParser {
   }
 
   protected isTransactionMessage(message: string): boolean {
+    if (this.isNonTransactionMessage(message)) return false;
+
     const lowerMessage = message.toLowerCase();
-
-    // Skip OTP and promotional messages
-    if (
-      lowerMessage.includes('otp') ||
-      lowerMessage.includes('one time password') ||
-      lowerMessage.includes('verification code') ||
-      lowerMessage.includes('offer') ||
-      lowerMessage.includes('discount') ||
-      lowerMessage.includes('cashback offer') ||
-      lowerMessage.includes('win ')
-    ) {
-      return false;
-    }
-
-    // Skip payment request messages
-    if (
-      lowerMessage.includes('has requested') ||
-      lowerMessage.includes('payment request') ||
-      lowerMessage.includes('collect request') ||
-      lowerMessage.includes('requesting payment') ||
-      lowerMessage.includes('requests rs') ||
-      lowerMessage.includes('ignore if already paid')
-    ) {
-      return false;
-    }
 
     // Kotak specific transaction keywords
     const kotakTransactionKeywords = [
       'sent', // Kotak uses "Sent Rs.X from Kotak Bank"
       'debited', 'credited', 'withdrawn', 'deposited',
       'spent', 'received', 'transferred', 'paid',
+      'refund',
     ];
 
     return kotakTransactionKeywords.some((kw) => lowerMessage.includes(kw));

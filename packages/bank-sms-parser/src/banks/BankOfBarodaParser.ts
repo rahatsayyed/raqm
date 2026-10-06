@@ -268,6 +268,14 @@ export class BankOfBarodaParser extends BaseIndianBankParser {
   isTransactionMessage(message: string): boolean {
     const lowerMessage = message.toLowerCase();
 
+    // Card bill-payment acknowledgement; the real debit is on the funding account
+    if (
+      lowerMessage.includes('payment of') &&
+      lowerMessage.includes('received for your bobcard')
+    ) {
+      return false;
+    }
+
     // Check for BOB-specific transaction keywords
     if (
       lowerMessage.includes('dr. from') ||

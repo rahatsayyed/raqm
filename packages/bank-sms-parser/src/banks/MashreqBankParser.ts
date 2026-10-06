@@ -59,9 +59,8 @@ export class MashreqBankParser extends BankParser {
 
   canHandle(sender: string): boolean {
     const upperSender = sender.toUpperCase();
-    return upperSender === 'MASHREQ' ||
-      upperSender.includes('MASHREQ') ||
-      upperSender === 'MSHREQ' ||
+    // "SHREQ" is the common tail of MASHREQ, MSHREQ and the bare "Shreq" header.
+    return upperSender.includes('SHREQ') ||
       // DLT patterns for UAE
       /^[A-Z]{2}-MASHREQ-[A-Z]$/.test(upperSender) ||
       /^[A-Z]{2}-MSHREQ-[A-Z]$/.test(upperSender);
@@ -100,7 +99,8 @@ export class MashreqBankParser extends BankParser {
     // Mashreq debit card purchase pattern: "at CARREFOUR on"
     if (
       message.toLowerCase().includes('debit card') ||
-      message.toLowerCase().includes('credit card')
+      message.toLowerCase().includes('credit card') ||
+      message.toLowerCase().includes('card ending')
     ) {
       // Pattern: "at MERCHANT on DATE"
       const merchantPattern = /at\s+([^,\n]+?)\s+on\s+\d{1,2}-[A-Z]{3}-\d{4}/i;
@@ -185,6 +185,16 @@ export class MashreqBankParser extends BankParser {
     return super.extractBalance(message);
   }
 
+  protected extractAvailableLimit(message: string): number | null {
+    // The base extractor only accepts Rs/INR/₹, but Mashreq prints "Avl.Limit: AED 1,000.00".
+    const match = message.match(/Avl\.?\s*Limit:?\s*[A-Z]{3}\s*([0-9,]+(?:\.\d{2})?)/i);
+    if (match) {
+      const parsed = parseFloat(match[1].replace(/,/g, ''));
+      return isNaN(parsed) ? null : parsed;
+    }
+    return super.extractAvailableLimit(message);
+  }
+
   protected extractReference(message: string): string | null {
     // Mashreq date/time patterns
     const referencePatterns: RegExp[] = [
@@ -220,6 +230,15 @@ export class MashreqBankParser extends BankParser {
     if (
       lowerMessage.includes('credit card') &&
       /for\s+[A-Z]{3}\s+[0-9,]+/i.test(message)
+    ) {
+      return TransactionType.CREDIT;
+    }
+
+    // Credit-card alert without "credit card" wording: an available limit marks it a credit card
+    if (
+      lowerMessage.includes('card ending') &&
+      /for\s+[A-Z]{3}\s+[0-9,]+/i.test(message) &&
+      /Avl\.?\s*Limit|Available\s+Limit/i.test(message)
     ) {
       return TransactionType.CREDIT;
     }

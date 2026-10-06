@@ -123,12 +123,49 @@ import { ZenithBankParser } from './banks/ZenithBankParser';
 import { KeystoneBankParser } from './banks/KeystoneBankParser';
 import { JaizBankParser } from './banks/JaizBankParser';
 import { OpayBankParser } from './banks/OpayBankParser';
+import { PluxeeBankParser } from './banks/PluxeeBankParser';
+import { JanaSmallFinanceBankParser } from './banks/JanaSmallFinanceBankParser';
+import { NSDLPaymentsBankParser } from './banks/NSDLPaymentsBankParser';
+import { KeralaBankParser } from './banks/KeralaBankParser';
+import { GTBankParser } from './banks/GTBankParser';
+import { StandardCharteredNigeriaParser } from './banks/StandardCharteredNigeriaParser';
+import { VFDBankParser } from './banks/VFDBankParser';
+import { MoniepointParser } from './banks/MoniepointParser';
+import { NDBBankParser } from './banks/NDBBankParser';
+import { NationsTrustBankParser } from './banks/NationsTrustBankParser';
+import { NationalSavingsBankParser } from './banks/NationalSavingsBankParser';
+import { ApolloParser } from './banks/ApolloParser';
+import { AwashBankParser } from './banks/AwashBankParser';
+import { BankOfAbyssiniaParser } from './banks/BankOfAbyssiniaParser';
+import { ZamZamBankParser } from './banks/ZamZamBankParser';
+import { SiketBankParser } from './banks/SiketBankParser';
+import { BSFBankParser } from './banks/BSFBankParser';
+import { D360BankParser } from './banks/D360BankParser';
+import { NepalBankParser } from './banks/NepalBankParser';
+import { NepalSBIBankParser } from './banks/NepalSBIBankParser';
+import { LumbiniBikashBankParser } from './banks/LumbiniBikashBankParser';
+import { MachchhapuchreBankParser } from './banks/MachchhapuchreBankParser';
+import { StandardCharteredNepalParser } from './banks/StandardCharteredNepalParser';
+import { BkashParser } from './banks/BkashParser';
+import { NMBTanzaniaParser } from './banks/NMBTanzaniaParser';
+import { DiamondTrustBankParser } from './banks/DiamondTrustBankParser';
+import { MixxByYasParser } from './banks/MixxByYasParser';
+import { ArabBankParser } from './banks/ArabBankParser';
+import { NationalBankOfEgyptParser } from './banks/NationalBankOfEgyptParser';
+import { ChaseUKParser } from './banks/ChaseUKParser';
+import { CitizensBankParser } from './banks/CitizensBankParser';
+import { Trading212Parser } from './banks/Trading212Parser';
+import { PasargadBankParser } from './banks/PasargadBankParser';
+import { BancoAgricolaParser } from './banks/BancoAgricolaParser';
+import { BancoCuscatlanParser } from './banks/BancoCuscatlanParser';
+import { BancoPromericaParser } from './banks/BancoPromericaParser';
 import { UPI_APP_PARSERS } from './apps';
 
 const parsers: BankParser[] = [
   new HDFCMutualFundParser(),
   new NaviMutualFundParser(),
   new HDFCBankParser(),
+  new NepalSBIBankParser(),
   new SBIBankParser(),
   new SaraswatBankParser(),
   new DBSBankParser(),
@@ -195,6 +232,7 @@ const parsers: BankParser[] = [
   new PriorbankParser(),
   new AlinmaBankParser(),
   new NabilBankParser(),
+  new NMBTanzaniaParser(),
   new NMBBankParser(),
   new ManjushreeFinanceParser(),
   new SiddharthaBankParser(),
@@ -204,11 +242,13 @@ const parsers: BankParser[] = [
   new MPESAParser(),
   new SelcomPesaParser(),
   new CrdbBankParser(),
+  new MixxByYasParser(),
   new TigoPesaParser(),
   new CIBEgyptParser(),
   new DhanlaxmiBankParser(),
   new DOPBankParser(),
   new HuntingtonBankParser(),
+  new StandardCharteredNigeriaParser(),
   new StandardCharteredBankParser(),
   new EquitasBankParser(),
   new TelebirrParser(),
@@ -232,8 +272,10 @@ const parsers: BankParser[] = [
   new CIMBThaiParser(),
   new KTCCreditCardParser(),
   new TBankParser(),
+  new ChaseUKParser(),
   new ChaseBankParser(),
   new AlRajhiBankParser(),
+  new BSFBankParser(),
   new SNBAlAhliBankParser(),
   new STCBankParser(),
   new SabbBankParser(),
@@ -249,6 +291,36 @@ const parsers: BankParser[] = [
   new KeystoneBankParser(),
   new JaizBankParser(),
   new OpayBankParser(),
+  new PluxeeBankParser(),
+  new JanaSmallFinanceBankParser(),
+  new NSDLPaymentsBankParser(),
+  new KeralaBankParser(),
+  new MoniepointParser(),
+  new NDBBankParser(),
+  new NationsTrustBankParser(),
+  new NationalSavingsBankParser(),
+  new ApolloParser(),
+  new AwashBankParser(),
+  new BankOfAbyssiniaParser(),
+  new ZamZamBankParser(),
+  new SiketBankParser(),
+  new D360BankParser(),
+  new NepalBankParser(),
+  new LumbiniBikashBankParser(),
+  new MachchhapuchreBankParser(),
+  new StandardCharteredNepalParser(),
+  new BkashParser(),
+  new DiamondTrustBankParser(),
+  new ArabBankParser(),
+  new NationalBankOfEgyptParser(),
+  new CitizensBankParser(),
+  new Trading212Parser(),
+  new PasargadBankParser(),
+  new BancoAgricolaParser(),
+  new BancoCuscatlanParser(),
+  new BancoPromericaParser(),
+  new GTBankParser(),
+  new VFDBankParser(),
 
   // Notification-source parsers, keyed by app package name instead of SMS sender ID.
   ...UPI_APP_PARSERS,

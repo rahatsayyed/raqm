@@ -53,6 +53,14 @@ export class CityUnionBankParser extends BaseIndianBankParser {
   extractTransactionType(message: string): TransactionType | null {
     const lowerMessage = message.toLowerCase();
 
+    // Transfers name both accounts; the clause about "your a/c" decides direction
+    if (lowerMessage.includes('your a/c') && lowerMessage.includes('is credited')) {
+      return TransactionType.INCOME;
+    }
+    if (lowerMessage.includes('your a/c') && lowerMessage.includes('is debited')) {
+      return TransactionType.EXPENSE;
+    }
+
     // Check for debit patterns
     if (lowerMessage.includes('is debited')) return TransactionType.EXPENSE;
     if (lowerMessage.includes('debited for')) return TransactionType.EXPENSE;
