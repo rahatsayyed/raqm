@@ -1,6 +1,6 @@
 import { TransactionType } from '@rahatsayyed/bank-sms-parser';
 import {
-  getBudgets, loadTxRecords, getSetting, setSetting, getMerchantPrivacyRules,
+  getBudgets, getCategories, loadTxRecords, getSetting, setSetting, getMerchantPrivacyRules,
   isMerchantExcludedFromBudget, type Budget, type TxRecord, type MerchantPrivacyRule,
 } from '../db/database';
 import { countsTowardTotals } from './txIntelligence';
@@ -9,6 +9,7 @@ import { getCycleConfig, currentCycleBounds } from './cycle';
 import { postBudgetAlert } from '../notifications/notifications';
 import { formatAmount } from '../utils/format';
 import { logEvent } from './logger';
+import { parseAlertSteps, stepsToFire } from './alertLogic';
 
 export interface BudgetStatus {
   budget: Budget;
@@ -112,31 +113,30 @@ export async function checkBudgetAlerts(txs?: TxRecord[]): Promise<void> {
     }
 
     const now = new Date();
-    const statuses = await getBudgetStatuses(now, txs);
-    const bounds = await currentCycleBounds(now);
+    const [statuses, bounds, categories] = await Promise.all([
+      getBudgetStatuses(now, txs),
+      currentCycleBounds(now),
+      getCategories(),
+    ]);
+    const names = new Map(categories.map((c) => [c.id, c.name]));
 
     for (const status of statuses) {
       const baseKey = `budget_alert_sent_${status.budget.id}_${bounds.from}`;
-
-      if (status.pct > 100) {
-        const key = `${baseKey}_100`;
-        if (!(await alreadySent(key))) {
-          await postBudgetAlert(
-            'Budget exceeded',
-            `You've spent ${formatAmount(status.spent)} of your ${formatAmount(status.limit)} budget.`,
-          );
-          await setSetting(key, '1');
-        }
-      } else if (status.pct >= 80) {
-        const key = `${baseKey}_80`;
-        if (!(await alreadySent(key))) {
-          await postBudgetAlert(
-            'Approaching budget limit',
-            `You've used ${Math.round(status.pct)}% of this period's budget.`,
-          );
-          await setSetting(key, '1');
-        }
+      const steps = parseAlertSteps(status.budget.alertSteps);
+      const sent = new Set<number>();
+      for (const step of steps) {
+        if (await alreadySent(`${baseKey}_${step}`)) sent.add(step);
       }
+      const { fire, markSent } = stepsToFire(status.pct, steps, (s) => sent.has(s));
+      if (fire == null) continue;
+
+      const name = names.get(status.budget.categoryId) ?? 'a category';
+      const body = `${formatAmount(status.spent)} of ${formatAmount(status.limit)} spent on ${name} this period.`;
+      await postBudgetAlert(
+        fire >= 100 ? `${name} budget limit reached` : `${name} budget ${fire}% used`,
+        body,
+      );
+      for (const step of markSent) await setSetting(`${baseKey}_${step}`, '1');
     }
     logEvent('budget_alert.done');
   } catch (e) {

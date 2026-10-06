@@ -4,7 +4,12 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Spacing } from '../../theme';
 import { MainStackScreenProps } from '../../navigation/types';
 import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollView';
-import { getSetting, setSetting, getCategories, getBudgets, upsertBudget, deleteBudget, type Category, type Budget } from '../../db/database';
+import {
+  getSetting, setSetting, getCategories, getBudgets, upsertBudget, deleteBudget, setBudgetAlertSteps,
+  type Category, type Budget,
+} from '../../db/database';
+import { ALERT_STEP_CHOICES, parseAlertSteps, serializeAlertSteps } from '../../services/alertLogic';
+import { cn } from '../../utils/cn';
 
 const PLANNED_MONTHLY_EXPENSE_KEY = 'planned_monthly_expense';
 
@@ -93,6 +98,13 @@ export function BudgetsScreen({ navigation }: MainStackScreenProps<'Budgets'>) {
     setBudgets(buds);
   }
 
+  async function toggleStep(budget: Budget, step: number) {
+    const current = parseAlertSteps(budget.alertSteps);
+    const next = current.includes(step) ? current.filter((s) => s !== step) : [...current, step];
+    await setBudgetAlertSteps(budget.id, serializeAlertSteps(next));
+    setBudgets(await getBudgets());
+  }
+
   return (
     <KeyboardAwareScrollView
       className="flex-1 bg-background"
@@ -135,6 +147,7 @@ export function BudgetsScreen({ navigation }: MainStackScreenProps<'Budgets'>) {
           <View className="h-[1px] bg-outline-variant" />
           {categories.map((cat) => {
             const draft = drafts[cat.id] ?? EMPTY_DRAFT;
+            const budget = budgets.find((b) => b.categoryId === cat.id);
             return (
               <View key={cat.id} className="py-sm border-b border-outline-variant gap-xs">
                 <Text className="font-inter text-body-standard text-on-surface">{cat.emoji} {cat.name}</Text>
@@ -158,6 +171,30 @@ export function BudgetsScreen({ navigation }: MainStackScreenProps<'Budgets'>) {
                     trackColor={{ true: Colors.primary, false: Colors.surfaceVariant }}
                   />
                 </View>
+                {budget && (
+                  <View className="pt-[4px] gap-xs">
+                    <Text className="font-inter text-supporting-text text-on-surface-variant">Alert me at</Text>
+                    <View className="flex-row gap-sm">
+                      {ALERT_STEP_CHOICES.map((step) => {
+                        const on = parseAlertSteps(budget.alertSteps).includes(step);
+                        return (
+                          <TouchableOpacity
+                            key={step}
+                            onPress={() => toggleStep(budget, step)}
+                            className={cn(
+                              'px-md py-[6px] rounded-full border',
+                              on ? 'bg-primary border-primary' : 'border-outline-variant',
+                            )}
+                          >
+                            <Text className={cn('font-inter-medium text-annotation', on ? 'text-on-primary' : 'text-on-surface-variant')}>
+                              {step}%
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
               </View>
             );
           })}

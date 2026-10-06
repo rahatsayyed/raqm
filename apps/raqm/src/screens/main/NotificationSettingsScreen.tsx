@@ -6,20 +6,24 @@ import { MainStackScreenProps } from '../../navigation/types';
 import { getSetting, setSetting } from '../../db/database';
 import { scheduleSummaries } from '../../notifications/notifications';
 import { SUB_NUDGES_SETTING } from '../../services/subscriptionNudges';
+import { LOW_BALANCE_ALERTS_SETTING } from '../../services/alerts';
 
 export function NotificationSettingsScreen({ navigation }: MainStackScreenProps<'NotificationSettings'>) {
   const [notifDaily, setNotifDaily] = useState(true);
   const [notifWeekly, setNotifWeekly] = useState(true);
   const [notifMonthly, setNotifMonthly] = useState(true);
   const [notifSubNudges, setNotifSubNudges] = useState(true);
+  const [notifLowBalance, setNotifLowBalance] = useState(true);
 
   const reload = useCallback(async () => {
-    const [daily, weekly, monthly, subNudges] = await Promise.all([
+    const [daily, weekly, monthly, subNudges, lowBalance] = await Promise.all([
       getSetting('notif_daily'),
       getSetting('notif_weekly'),
       getSetting('notif_monthly'),
       getSetting(SUB_NUDGES_SETTING),
+      getSetting(LOW_BALANCE_ALERTS_SETTING),
     ]);
+    setNotifLowBalance(lowBalance !== '0');
     setNotifDaily(daily !== '0');
     setNotifWeekly(weekly !== '0');
     setNotifMonthly(monthly !== '0');
@@ -83,6 +87,18 @@ export function NotificationSettingsScreen({ navigation }: MainStackScreenProps<
               onValueChange={(v) => {
                 setNotifSubNudges(v);
                 setSetting(SUB_NUDGES_SETTING, v ? '1' : '0');
+              }}
+              trackColor={{ true: Colors.primary, false: Colors.surfaceVariant }}
+            />
+          </View>
+          <View className="h-[1px] bg-outline-variant" />
+          <View className="flex-row justify-between items-center py-[10px]">
+            <Text className="font-inter text-body-standard text-on-surface">Low balance alerts</Text>
+            <Switch
+              value={notifLowBalance}
+              onValueChange={(v) => {
+                setNotifLowBalance(v);
+                setSetting(LOW_BALANCE_ALERTS_SETTING, v ? '1' : '0');
               }}
               trackColor={{ true: Colors.primary, false: Colors.surfaceVariant }}
             />

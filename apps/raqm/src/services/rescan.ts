@@ -4,6 +4,7 @@ import type { ParsedTransaction } from '@rahatsayyed/bank-sms-parser';
 import { insertParsedTxs, getScannedIdentitiesSince } from '../db/database';
 import { useTxStore } from '../store/txStore';
 import { runDetectionJobs, matchSplitPayments } from './txIntelligence';
+import { runAlertChecks } from './alerts';
 import { logEvent } from './logger';
 import { captureParseFailure } from './parseFailures';
 
@@ -65,6 +66,7 @@ async function scanMissing(from: number, to: number = Date.now()): Promise<Resca
     }
     // Refresh even when nothing new was found so a pull still syncs any external DB changes.
     await useTxStore.getState().refresh();
+    if (parsed.length > 0) runAlertChecks(useTxStore.getState().txs);
 
     logEvent('rescan.done');
     return { found: parsed.length };

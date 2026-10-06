@@ -679,6 +679,20 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
       throw e;
     }
   }
+
+  if (current < 23) {
+    await database.runAsync(`BEGIN`);
+    try {
+      await database.runAsync(`ALTER TABLE accounts ADD COLUMN low_balance_threshold REAL`);
+      await database.runAsync(`ALTER TABLE accounts ADD COLUMN low_balance_alerted INTEGER NOT NULL DEFAULT 0`);
+      await database.runAsync(`ALTER TABLE budgets ADD COLUMN alert_steps TEXT`);
+      await database.runAsync(`INSERT INTO schema_migrations VALUES (23)`);
+      await database.runAsync(`COMMIT`);
+    } catch (e) {
+      await database.runAsync(`ROLLBACK`);
+      throw e;
+    }
+  }
 }
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -3079,6 +3093,7 @@ export interface Budget {
   amount: number;
   rollover: boolean;
   createdAt: number;
+  alertSteps: string | null;
 }
 
 function rowToBudget(row: Record<string, unknown>): Budget {
@@ -3088,7 +3103,13 @@ function rowToBudget(row: Record<string, unknown>): Budget {
     amount: row.amount as number,
     rollover: (row.rollover as number) === 1,
     createdAt: row.created_at as number,
+    alertSteps: (row.alert_steps as string | null) ?? null,
   };
+}
+
+export async function setBudgetAlertSteps(id: number, steps: string | null): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`UPDATE budgets SET alert_steps = ? WHERE id = ?`, steps, id);
 }
 
 export async function getBudgets(): Promise<Budget[]> {
@@ -3883,10 +3904,28 @@ export interface Account {
   balance: number | null;
   balanceUpdatedAt: number | null;
   hiddenAt: number | null;
+  lowBalanceThreshold: number | null;
+  lowBalanceAlerted: boolean;
+}
+
+export async function setAccountLowBalanceThreshold(id: number, threshold: number | null): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(
+    `UPDATE accounts SET low_balance_threshold = ?, low_balance_alerted = 0 WHERE id = ?`,
+    threshold,
+    id,
+  );
+}
+
+export async function setAccountLowBalanceAlerted(id: number, alerted: boolean): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(`UPDATE accounts SET low_balance_alerted = ? WHERE id = ?`, alerted ? 1 : 0, id);
 }
 
 function rowToAccount(row: Record<string, unknown>): Account {
   return {
+    lowBalanceThreshold: (row.low_balance_threshold as number | null) ?? null,
+    lowBalanceAlerted: (row.low_balance_alerted as number) === 1,
     id: row.id as number,
     bankName: row.bank_name as string,
     last4: (row.last4 as string | null) ?? null,
