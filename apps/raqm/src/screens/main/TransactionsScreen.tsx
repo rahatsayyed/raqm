@@ -152,6 +152,19 @@ export function TransactionsScreen() {
     [txs],
   );
 
+  const selectionTotals = useMemo(() => {
+    let expense = 0;
+    let income = 0;
+    if (selected.size > 0) {
+      for (const t of realTxs) {
+        if (!selected.has(t.id) || !countsTowardTotals(t)) continue;
+        if (isCredit(t.type)) income += t.amount;
+        else if (isDebit(t.type)) expense += t.amount;
+      }
+    }
+    return { expense, income, net: income - expense };
+  }, [realTxs, selected]);
+
   const sorted = useMemo(
     () => [...realTxs].sort((a, b) => b.timestamp - a.timestamp),
     [realTxs],
@@ -403,6 +416,21 @@ export function TransactionsScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+      {selectMode && selected.size > 0 && (
+        <View className="flex-row justify-between px-[24px] pb-[16px]">
+          <View>
+            <Text className="font-inter text-[12px] text-ink-label">{selected.size} selected</Text>
+            <Text className={`font-mono-medium text-numeric-sm ${selectionTotals.net < 0 ? 'text-primary-container' : 'text-ink-headline'}`}>
+              Net {formatAmount(selectionTotals.net, currency)}
+            </Text>
+          </View>
+          <View className="items-end">
+            <Text className="font-mono text-[13px] leading-[20px] text-ink-label">Out {formatAmount(selectionTotals.expense, currency)}</Text>
+            <Text className="font-mono text-[13px] leading-[20px] text-ink-label">In {formatAmount(selectionTotals.income, currency)}</Text>
+          </View>
+        </View>
+      )}
 
       {!searchOpen && (
         <View className="px-[24px] pb-[16px]">
