@@ -1332,12 +1332,14 @@ function getAutoTags(merchant: string | null | undefined): string[] {
 // up a sensible category instead of falling through to keyword rules/Uncategorized.
 async function getMajorityCategoryForMerchant(
   merchant: string,
+  caseInsensitive = false,
 ): Promise<{ categoryId: number; subcategoryId: number | null } | null> {
   const database = await getDb();
+  const merchantClause = caseInsensitive ? 'LOWER(merchant) = LOWER(?)' : 'merchant = ?';
   const winner = await database.getFirstAsync<{ category_id: number }>(
     `SELECT category_id, COUNT(*) as cnt, MAX(timestamp) as last_ts
      FROM transactions
-     WHERE merchant = ? AND category_id IS NOT NULL AND deleted_at IS NULL
+     WHERE ${merchantClause} AND category_id IS NOT NULL AND deleted_at IS NULL
      GROUP BY category_id
      ORDER BY cnt DESC, last_ts DESC
      LIMIT 1`,
@@ -1347,7 +1349,7 @@ async function getMajorityCategoryForMerchant(
 
   const subRow = await database.getFirstAsync<{ subcategory_id: number | null }>(
     `SELECT subcategory_id FROM transactions
-     WHERE merchant = ? AND category_id = ? AND deleted_at IS NULL AND subcategory_id IS NOT NULL
+     WHERE ${merchantClause} AND category_id = ? AND deleted_at IS NULL AND subcategory_id IS NOT NULL
      ORDER BY timestamp DESC
      LIMIT 1`,
     merchant,
@@ -1459,6 +1461,46 @@ const DEFAULT_KEYWORD_RULES: Array<[RegExp, string]> = [
 function matchDefaultKeywordCategory(merchant: string): string | null {
   for (const [pattern, category] of DEFAULT_KEYWORD_RULES) {
     if (pattern.test(merchant)) return category;
+  }
+  return null;
+}
+
+const VOICE_WORD_RULES: Array<[RegExp, string]> = [
+  [/\b(chai|tea|coffee|lunch|dinner|snack|snacks|samosa)\b/i, 'Food and Drink'],
+  [/\b(auto|cab|bus|metro|parking)\b/i, 'Transportation'],
+  [/\b(vegetables|milk|fruits)\b/i, 'Groceries'],
+  [/\b(medicine|doctor)\b/i, 'Health'],
+  [/\b(movie)\b/i, 'Entertainment'],
+];
+
+export function matchVoiceWordCategory(text: string): string | null {
+  for (const [pattern, category] of VOICE_WORD_RULES) {
+    if (pattern.test(text)) return category;
+  }
+  return null;
+}
+
+export async function suggestCategory(
+  merchant: string,
+  categoryText: string,
+): Promise<{ categoryId: number; subcategoryId: number | null } | null> {
+  const m = merchant.trim();
+  const t = categoryText.trim();
+  const rule = m ? await getCategoryRuleForMerchant(m) : null;
+  if (rule) return rule;
+  const word = (m ? await getWordMatchCategoryForMerchant(m) : null) ?? (t ? await getWordMatchCategoryForMerchant(t) : null);
+  if (word) return word;
+  const majority = m ? await getMajorityCategoryForMerchant(m, true) : null;
+  if (majority) return majority;
+  for (const text of [m, t]) {
+    const name = text ? matchDefaultKeywordCategory(text) : null;
+    const id = name ? await getCategoryIdByName(name) : null;
+    if (id != null) return { categoryId: id, subcategoryId: null };
+  }
+  for (const text of [m, t]) {
+    const name = text ? matchVoiceWordCategory(text) : null;
+    const id = name ? await getCategoryIdByName(name) : null;
+    if (id != null) return { categoryId: id, subcategoryId: null };
   }
   return null;
 }

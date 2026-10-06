@@ -5,7 +5,7 @@ import { KeyboardAwareScrollView } from '../../components/KeyboardAwareScrollVie
 import { MainStackScreenProps } from '../../navigation/types';
 import { useTxStore } from '../../store/txStore';
 import { cn } from '../../utils/cn';
-import { getCategories, getCategoryRuleForMerchant, getWordMatchCategoryForMerchant } from '../../db/database';
+import { getCategories, suggestCategory } from '../../db/database';
 import { parseVoiceTx } from '../../services/voiceParse';
 import { requestRecordAudioPermission } from '../../utils/permissions';
 import {
@@ -83,9 +83,7 @@ export function QuickAddCashScreen({ route, navigation }: MainStackScreenProps<'
     }
     setAmount(String(parsed.amount));
     if (parsed.merchant) setMerchant(parsed.merchant);
-    const hit =
-      (parsed.merchant ? await getCategoryRuleForMerchant(parsed.merchant) : null) ??
-      (await getWordMatchCategoryForMerchant(parsed.categoryText));
+    const hit = await suggestCategory(parsed.merchant ?? '', parsed.categoryText);
     if (hit) await applyCategory(hit.categoryId, hit.subcategoryId);
   };
 
