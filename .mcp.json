@@ -6,6 +6,17 @@
         "serve"
       ],
       "type": "stdio"
+    },
+    "open-design": {
+      "command": "/Users/copods/.nvm/versions/node/v24.21.0/bin/node",
+      "args": [
+        "/Users/copods/Documents/Projects/personal/open-design/apps/daemon/dist/cli.js",
+        "mcp"
+      ],
+      "env": {
+        "OD_DATA_DIR": "/Users/copods/Documents/Projects/personal/open-design/.od",
+        "OD_SIDECAR_CLIENT_ENDPOINT": "/var/folders/_k/c1q5kq610mqcrdrbh3ptwqdm0000gp/T/od-sidecar-502/30e717931c1135dc2e8fbf5aa6bd69c4.sock"
+      }
     }
   }
 }
