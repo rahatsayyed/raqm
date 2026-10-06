@@ -15,7 +15,8 @@ export class SliceParser extends BankParser {
     return (
       normalizedSender.includes('SLICE') ||
       normalizedSender.includes('SLICEIT') ||
-      normalizedSender.includes('SLCEIT') // Matches JD-SLCEIT-S and similar
+      normalizedSender.includes('SLCEIT') || // Matches JD-SLCEIT-S and similar
+      normalizedSender.includes('SLCBNK') // Slice SFB sender, e.g. VA-SLCBNK-S
     );
   }
 
@@ -51,7 +52,21 @@ export class SliceParser extends BankParser {
   isTransactionMessage(message: string): boolean {
     const lowerMessage = message.toLowerCase();
 
-    // Slice uses "sent" for UPI transfers (always success?)
+    // OTP / authorization messages are not completed transactions
+    if (lowerMessage.includes('otp')) {
+      return false;
+    }
+
+    // UPI AutoPay mandate lifecycle notices move no money
+    if (
+      lowerMessage.includes('revoked') ||
+      lowerMessage.includes('is paused') ||
+      lowerMessage.includes('is suspended')
+    ) {
+      return false;
+    }
+
+    // The base keyword list lacks "sent"; collect requests are rejected by the base guards
     if (lowerMessage.includes('sent')) {
       return true;
     }
@@ -66,6 +81,31 @@ export class SliceParser extends BankParser {
 
   extractMerchant(message: string, sender: string): string | null {
     const lowerMessage = message.toLowerCase();
+
+    // Slice SFB card spend: "transaction of Rs. 2.07 at MERCHANT from a/c ... is successful"
+    const atMerchantMatch = message.match(/\bat\s+(.+?)(?:\s+from\b|\s+on\b|\s+is\b|\.\s|$)/i);
+    if (atMerchantMatch) {
+      const merchant = this.cleanMerchantName(atMerchantMatch[1].trim());
+      if (this.isValidMerchantName(merchant)) {
+        return merchant;
+      }
+    }
+
+    // Slice SFB account flows always carry an a/c reference; "in your" ends the payer in app notifications
+    if (/\ba\/c\b/i.test(message)) {
+      const payeeKeyword = lowerMessage.includes('received') ? 'from' : 'to';
+      const payeePattern = new RegExp(
+        `\\b${payeeKeyword}\\s+(.+?)(?:\\s+in\\s+your\\b|\\s+on\\b|\\s+via\\b|\\s+is\\b|\\s*\\(|\\.\\s|$)`,
+        'i'
+      );
+      const payeeMatch = message.match(payeePattern);
+      if (payeeMatch) {
+        const merchant = this.cleanMerchantName(payeeMatch[1].trim());
+        if (this.isValidMerchantName(merchant)) {
+          return merchant;
+        }
+      }
+    }
 
     // Look for "sent to NAME" pattern for UPI transfers
     const sentToPattern = /sent.*to\s+([A-Z][A-Z0-9\s./&-]+?)\s*\(/i;
@@ -110,6 +150,41 @@ export class SliceParser extends BankParser {
       return 'Slice Credit';
     }
     return super.extractMerchant(message, sender) ?? 'Slice';
+  }
+
+  detectIsCard(message: string): boolean {
+    const lower = message.toLowerCase();
+    // SFB card-spend text carries an a/c reference, which the base detector treats as non-card
+    if (
+      lower.includes('transaction of') &&
+      /\bat\s/i.test(message) &&
+      !lower.includes('sent') &&
+      !lower.includes('received') &&
+      !lower.includes('paid')
+    ) {
+      return true;
+    }
+    return super.detectIsCard(message);
+  }
+
+  extractBalance(message: string): number | null {
+    // Dots after Avl/Bal ("Avl. Bal. Rs. 2,203.56") break the base patterns
+    const match = message.match(/Avl\.?\s*Bal\.?\s*(?:Rs\.?|INR|₹)?\s*([0-9,]+(?:\.\d{2})?)/i);
+    if (match) {
+      const parsed = parseFloat(match[1].replace(/,/g, ''));
+      return isNaN(parsed) ? null : parsed;
+    }
+    return super.extractBalance(message);
+  }
+
+  extractReference(message: string): string | null {
+    const upiRef = message.match(/UPI\s+Ref(?:\s+ID)?[:\s]+([0-9]+)/i);
+    if (upiRef) return upiRef[1];
+
+    const refId = message.match(/Ref\s+ID[:\s]+([0-9]+)/i);
+    if (refId) return refId[1];
+
+    return super.extractReference(message);
   }
 
   /**

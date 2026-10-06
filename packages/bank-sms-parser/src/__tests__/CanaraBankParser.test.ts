@@ -18,3 +18,15 @@ describe('CanaraBankParser', () => {
     expect(result!.accountLast4).toBe('9108');
   });
 });
+
+describe('CanaraBankParser semicolon-terminated payee', () => {
+  test('UPI payee stops at ; UPI', () => {
+    const r = parser.parse(
+      'Rs.23.00 paid thru A/C XX1234 on 08-8-25 16:41:00 to BMTC BUS KA57F6; UPI Ref 123456789012. -Canara Bank',
+      'VM-CANBNK-S', ts
+    );
+    expect(r!.amount).toBe(23);
+    expect(r!.merchant).toBe('BMTC BUS KA57F6');
+    expect(r!.reference).toBe('123456789012');
+  });
+});

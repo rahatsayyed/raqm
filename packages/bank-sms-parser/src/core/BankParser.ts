@@ -77,28 +77,41 @@ export abstract class BankParser {
    * Checks if the message is a transaction message (not OTP, promotional, etc.)
    */
   protected isTransactionMessage(message: string): boolean {
+    if (this.isNonTransactionMessage(message)) return false;
+
+    const lowerMessage = message.toLowerCase();
+    const transactionKeywords = [
+      'debited', 'credited', 'withdrawn', 'deposited',
+      'spent', 'received', 'transferred', 'paid',
+    ];
+
+    return transactionKeywords.some((kw) => lowerMessage.includes(kw));
+  }
+
+  /**
+   * Messages that carry an amount but are never a transaction: OTPs, promos,
+   * payment requests, due/reminder notices, ASBA blocks, auto-debit intimations.
+   */
+  protected isNonTransactionMessage(message: string): boolean {
     const lowerMessage = message.toLowerCase();
 
-    // Skip OTP messages
     if (
       lowerMessage.includes('otp') ||
-      lowerMessage.includes('one time password') ||
+      /one[-\s]?time password/.test(lowerMessage) ||
       lowerMessage.includes('verification code')
     ) {
-      return false;
+      return true;
     }
 
-    // Skip promotional messages
     if (
       lowerMessage.includes('offer') ||
       lowerMessage.includes('discount') ||
       lowerMessage.includes('cashback offer') ||
       lowerMessage.includes('win ')
     ) {
-      return false;
+      return true;
     }
 
-    // Skip payment request messages (common across banks)
     if (
       lowerMessage.includes('has requested') ||
       lowerMessage.includes('payment request') ||
@@ -107,15 +120,36 @@ export abstract class BankParser {
       lowerMessage.includes('requests rs') ||
       lowerMessage.includes('ignore if already paid')
     ) {
-      return false;
+      return true;
     }
 
-    // Skip merchant payment acknowledgments
-    if (lowerMessage.includes('have received payment')) {
-      return false;
+    if (lowerMessage.includes('have received payment')) return true;
+
+    if (lowerMessage.includes('asba') || lowerMessage.includes('is blocked in your')) {
+      return true;
     }
 
-    // Skip payment reminder/due messages
+    // Voucher delivery notices move no money; buying one still parses via debit verbs
+    if (
+      (lowerMessage.includes('e-voucher') || lowerMessage.includes('evoucher')) &&
+      (lowerMessage.includes('received') ||
+        lowerMessage.includes('reward') ||
+        lowerMessage.includes('redemption')) &&
+      !lowerMessage.includes('spent') &&
+      !lowerMessage.includes('debited') &&
+      !lowerMessage.includes('charged')
+    ) {
+      return true;
+    }
+
+    // Future-debit intimations; the real debit arrives as its own SMS
+    if (
+      lowerMessage.includes('will be auto-debited') ||
+      lowerMessage.includes('will be auto debited')
+    ) {
+      return true;
+    }
+
     if (
       lowerMessage.includes('is due') ||
       lowerMessage.includes('min amount due') ||
@@ -125,16 +159,10 @@ export abstract class BankParser {
       lowerMessage.includes('ignore if paid') ||
       (lowerMessage.includes('pls pay') && lowerMessage.includes('min of'))
     ) {
-      return false;
+      return true;
     }
 
-    // Must contain transaction keywords
-    const transactionKeywords = [
-      'debited', 'credited', 'withdrawn', 'deposited',
-      'spent', 'received', 'transferred', 'paid',
-    ];
-
-    return transactionKeywords.some((kw) => lowerMessage.includes(kw));
+    return false;
   }
 
   /**

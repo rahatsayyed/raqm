@@ -21,6 +21,7 @@ export class FederalBankParser extends BaseIndianBankParser {
       normalizedSender.includes('FEDBNK') ||
       normalizedSender.includes('FEDERAL') ||
       normalizedSender.includes('FEDFIB') ||
+      normalizedSender.includes('FEDSMS') ||
       normalizedSender.includes('FEDSCP') ||
       // DLT patterns for transactions (-S suffix)
       /^[A-Z]{2}-FEDBNK-S$/.test(normalizedSender) ||
@@ -432,6 +433,20 @@ export class FederalBankParser extends BaseIndianBankParser {
     // Skip mandate creation notifications and declined payments
     if (this.isMandateCreationNotification(message) || this.isDeclinedMandatePayment(message)) {
       return false;
+    }
+
+    // Outgoing NEFT/IMPS delivery receipts duplicate the debit SMS (same ref); investments stay
+    if (this.isOutgoingHasReceivedPattern(message) && !this.isInvestmentTransaction(lowerMessage)) {
+      return false;
+    }
+
+    if (
+      lowerMessage.includes('txn of') &&
+      (lowerMessage.includes('rewards') || lowerMessage.includes('was successful')) &&
+      !lowerMessage.includes('failed') &&
+      !lowerMessage.includes('declined')
+    ) {
+      return true;
     }
 
     // Federal Bank specific transaction keywords

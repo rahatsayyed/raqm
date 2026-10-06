@@ -62,3 +62,31 @@ describe('ICICIBankParser', () => {
     expect(result!.type).toBe(TransactionType.TRANSFER);
   });
 });
+
+describe('ICICIBankParser merchant markers', () => {
+  test('incoming NEFT names the payer', () => {
+    const r = parser.parse(
+      'ICICI Bank Acct XX123 is credited with Rs 1,000.00 on 05-Oct-26. Info NEFT-FDRLM4175907234-JOHN JOSE. Avl Bal Rs 5,000.00.',
+      'VM-ICICIB-S', TS
+    );
+    expect(r!.type).toBe(TransactionType.INCOME);
+    expect(r!.merchant).toBe('JOHN JOSE');
+  });
+
+  test('CAM marker is an ATM withdrawal', () => {
+    const r = parser.parse(
+      'ICICI Bank Acct XX123 debited for Rs 2,000.00 on 05-Oct-26; Info CAM*TEST123*. Avl Bal Rs 3,000.00.',
+      'VM-ICICIB-S', TS
+    );
+    expect(r!.type).toBe(TransactionType.EXPENSE);
+    expect(r!.merchant).toBe('ATM Withdrawal');
+  });
+
+  test('InfoBIL names the biller', () => {
+    const r = parser.parse(
+      'ICICI Bank Acct XX123 debited for Rs 700.00 on 05-Oct-26; Info InfoBIL*Airtel Postpaid. Avl Bal Rs 3,000.00.',
+      'VM-ICICIB-S', TS
+    );
+    expect(r!.merchant).toBe('Airtel Postpaid');
+  });
+});

@@ -125,20 +125,7 @@ export class IDFCFirstBankParser extends BaseIndianBankParser {
     isTransactionMessage(message: string): boolean {
         const lowerMessage = message.toLowerCase();
 
-        // Skip OTP messages
-        if (lowerMessage.includes('otp') ||
-            lowerMessage.includes('one time password') ||
-            lowerMessage.includes('verification code')
-        ) {
-            return false;
-        }
-
-        // Skip promotional messages
-        if (lowerMessage.includes('offer') ||
-            lowerMessage.includes('discount') ||
-            lowerMessage.includes('cashback offer') ||
-            lowerMessage.includes('win ')
-        ) {
+        if (this.isNonTransactionMessage(message)) {
             return false;
         }
 

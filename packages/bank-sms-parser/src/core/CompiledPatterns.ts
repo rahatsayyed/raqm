@@ -1,8 +1,9 @@
 export const CompiledPatterns = {
   Amount: {
-    RS_PATTERN: /Rs\.?\s*([0-9,]+(?:\.\d{2})?)/i,
-    INR_PATTERN: /INR\s*([0-9,]+(?:\.\d{2})?)/i,
-    RUPEE_SYMBOL_PATTERN: /₹\s*([0-9,]+(?:\.\d{2})?)/,
+    // Integer part optional: banks print sub-unit amounts as "Rs..6" or "USD .28"
+    RS_PATTERN: /Rs\.?\s*((?:[0-9,]+(?:\.\d{1,2})?|\.\d{1,2}))/i,
+    INR_PATTERN: /INR\s*((?:[0-9,]+(?:\.\d{1,2})?|\.\d{1,2}))/i,
+    RUPEE_SYMBOL_PATTERN: /₹\s*((?:[0-9,]+(?:\.\d{1,2})?|\.\d{1,2}))/,
     get ALL_PATTERNS(): RegExp[] {
       return [
         CompiledPatterns.Amount.RS_PATTERN,
@@ -13,7 +14,7 @@ export const CompiledPatterns = {
   },
 
   Reference: {
-    GENERIC_REF: /(?:Ref|Reference|Txn|Transaction)(?:\s+No)?[:\s]+([A-Z0-9]+)/i,
+    GENERIC_REF: /(?:Ref|Reference|Txn|Transaction)\.?(?:\s+No\.?)?[:\s]+([A-Z0-9]+)/i,
     UPI_REF: /UPI[:\s]+([0-9]+)/i,
     REF_NUMBER: /Reference\s+Number[:\s]+([A-Z0-9]+)/i,
     get ALL_PATTERNS(): RegExp[] {

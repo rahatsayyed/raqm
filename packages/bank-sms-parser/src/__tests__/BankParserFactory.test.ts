@@ -2,9 +2,9 @@ import { BankParserFactory } from '../BankParserFactory';
 import { TransactionType } from '../core/types';
 
 describe('BankParserFactory', () => {
-  test('loads 129 parsers', () => {
-    // 123 registered bank parsers (abstract UAEBankParser excluded) + 6 package-keyed app parsers.
-    expect(BankParserFactory.getAllParsers().length).toBe(129);
+  test('loads 165 parsers', () => {
+    // Registered bank parsers (abstract UAEBankParser excluded) plus 6 package-keyed UPI app parsers.
+    expect(BankParserFactory.getAllParsers().length).toBe(165);
   });
 
   test('isKnownBankSender identifies HDFC sender', () => {

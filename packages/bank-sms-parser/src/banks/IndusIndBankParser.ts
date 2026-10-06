@@ -9,6 +9,10 @@ import { ParsedTransaction, TransactionType } from '../core/types';
  * - Relies on base patterns for amount, balance, merchant, account, reference
  * - canHandle() includes common DLT sender variants seen in India
  */
+const CARD_MASK_PATTERN = /card\s+x{2,}\d/i;
+const REFUND_MERCHANT_PATTERN = /refund\s+of\s+(?:INR|Rs\.?|₹)\s*[0-9,]+(?:\.\d{2})?\s+from\s+(.+?)\s+has\s+been\s+credited/i;
+const LEGAL_ENTITY_SUFFIX_PATTERN = /\s+(?:Limited|Ltd\.?|Pvt\.?|Private).*$/i;
+
 export class IndusIndBankParser extends BaseIndianBankParser {
 
   getBankName(): string {
@@ -54,6 +58,8 @@ export class IndusIndBankParser extends BaseIndianBankParser {
     const isAchOrNach =
       lower.includes('ach db') || lower.includes('ach cr') || lower.includes('nach');
     if (isAchOrNach) return false;
+    // Refund SMS end in "card account", which makes the base detector bail out as non-card
+    if (lower.includes('credit card') && CARD_MASK_PATTERN.test(message)) return true;
     return super.detectIsCard(message);
   }
 
@@ -158,6 +164,13 @@ export class IndusIndBankParser extends BaseIndianBankParser {
   }
 
   extractMerchant(message: string, sender: string): string | null {
+    // Refund merchant carries legal entity + branch noise ("Swiggy Limited Banga"); keep the brand
+    const refundMatch = message.match(REFUND_MERCHANT_PATTERN);
+    if (refundMatch) {
+      const m = refundMatch[1].trim().replace(LEGAL_ENTITY_SUFFIX_PATTERN, '');
+      if (m.length > 0) return this.cleanMerchantName(m);
+    }
+
     // UPI-style: towards <vpa or merchant>
     // Capture the next token (can include dots) and strip trailing punctuation
     const towardsPattern = /towards\s+(\S+)/i;

@@ -245,6 +245,11 @@ export class TigoPesaParser extends BankParser {
       return false;
     }
 
+    // Secondary twin of a Mixx by Yas outbound transfer; the primary is booked by MixxByYasParser.
+    if (lowerMessage.includes('you have sent') && lowerMessage.includes('please wait for confirmation')) {
+      return false;
+    }
+
     // Must contain transaction keywords or status indicators
     const transactionKeywords = [
       'cash-in',

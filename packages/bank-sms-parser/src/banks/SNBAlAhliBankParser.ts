@@ -1,5 +1,9 @@
 import { BankParser } from '../core/BankParser';
-import { ParsedTransaction, TransactionType } from '../core/types';
+import { FinancialMessageSafety } from '../core/FinancialMessageSafety';
+import { SaudiTransactionMessageGuards } from '../core/SaudiTransactionMessageGuards';
+import { TransactionType } from '../core/types';
+
+const MASKED_OR_BLANK = /^[*\s\p{Nd}]*$/u;
 
 /**
  * Parser for Saudi National Bank / Al Ahli Bank (SNB-AlAhli, Saudi Arabia).
@@ -7,8 +11,8 @@ import { ParsedTransaction, TransactionType } from '../core/types';
  * Handles Arabic POS purchase, withdrawal and transfer formats such as:
  *   شراء نقاط بيع SamsungPay
  *   بـSAR 19.45
- *   من filwah al
- *   مدى *2342
+ *   من SYNTHETIC MERCHANT
+ *   مدى *0002
  *   في 07:53 03/04/26
  *
  * Sender examples: SNB-AlAhli, SNB, AlAhliBank, الأهلي
@@ -33,27 +37,20 @@ export class SNBAlAhliBankParser extends BankParser {
   }
 
   protected extractAmount(message: string): number | null {
-    // Pattern 1: "بـSAR 19.45" (POS purchase, card transaction)
-    const bPattern = /بـ\s*SAR\s*([0-9,]+(?:\.\d{1,2})?)/i;
-    const bMatch = message.match(bPattern);
-    if (bMatch) {
-      return this.parseSarAmount(bMatch[1]);
+    const patterns = [
+      /\(\s*(?:SAR|SR)\s*([0-9,]+(?:\.\d{1,2})?)\s*\)/i,
+      /(?:بـ?|مبلغ)[ \t]*:?[ \t]*(?:SAR|SR)[ \t]*:?[ \t]*([0-9,]+(?:\.\d{1,2})?)\b/i,
+      /(?:بـ?|مبلغ)[ \t]*:?[ \t]*([0-9,]+(?:\.\d{1,2})?)[ \t]*:?[ \t]*(?:SAR|SR)\b/i,
+      /^\s*(?:SAR|SR)[ \t]*:?[ \t]*([0-9,]+(?:\.\d{1,2})?)\s*$/im,
+      /^\s*([0-9][0-9,]*(?:\.\d{1,2})?)[ \t]*(?:SAR|SR)\s*$/im,
+    ];
+    for (const pattern of patterns) {
+      const match = message.match(pattern);
+      if (match) {
+        const amount = this.parseSarAmount(match[1]);
+        if (amount !== null) return amount;
+      }
     }
-
-    // Pattern 2: "مبلغ: SAR 100" or "مبلغ:SAR 100"
-    const amountPattern = /مبلغ\s*:?\s*SAR\s*([0-9,]+(?:\.\d{1,2})?)/i;
-    const amountMatch = message.match(amountPattern);
-    if (amountMatch) {
-      return this.parseSarAmount(amountMatch[1]);
-    }
-
-    // Pattern 3: "SAR 19.45" (loose fallback)
-    const looseSarPattern = /SAR\s+([0-9,]+(?:\.\d{1,2})?)/i;
-    const looseSarMatch = message.match(looseSarPattern);
-    if (looseSarMatch) {
-      return this.parseSarAmount(looseSarMatch[1]);
-    }
-
     return null;
   }
 
@@ -64,7 +61,21 @@ export class SNBAlAhliBankParser extends BankParser {
   }
 
   protected extractTransactionType(message: string): TransactionType | null {
+    if (message.includes('استرجاع') || message.includes('مرتجع') ||
+      message.includes('إرجاع') || message.includes('عكس العملية') ||
+      message.includes('اعادة شراء') || message.includes('إعادة شراء')) {
+      return TransactionType.INCOME;
+    }
+    if (message.includes('تصحيح') && message.includes('سحب') &&
+      (message.includes('طوارئ') || message.includes('نقد'))) {
+      return TransactionType.INCOME;
+    }
+    if (message.includes('سداد') &&
+      (message.includes('بطاقة') || message.includes('ائتمان'))) {
+      return TransactionType.TRANSFER;
+    }
     if (message.includes('واردة')) return TransactionType.INCOME;   // incoming transfer
+    if (message.includes('حوالة بين حساباتك')) return TransactionType.TRANSFER;
     if (message.includes('إيداع')) return TransactionType.INCOME;   // deposit
     if (message.includes('شراء')) return TransactionType.EXPENSE;   // purchase
     if (message.includes('سحب')) return TransactionType.EXPENSE;    // withdrawal
@@ -75,23 +86,16 @@ export class SNBAlAhliBankParser extends BankParser {
   }
 
   protected extractMerchant(message: string, _sender: string): string | null {
-    // For outgoing purchases/transfers, merchant follows "من" (from) on its own line.
-    // For incoming transfers it is also "من" (sender), so we extract it the same way.
-    const fromPattern = /من\s+([^\n]+?)(?:\n|$)/;
-    const fromMatch = message.match(fromPattern);
-    if (fromMatch) {
-      const raw = fromMatch[1].trim();
-      if (raw.length > 0 && !raw.split('').every(c => c === '*' || /\d/.test(c))) {
-        const merchant = this.cleanMerchantName(raw);
-        if (this.isValidMerchantName(merchant)) {
-          return merchant;
-        }
-      }
+    // Merchant (purchase) and sender (incoming transfer) both follow "من" on its own line
+    for (const match of message.matchAll(/(?:^|\n)من[ \t]*([^\n]+)/g)) {
+      const raw = match[1].trim();
+      if (raw === '' || MASKED_OR_BLANK.test(raw)) continue;
+      const merchant = this.cleanMerchantName(raw.replace(/^(?:[0-9*]+)[ \t]*/, '').trim());
+      if (this.isValidMerchantName(merchant)) return merchant;
     }
 
     // "الى: NAME" (to: recipient) for outgoing transfers
-    const toPattern = /الى\s*:?\s*([^\n]+?)(?:\n|$)/;
-    const toMatch = message.match(toPattern);
+    const toMatch = message.match(/الى\s*:?\s*([^\n]+?)(?:\n|$)/);
     if (toMatch) {
       const merchant = this.cleanMerchantName(toMatch[1].trim());
       if (this.isValidMerchantName(merchant)) {
@@ -99,7 +103,6 @@ export class SNBAlAhliBankParser extends BankParser {
       }
     }
 
-    // ATM fallback
     if (message.includes('صراف')) {
       return 'ATM Withdrawal';
     }
@@ -108,30 +111,21 @@ export class SNBAlAhliBankParser extends BankParser {
   }
 
   protected extractAccountLast4(message: string): string | null {
-    // "مدى *2342" or "مدى*2342" (Mada card)
-    const madaPattern = /مدى\s*\*+\s*(\d{3,4})/;
-    const madaMatch = message.match(madaPattern);
-    if (madaMatch) {
-      return this.extractLast4Digits(madaMatch[1]);
-    }
+    // "مدى *0002" or "مدى*0002" (Mada card)
+    const madaMatch = message.match(/\*?\s*مدى(?:\s*-\s*ابل)?\s*\*+\s*(\d{3,4})\*?/);
+    if (madaMatch) return this.extractLast4Digits(madaMatch[1]);
 
-    // "بطاقة *2342" (card)
-    const cardPattern = /بطاقة\s*\*+\s*(\d{3,4})/;
-    const cardMatch = message.match(cardPattern);
-    if (cardMatch) {
-      return this.extractLast4Digits(cardMatch[1]);
-    }
+    // "بطاقة *0002" (card)
+    const cardMatch = message.match(/بطاقة\s*\*+\s*(\d{3,4})/);
+    if (cardMatch) return this.extractLast4Digits(cardMatch[1]);
 
     return super.extractAccountLast4(message);
   }
 
   protected extractBalance(message: string): number | null {
     // "الرصيد: SAR 1234.56" or "الرصيد المتاح: SAR 1234.56"
-    const balancePattern = /الرصيد(?:\s*المتاح)?\s*:?\s*SAR\s*([0-9,]+(?:\.\d{1,2})?)/i;
-    const balanceMatch = message.match(balancePattern);
-    if (balanceMatch) {
-      return this.parseSarAmount(balanceMatch[1]);
-    }
+    const balanceMatch = message.match(/الرصيد(?:\s*المتاح)?\s*:?\s*(?:SAR|SR)\s*([0-9,]+(?:\.\d{1,2})?)/i);
+    if (balanceMatch) return this.parseSarAmount(balanceMatch[1]);
 
     return null;
   }
@@ -151,9 +145,10 @@ export class SNBAlAhliBankParser extends BankParser {
 
   protected isTransactionMessage(message: string): boolean {
     if (
-      message.includes('رمز') ||
-      message.toLowerCase().includes('otp') ||
-      message.includes('كلمة المرور')
+      SaudiTransactionMessageGuards.isDeclinedOrFailed(message) ||
+      SaudiTransactionMessageGuards.isPromotionalOrOperationalNotice(message) ||
+      FinancialMessageSafety.isSecurityCode(message) || message.includes('رمز') ||
+      message.toLowerCase().includes('otp') || message.includes('كلمة المرور')
     ) {
       return false;
     }
@@ -165,9 +160,9 @@ export class SNBAlAhliBankParser extends BankParser {
       'خصم',    // deduction
       'سداد',   // payment
       'إيداع',  // deposit
-      'SAR',
+      'SAR', 'SR',
     ];
-    return keywords.some(kw => message.includes(kw));
+    return keywords.some((kw) => message.includes(kw));
   }
 }
 

@@ -33,6 +33,15 @@ export class HDFCBankParser extends BaseIndianBankParser {
   }
 
   extractMerchant(message: string, sender: string): string | null {
+    // Reversals right-pad the merchant with spaces before a trailing code
+    if (/reversed/i.test(message) || /reversal/i.test(message)) {
+      const reversalMatch = message.match(/\bBy\s+(.+?)(?:\s{2,}|\s+On\s)/i);
+      if (reversalMatch) {
+        const merchant = this.cleanMerchantName(reversalMatch[1].trim());
+        if (merchant.length > 0) return merchant;
+      }
+    }
+
     // Check for HDFC Bank Card debit transactions - "Spent Rs.xxx From HDFC Bank Card xxxx At [MERCHANT] On xxx"
     if (
       /From HDFC Bank Card/i.test(message) &&
@@ -102,6 +111,14 @@ export class HDFCBankParser extends BaseIndianBankParser {
         if (cleanedMerchant.length > 0) {
           return this.cleanMerchantName(cleanedMerchant);
         }
+      }
+    }
+
+    if (/NetBanking/i.test(message)) {
+      const netBankingMatch = message.match(/to\s+(.+?)\s+via\s+HDFC\s+Bank\s+NetBanking/i);
+      if (netBankingMatch) {
+        const merchant = this.cleanMerchantName(netBankingMatch[1].trim());
+        if (merchant.length > 0) return merchant;
       }
     }
 
@@ -245,6 +262,11 @@ export class HDFCBankParser extends BaseIndianBankParser {
       return TransactionType.INVESTMENT;
     }
 
+    // Reversals pay down the card balance, so classify before the debit keywords
+    if (lowerMessage.includes('reversed') || lowerMessage.includes('reversal')) {
+      return TransactionType.INCOME;
+    }
+
     if (lowerMessage.includes('block cc') || lowerMessage.includes('block pcc')) {
       return TransactionType.CREDIT;
     }
@@ -258,6 +280,10 @@ export class HDFCBankParser extends BaseIndianBankParser {
     }
 
     if (lowerMessage.includes('towards') && lowerMessage.includes('credit card')) {
+      return TransactionType.EXPENSE;
+    }
+
+    if (lowerMessage.includes('payment successful')) {
       return TransactionType.EXPENSE;
     }
 
@@ -440,15 +466,7 @@ export class HDFCBankParser extends BaseIndianBankParser {
       return false;
     }
 
-    if (
-      lowerMessage.includes('otp') ||
-      lowerMessage.includes('one time password') ||
-      lowerMessage.includes('verification code') ||
-      lowerMessage.includes('offer') ||
-      lowerMessage.includes('discount') ||
-      lowerMessage.includes('cashback offer') ||
-      lowerMessage.includes('win ')
-    ) {
+    if (this.isNonTransactionMessage(message)) {
       return false;
     }
 
@@ -459,6 +477,9 @@ export class HDFCBankParser extends BaseIndianBankParser {
       'deducted',
       'txn',
       'refund',
+      'reversed',
+      'reversal',
+      'payment successful',
     ];
 
     return hdfcTransactionKeywords.some(kw => lowerMessage.includes(kw));

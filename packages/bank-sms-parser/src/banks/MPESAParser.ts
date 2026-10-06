@@ -26,6 +26,11 @@ export class MPESAParser extends BankParser {
     return 'KES';
   }
 
+  // Wallet SMS carry no stable per-account number, so never mint a last4.
+  protected extractAccountLast4(_message: string): string | null {
+    return null;
+  }
+
   canHandle(sender: string): boolean {
     const normalizedSender = sender.toUpperCase();
     return normalizedSender.includes('MPESA') ||

@@ -62,3 +62,26 @@ describe('HDFCBankParser', () => {
     expect(result!.balance).toBe(8500);
   });
 });
+
+describe('HDFCBankParser reversals and NetBanking', () => {
+  test('credit card reversal is income with merchant from By clause', () => {
+    const r = parser.parse(
+      'Transaction Reversed!On HDFC Bank CREDIT Card 1234 for Rs.499.00 By AMAZON        000 On 2026-08-21:10:10:10',
+      'VM-HDFCBK-S', TS
+    );
+    expect(r).not.toBeNull();
+    expect(r!.amount).toBe(499);
+    expect(r!.type).toBe(TransactionType.INCOME);
+    expect(r!.merchant).toBe('AMAZON');
+    expect(r!.accountLast4).toBe('1234');
+  });
+
+  test('NetBanking transfer names the payee', () => {
+    const r = parser.parse(
+      'Rs.1500.00 debited from HDFC Bank A/c XX1234 on 01-Aug-26 to RENT PAYMENT via HDFC Bank NetBanking. Avl bal:INR 5000.00',
+      'VM-HDFCBK-S', TS
+    );
+    expect(r!.type).toBe(TransactionType.EXPENSE);
+    expect(r!.merchant).toBe('RENT PAYMENT');
+  });
+});

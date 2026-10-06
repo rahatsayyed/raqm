@@ -59,7 +59,7 @@ export class CanaraBankParser extends BaseIndianBankParser {
     }
 
     // Pattern 2: UPI - paid thru A/C XX1234 on 08-8-25 16:41:00 to BMTC BUS KA57F6
-    const upiMerchantPattern = /\sto\s+([^,]+?)(?:,\s*UPI|\.|-Canara)/i;
+    const upiMerchantPattern = /\sto\s+([^,;]+?)(?:[,;]\s*UPI|\.|-Canara)/i;
     const upiMatch = message.match(upiMerchantPattern);
     if (upiMatch) {
       const merchant = this.cleanMerchantName(upiMatch[1].trim());
@@ -120,15 +120,6 @@ export class CanaraBankParser extends BaseIndianBankParser {
     // Skip failed transactions
     if (lowerMessage.includes('failed due to')) {
       return false;
-    }
-
-    // Check for Canara-specific transaction keywords
-    if (
-      lowerMessage.includes('paid thru') ||
-      lowerMessage.includes('has been debited') ||
-      lowerMessage.includes('has been credited')
-    ) {
-      return true;
     }
 
     // Defer to the base class first. It accepts the standard keyword forms above AND —
