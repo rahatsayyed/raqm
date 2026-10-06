@@ -3,8 +3,10 @@ import { View, Text, ScrollView, TouchableOpacity, Alert, Modal, FlatList } from
 import { useFocusEffect } from '@react-navigation/native';
 import { MainStackScreenProps } from '../../navigation/types';
 import {
-  getAccounts, setAccountHidden, mergeAccounts, updateAccount, type Account,
+  getAccounts, setAccountHidden, mergeAccounts, updateAccount, setAccountLowBalanceThreshold, type Account,
 } from '../../db/database';
+import { checkLowBalanceAlerts } from '../../services/alerts';
+import { formatAmount } from '../../utils/format';
 import { useTxStore } from '../../store/txStore';
 import { AddAccountModal } from '../../components/AddAccountModal';
 import { EditFieldSheet } from '../../components/EditFieldSheet';
@@ -22,6 +24,7 @@ export function ManageAccountsScreen({ navigation }: MainStackScreenProps<'Manag
   const [addVisible, setAddVisible] = useState(false);
   const [mergeSource, setMergeSource] = useState<Account | null>(null);
   const [aliasTarget, setAliasTarget] = useState<Account | null>(null);
+  const [alertTarget, setAlertTarget] = useState<Account | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
@@ -148,6 +151,16 @@ export function ManageAccountsScreen({ navigation }: MainStackScreenProps<'Manag
                   <MergeIcon color={Colors.onSurfaceVariant} size={14} />
                   <Text className="font-inter-medium text-annotation text-on-surface-variant">Merge</Text>
                 </TouchableOpacity>
+                {!account.isCard && (
+                  <TouchableOpacity
+                    className="flex-1 flex-row items-center justify-center gap-xs py-sm rounded-lg bg-surface-variant"
+                    onPress={busy ? undefined : () => setAlertTarget(account)}
+                  >
+                    <Text className="font-inter-medium text-annotation text-on-surface-variant">
+                      {account.lowBalanceThreshold != null ? `Alert ${formatAmount(account.lowBalanceThreshold)}` : 'Alert'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           );
@@ -167,6 +180,25 @@ export function ManageAccountsScreen({ navigation }: MainStackScreenProps<'Manag
           setAliasTarget(null);
           await load();
           await useTxStore.getState().refresh();
+        }}
+      />
+
+      <EditFieldSheet
+        visible={alertTarget != null}
+        onClose={() => setAlertTarget(null)}
+        title="Low balance alert (leave empty to turn off)"
+        placeholder="e.g. 2000"
+        keyboardType="numeric"
+        initialValue={alertTarget?.lowBalanceThreshold != null ? String(alertTarget.lowBalanceThreshold) : ''}
+        onConfirm={async (value) => {
+          const target = alertTarget;
+          const amount = Number(value);
+          const threshold = value && Number.isFinite(amount) && amount > 0 ? amount : null;
+          setAlertTarget(null);
+          if (!target) return;
+          await setAccountLowBalanceThreshold(target.id, threshold);
+          await load();
+          checkLowBalanceAlerts().catch(() => {});
         }}
       />
 

@@ -16,7 +16,7 @@ import {
 } from '../db/database';
 import { getCurrentCoords } from '../services/location';
 import { isDuplicateSms } from '../services/txIntelligence';
-import { checkBudgetAlerts } from '../services/budgets';
+import { runAlertChecks } from '../services/alerts';
 import { refreshWidgets } from '../../modules/sms-reader/src/SmsReaderModule';
 
 async function loadAccountLabels(): Promise<Map<string, string>> {
@@ -70,7 +70,7 @@ export const useTxStore = create<TxStore>((set, get) => ({
     // whole transactions table a second time on every single insert, right when the
     // notification-posting path needs its own quick DB read (see budgets.ts for why this
     // used to delay notifications on the live SMS/notification path).
-    checkBudgetAlerts(get().txs).catch(() => {});
+    runAlertChecks(get().txs);
     return id;
   },
 
@@ -81,7 +81,7 @@ export const useTxStore = create<TxStore>((set, get) => ({
     // whole transactions table a second time on every single insert, right when the
     // notification-posting path needs its own quick DB read (see budgets.ts for why this
     // used to delay notifications on the live SMS/notification path).
-    checkBudgetAlerts(get().txs).catch(() => {});
+    runAlertChecks(get().txs);
   },
 
   addParsedWithLocation: async (tx, source = 'sms') => {
@@ -109,7 +109,7 @@ export const useTxStore = create<TxStore>((set, get) => ({
     // whole transactions table a second time on every single insert, right when the
     // notification-posting path needs its own quick DB read (see budgets.ts for why this
     // used to delay notifications on the live SMS/notification path).
-    checkBudgetAlerts(get().txs).catch(() => {});
+    runAlertChecks(get().txs);
 
     if (merged) {
       // Cross-source merge: an existing row (from the other ingestion source) was updated
@@ -139,7 +139,7 @@ export const useTxStore = create<TxStore>((set, get) => ({
     // whole transactions table a second time on every single insert, right when the
     // notification-posting path needs its own quick DB read (see budgets.ts for why this
     // used to delay notifications on the live SMS/notification path).
-    checkBudgetAlerts(get().txs).catch(() => {});
+    runAlertChecks(get().txs);
   },
 
   remove: async (id) => {
