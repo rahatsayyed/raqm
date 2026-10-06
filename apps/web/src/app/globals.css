@@ -64,6 +64,22 @@ html.lenis, html.lenis body {
   }
 }
 
+.intro-overlay {
+  z-index: 60;
+  animation: intro-failsafe 0s linear 5s forwards;
+}
+
+html[data-intro='skip'] .intro-overlay,
+html[data-intro='done'] .intro-overlay {
+  display: none;
+}
+
+@keyframes intro-failsafe {
+  to {
+    visibility: hidden;
+  }
+}
+
 @keyframes tx-ticker-scroll {
   to {
     transform: translateX(-50%);

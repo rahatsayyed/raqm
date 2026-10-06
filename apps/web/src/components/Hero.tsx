@@ -5,6 +5,7 @@ import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { AppStoreBadges } from './AppStoreBadges';
 import { HeroParallax } from './HeroParallax';
+import { INTRO_REVEAL_EVENT } from './IntroScreen';
 import { TxTicker } from './TxTicker';
 
 export function Hero() {
@@ -22,11 +23,22 @@ export function Hero() {
       const restWidth = line.getBoundingClientRect().width;
       const titleWidth = title.getBoundingClientRect().width;
 
+      const introPending = document.documentElement.dataset.intro === 'play';
+
       gsap.set(line, { width: 2 });
-      gsap
-        .timeline({ delay: 0.2, onComplete: () => gsap.set(line, { clearProps: 'width' }) })
+      const tl = gsap
+        .timeline({ paused: introPending, delay: 0.2, onComplete: () => gsap.set(line, { clearProps: 'width' }) })
         .to(line, { width: titleWidth, duration: 0.9, ease: 'power2.out' })
         .to(line, { width: restWidth, duration: 0.8, ease: 'power2.inOut' }, '+=0.1');
+
+      if (!introPending) return;
+      const start = () => tl.play();
+      window.addEventListener(INTRO_REVEAL_EVENT, start, { once: true });
+      const fallback = setTimeout(start, 5000);
+      return () => {
+        window.removeEventListener(INTRO_REVEAL_EVENT, start);
+        clearTimeout(fallback);
+      };
     });
 
     return () => mm.revert();
