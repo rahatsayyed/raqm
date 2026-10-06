@@ -7,6 +7,8 @@ const GPAY = 'com.google.android.apps.nbu.paisa.user';
 const PHONEPE = 'com.phonepe.app';
 const PAYTM = 'net.one97.paytm';
 const BHIM = 'in.org.npci.upiapp';
+const SLICE = 'indwin.c3.shareapp';
+const CRED = 'com.dreamplug.androidapp';
 const ts = 1_757_000_000_000;
 
 describe('UpiAppNotificationParser — debits', () => {
@@ -66,6 +68,65 @@ describe('UpiAppNotificationParser — credits', () => {
     expect(r!.amount).toBe(500);
     expect(r!.type).toBe(TransactionType.INCOME);
     expect(r!.merchant).toBe('Aisha');
+  });
+});
+
+describe('UpiAppNotificationParser — Slice', () => {
+  test('"Sent Rs.500 to MERCHANT (UPI transaction success)"', () => {
+    const r = BankParserFactory.parse(
+      'Sent Rs.500 to SWIGGY (UPI transaction success). Sent from slice.',
+      SLICE,
+      ts,
+    );
+    expect(r!.amount).toBe(500);
+    expect(r!.type).toBe(TransactionType.EXPENSE);
+    expect(r!.merchant).toBe('SWIGGY');
+    expect(r!.bankName).toBe('Slice App');
+  });
+
+  test('credit "Rs.250 received from Aisha"', () => {
+    const r = BankParserFactory.parse('Rs.250 received from Aisha', SLICE, ts);
+    expect(r!.type).toBe(TransactionType.INCOME);
+    expect(r!.merchant).toBe('Aisha');
+  });
+
+  test('debit with no payee produces no transaction', () => {
+    expect(
+      BankParserFactory.parse('Rs.250 debited from your slice account via UPI.', SLICE, ts),
+    ).toBeNull();
+  });
+});
+
+describe('UpiAppNotificationParser — CRED', () => {
+  test('"Payment of ₹12,000 to HDFC Credit Card is successful" is a transfer', () => {
+    const r = BankParserFactory.parse(
+      'Payment of ₹12,000 to HDFC Credit Card is successful',
+      CRED,
+      ts,
+    );
+    expect(r!.amount).toBe(12000);
+    expect(r!.type).toBe(TransactionType.TRANSFER);
+    expect(r!.merchant).toBe('HDFC Credit Card');
+    expect(r!.bankName).toBe('CRED App');
+  });
+
+  test('"Your bill payment of ₹899 for Airtel was successful"', () => {
+    const r = BankParserFactory.parse('Your bill payment of ₹899 for Airtel was successful.', CRED, ts);
+    expect(r!.amount).toBe(899);
+    expect(r!.merchant).toBe('Airtel');
+  });
+
+  test('"You paid ₹300 to Zomato on CRED"', () => {
+    const r = BankParserFactory.parse('You paid ₹300 to Zomato on CRED', CRED, ts);
+    expect(r!.amount).toBe(300);
+    expect(r!.merchant).toBe('Zomato');
+  });
+
+  test.each([
+    ['cashback', 'You earned ₹50 cashback on your last payment'],
+    ['reminder', 'Your HDFC bill of ₹12,000 is due in 3 days'],
+  ])('%s produces no transaction', (_label, body) => {
+    expect(BankParserFactory.parse(body, CRED, ts)).toBeNull();
   });
 });
 

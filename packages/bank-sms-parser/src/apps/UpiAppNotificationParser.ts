@@ -6,9 +6,14 @@ export interface UpiAppConfig {
   packageName: string;
   /** Human display name, stored as the transaction's bankName (e.g. "Google Pay"). */
   appName: string;
+  /** App-specific patterns tried before the shared UPI ones; need `amount` and `merchant` groups. */
+  extraDebitPatterns?: RegExp[];
+  extraCreditPatterns?: RegExp[];
+  /** Overrides the type for debits (e.g. CRED bill payments are TRANSFER). */
+  debitType?: TransactionType;
 }
 
-const AMOUNT = String.raw`(?:₹|Rs\.?|INR)\s?(?<amount>\d[\d,]*(?:\.\d{1,2})?)`;
+export const AMOUNT = String.raw`(?:₹|Rs\.?|INR)\s?(?<amount>\d[\d,]*(?:\.\d{1,2})?)`;
 
 /**
  * UPI app notification text is short and, across GPay/PhonePe/Paytm/BHIM, almost
@@ -33,7 +38,7 @@ export const UPI_CREDIT_PATTERNS: RegExp[] = [
 
 /** Trailing noise UPI apps append to the counterparty name. */
 const MERCHANT_SUFFIXES =
-  /\s+(?:via\s+UPI|using\s+UPI|on\s+(?:Google\s+Pay|PhonePe|Paytm|BHIM)|through\s+UPI)\b.*$/i;
+  /\s+(?:via\s+UPI|using\s+UPI|on\s+(?:Google\s+Pay|PhonePe|Paytm|BHIM|CRED|slice)|through\s+UPI)\b.*$/i;
 
 export function cleanMerchant(raw: string): string | null {
   const cleaned = raw
@@ -78,8 +83,14 @@ export class UpiAppNotificationParser extends BankParser {
     if (line.length === 0) return null;
 
     const groups: Array<[RegExp[], TransactionType]> = [
-      [UPI_DEBIT_PATTERNS, TransactionType.EXPENSE],
-      [UPI_CREDIT_PATTERNS, TransactionType.INCOME],
+      [
+        [...(this.config.extraDebitPatterns ?? []), ...UPI_DEBIT_PATTERNS],
+        this.config.debitType ?? TransactionType.EXPENSE,
+      ],
+      [
+        [...(this.config.extraCreditPatterns ?? []), ...UPI_CREDIT_PATTERNS],
+        TransactionType.INCOME,
+      ],
     ];
 
     for (const [patterns, type] of groups) {
