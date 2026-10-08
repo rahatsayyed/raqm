@@ -7,6 +7,9 @@ const HEIGHT = 160;
 
 const nameCache = new Map<string, string | null>();
 
+// OSM tile policy requires an identifying User-Agent; default okhttp UA is blocked.
+const TILE_HEADERS = { "User-Agent": "Raqm/1.0 (personal finance app)", Referer: "https://raqm.app/" };
+
 function project(lat: number, lng: number) {
   const n = 2 ** ZOOM;
   const rad = (lat * Math.PI) / 180;
@@ -81,7 +84,7 @@ export function LocationMap({ lat, lng }: { lat: number; lng: number }) {
         {tiles.map((t) => (
           <Image
             key={t.key}
-            source={{ uri: t.uri }}
+            source={{ uri: t.uri, headers: TILE_HEADERS }}
             style={{ position: "absolute", left: t.left, top: t.top, width: TILE, height: TILE }}
           />
         ))}
@@ -94,7 +97,6 @@ export function LocationMap({ lat, lng }: { lat: number; lng: number }) {
       <Text className="font-inter text-supporting-text text-on-surface mt-sm" numberOfLines={2}>
         {place === undefined ? "Locating place…" : (place ?? `${lat.toFixed(4)}, ${lng.toFixed(4)}`)}
       </Text>
-      <Text className="font-inter text-annotation text-primary mt-xs">Open in Google Maps</Text>
     </Pressable>
   );
 }
