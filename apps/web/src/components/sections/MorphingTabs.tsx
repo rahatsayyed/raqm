@@ -158,7 +158,17 @@ export function MorphingTabs({
       draw();
     });
     ro.observe(wrap);
-    return () => ro.disconnect();
+    let live = true;
+    document.fonts?.ready.then(() => {
+      if (!live) return;
+      const t = measure(activeRef.current);
+      if (t) geo.current = { ...t };
+      draw();
+    });
+    return () => {
+      live = false;
+      ro.disconnect();
+    };
   }, [draw, measure]);
 
   useGSAP(
@@ -290,7 +300,7 @@ export function MorphingTabs({
         role="tablist"
         aria-label={label}
         onKeyDown={onKeyDown}
-        className="relative z-10 flex h-20 items-end gap-1 px-6 sm:gap-2"
+        className="relative z-10 flex h-20 items-end gap-1 px-4 sm:gap-2"
       >
         {tabs.map((t, n) => {
           const on = n === active;
@@ -309,7 +319,7 @@ export function MorphingTabs({
               onClick={() => select(n)}
               style={{ height: TAB_H }}
               className={cn(
-                'relative min-w-0 flex-1 rounded-cell px-2 text-sm font-medium outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-brand sm:text-base',
+                'relative min-w-0 max-w-44 flex-1 basis-0 rounded-cell px-2 text-sm font-medium outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-brand sm:text-base',
                 on ? 'text-ink' : 'text-inverse-ink/60 hover:bg-inverse-ink/10 hover:text-inverse-ink',
               )}
             >

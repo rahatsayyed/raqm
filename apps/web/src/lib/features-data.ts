@@ -253,7 +253,7 @@ export interface ProcessStep {
 
 export const processSteps: ProcessStep[] = [
   { title: 'Get the SMS', body: 'Every debit and credit already lands as a text. Raqm just listens.' },
-  { title: 'Let Raqm read it', body: 'Amount, merchant and category are read on your phone. Nothing leaves it.' },
+  { title: 'Let Raqm read it', body: 'Amount, merchant and category, read right on your phone.' },
   { title: 'See your month', body: 'A clean timeline and budgets that are already up to date.' },
 ];
 
