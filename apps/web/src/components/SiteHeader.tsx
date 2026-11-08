@@ -12,7 +12,7 @@ import { cx } from './ui/cx';
 const LINKS = [
   { label: 'Home', href: '/' },
   { label: 'Features', href: '/features' },
-  { label: 'Free', href: '/free' },
+  { label: 'Compare', href: '/free' },
   { label: 'Blog', href: '/blog' },
   { label: 'FAQ', href: '/faq' },
 ] as const;

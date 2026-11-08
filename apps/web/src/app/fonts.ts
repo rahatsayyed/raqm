@@ -11,4 +11,5 @@ export const jetbrainsMono = JetBrains_Mono({
   weight: ['400', '500', '600'],
   variable: '--font-jetbrains-mono',
   display: 'swap',
+  preload: false,
 });
