@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Button } from './ui/Button';
+import { StoreBadges } from './content/StoreBadge';
 import { Container } from './ui/Container';
 
 const COLUMNS = [
@@ -65,13 +66,11 @@ export function Footer() {
               <h2 className="font-sans text-h2 text-balance text-ink">Know where your money went, without handing it over.</h2>
               <p className="font-sans text-lg leading-7 text-ink-muted">Join the waitlist with just an email. No account, no card.</p>
             </div>
-            <div className="flex flex-wrap gap-2.5">
-              <Button href="/#waitlist" size="lg">
+            <div className="flex flex-col gap-4">
+              <Button href="/#waitlist" size="lg" className="self-start">
                 Join waitlist
               </Button>
-              <Button href="/download" variant="secondary" size="lg">
-                Download
-              </Button>
+              <StoreBadges />
             </div>
           </div>
         </div>

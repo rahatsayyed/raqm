@@ -54,8 +54,8 @@ export default function AboutPage() {
           </div>
         </Rise>
         <Rise className="mt-10 flex flex-wrap items-center justify-center gap-3">
-          <StoreBadge store="android" status="Android, coming soon" />
-          <StoreBadge store="ios" status="iPhone, in progress" />
+          <StoreBadge store="android" />
+          <StoreBadge store="ios" />
         </Rise>
         <p className="mt-6 text-center text-sm text-ink-subtle">
           Questions? Read the <Link href="/faq" className="text-ink underline underline-offset-4">FAQ</Link>.

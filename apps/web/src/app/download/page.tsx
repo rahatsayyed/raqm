@@ -41,7 +41,7 @@ export default function DownloadPage() {
               <span className="rounded-pill bg-brand-soft px-3 py-1 text-xs font-medium text-ink">{p.status}</span>
             </div>
             <p className="text-ink-muted">{p.text}</p>
-            <StoreBadge store={p.store} status={p.status} />
+            <StoreBadge store={p.store} />
           </Rise>
         ))}
       </div>
