@@ -1,3 +1,7 @@
+import { POSTS_BATCH_A } from './posts-batch-a';
+import { POSTS_BATCH_B } from './posts-batch-b';
+import { POSTS_BATCH_C } from './posts-batch-c';
+
 export type Block =
   | { type: 'p'; text: string }
   | { type: 'h2'; text: string }
@@ -20,7 +24,7 @@ export interface Post {
   faq: { q: string; a: string }[];
 }
 
-export const POSTS: Post[] = [
+const LAUNCH_POSTS: Post[] = [
   {
     slug: 'why-your-bank-sms-should-stay-on-your-phone',
     title: 'Why your bank SMS should stay on your phone',
@@ -398,6 +402,8 @@ export const POSTS: Post[] = [
     ],
   },
 ];
+
+export const POSTS: Post[] = [...LAUNCH_POSTS, ...POSTS_BATCH_A, ...POSTS_BATCH_B, ...POSTS_BATCH_C];
 
 export const TAGS = Array.from(new Set(POSTS.map((p) => p.tag)));
 
