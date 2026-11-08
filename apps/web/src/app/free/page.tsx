@@ -31,9 +31,6 @@ export default function FreePage() {
       />
       <Rise className="mx-auto max-w-col px-6">
         <ComparisonCard rows={ROWS} featureLabel="Features" otherLabel="Other apps" />
-        <p className="mt-4 text-center text-sm text-ink-subtle">
-          &ldquo;Other apps&rdquo; describes common patterns, not any one product. Raqm is pre-launch.
-        </p>
       </Rise>
       <Rise className="mx-auto mt-12 flex max-w-col justify-center px-6">
         <Button href="/#waitlist" size="lg">
