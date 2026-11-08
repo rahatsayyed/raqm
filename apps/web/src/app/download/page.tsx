@@ -3,12 +3,11 @@ import { PageHeader } from '@/components/content/PageHeader';
 import { Rise } from '@/components/content/Rise';
 import { StoreBadge } from '@/components/content/StoreBadge';
 import { pageMeta } from '@/content/meta';
+import { JsonLd } from '@/components/content/JsonLd';
+import { PAGE_SEO } from '@/lib/seo/pages';
+import { breadcrumbNode, graph, siteNodes, webPageNode } from '@/lib/seo/schema';
 
-export const metadata = pageMeta(
-  '/download',
-  'Download Raqm · Raqm',
-  'Raqm is not on the stores yet. Android is the primary build; iPhone is in progress. Join the waitlist to hear first.',
-);
+export const metadata = pageMeta('/download');
 
 const PLATFORMS = [
   {
@@ -21,13 +20,20 @@ const PLATFORMS = [
     store: 'ios' as const,
     name: 'iPhone',
     status: 'In progress',
-    text: 'iOS does not let apps read SMS, so the iPhone version uses manual entry and PDF statement import. Still being built.',
+    text: 'iOS does not let apps read SMS, so the iPhone version uses manual entry. Still being built.',
   },
 ];
 
 export default function DownloadPage() {
   return (
     <main id="main-content" className="pb-section-lg">
+      <JsonLd
+        data={graph(
+          ...siteNodes(),
+          webPageNode('WebPage', '/download', PAGE_SEO['/download'].title, PAGE_SEO['/download'].description),
+          breadcrumbNode('/download', [{ name: 'Download', path: '/download' }]),
+        )}
+      />
       <PageHeader
         eyebrow="Download"
         title="Not on the stores yet"

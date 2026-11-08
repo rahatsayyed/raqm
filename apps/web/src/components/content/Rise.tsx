@@ -22,6 +22,12 @@ export function Rise({
       el.classList.add('is-revealed');
       return;
     }
+    const r = el.getBoundingClientRect();
+    if (r.top < innerHeight && r.bottom > 0) {
+      el.classList.add('is-revealed');
+      return;
+    }
+    el.classList.add('reveal-armed');
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {

@@ -10,7 +10,9 @@ import { ShareRow } from '@/components/content/ShareRow';
 import { FaqAccordion } from '@/components/sections/FaqAccordion';
 import { Rise } from '@/components/content/Rise';
 import { formatDate, getPost, getToc, POSTS, readMinutes, sortedPosts } from '@/content/posts';
-import { AUTHOR, SITE_NAME, absoluteUrl } from '@/content/site';
+import { AUTHOR, absoluteUrl } from '@/content/site';
+import { pageMeta } from '@/lib/seo/meta';
+import { blogPostingNode, breadcrumbNode, graph, siteNodes, webPageNode } from '@/lib/seo/schema';
 
 export const dynamicParams = false;
 
@@ -22,25 +24,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const post = getPost(slug);
   if (!post) return {};
-  const url = absoluteUrl(`/blog/${post.slug}`);
-  return {
-    title: `${post.title} · Raqm`,
-    description: post.description,
-    alternates: { canonical: url },
-    openGraph: {
-      type: 'article',
-      siteName: SITE_NAME,
-      title: post.title,
-      description: post.description,
-      url,
-      locale: 'en_IN',
-      publishedTime: post.publishedAt,
-      modifiedTime: post.updatedAt,
-      authors: [AUTHOR.name],
-      tags: [post.tag],
-    },
-    twitter: { card: 'summary_large_image', title: post.title, description: post.description },
-  };
+  return pageMeta(`/blog/${post.slug}`, post.title, post.description, {
+    publishedTime: post.publishedAt,
+    modifiedTime: post.updatedAt,
+    authors: [AUTHOR.name],
+    tags: [post.tag],
+  });
 }
 
 export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -48,47 +37,32 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   const post = getPost(slug);
   if (!post) notFound();
 
-  const url = absoluteUrl(`/blog/${post.slug}`);
+  const path = `/blog/${post.slug}`;
+  const url = absoluteUrl(path);
   const toc = getToc(post);
   const more = sortedPosts().filter((p) => p.slug !== post.slug).slice(0, 2);
 
   return (
     <main id="main-content" className="pb-section-lg">
       <JsonLd
-        data={[
+        data={graph(
+          ...siteNodes(),
+          webPageNode('WebPage', path, post.title, post.description, { mainEntity: { '@id': `${url}#article` } }),
+          blogPostingNode(post),
+          breadcrumbNode(path, [
+            { name: 'Blog', path: '/blog' },
+            { name: post.title, path },
+          ]),
           {
-            '@context': 'https://schema.org',
-            '@type': 'BlogPosting',
-            '@id': `${url}#article`,
-            headline: post.title,
-            description: post.description,
-            abstract: post.quickAnswer,
-            datePublished: post.publishedAt,
-            dateModified: post.updatedAt,
-            author: { '@type': 'Person', name: AUTHOR.name },
-            publisher: { '@type': 'Organization', name: SITE_NAME, url: absoluteUrl('/') },
-            mainEntityOfPage: url,
-            inLanguage: 'en-IN',
-            isAccessibleForFree: true,
-          },
-          {
-            '@context': 'https://schema.org',
-            '@type': 'BreadcrumbList',
-            itemListElement: [
-              { '@type': 'ListItem', position: 1, name: 'Blog', item: absoluteUrl('/blog') },
-              { '@type': 'ListItem', position: 2, name: post.title, item: url },
-            ],
-          },
-          {
-            '@context': 'https://schema.org',
             '@type': 'FAQPage',
+            '@id': `${url}#faq`,
             mainEntity: post.faq.map((f) => ({
               '@type': 'Question',
               name: f.q,
               acceptedAnswer: { '@type': 'Answer', text: f.a },
             })),
           },
-        ]}
+        )}
       />
 
       <Rise as="header" className="mx-auto max-w-col px-6 pt-36 md:pt-40">

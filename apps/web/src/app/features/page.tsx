@@ -1,43 +1,24 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { absoluteUrl } from '@/content/site';
+import { pageMeta } from '@/lib/seo/meta';
+import { PAGE_SEO } from '@/lib/seo/pages';
+import { breadcrumbNode, graph, itemListNode, siteNodes, webPageNode } from '@/lib/seo/schema';
 import { comingSoonFeatures, hubFeatures } from '@/lib/features-data';
 import { JsonLd } from '@/components/content/JsonLd';
 import { FeatureHubCard } from '@/components/features/FeatureHubCard';
 import { FeaturesMotion } from '@/components/features/FeaturesMotion';
 import { PromoRail } from '@/components/features/PromoRail';
 
-export const metadata: Metadata = {
-  title: 'Features: automatic expense tracking on your phone | Raqm',
-  description:
-    'See what Raqm does: bank SMS capture, automatic categories, safe-to-spend budgets, bill splitting, Android widgets, export and on-device privacy.',
-  alternates: { canonical: '/features' },
-  openGraph: {
-    title: 'Raqm features',
-    description: 'Automatic capture, budgets, split with friends, widgets, export and on-device privacy.',
-    url: '/features',
-    type: 'website',
-  },
-};
+export const metadata = pageMeta('/features');
 
-const jsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Home', item: absoluteUrl('/') },
-        { '@type': 'ListItem', position: 2, name: 'Features', item: absoluteUrl('/features') },
-      ],
-    },
-    {
-      '@type': 'CollectionPage',
-      name: 'Raqm features',
-      url: absoluteUrl('/features'),
-      hasPart: hubFeatures.map((f) => ({ '@type': 'WebPage', name: f.name, url: absoluteUrl(`/features/${f.slug}`) })),
-    },
-  ],
-};
+const jsonLd = graph(
+  ...siteNodes(),
+  webPageNode('CollectionPage', '/features', PAGE_SEO['/features'].title, PAGE_SEO['/features'].description, {
+    mainEntity: { '@id': `${absoluteUrl('/features')}#list` },
+  }),
+  itemListNode('/features', hubFeatures.map((f) => ({ name: f.name, path: `/features/${f.slug}` }))),
+  breadcrumbNode('/features', [{ name: 'Features', path: '/features' }]),
+);
 
 export default function FeaturesPage() {
   const [featured, ...rest] = hubFeatures;

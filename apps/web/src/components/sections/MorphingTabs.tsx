@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { cn } from './cn';
@@ -89,7 +89,9 @@ export function MorphingTabs({
   );
   const g = compact ? GEOM_SM : GEOM_LG;
   const gRef = useRef(g);
-  gRef.current = g;
+  useLayoutEffect(() => {
+    gRef.current = g;
+  }, [g]);
   const [inner, setInner] = useState(0);
   const active = value ?? inner;
   const [shown, setShown] = useState(active);

@@ -6,7 +6,7 @@ const CELLS = {
   data: { icon: 'phone', raqm: 'On your phone', other: 'Often on company servers', otherMark: 'limit' },
   account: { icon: 'user', raqm: 'No account', other: 'Usually an account', otherMark: 'limit' },
   bank: { icon: 'bank', raqm: 'Not needed', other: 'Often asked for', otherMark: 'limit' },
-  offline: { icon: 'wifi', raqm: 'Works fully offline', other: 'Varies by app', otherMark: 'limit' },
+  offline: { icon: 'wifi', raqm: 'Tracking works offline', other: 'Varies by app', otherMark: 'limit' },
   sms: { icon: 'sms', raqm: 'Reads bank SMS automatically', other: 'Manual entry or linked accounts', otherMark: 'limit' },
   widget: { icon: 'widget', raqm: 'On your home screen', other: 'Varies by app', otherMark: 'limit' },
   export: { icon: 'export', raqm: 'Export your transactions', other: 'Varies by app', otherMark: 'limit' },

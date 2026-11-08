@@ -5,36 +5,29 @@ import { FAQ_GROUPS, FAQ_UPDATED } from '@/content/faq';
 import { pageMeta } from '@/content/meta';
 import { formatDate } from '@/content/posts';
 import { absoluteUrl } from '@/content/site';
+import { PAGE_SEO } from '@/lib/seo/pages';
+import { breadcrumbNode, graph, siteNodes, webPageNode } from '@/lib/seo/schema';
 
-export const metadata = pageMeta(
-  '/faq',
-  'FAQ · Raqm',
-  'Answers about Raqm: how it reads bank SMS on your phone, privacy, supported banks, budgets and exports.',
-);
+export const metadata = pageMeta('/faq');
 
 export default function FaqPage() {
   return (
     <main id="main-content">
       <JsonLd
-        data={[
+        data={graph(
+          ...siteNodes(),
+          webPageNode('WebPage', '/faq', PAGE_SEO['/faq'].title, PAGE_SEO['/faq'].description, { dateModified: FAQ_UPDATED }),
+          breadcrumbNode('/faq', [{ name: 'FAQ', path: '/faq' }]),
           {
-            '@context': 'https://schema.org',
             '@type': 'FAQPage',
+            '@id': `${absoluteUrl('/faq')}#faq`,
             mainEntity: FAQ_GROUPS.flatMap((g) => g.items).map((f) => ({
               '@type': 'Question',
               name: f.q,
               acceptedAnswer: { '@type': 'Answer', text: f.a },
             })),
           },
-          {
-            '@context': 'https://schema.org',
-            '@type': 'BreadcrumbList',
-            itemListElement: [
-              { '@type': 'ListItem', position: 1, name: 'Home', item: absoluteUrl('/') },
-              { '@type': 'ListItem', position: 2, name: 'FAQ', item: absoluteUrl('/faq') },
-            ],
-          },
-        ]}
+        )}
       />
       <PageHeader eyebrow="FAQ" title="Frequently asked questions" sub="Short, honest answers. If something is missing, tell us.">
         <p className="mx-auto mt-6 inline-flex items-center gap-2 rounded-pill bg-surface-sunken px-4 py-1.5 text-[13px] text-ink-muted">

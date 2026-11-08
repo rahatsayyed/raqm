@@ -7,7 +7,9 @@ import { SmoothScrollProvider } from '@/components/SmoothScrollProvider';
 import { IntroScreen } from '@/components/IntroScreen';
 import { SiteHeader } from '@/components/SiteHeader';
 import { Footer } from '@/components/Footer';
-import { SITE_URL } from '@/content/site';
+import { SITE_NAME, SITE_URL } from '@/content/site';
+import { MOSS, OG_DEFAULT_ALT, OG_SIZE } from '@/lib/seo/constants';
+import { HOME_SEO } from '@/lib/seo/pages';
 import './globals.css';
 
 const PaletteSwitcher =
@@ -19,13 +21,29 @@ const INTRO_GATE = `try{var d=document.documentElement,s=matchMedia('(prefers-re
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'Raqm: know where your money goes, automatically',
-  description:
-    'Raqm reads your bank SMS on-device and shows you where your money goes. No bank linking, nothing leaves your phone. Join the waitlist.',
+  title: { default: HOME_SEO.title, template: '%s | Raqm' },
+  description: HOME_SEO.description,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: 'website',
+    siteName: SITE_NAME,
+    locale: 'en_IN',
+    title: HOME_SEO.title,
+    description: HOME_SEO.description,
+    images: [{ url: '/opengraph-image', ...OG_SIZE, alt: OG_DEFAULT_ALT }],
+  },
+  twitter: { card: 'summary_large_image', title: HOME_SEO.title, description: HOME_SEO.description, images: ['/opengraph-image'] },
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '48x48' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    apple: [{ url: '/apple-icon', sizes: '180x180', type: 'image/png' }],
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#F7F6F3',
+  themeColor: MOSS.canvas,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

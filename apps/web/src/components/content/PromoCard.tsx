@@ -6,7 +6,7 @@ export function PromoCard({ className = '' }: { className?: string }) {
       <p className="font-mono text-xs tracking-wide text-inverse-ink/60 uppercase">Raqm</p>
       <p className="mt-3 text-h3 text-inverse-ink">Know where your money goes, automatically.</p>
       <p className="mt-2 text-sm text-inverse-ink/70">
-        Bank SMS read on your phone. Nothing leaves the device. Join the waitlist.
+        Bank SMS read on your phone, never uploaded. Join the waitlist.
       </p>
       <Link
         href="/#waitlist"

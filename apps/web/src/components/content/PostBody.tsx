@@ -1,18 +1,28 @@
+import Link from 'next/link';
 import { slugify, type Block } from '@/content/posts';
 import { PromoCard } from './PromoCard';
 
 function Inline({ text }: { text: string }) {
   return (
     <>
-      {text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
-        part.startsWith('**') ? (
-          <strong key={i} className="font-semibold text-ink">
-            {part.slice(2, -2)}
-          </strong>
-        ) : (
-          part
-        ),
-      )}
+      {text.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\(\/[^)]*\))/g).map((part, i) => {
+        if (part.startsWith('**')) {
+          return (
+            <strong key={i} className="font-semibold text-ink">
+              {part.slice(2, -2)}
+            </strong>
+          );
+        }
+        const link = /^\[([^\]]+)\]\((\/[^)]*)\)$/.exec(part);
+        if (link) {
+          return (
+            <Link key={i} href={link[2]} className="text-ink underline underline-offset-4 hover:text-brand">
+              {link[1]}
+            </Link>
+          );
+        }
+        return part;
+      })}
     </>
   );
 }

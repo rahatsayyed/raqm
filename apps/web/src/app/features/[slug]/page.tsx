@@ -4,6 +4,10 @@ import Link from 'next/link';
 import { featureDeepDives, getFeatureBySlug } from '@/lib/features-data';
 import { WaitlistForm } from '@/components/WaitlistForm';
 import { ScrollToTop } from '@/components/ScrollToTop';
+import { JsonLd } from '@/components/content/JsonLd';
+import { pageMeta } from '@/lib/seo/meta';
+import { FEATURE_SEO } from '@/lib/seo/pages';
+import { breadcrumbNode, graph, siteNodes, webPageNode } from '@/lib/seo/schema';
 
 export function generateStaticParams() {
   return featureDeepDives.map((feature) => ({ slug: feature.slug }));
@@ -21,11 +25,7 @@ export async function generateMetadata({
     return {};
   }
 
-  return {
-    title: `${feature.name} · Raqm`,
-    description: feature.tagline,
-    alternates: { canonical: `/features/${feature.slug}` },
-  };
+  return pageMeta(`/features/${feature.slug}`, feature.name, feature.tagline);
 }
 
 export default async function FeaturePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -37,9 +37,21 @@ export default async function FeaturePage({ params }: { params: Promise<{ slug: 
   }
 
   const isLive = feature.status === 'live';
+  const path = `/features/${feature.slug}`;
+  const seo = FEATURE_SEO[feature.slug];
 
   return (
     <main id="main-content" className="min-h-dvh px-4 pb-24 pt-28 sm:px-6 sm:pt-36">
+      <JsonLd
+        data={graph(
+          ...siteNodes(),
+          webPageNode('WebPage', path, seo?.title ?? feature.name, seo?.description ?? feature.tagline),
+          breadcrumbNode(path, [
+            { name: 'Features', path: '/features' },
+            { name: feature.name, path },
+          ]),
+        )}
+      />
       <ScrollToTop />
       <div className="mx-auto max-w-3xl">
         <Link href="/features" className="mb-8 inline-block rounded-pill text-sm text-ink-muted hover:text-ink">
@@ -50,7 +62,7 @@ export default async function FeaturePage({ params }: { params: Promise<{ slug: 
         >
           {feature.statusLabel}
         </span>
-        <h1 className="mb-4 text-h2 text-ink">{feature.name}</h1>
+        <h1 className="mb-4 text-h2 text-ink">{feature.h1}</h1>
         <p className="mb-12 text-lead text-ink-muted">{feature.tagline}</p>
         <div className="mb-16 flex flex-col divide-y divide-line">
           {feature.sections.map((section, index) => (

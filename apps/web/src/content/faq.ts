@@ -25,7 +25,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       },
       {
         q: 'Which phones does it support?',
-        a: 'Android is the primary, full-featured platform. An iPhone version is in progress and works through manual entry and PDF statement import, because iOS does not let apps read SMS.',
+        a: 'Android is the primary, full-featured platform. An iPhone version is in progress and is planned around manual entry, because iOS does not let apps read SMS.',
       },
       {
         q: 'Is Raqm a financial advisor?',
@@ -39,7 +39,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
     items: [
       {
         q: 'Does my data leave my phone?',
-        a: 'No. Raqm parses SMS and stores your transactions in a database on your device. There is no server that receives your transactions.',
+        a: 'Your SMS and transactions never leave your phone. Raqm has no account and no analytics, and no server receives your transactions. The one thing that does reach an outside service is the optional location map, which asks OpenStreetMap for map tiles and a place name using a transaction’s coordinates when you open it.',
       },
       {
         q: 'Do I need an account?',
@@ -51,7 +51,11 @@ export const FAQ_GROUPS: FaqGroup[] = [
       },
       {
         q: 'Does anything ever get shared?',
-        a: 'Budget together is a separate feature that shares budget data between people on purpose. It is the one named exception to the on-device default.',
+        a: 'Not today. Budget Together, planned for later and not available yet, would share budget data between people on purpose and would be optional. AI insights are also planned, off by default and not available yet.',
+      },
+      {
+        q: 'What does leave my phone?',
+        a: 'Two things. If you join the waitlist on this website, your email address is stored. In the app, opening the location map card sends that transaction’s coordinates to OpenStreetMap. Your bank SMS and transactions are not uploaded.',
       },
     ],
   },
@@ -91,7 +95,11 @@ export const FAQ_GROUPS: FaqGroup[] = [
       },
       {
         q: 'Can I export my data?',
-        a: 'Yes. You can export your transactions, which is also the way to keep a copy because Raqm holds no cloud backup of your data.',
+        a: 'Yes. You can export your transactions to CSV and a monthly PDF statement, which is also the way to keep a copy because Raqm holds no cloud backup of your data.',
+      },
+      {
+        q: 'Can I import my old data?',
+        a: 'Yes, from two sources today: an Axio CSV report and a Google Pay statement PDF. Bank statement PDFs and Pennywise are marked as coming soon and are not available yet.',
       },
       {
         q: 'What if I lose my phone?',

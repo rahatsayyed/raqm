@@ -10,6 +10,8 @@ export interface FeatureDeepDive {
   name: string;
   status: FeatureStatus;
   statusLabel: string;
+  h1: string;
+  seoDescription: string;
   tagline: string;
   sections: FeatureMicroSection[];
 }
@@ -19,16 +21,19 @@ export const featureDeepDives: FeatureDeepDive[] = [
     slug: 'capture-organize',
     name: 'Capture & organize',
     status: 'live',
-    statusLabel: 'Live now',
+    statusLabel: 'In the app',
+    h1: 'Automatic expense tracking from bank SMS',
+    seoDescription:
+      'Raqm reads bank SMS from 120+ formats on your phone, logs cash in a few taps, imports Google Pay PDF statements and remembers every merchant fix you make.',
     tagline: 'Your bank already texts you. Raqm reads it, sorts it, and cleans up after itself.',
     sections: [
       {
         heading: 'Every bank SMS, parsed on-device',
-        body: '120+ Indian and international banks. Amount, merchant, account, balance, extracted the moment the SMS arrives, nothing sent anywhere.',
+        body: '120+ Indian and international banks. Amount, merchant, account, balance, extracted the moment the SMS arrives, your SMS never uploaded.',
       },
       {
-        heading: 'PDF statements for accounts that never text you',
-        body: 'Upload a bank or UPI statement PDF and get the same structured transactions SMS parsing gives you.',
+        heading: 'Google Pay statements, imported',
+        body: 'Import a Google Pay statement PDF to bring in your UPI history with full merchant names. Bank statement PDFs are coming, and are not available yet.',
       },
       {
         heading: 'Cash, logged manually',
@@ -47,12 +52,8 @@ export const featureDeepDives: FeatureDeepDive[] = [
         body: 'Bundle a few small transactions into a folder, one summed entry, with a tap to expand the individual items.',
       },
       {
-        heading: 'It knows a transfer isn’t an expense',
-        body: 'A debit and credit within 24 hours, same amount, different accounts of yours, recognized as a self-transfer and kept out of your spending totals automatically.',
-      },
-      {
-        heading: 'Refunds, netted against the original spend',
-        body: 'A credit that matches a prior debit gets linked as a refund, so your category totals reflect what you actually kept, not the gross amount.',
+        heading: 'Totals stay clean on their own',
+        body: 'Transfers between your accounts and refunds are recognised as they come in. How that works is explained on the Smart matching page.',
       },
     ],
   },
@@ -60,7 +61,10 @@ export const featureDeepDives: FeatureDeepDive[] = [
     slug: 'split',
     name: 'Split & settle',
     status: 'live',
-    statusLabel: 'Live now',
+    statusLabel: 'In the app',
+    h1: 'Split bills and settle up with UPI links',
+    seoDescription:
+      'Split a bill equally or by custom shares, send a prefilled UPI link, and let Raqm spot the repayment in your bank SMS. Nothing settles without your approval.',
     tagline: 'Split a bill, track who owes what, and let the app notice when you’ve been paid back.',
     sections: [
       {
@@ -93,7 +97,10 @@ export const featureDeepDives: FeatureDeepDive[] = [
     slug: 'smarter-budgets',
     name: 'Smarter budgets',
     status: 'live',
-    statusLabel: 'Live now',
+    statusLabel: 'In the app',
+    h1: 'Budgets with a daily safe-to-spend number',
+    seoDescription:
+      'Budgets that follow your salary date, a daily safe-to-spend figure, a nudge at 80% of a category and optional rollover. Built around Indian pay cycles.',
     tagline: 'A budget that adjusts to how you actually get paid, and tells you before you overspend.',
     sections: [
       {
@@ -113,8 +120,8 @@ export const featureDeepDives: FeatureDeepDive[] = [
         body: 'Opt in per category: what you don’t spend this week carries into the next, instead of resetting to zero.',
       },
       {
-        heading: 'Subscriptions, flagged automatically',
-        body: 'The same merchant and amount recurring monthly gets flagged as a subscription, with a nudge to cancel the ones you forgot about.',
+        heading: 'Plan around recurring bills',
+        body: 'Charges that repeat every month are flagged, so you can leave room for them in a category budget before the month begins.',
       },
     ],
   },
@@ -122,12 +129,19 @@ export const featureDeepDives: FeatureDeepDive[] = [
     slug: 'life-admin',
     name: 'Life admin',
     status: 'live',
-    statusLabel: 'Live now',
+    statusLabel: 'In the app',
+    h1: 'Notes, places, lending reminders and grocery lists',
+    seoDescription:
+      'Add notes and places to any payment, get reminded about money you lent, and keep grocery lists that remember the last price and show planned vs actual.',
     tagline: 'Notes, locations, lending, and grocery lists: the small stuff that adds up.',
     sections: [
       {
         heading: 'A note and a place, on any transaction',
         body: 'Add a free-text note, or let Raqm tag where a payment happened, both live right on the transaction, under “Other Info.”',
+      },
+      {
+        heading: 'What the map card sends',
+        body: 'Opening the map card on a tagged transaction sends that place’s coordinates to OpenStreetMap to draw the map and name the spot. Notes and the rest of your data stay on your phone.',
       },
       {
         heading: 'Lending reminders that nudge, not nag',
@@ -151,24 +165,27 @@ export const featureDeepDives: FeatureDeepDive[] = [
     slug: 'budget-together',
     name: 'Budget Together',
     status: 'coming-soon',
-    statusLabel: 'Coming soon - Plus',
+    statusLabel: 'Coming later, optional',
+    h1: 'Budget Together: share a budget, not everything',
+    seoDescription:
+      'Planned, not available yet: share one budget with a spouse or flatmate, choose exactly which accounts to include and keep everything else on your own phone.',
     tagline: 'Share a budget with your spouse or flatmate. Not your whole financial life.',
     sections: [
       {
         heading: 'Share only what you choose',
-        body: 'Pick exactly which accounts to share (say, only your joint SBI account) and everything else stays private on your device, the way Raqm already works today.',
+        body: 'The plan: pick exactly which accounts to share (say, only your joint SBI account) and keep everything else private on your device, the way Raqm works today.',
       },
       {
         heading: 'Not a shared inbox for your whole financial life',
-        body: 'Your salary account, your personal cards, your own spending stay exactly as private as they are now. Budget Together only ever touches the accounts you explicitly turn on.',
+        body: 'Your salary account, your personal cards and your own spending are meant to stay as private as they are now. Budget Together would only touch the accounts you explicitly turn on.',
       },
       {
-        heading: 'Encrypted before it leaves your phone',
-        body: 'Sync between devices is end-to-end encrypted. The server relays data it cannot read: not a policy promise, a property of how it’s built.',
+        heading: 'Planned: encrypted before it leaves your phone',
+        body: 'The goal is end-to-end encrypted sync, so a server only relays data it cannot read. This is a design goal for a feature that is not built yet.',
       },
       {
         heading: 'Built for two, not a crowd',
-        body: 'Designed around a spouse or a flatmate: one shared budget, two people watching it, no group-chat-sized permission model to manage.',
+        body: 'Planned around a spouse or a flatmate: one shared budget, two people watching it, no group-chat-sized permission model to manage. It is optional, and tracking on your phone does not depend on it.',
       },
     ],
   },
@@ -176,12 +193,15 @@ export const featureDeepDives: FeatureDeepDive[] = [
     slug: 'ai-insights',
     name: 'AI, on your terms',
     status: 'coming-soon',
-    statusLabel: 'Coming soon - Plus',
+    statusLabel: 'Coming later, optional',
+    h1: 'Opt-in AI insights, on your terms',
+    seoDescription:
+      'Planned and off by default: smarter categories, plain-language monthly summaries and a should-I-buy-this check. It is optional and not available yet.',
     tagline: 'Auto-categorization that gets smarter, spending insights, and a second opinion before you buy, without handing over your financial life.',
     sections: [
       {
-        heading: 'Three fields leave your phone. Nothing else.',
-        body: 'Only the amount, the category, and your own note are ever sent for processing. Never the merchant name, never your location, never the raw SMS.',
+        heading: 'Planned: three fields, only if you opt in',
+        body: 'The plan is to send only the amount, the category and your own note for processing, and only after you turn it on. Not the merchant name, your location or the raw SMS. Not available yet.',
       },
       {
         heading: 'Categorization that learns your edge cases',
@@ -205,20 +225,23 @@ export const featureDeepDives: FeatureDeepDive[] = [
     slug: 'insights',
     name: 'Insights & analytics',
     status: 'live',
-    statusLabel: 'Live now',
+    statusLabel: 'In the app',
+    h1: 'Spending insights without inflated totals',
+    seoDescription:
+      'Category totals that skip self-transfers and net out refunds, month-over-month changes on your own pay cycle and a calm picture of what already happened.',
     tagline: 'See where the month went, calmly. Totals that net out refunds and skip your own transfers.',
     sections: [
       {
         heading: 'Category totals you can trust',
-        body: 'Self-transfers stay out and refunds are netted against the category they came from, so the numbers show what you actually spent.',
+        body: 'Each category total reflects what you actually spent, after matched transfers and refunds are taken out. See Smart matching for how those are found.',
       },
       {
         heading: 'Month over month at a glance',
         body: 'Compare this period with the last one, and see which categories moved. Your month follows your own pay-cycle day.',
       },
       {
-        heading: 'Recurring charges, flagged',
-        body: 'The same merchant and amount every month is marked as a subscription, so quiet charges stop hiding.',
+        heading: 'Recurring charges in the picture',
+        body: 'Monthly repeats show up flagged next to your trends, so quiet charges stop hiding in the totals.',
       },
       {
         heading: 'Calm by design',
@@ -230,7 +253,10 @@ export const featureDeepDives: FeatureDeepDive[] = [
     slug: 'smart-matching',
     name: 'Smart matching',
     status: 'live',
-    statusLabel: 'Live now',
+    statusLabel: 'In the app',
+    h1: 'Self-transfers, refunds and duplicates, detected',
+    seoDescription:
+      'Raqm pairs transfers between your own accounts, links refunds to the original purchase and catches duplicate entries, so your spending totals stay true.',
     tagline: 'Raqm spots transfers, refunds, duplicates and subscriptions so your totals stay honest.',
     sections: [
       {
@@ -243,7 +269,7 @@ export const featureDeepDives: FeatureDeepDive[] = [
       },
       {
         heading: 'Duplicates caught',
-        body: 'The same transaction arriving twice, from an SMS and a statement for example, is detected so it is not counted twice.',
+        body: 'The same transaction arriving twice, for example from an SMS and an imported statement, is detected so it is not counted twice.',
       },
       {
         heading: 'Subscriptions flagged',
@@ -259,7 +285,10 @@ export const featureDeepDives: FeatureDeepDive[] = [
     slug: 'widgets',
     name: 'Home-screen widgets',
     status: 'live',
-    statusLabel: 'Live now - Android',
+    statusLabel: 'In the app - Android',
+    h1: 'Android home-screen widgets for your spending',
+    seoDescription:
+      'Seven Android widgets: safe-to-spend, budgets, category pie, recent spends and quick add. See your money at a glance, with amounts you can hide.',
     tagline: 'Seven Android widgets put your numbers and quick actions one glance from your home screen.',
     sections: [
       {
@@ -279,8 +308,8 @@ export const featureDeepDives: FeatureDeepDive[] = [
         body: 'An add-transaction widget, plus a voice widget, take you straight to logging a spend.',
       },
       {
-        heading: 'Amounts you can mask',
-        body: 'Choose to hide amounts in lists and widgets, and tap a masked amount to reveal it.',
+        heading: 'Privacy on the home screen',
+        body: 'Widgets can show hidden amounts, so a glance from across the table reveals nothing.',
       },
     ],
   },
@@ -288,12 +317,15 @@ export const featureDeepDives: FeatureDeepDive[] = [
     slug: 'private-by-design',
     name: 'Private by design',
     status: 'live',
-    statusLabel: 'Live now',
+    statusLabel: 'In the app',
+    h1: 'A private expense tracker: your SMS stays on your phone',
+    seoDescription:
+      'Raqm parses bank SMS on your device, needs no account or bank login and can tidy raw bank alerts off your lock screen. Know exactly what does leave the phone.',
     tagline: 'Your bank texts are read on your phone and stay on your phone. No account needed.',
     sections: [
       {
         heading: 'Parsed on-device',
-        body: 'Amount, merchant and category are read from the SMS right on your phone. The raw message is never sent anywhere.',
+        body: 'Amount, merchant and category are read from the SMS right on your phone. The raw message is never uploaded anywhere.',
       },
       {
         heading: 'No account, no sign-up',
@@ -308,6 +340,10 @@ export const featureDeepDives: FeatureDeepDive[] = [
         body: 'Mask amounts everywhere, or only in lists and widgets, and reveal one with a tap.',
       },
       {
+        heading: 'What does leave your phone',
+        body: 'Your SMS and transactions never leave your phone, and the app has no analytics. The one exception is the optional location map, which asks OpenStreetMap for map tiles and a place name using that transaction’s coordinates.',
+      },
+      {
         heading: 'You delete, it stays deleted',
         body: 'A deleted transaction can be restored from the app, and a later scan will not bring it back.',
       },
@@ -317,8 +353,11 @@ export const featureDeepDives: FeatureDeepDive[] = [
     slug: 'export',
     name: 'Export & import',
     status: 'live',
-    statusLabel: 'Live now',
-    tagline: 'Your data is yours. Take it out as a spreadsheet or a statement, and bring history in.',
+    statusLabel: 'In the app',
+    h1: 'Export expenses to CSV and import your history',
+    seoDescription:
+      'Export every transaction to CSV, share a monthly PDF statement with income, spend and savings rate, and import an Axio CSV or Google Pay statement PDF.',
+    tagline: 'Your data is yours. Take it out as a spreadsheet or a statement, and bring supported history in.',
     sections: [
       {
         heading: 'Transactions as CSV',
@@ -330,7 +369,7 @@ export const featureDeepDives: FeatureDeepDive[] = [
       },
       {
         heading: 'Bring history in',
-        body: 'Import a CSV or a statement export from another app, so you do not start from zero.',
+        body: 'Import an Axio CSV report or a Google Pay statement PDF so you do not start from zero. Bank statement PDFs and more apps are coming, not available yet.',
       },
       {
         heading: 'Follows your pay cycle',
@@ -358,7 +397,7 @@ export const showcaseTabs: ShowcaseTab[] = [
     label: 'Capture',
     title: 'The SMS arrives. The entry is already there.',
     body: 'Raqm reads your bank texts on the phone itself, so every spend lands in your timeline without you typing a thing.',
-    points: ['120+ bank SMS formats', 'PDF statements for quiet accounts', 'Cash added in a few taps'],
+    points: ['120+ bank SMS formats', 'Google Pay statement import', 'Cash added in a few taps'],
   },
   {
     id: 'categorize',
@@ -406,7 +445,7 @@ export interface FeatureCell {
 
 export const featureCells: FeatureCell[] = [
   { icon: 'bank', title: '120+ banks', body: 'Indian and international SMS formats, parsed the moment they arrive.' },
-  { icon: 'file', title: 'PDF statements', body: 'Upload a bank or UPI statement for accounts that never text you.' },
+  { icon: 'file', title: 'Google Pay import', body: 'Import a Google Pay statement PDF for your UPI history. Bank PDFs are coming.' },
   { icon: 'cash', title: 'Cash, logged fast', body: 'Add a cash expense in a few taps and it sits beside everything else.' },
   { icon: 'tag', title: 'Merchant renames', body: 'Fix one name and every future transaction from that merchant follows.' },
   { icon: 'split', title: 'Split a purchase', body: 'Divide one transaction across categories, or group small ones into one entry.' },
@@ -474,15 +513,15 @@ export const hubFeatures: HubFeature[] = [
     slug: 'private-by-design',
     name: 'Private by design',
     chip: 'Privacy',
-    summary: 'SMS is parsed on your phone, with no account and no raw message sent anywhere.',
-    art: { value: '0', caption: 'bank texts sent off your phone', bars: [100, 100, 100] },
+    summary: 'SMS is parsed on your phone, with no account, no analytics and no raw message uploaded.',
+    art: { value: '0', caption: 'bank SMS uploaded from your phone', bars: [100, 100, 100] },
   },
   {
     slug: 'export',
     name: 'Export & import',
     chip: 'Your data',
-    summary: 'Take your transactions out as CSV or a monthly PDF statement, and import history in.',
-    art: { value: 'CSV + PDF', caption: 'transactions and monthly statement', bars: [64, 92] },
+    summary: 'Take your transactions out as CSV or a monthly PDF statement, and import Axio CSV or Google Pay history.',
+    art: { value: 'CSV + PDF', caption: 'export transactions and a monthly statement', bars: [64, 92] },
   },
   {
     slug: 'life-admin',

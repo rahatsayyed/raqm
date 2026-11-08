@@ -1,11 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import Lenis from 'lenis';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-gsap.registerPlugin(ScrollTrigger);
+import type Lenis from 'lenis';
 
 export let lenisInstance: Lenis | null = null;
 
@@ -28,21 +24,41 @@ export function SmoothScrollProvider({ children }: { children: React.ReactNode }
       return;
     }
 
-    const lenis = new Lenis({ duration: 1.1, smoothWheel: true });
-    lenisInstance = lenis;
+    let cancelled = false;
+    let cleanup: (() => void) | undefined;
 
-    function onTick(time: number) {
-      lenis.raf(time * 1000);
-    }
+    const start = async () => {
+      const [{ default: LenisCtor }, { default: gsap }, { ScrollTrigger }] = await Promise.all([
+        import('lenis'),
+        import('gsap'),
+        import('gsap/ScrollTrigger'),
+      ]);
+      if (cancelled) return;
+      gsap.registerPlugin(ScrollTrigger);
 
-    gsap.ticker.add(onTick);
-    gsap.ticker.lagSmoothing(0);
-    lenis.on('scroll', ScrollTrigger.update);
+      const lenis = new LenisCtor({ duration: 1.1, smoothWheel: true });
+      lenisInstance = lenis;
+
+      const onTick = (time: number) => lenis.raf(time * 1000);
+      gsap.ticker.add(onTick);
+      gsap.ticker.lagSmoothing(0);
+      lenis.on('scroll', ScrollTrigger.update);
+
+      cleanup = () => {
+        gsap.ticker.remove(onTick);
+        lenis.destroy();
+        lenisInstance = null;
+      };
+    };
+
+    const hasRic = 'requestIdleCallback' in window;
+    const handle = hasRic ? window.requestIdleCallback(() => void start(), { timeout: 2000 }) : window.setTimeout(() => void start(), 300);
 
     return () => {
-      gsap.ticker.remove(onTick);
-      lenis.destroy();
-      lenisInstance = null;
+      cancelled = true;
+      if (hasRic) window.cancelIdleCallback(handle);
+      else clearTimeout(handle);
+      cleanup?.();
     };
   }, []);
 

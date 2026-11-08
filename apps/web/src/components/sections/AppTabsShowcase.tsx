@@ -154,7 +154,7 @@ const screens: Record<ShowcaseTab['id'], React.ReactNode> = {
 };
 
 const stats: Record<ShowcaseTab['id'], { v: string; k: string }[]> = {
-  capture: [{ v: 'Auto', k: 'entry per bank SMS' }, { v: '0', k: 'bytes leave your phone' }],
+  capture: [{ v: 'Auto', k: 'entry per bank SMS' }, { v: '0', k: 'SMS uploaded from your phone' }],
   categorize: [{ v: '1 edit', k: 'fixes every match' }, { v: 'Any split', k: 'for one shared bill' }],
   budgets: [{ v: 'Your cycle', k: 'starts on pay day' }, { v: 'Daily', k: 'safe-to-spend number' }],
   insights: [{ v: 'Netted', k: 'refunds per category' }, { v: 'Auto', k: 'subscription detection' }],

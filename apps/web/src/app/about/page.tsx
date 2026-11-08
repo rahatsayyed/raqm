@@ -4,16 +4,22 @@ import { Rise } from '@/components/content/Rise';
 import { StoreBadge } from '@/components/content/StoreBadge';
 import { pageMeta } from '@/content/meta';
 import { AUTHOR } from '@/content/site';
+import { JsonLd } from '@/components/content/JsonLd';
+import { PAGE_SEO } from '@/lib/seo/pages';
+import { breadcrumbNode, graph, ids, siteNodes, webPageNode } from '@/lib/seo/schema';
 
-export const metadata = pageMeta(
-  '/about',
-  'About · Raqm',
-  'Why Raqm exists: a calm, private expense tracker for India that works from the bank SMS you already get.',
-);
+export const metadata = pageMeta('/about');
 
 export default function AboutPage() {
   return (
     <main id="main-content">
+      <JsonLd
+        data={graph(
+          ...siteNodes(),
+          webPageNode('AboutPage', '/about', PAGE_SEO['/about'].title, PAGE_SEO['/about'].description, { about: { '@id': ids.org }, mainEntity: { '@id': ids.author } }),
+          breadcrumbNode('/about', [{ name: 'About', path: '/about' }]),
+        )}
+      />
       <section className="grid min-h-svh place-items-center px-6 pt-32 pb-16">
         <Rise className="max-w-[520px] text-center">
           <AboutArt className="mx-auto mb-8 h-[178px] w-[210px] sm:h-[221px] sm:w-[260px]" />
@@ -34,7 +40,7 @@ export default function AboutPage() {
               </p>
               <p>
                 So I built Raqm to read those messages on your phone, sort them, and show you where your money went.
-                Nothing needs to leave the device, and there is no account to make.
+                Your SMS and transactions stay on the device, and there is no account to make.
               </p>
               <p>
                 Raqm is an expense tracker, and I would rather say that plainly than promise more. It shows you what
@@ -57,6 +63,7 @@ export default function AboutPage() {
           <StoreBadge store="android" />
           <StoreBadge store="ios" />
         </Rise>
+        {/* TODO(owner): add a real contact method (email or form) here; none is published yet. */}
         <p className="mt-6 text-center text-sm text-ink-subtle">
           Questions? Read the <Link href="/faq" className="text-ink underline underline-offset-4">FAQ</Link>.
         </p>

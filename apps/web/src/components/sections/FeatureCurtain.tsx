@@ -27,7 +27,7 @@ const PEOPLE = [
   { n: 'R', paid: true },
 ];
 
-const FACTS = ['No cloud upload', 'No account', 'Works offline'];
+const FACTS = ['No account or analytics', 'No account', 'Works offline'];
 
 const card = 'flex flex-col rounded-container border border-line bg-surface p-5 shadow-1 text-ink';
 const eyebrow = 'font-mono text-[12px] uppercase tracking-wide opacity-70';
@@ -61,13 +61,13 @@ function Panel({ side }: { side: 'l' | 'r' }) {
       className={`absolute inset-y-0 w-1/2 bg-canvas will-change-transform ${left ? 'left-0 border-r' : 'right-0 border-l'} border-line`}
     >
       <div className={`absolute inset-y-0 flex flex-col justify-center gap-2 px-6 lg:px-10 ${left ? 'left-0 items-start' : 'right-0 items-end text-right'}`}>
-        <span className="font-mono text-[12px] uppercase tracking-wide text-ink-subtle">{left ? '120+' : '0 bytes'}</span>
-        <span className="max-w-[9rem] text-[14px] leading-snug text-ink-muted">{left ? 'bank SMS formats read' : 'sent to any server'}</span>
+        <span className="font-mono text-[12px] uppercase tracking-wide text-ink-subtle">{left ? '120+' : '0 SMS'}</span>
+        <span className="max-w-[9rem] text-[14px] leading-snug text-ink-muted">{left ? 'bank SMS formats read' : 'uploaded to any server'}</span>
         <span className="mt-3 h-px w-10 bg-line" />
       </div>
       <div data-seam className={`absolute inset-y-0 flex flex-col justify-center gap-2 ${left ? 'right-6 items-end text-right' : 'left-6 items-start'}`}>
         <span className="rounded-pill border border-line bg-surface px-3 py-1 font-mono text-[12px] text-ink-subtle">{left ? 'SMS in' : 'On-device'}</span>
-        <p className="text-h3 max-w-[8.5rem] text-ink">{left ? 'Every bank SMS, captured.' : 'Nothing leaves your phone.'}</p>
+        <p className="text-h3 max-w-[8.5rem] text-ink">{left ? 'Every bank SMS, captured.' : 'Your SMS stays on your phone.'}</p>
       </div>
     </div>
   );
@@ -205,7 +205,7 @@ export function FeatureCurtain() {
                   <Lock />
                   <div>
                     <p className="text-h3 text-inherit">Private on-device</p>
-                    <p className="mt-1 max-w-[26rem] text-[14px] leading-snug opacity-80">Reading, sorting and totals all happen on your phone. Your SMS never leaves it.</p>
+                    <p className="mt-1 max-w-[26rem] text-[14px] leading-snug opacity-80">Reading, sorting and totals all happen on your phone. Your SMS and transactions never leave it.</p>
                   </div>
                 </div>
                 <ul className="flex flex-wrap gap-2">

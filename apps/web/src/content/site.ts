@@ -3,7 +3,7 @@ export const SITE_NAME = 'Raqm';
 export const AUTHOR = {
   name: 'Rahat Sayyed',
   role: 'Founder, Raqm',
-  bio: 'Builds Raqm, an on-device expense tracker for India. Writes about money, privacy and the small details of reading bank SMS.',
+  bio: 'Founder of Raqm and maintainer of the open-source bank SMS parser behind it. Builds Raqm, an on-device expense tracker for India. Writes about money, privacy and the small details of reading bank SMS.',
 };
 
 export function absoluteUrl(path: string) {

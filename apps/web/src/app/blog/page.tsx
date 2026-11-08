@@ -4,12 +4,10 @@ import { JsonLd } from '@/components/content/JsonLd';
 import { pageMeta } from '@/content/meta';
 import { formatDate, readMinutes, sortedPosts } from '@/content/posts';
 import { absoluteUrl } from '@/content/site';
+import { PAGE_SEO } from '@/lib/seo/pages';
+import { breadcrumbNode, graph, itemListNode, siteNodes, webPageNode } from '@/lib/seo/schema';
 
-export const metadata = pageMeta(
-  '/blog',
-  'Blog · Raqm',
-  'Notes from the team building Raqm: on-device privacy, tracking spending from bank SMS in India, and how the app thinks.',
-);
+export const metadata = pageMeta('/blog');
 
 export default function BlogPage() {
   const entries = sortedPosts().map((p) => ({
@@ -25,17 +23,14 @@ export default function BlogPage() {
   return (
     <main id="main-content">
       <JsonLd
-        data={[
-          { '@context': 'https://schema.org', '@type': 'Blog', name: 'Raqm blog', url: absoluteUrl('/blog') },
-          {
-            '@context': 'https://schema.org',
-            '@type': 'BreadcrumbList',
-            itemListElement: [
-              { '@type': 'ListItem', position: 1, name: 'Home', item: absoluteUrl('/') },
-              { '@type': 'ListItem', position: 2, name: 'Blog', item: absoluteUrl('/blog') },
-            ],
-          },
-        ]}
+        data={graph(
+          ...siteNodes(),
+          webPageNode('CollectionPage', '/blog', PAGE_SEO['/blog'].title, PAGE_SEO['/blog'].description, {
+            mainEntity: { '@id': `${absoluteUrl('/blog')}#list` },
+          }),
+          itemListNode('/blog', entries.map((e) => ({ name: e.title, path: `/blog/${e.slug}` }))),
+          breadcrumbNode('/blog', [{ name: 'Blog', path: '/blog' }]),
+        )}
       />
       <PageHeader
         eyebrow="Blog"

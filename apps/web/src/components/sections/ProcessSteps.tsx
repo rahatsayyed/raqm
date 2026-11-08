@@ -11,7 +11,7 @@ gsap.registerPlugin(ScrollTrigger);
 
 const facts = [
   { label: '120+ bank formats', d: 'M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18' },
-  { label: 'Works offline', d: 'M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01' },
+  { label: 'Tracks offline', d: 'M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01' },
   { label: 'No account needed', d: 'M6 11V8a6 6 0 0 1 12 0v3M5 11h14v9H5z' },
 ];
 

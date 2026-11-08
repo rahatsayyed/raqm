@@ -1,12 +1,15 @@
 import { AppleGlyph, PlayGlyph, StoreBadge, type StoreId } from './content/StoreBadge';
 
-const SCAN_STEPS = [
-  { number: 1, text: "Open your phone's camera app" },
-  { number: 2, text: 'Point the camera at the QR code' },
-  { number: 3, text: 'Tap the link that appears' },
+const WAITLIST_STEPS = [
+  { number: 1, text: 'Add your email' },
+  { number: 2, text: 'We tell you when it is ready' },
+  { number: 3, text: 'No account needed' },
 ];
 
-const BLURB = 'Download Raqm and let it sort every rupee for you.';
+const BLURB: Record<StoreId, string> = {
+  android: 'Raqm for Android is coming soon. Join the waitlist and we will tell you when it is on Google Play.',
+  ios: 'Raqm for iPhone is in progress. Join the waitlist and we will tell you when it is on the App Store.',
+};
 
 type Align = 'center' | 'start';
 type Placement = 'top' | 'bottom';
@@ -27,14 +30,16 @@ function BadgeWithQr({ store, align, placement }: { store: StoreId; align: Align
               ) : (
                 <AppleGlyph className="mb-2 size-4 shrink-0 text-ink" />
               )}
-              <p className="text-sm text-ink-muted">{BLURB}</p>
+              <p className="text-sm text-ink-muted">{BLURB[store]}</p>
             </div>
             <div className="flex size-28 shrink-0 items-center justify-center rounded-chip border border-line bg-surface text-[10px] text-ink-subtle">
-              QR code
+              <svg aria-hidden viewBox="0 0 24 24" className="size-8 text-ink-subtle" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 6h16v12H4zM4 7l8 6 8-6" />
+              </svg>
             </div>
           </div>
           <ol className="mt-3 flex flex-col px-3">
-            {SCAN_STEPS.map((step) => (
+            {WAITLIST_STEPS.map((step) => (
               <li
                 key={step.number}
                 className="flex items-end gap-2 border-t border-line py-2 text-xs font-medium text-ink-muted first:border-t-0 first:pt-0"
