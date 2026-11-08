@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { ALTERNATIVES } from '@/content/alternatives';
 import { StoreBadgesWithQr } from './AppStoreBadges';
 
+const shortName = (name: string) => name.split(':')[0].replace(/\s+by\s.*$/, '').trim();
+
 const COLUMNS = [
   {
     title: 'Product',
@@ -17,7 +19,7 @@ const COLUMNS = [
     links: [
       { label: 'How Raqm differs', href: '/free' },
       { label: 'All alternatives', href: '/alternatives' },
-      ...ALTERNATIVES.map((a) => ({ label: `Raqm vs ${a.name}`, href: `/alternatives/${a.slug}` })),
+      ...ALTERNATIVES.map((a) => ({ label: `vs ${shortName(a.name)}`, href: `/alternatives/${a.slug}` })),
     ],
   },
   {
