@@ -6,6 +6,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { featureCells, type CellIcon } from '@/lib/features-data';
 import { cn } from './cn';
+import { WidgetPhone } from './feature-cells/WidgetPhone';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -31,6 +32,22 @@ export function FeatureCells({ className }: { className?: string }) {
     () => {
       const mm = gsap.matchMedia();
       mm.add('(prefers-reduced-motion: no-preference)', () => {
+        gsap.from('[data-phone]', {
+          y: 60,
+          opacity: 0,
+          duration: 0.9,
+          ease: 'expo.out',
+          scrollTrigger: { trigger: '[data-widgets]', start: 'top 75%', once: true },
+        });
+        gsap.from('[data-widget]', {
+          y: 16,
+          opacity: 0,
+          duration: 0.6,
+          ease: 'expo.out',
+          stagger: 0.12,
+          delay: 0.25,
+          scrollTrigger: { trigger: '[data-widgets]', start: 'top 75%', once: true },
+        });
         gsap.from('[data-cell]', {
           opacity: 0,
           y: 14,
@@ -46,38 +63,73 @@ export function FeatureCells({ className }: { className?: string }) {
   );
 
   return (
-    <section id="features" aria-labelledby="features-heading" className={cn('mx-auto w-full max-w-col scroll-mt-24 px-4 py-section', className)}>
-      <div className="mx-auto mb-12 max-w-xl text-center">
+    <section id="features" aria-labelledby="features-heading" className={cn('mx-auto w-full max-w-wide scroll-mt-24 px-4 py-15', className)}>
+      <div className="mx-auto mb-9 max-w-xl text-center">
         <h2 id="features-heading" className="text-h2 text-ink">The small things, handled.</h2>
-        <p className="mt-4 text-lead text-ink-muted">Twelve quiet details that keep your numbers honest.</p>
+        <p className="mt-3 text-lead text-ink-muted">Twelve quiet details that keep your numbers honest.</p>
       </div>
-      <div ref={ref} className="rounded-container bg-surface p-1.5 shadow-2 shadow-ring">
-        <ul className="grid gap-cell overflow-hidden rounded-cell bg-line sm:grid-cols-2 lg:grid-cols-3">
+      <div ref={ref} className="mx-auto max-w-col rounded-container bg-surface p-1.5 shadow-2 shadow-ring">
+        <ul className="grid auto-rows-fr gap-0.5 overflow-hidden rounded-cell sm:grid-cols-2 lg:grid-cols-3">
           {featureCells.map((c) => (
             <li
               key={c.title}
               data-cell
-              className="min-h-44 bg-surface-sunken p-6 transition-colors duration-200 [@media(hover:hover)]:hover:bg-surface"
+              className="flex min-h-[150px] flex-col gap-3 bg-surface-sunken p-5 transition-colors duration-200 [@media(hover:hover)]:hover:bg-[color-mix(in_oklab,var(--color-surface-sunken)_86%,var(--color-ink))]"
             >
-              <span className="grid size-10 place-items-center rounded-chip bg-inverse text-inverse-ink">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="size-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden
-                >
-                  {ICONS[c.icon]}
-                </svg>
-              </span>
-              <h3 className="mt-5 text-h3 text-ink">{c.title}</h3>
-              <p className="mt-1.5 text-base text-ink-muted">{c.body}</p>
+              <svg
+                viewBox="0 0 24 24"
+                className="size-5 text-ink"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                {ICONS[c.icon]}
+              </svg>
+              <div className="flex flex-col gap-1.5">
+                <h3 className="text-h3 font-semibold text-ink">{c.title}</h3>
+                <p className="text-base leading-5 font-medium text-ink-muted">{c.body}</p>
+              </div>
             </li>
           ))}
         </ul>
+        <div
+          data-widgets
+          className="mt-0.5 grid items-end overflow-hidden rounded-cell bg-surface-sunken lg:h-[340px] lg:grid-cols-2"
+        >
+          <div className="relative flex items-end self-stretch px-6 pt-6">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(color-mix(in_oklab,var(--color-ink)_16%,transparent)_1px,transparent_1px)] bg-[length:20px_20px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
+            />
+            <div className="relative w-full">
+              <WidgetPhone />
+            </div>
+          </div>
+          <div className="flex flex-col gap-6 px-6 py-6 lg:self-stretch lg:justify-center lg:px-10 lg:py-6">
+            <span className="inline-flex items-center gap-2.5 text-h3 font-semibold text-ink">
+              <span className="grid size-7 place-items-center rounded-tag bg-brand text-brand-ink" aria-hidden>
+                <svg viewBox="0 0 28 28" className="size-7" fill="currentColor">
+                  <rect x="7" y="7.5" width="6" height="6" rx="1.5" />
+                  <rect x="7" y="15" width="6" height="6" rx="1.5" />
+                  <rect x="14.5" y="15" width="6" height="6" rx="1.5" />
+                  <rect x="15.5" y="6.5" width="6" height="6" rx="1.5" transform="rotate(12 18.5 9.5)" opacity="0.6" />
+                </svg>
+              </span>
+              Widgets
+            </span>
+            <div className="flex flex-col gap-3">
+              <h3 className="text-h3 font-semibold text-ink">Your safe-to-spend, one glance away.</h3>
+              <p className="text-base leading-5 font-medium text-ink-muted">
+                Seven Android home-screen widgets: safe-to-spend, budgets, a single budget, spend by category, recent
+                transactions, and one-tap cash or voice logging. Resize them, set the background opacity from 10 to 100%,
+                or tint them from your wallpaper.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
