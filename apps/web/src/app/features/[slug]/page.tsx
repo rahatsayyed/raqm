@@ -24,6 +24,7 @@ export async function generateMetadata({
   return {
     title: `${feature.name} · Raqm`,
     description: feature.tagline,
+    alternates: { canonical: `/features/${feature.slug}` },
   };
 }
 
@@ -41,8 +42,8 @@ export default async function FeaturePage({ params }: { params: Promise<{ slug: 
     <main id="main-content" className="min-h-dvh px-4 pb-24 pt-28 sm:px-6 sm:pt-36">
       <ScrollToTop />
       <div className="mx-auto max-w-3xl">
-        <Link href="/" className="mb-8 inline-block rounded-pill text-sm text-ink-muted hover:text-ink">
-          ← Back to Raqm
+        <Link href="/features" className="mb-8 inline-block rounded-pill text-sm text-ink-muted hover:text-ink">
+          ← All features
         </Link>
         <span
           className={`mb-4 block w-fit rounded-pill px-3 py-1 text-xs font-medium ${isLive ? 'bg-brand-soft text-brand' : 'bg-surface-sunken text-ink-muted'}`}

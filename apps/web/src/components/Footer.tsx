@@ -5,17 +5,11 @@ const COLUMNS = [
   {
     title: 'Product',
     links: [
-      { label: 'Features', href: '/#features' },
+      { label: 'Features', href: '/features' },
       { label: 'How it works', href: '/#how-it-works' },
+      { label: 'Free to use', href: '/free' },
       { label: 'Download', href: '/download' },
       { label: 'Join waitlist', href: '/#waitlist' },
-    ],
-  },
-  {
-    title: 'Tools',
-    links: [
-      { label: 'All tools', href: '/tools' },
-      { label: 'Free to use', href: '/free' },
     ],
   },
   {

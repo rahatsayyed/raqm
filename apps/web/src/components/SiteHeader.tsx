@@ -11,8 +11,7 @@ import { cx } from './ui/cx';
 
 const LINKS = [
   { label: 'Home', href: '/' },
-  { label: 'Features', href: '/#features' },
-  { label: 'Tools', href: '/tools' },
+  { label: 'Features', href: '/features' },
   { label: 'Free', href: '/free' },
   { label: 'Blog', href: '/blog' },
   { label: 'FAQ', href: '/faq' },
@@ -22,7 +21,6 @@ const CTA = { label: 'Join waitlist', href: '/#waitlist' };
 
 function isActive(href: string, pathname: string) {
   if (href === '/') return pathname === '/';
-  if (href === '/#features') return pathname.startsWith('/features');
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

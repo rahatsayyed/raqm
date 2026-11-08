@@ -4,7 +4,7 @@ import { useRef, type ReactNode } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 
-export function ToolsMotion({ children, className }: { children: ReactNode; className?: string }) {
+export function FeaturesMotion({ children, className }: { children: ReactNode; className?: string }) {
   const root = useRef<HTMLDivElement>(null);
   useGSAP(
     () => {

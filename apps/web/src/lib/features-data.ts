@@ -201,6 +201,143 @@ export const featureDeepDives: FeatureDeepDive[] = [
       },
     ],
   },
+  {
+    slug: 'insights',
+    name: 'Insights & analytics',
+    status: 'live',
+    statusLabel: 'Live now',
+    tagline: 'See where the month went, calmly. Totals that net out refunds and skip your own transfers.',
+    sections: [
+      {
+        heading: 'Category totals you can trust',
+        body: 'Self-transfers stay out and refunds are netted against the category they came from, so the numbers show what you actually spent.',
+      },
+      {
+        heading: 'Month over month at a glance',
+        body: 'Compare this period with the last one, and see which categories moved. Your month follows your own pay-cycle day.',
+      },
+      {
+        heading: 'Recurring charges, flagged',
+        body: 'The same merchant and amount every month is marked as a subscription, so quiet charges stop hiding.',
+      },
+      {
+        heading: 'Calm by design',
+        body: 'Nothing here is built to shame or gamify. It is a clear picture of what already happened.',
+      },
+    ],
+  },
+  {
+    slug: 'smart-matching',
+    name: 'Smart matching',
+    status: 'live',
+    statusLabel: 'Live now',
+    tagline: 'Raqm spots transfers, refunds, duplicates and subscriptions so your totals stay honest.',
+    sections: [
+      {
+        heading: 'Self-transfers are not spending',
+        body: 'A debit and a credit of the same amount between your own accounts within 24 hours are linked and kept out of your totals.',
+      },
+      {
+        heading: 'Refunds find their original spend',
+        body: 'A credit that matches an earlier debit is linked as a refund and netted against that purchase.',
+      },
+      {
+        heading: 'Duplicates caught',
+        body: 'The same transaction arriving twice, from an SMS and a statement for example, is detected so it is not counted twice.',
+      },
+      {
+        heading: 'Subscriptions flagged',
+        body: 'The same merchant and amount recurring monthly is marked as a subscription, with a nudge to review it.',
+      },
+      {
+        heading: 'You stay in charge',
+        body: 'Every link can be reviewed and changed by hand, and your edits survive later scans.',
+      },
+    ],
+  },
+  {
+    slug: 'widgets',
+    name: 'Home-screen widgets',
+    status: 'live',
+    statusLabel: 'Live now - Android',
+    tagline: 'Seven Android widgets put your numbers and quick actions one glance from your home screen.',
+    sections: [
+      {
+        heading: 'Safe-to-spend, always visible',
+        body: 'The daily number sits on your home screen, so you check it without opening the app.',
+      },
+      {
+        heading: 'Budgets at a glance',
+        body: 'An overview of your budgets, or a single budget you care about most, as its own widget.',
+      },
+      {
+        heading: 'Where the money went',
+        body: 'A category pie and a list of recent transactions, straight from the data on your phone.',
+      },
+      {
+        heading: 'Add a transaction in one tap',
+        body: 'An add-transaction widget, plus a voice widget, take you straight to logging a spend.',
+      },
+      {
+        heading: 'Amounts you can mask',
+        body: 'Choose to hide amounts in lists and widgets, and tap a masked amount to reveal it.',
+      },
+    ],
+  },
+  {
+    slug: 'private-by-design',
+    name: 'Private by design',
+    status: 'live',
+    statusLabel: 'Live now',
+    tagline: 'Your bank texts are read on your phone and stay on your phone. No account needed.',
+    sections: [
+      {
+        heading: 'Parsed on-device',
+        body: 'Amount, merchant and category are read from the SMS right on your phone. The raw message is never sent anywhere.',
+      },
+      {
+        heading: 'No account, no sign-up',
+        body: 'Raqm works without a login. Your transactions live in a database on your device.',
+      },
+      {
+        heading: 'Raw bank texts tidied away',
+        body: 'On Android, Raqm can replace the raw bank SMS notification with a clean one, so card and balance details are not left on the lock screen.',
+      },
+      {
+        heading: 'Hide amounts when you need to',
+        body: 'Mask amounts everywhere, or only in lists and widgets, and reveal one with a tap.',
+      },
+      {
+        heading: 'You delete, it stays deleted',
+        body: 'A deleted transaction can be restored from the app, and a later scan will not bring it back.',
+      },
+    ],
+  },
+  {
+    slug: 'export',
+    name: 'Export & import',
+    status: 'live',
+    statusLabel: 'Live now',
+    tagline: 'Your data is yours. Take it out as a spreadsheet or a statement, and bring history in.',
+    sections: [
+      {
+        heading: 'Transactions as CSV',
+        body: 'Export your transactions to a CSV file and open it in any spreadsheet.',
+      },
+      {
+        heading: 'A monthly statement as PDF',
+        body: 'A summary with income, expense, savings rate and your top categories for the period, ready to share.',
+      },
+      {
+        heading: 'Bring history in',
+        body: 'Import a CSV or a statement export from another app, so you do not start from zero.',
+      },
+      {
+        heading: 'Follows your pay cycle',
+        body: 'The monthly summary respects your own start-of-month day, the same as budgets and totals.',
+      },
+    ],
+  },
 ];
 
 export function getFeatureBySlug(slug: string): FeatureDeepDive | undefined {
@@ -281,3 +418,79 @@ export const featureCells: FeatureCell[] = [
   { icon: 'repeat', title: 'Subscriptions', body: 'Same merchant, same amount, every month, flagged for you.' },
   { icon: 'list', title: 'Grocery lists', body: 'Named lists with a running total and the last price you paid.' },
 ];
+
+export interface HubFeature {
+  slug: string;
+  name: string;
+  chip: string;
+  summary: string;
+  art: { value: string; caption: string; bars: number[] };
+}
+
+export const hubFeatures: HubFeature[] = [
+  {
+    slug: 'capture-organize',
+    name: 'Capture & organize',
+    chip: 'Capture',
+    summary: 'Your bank already texts you. Raqm reads it on your phone, sorts it and keeps transfers and refunds out of the way.',
+    art: { value: '120+', caption: 'bank SMS formats, read on-device', bars: [18, 26, 38, 50, 62, 74, 84, 94] },
+  },
+  {
+    slug: 'smarter-budgets',
+    name: 'Smarter budgets',
+    chip: 'Budgets',
+    summary: 'A safe-to-spend number, early alerts and a month that starts on your pay day.',
+    art: { value: '80%', caption: 'the point where a budget nudges you', bars: [14, 24, 36, 48, 60, 72, 80] },
+  },
+  {
+    slug: 'split',
+    name: 'Split & settle',
+    chip: 'Friends',
+    summary: 'Split a bill, share a UPI link and let Raqm notice when you have been paid back.',
+    art: { value: '₹1,200', caption: 'each, a 4 person table of ₹4,800', bars: [70, 70, 70, 70] },
+  },
+  {
+    slug: 'insights',
+    name: 'Insights & analytics',
+    chip: 'Insights',
+    summary: 'Category totals that net out refunds and skip transfers, with subscriptions flagged.',
+    art: { value: '-₹500', caption: 'refund netted from the original spend', bars: [78, 62, 90, 54, 70, 40] },
+  },
+  {
+    slug: 'smart-matching',
+    name: 'Smart matching',
+    chip: 'Matching',
+    summary: 'Self-transfers, refunds, duplicates and subscriptions are spotted for you.',
+    art: { value: '24h', caption: 'window to pair a transfer between your accounts', bars: [60, 60, 60, 60, 60] },
+  },
+  {
+    slug: 'widgets',
+    name: 'Home-screen widgets',
+    chip: 'Android',
+    summary: 'Seven widgets for safe-to-spend, budgets, categories, recent spends and quick add.',
+    art: { value: '7', caption: 'Android home-screen widgets', bars: [100, 100, 100, 100, 100, 100, 100] },
+  },
+  {
+    slug: 'private-by-design',
+    name: 'Private by design',
+    chip: 'Privacy',
+    summary: 'SMS is parsed on your phone, with no account and no raw message sent anywhere.',
+    art: { value: '0', caption: 'bank texts sent off your phone', bars: [100, 100, 100] },
+  },
+  {
+    slug: 'export',
+    name: 'Export & import',
+    chip: 'Your data',
+    summary: 'Take your transactions out as CSV or a monthly PDF statement, and import history in.',
+    art: { value: 'CSV + PDF', caption: 'transactions and monthly statement', bars: [64, 92] },
+  },
+  {
+    slug: 'life-admin',
+    name: 'Life admin',
+    chip: 'Everyday',
+    summary: 'Notes, places, lending reminders and grocery lists that remember what things cost.',
+    art: { value: '₹62', caption: 'last price paid, shown as a hint', bars: [40, 55, 48, 66, 58, 80] },
+  },
+];
+
+export const comingSoonFeatures = featureDeepDives.filter((f) => f.status === 'coming-soon');
