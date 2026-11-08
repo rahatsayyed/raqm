@@ -8,7 +8,7 @@ const HEIGHT = 160;
 const nameCache = new Map<string, string | null>();
 
 // OSM tile policy requires an identifying User-Agent; default okhttp UA is blocked.
-const TILE_HEADERS = { "User-Agent": "Raqm/1.0 (personal finance app)", Referer: "https://raqm.app/" };
+const TILE_HEADERS = { "User-Agent": "Raqm/1.0 (personal finance app)", Referer: "https://raqm.money/" };
 
 function project(lat: number, lng: number) {
   const n = 2 ** ZOOM;
