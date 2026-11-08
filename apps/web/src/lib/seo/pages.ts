@@ -1,3 +1,5 @@
+import { ALTERNATIVES } from '@/content/alternatives';
+
 export interface PageSeo {
   title: string;
   description: string;
@@ -19,6 +21,11 @@ export const PAGE_SEO: Record<string, PageSeo> = {
     title: 'Expense Tracker Without Bank Login or Sign-up | Raqm',
     description:
       'No bank login, no account, no server holding your transactions. See how Raqm tracks spending from the SMS on your phone, compared with the usual approach.',
+  },
+  '/alternatives': {
+    title: 'Apps Like Axio, PennyWise, Splitwise, Money Manager | Raqm',
+    description:
+      'Compare Raqm with Axio, PennyWise, Splitwise, Money Manager, Wallet and Money View. Plain, dated, sourced facts on SMS access, accounts and where data lives.',
   },
   '/blog': {
     title: 'Blog: Bank SMS, Expense Tracking and Privacy | Raqm',
@@ -128,11 +135,16 @@ export const POST_SEO: Record<string, PageSeo> = {
   },
 };
 
+export const ALTERNATIVE_SEO: Record<string, PageSeo> = Object.fromEntries(
+  ALTERNATIVES.map((a) => [a.slug, { title: a.seoTitle, description: a.seoDescription }]),
+);
+
 export function seoFor(path: string): PageSeo | undefined {
   if (path === '/') return HOME_SEO;
   if (PAGE_SEO[path]) return PAGE_SEO[path];
   const [, section, slug] = path.split('/');
   if (section === 'features' && slug) return FEATURE_SEO[slug];
+  if (section === 'alternatives' && slug) return ALTERNATIVE_SEO[slug];
   if (section === 'blog' && slug) return POST_SEO[slug];
   return undefined;
 }

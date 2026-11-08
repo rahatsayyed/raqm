@@ -1,3 +1,4 @@
+import { ALTERNATIVES } from '@/content/alternatives';
 import { FAQ_GROUPS } from '@/content/faq';
 import { sortedPosts } from '@/content/posts';
 import { absoluteUrl } from '@/content/site';
@@ -11,6 +12,7 @@ export function GET() {
   const features = featureDeepDives
     .map((f) => `- [${f.name}](${absoluteUrl(`/features/${f.slug}`)}): ${FEATURE_SEO[f.slug]?.description ?? f.tagline}${f.status === 'coming-soon' ? ' (not built yet)' : ''}`)
     .join('\n');
+  const alternatives = ALTERNATIVES.map((a) => `- [${a.h1}](${absoluteUrl(`/alternatives/${a.slug}`)}): ${a.seoDescription}`).join('\n');
   const posts = sortedPosts()
     .map((p) => `- [${p.title}](${absoluteUrl(`/blog/${p.slug}`)}): ${p.description}`)
     .join('\n');
@@ -37,6 +39,10 @@ Key facts:
 
 ## Features
 ${features}
+
+## Alternatives
+- [Apps like Axio, PennyWise, Splitwise and Money Manager](${absoluteUrl('/alternatives')}): how Raqm compares, with dated and sourced facts
+${alternatives}
 
 ## Blog
 ${posts}

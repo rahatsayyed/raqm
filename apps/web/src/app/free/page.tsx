@@ -1,4 +1,5 @@
 import { ComparisonCard } from '@/components/sections/ComparisonCard';
+import Link from 'next/link';
 import { Button } from '@/components/ui';
 import { PageHeader } from '@/components/content/PageHeader';
 import { Rise } from '@/components/content/Rise';
@@ -28,6 +29,15 @@ export default function FreePage() {
       <div className="px-4 sm:px-6">
         <Rise className="mx-auto max-w-col">
           <ComparisonCard rows={FREE_ROWS} featureLabel="Features" otherLabel="Other apps" />
+        </Rise>
+        <Rise className="mx-auto mt-10 max-w-col text-center">
+          <p className="text-base text-ink-muted">
+            Looking at other apps?{' '}
+            <Link href="/alternatives" className="rounded-tag font-semibold text-ink underline decoration-line underline-offset-4 hover:decoration-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+              See Raqm next to Axio, PennyWise, Splitwise, Money Manager and more
+            </Link>
+            .
+          </p>
         </Rise>
         <Rise className="mx-auto mt-12 max-w-col text-center">
           <p className="mx-auto max-w-md text-lead text-ink-muted">Android and iPhone are coming soon. Join the waitlist and we will let you know.</p>

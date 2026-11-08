@@ -146,6 +146,14 @@ export function itemListNode(path: string, items: { name: string; path: string }
   };
 }
 
+export function faqPageNode(path: string, items: { q: string; a: string }[]): JsonLdNode {
+  return {
+    '@type': 'FAQPage',
+    '@id': `${absoluteUrl(path)}#faq`,
+    mainEntity: items.map((it) => ({ '@type': 'Question', name: it.q, acceptedAnswer: { '@type': 'Answer', text: it.a } })),
+  };
+}
+
 // Org, site and founder nodes ride on every page so @id references always resolve.
 export function siteNodes(): JsonLdNode[] {
   return [organizationNode(), websiteNode(), personNode()];

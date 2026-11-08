@@ -4,7 +4,7 @@ import { OG_DEFAULT_ALT, OG_SIZE } from './constants';
 import { seoFor } from './pages';
 
 export function ogImagePath(path: string) {
-  return /^\/(blog|features)\/[^/]+$/.test(path) ? `${path}/opengraph-image` : '/opengraph-image';
+  return /^\/(blog|features|alternatives)\/[^/]+$/.test(path) ? `${path}/opengraph-image` : '/opengraph-image';
 }
 
 interface Article {

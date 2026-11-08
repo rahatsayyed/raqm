@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ALTERNATIVES } from '@/content/alternatives';
 import { StoreBadgesWithQr } from './AppStoreBadges';
 
 const COLUMNS = [
@@ -7,9 +8,16 @@ const COLUMNS = [
     links: [
       { label: 'Features', href: '/features' },
       { label: 'How it works', href: '/#how-it-works' },
-      { label: 'Compare', href: '/free' },
       { label: 'Download', href: '/download' },
       { label: 'Join waitlist', href: '/#waitlist' },
+    ],
+  },
+  {
+    title: 'Compare',
+    links: [
+      { label: 'How Raqm differs', href: '/free' },
+      { label: 'All alternatives', href: '/alternatives' },
+      ...ALTERNATIVES.map((a) => ({ label: `Raqm vs ${a.name}`, href: `/alternatives/${a.slug}` })),
     ],
   },
   {

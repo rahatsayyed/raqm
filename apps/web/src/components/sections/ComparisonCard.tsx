@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { OtherValue, RaqmValue, RowIcon, type CellValue, type IconName } from './comparison/marks';
+import { BinaryValue, OtherValue, RaqmValue, RowIcon, type CellValue, type IconName } from './comparison/marks';
 import { WaitlistButton } from './comparison/WaitlistButton';
 import { ScrollHint } from './comparison/ScrollHint';
 import { HOME_ROWS } from '@/content/comparison';
@@ -18,6 +18,7 @@ export type ComparisonRow = {
   raqm: CellValue;
   note?: string;
   icon?: IconName;
+  source?: string;
 };
 
 type Props = {
@@ -26,6 +27,8 @@ type Props = {
   raqmLabel?: string;
   raqmBadge?: string;
   featureLabel?: string;
+  binaryMarks?: boolean;
+  raqmFooter?: string | null;
   className?: string;
 };
 
@@ -56,7 +59,7 @@ function AppGlyph() {
   );
 }
 
-export function ComparisonCard({ rows = HOME_ROWS, otherLabel = 'Other apps', raqmLabel = 'Raqm', raqmBadge = 'On-device', featureLabel = 'Features', className = '' }: Props) {
+export function ComparisonCard({ rows = HOME_ROWS, otherLabel = 'Other apps', raqmLabel = 'Raqm', raqmBadge = 'On-device', featureLabel = 'Features', binaryMarks = false, raqmFooter = 'Android and iPhone coming soon', className = '' }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const last = rows.length + 1;
@@ -141,12 +144,12 @@ export function ComparisonCard({ rows = HOME_ROWS, otherLabel = 'Other apps', ra
               </div>
               <div role="cell" className={`${cell} col-start-2 text-inverse-ink ${R_PAD}`} style={{ gridRow: row }}>
                 <span data-cell className="min-w-0">
-                  <RaqmValue value={r.raqm} />
+                  {binaryMarks ? <BinaryValue value={r.raqm} tone="raqm" /> : <RaqmValue value={r.raqm} />}
                 </span>
               </div>
               <div role="cell" className={`${cell} col-start-3 text-ink ${O_PAD}`} style={{ gridRow: row }}>
                 <span data-cell className="min-w-0">
-                  <OtherValue value={r.other} />
+                  {binaryMarks ? <BinaryValue value={r.other} tone="other" source={r.source} /> : <OtherValue value={r.other} />}
                 </span>
               </div>
             </div>
@@ -157,7 +160,7 @@ export function ComparisonCard({ rows = HOME_ROWS, otherLabel = 'Other apps', ra
           <div role="cell" className="relative z-10 col-start-2 flex items-start py-5" style={{ gridRow: footer }}>
             <div className={`w-full ${R_PAD}`}>
               <WaitlistButton />
-              <p className="mt-2.5 text-center text-xs font-semibold leading-4 tracking-[-0.01em] text-inverse-ink/70">Android and iPhone coming soon</p>
+              {raqmFooter && <p className="mt-2.5 text-center text-xs font-semibold leading-4 tracking-[-0.01em] text-inverse-ink/70">{raqmFooter}</p>}
             </div>
           </div>
         </div>

@@ -89,3 +89,46 @@ export function OtherValue({ value }: { value: CellValue }) {
     </span>
   );
 }
+
+function Cross() {
+  return (
+    <Mark>
+      <svg viewBox="0 0 24 24" className={`${GLYPH} text-negative`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+      </svg>
+    </Mark>
+  );
+}
+
+const SR_LABEL: Record<string, string> = { yes: 'Yes', no: 'No', unknown: 'Not confirmed in the public listing' };
+
+export function BinaryValue({ value, tone, source }: { value: CellValue; tone: 'raqm' | 'other'; source?: string }) {
+  const sr = SR_LABEL[value];
+  const glyph = value === 'yes' ? <Check /> : value === 'no' ? <Cross /> : value === 'unknown' ? <Dash /> : tone === 'raqm' ? <Check /> : null;
+  return (
+    <span className="flex flex-wrap items-start gap-x-2 gap-y-0.5">
+      {sr ? (
+        <span className="flex items-start" title={value === 'unknown' ? sr : undefined}>
+          {glyph}
+          <span className="sr-only">{sr}</span>
+        </span>
+      ) : (
+        <>
+          {glyph}
+          <span className="min-w-0 break-words">{value}</span>
+        </>
+      )}
+      {source && (
+        <a
+          href={source}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Source (opens in a new tab)"
+          className="self-center rounded-tag text-xs font-medium leading-4 text-ink-subtle underline decoration-line underline-offset-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          source
+        </a>
+      )}
+    </span>
+  );
+}
