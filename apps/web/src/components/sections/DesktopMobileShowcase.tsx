@@ -55,7 +55,7 @@ export function DesktopMobileShowcase({
   );
 
   return (
-    <section ref={root} className="bg-canvas py-section lg:py-section-lg">
+    <section ref={root} className="overflow-x-clip bg-canvas py-section lg:py-section-lg">
       <div className="mx-auto max-w-wide px-4 md:px-6">
         <div className="mx-auto mb-12 max-w-col text-center md:mb-16">
           <span className="inline-flex rounded-pill border border-line bg-surface px-3 py-1 text-[13px] text-ink-muted">{eyebrow}</span>
