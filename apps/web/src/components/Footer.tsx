@@ -1,7 +1,5 @@
 import Link from 'next/link';
-import { Button } from './ui/Button';
 import { StoreBadges } from './content/StoreBadge';
-import { Container } from './ui/Container';
 
 const COLUMNS = [
   {
@@ -36,12 +34,12 @@ const COLUMNS = [
   },
 ];
 
+const LINK =
+  'relative inline-flex text-[14px] font-semibold leading-[17px] text-inverse-ink/50 transition-colors duration-150 after:absolute after:-inset-x-1 after:-inset-y-[6px] hover:text-inverse-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-inverse-ink motion-reduce:transition-none';
+
 function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link
-      href={href}
-      className="inline-block rounded-tag py-1 font-sans text-[15px] text-inverse-ink/60 transition-colors duration-150 hover:text-inverse-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-inverse-ink"
-    >
+    <Link href={href} className={LINK}>
       {children}
     </Link>
   );
@@ -50,45 +48,50 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
 export function Footer() {
   return (
     <footer className="bg-inverse px-4 pb-10 pt-20 text-inverse-ink md:px-6">
-      <Container className="px-0">
-        <div className="relative overflow-hidden rounded-card-lg bg-surface text-ink">
-          <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 hidden size-[520px] md:block">
+      <div className="mx-auto flex w-full max-w-col flex-col">
+        <div className="relative mb-16 flex min-h-[720px] flex-col overflow-hidden rounded-card-lg bg-surface text-ink md:min-h-[500px] md:flex-row md:items-center">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -bottom-32 -right-24 size-[360px] md:-top-24 md:bottom-auto md:size-[520px]"
+          >
             <div className="absolute inset-0 rounded-full bg-brand-soft" />
-            <div className="absolute inset-12 rounded-full bg-surface/70 shadow-ring" />
-            <div className="absolute inset-28 rounded-full bg-brand-soft shadow-ring" />
-            <div className="absolute inset-44 rounded-full bg-brand" />
+            <div className="absolute inset-8 rounded-full bg-surface/70 shadow-ring md:inset-12" />
+            <div className="absolute inset-20 rounded-full bg-brand-soft shadow-ring md:inset-28" />
+            <div className="absolute inset-32 rounded-full bg-brand md:inset-44" />
           </div>
-          <div className="relative flex max-w-[600px] flex-col items-start gap-8 p-8 md:gap-10 md:p-14">
-            <span aria-hidden="true" className="grid size-[52px] place-items-center rounded-cell bg-brand font-mono text-xl text-brand-ink">
+          <div className="relative flex w-full flex-col items-start gap-8 px-4 pb-4 pt-10 md:w-[504px] md:gap-12 md:px-10 md:py-0">
+            <span
+              aria-hidden="true"
+              className="grid size-[52px] place-items-center rounded-cell bg-brand font-mono text-xl text-brand-ink shadow-2"
+            >
               R
             </span>
-            <div className="flex flex-col gap-4">
-              <h2 className="font-sans text-h2 text-balance text-ink">Know where your money went, without handing it over.</h2>
-              <p className="font-sans text-lg leading-7 text-ink-muted">Join the waitlist with just an email. No account, no card.</p>
+            <div>
+              <h2 className="mb-4 font-sans text-h2 text-balance text-ink max-md:text-[34px] max-md:leading-[37px]">
+                Know where your money went, without handing it over.
+              </h2>
+              <p className="max-w-[320px] font-sans text-lg font-medium leading-[22px] text-ink-muted">
+                Join the waitlist with just an email. No account, no card.
+              </p>
             </div>
-            <div className="flex flex-col gap-4">
-              <Button href="/#waitlist" size="lg" className="self-start">
-                Join waitlist
-              </Button>
-              <StoreBadges />
-            </div>
+            <StoreBadges />
           </div>
         </div>
 
-        <div className="mt-16 flex flex-col justify-between gap-12 md:mt-20 md:flex-row">
+        <div className="mb-16 flex flex-col items-start gap-8 md:flex-row md:justify-between">
           <div className="max-w-[260px]">
-            <p className="flex items-center gap-2 font-sans text-xl font-semibold tracking-[-0.02em]">Raqm</p>
-            <p className="mt-3 font-sans text-sm leading-5 text-inverse-ink/60">
+            <p className="mb-4 flex h-5 items-center font-sans text-xl font-semibold leading-5 tracking-[-0.02em]">Raqm</p>
+            <p className="font-sans text-sm font-medium leading-4 text-inverse-ink/50">
               A private expense tracker that works on your phone.
             </p>
           </div>
-          <nav aria-label="Footer" className="grid grid-cols-2 gap-x-10 gap-y-10 sm:grid-cols-4 md:gap-x-14">
+          <nav aria-label="Footer" className="flex flex-col gap-8 md:flex-row md:gap-[46px]">
             {COLUMNS.map((column) => (
               <div key={column.title}>
-                <h3 className="font-sans text-sm font-semibold text-inverse-ink">{column.title}</h3>
-                <ul className="mt-3 flex flex-col">
+                <h3 className="mb-4 font-sans text-sm font-semibold leading-[17px] text-inverse-ink">{column.title}</h3>
+                <ul className="flex flex-col gap-2">
                   {column.links.map((link) => (
-                    <li key={link.label}>
+                    <li key={link.label} className="py-px">
                       <FooterLink href={link.href}>{link.label}</FooterLink>
                     </li>
                   ))}
@@ -98,22 +101,25 @@ export function Footer() {
           </nav>
         </div>
 
-        <div className="mt-14 flex flex-col gap-3 border-t border-inverse-line pt-6 font-sans text-[13px] text-inverse-ink/50 sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; {new Date().getFullYear()} Raqm. All rights reserved.</p>
-          <ul className="flex gap-5">
-            <li>
-              <Link href="/privacy" className="transition-colors duration-150 hover:text-inverse-ink">
-                Privacy
-              </Link>
-            </li>
-            <li>
-              <Link href="/about" className="transition-colors duration-150 hover:text-inverse-ink">
-                About
-              </Link>
-            </li>
-          </ul>
+        <div className="flex flex-col gap-6 border-t border-inverse-line pt-12 font-sans text-xs font-semibold text-inverse-ink/50 md:flex-row md:items-start md:justify-between">
+          <div className="flex flex-col gap-0.5">
+            <p className="leading-[15px]">&copy; {new Date().getFullYear()} Raqm. All rights reserved.</p>
+            <ul className="flex items-center gap-1.5 leading-[15px]">
+              <li>
+                <Link href="/privacy" className="transition-colors duration-150 hover:text-inverse-ink motion-reduce:transition-none">
+                  Privacy
+                </Link>
+              </li>
+              <li aria-hidden="true">&bull;</li>
+              <li>
+                <Link href="/about" className="transition-colors duration-150 hover:text-inverse-ink motion-reduce:transition-none">
+                  About
+                </Link>
+              </li>
+            </ul>
+          </div>
         </div>
-      </Container>
+      </div>
     </footer>
   );
 }
