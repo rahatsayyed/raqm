@@ -1,12 +1,16 @@
 'use client';
 
 import { useEffect, useId, useMemo, useState } from 'react';
-import { FAQ_CATEGORIES, type FaqCategory } from '@/lib/faq-data';
+import Link from 'next/link';
+import { FAQ_GROUPS, type FaqGroup } from '@/content/faq';
+import { FEATURED_FAQS } from '@/lib/faq-data';
 
 type Variant = 'inverse' | 'light';
 
 type Props = {
-  categories?: FaqCategory[];
+  categories?: FaqGroup[];
+  compact?: boolean;
+  defaultOpenFirst?: boolean;
   variant?: Variant;
   showChips?: boolean;
   showSearch?: boolean;
@@ -40,7 +44,7 @@ const V = {
   },
 } as const;
 
-function Item({ id, q, a, open, onToggle, v }: { id: string; q: string; a: string; open: boolean; onToggle: () => void; v: (typeof V)[Variant] }) {
+function Item({ id, q, a, open, onToggle, v, compact }: { id: string; q: string; a: string; open: boolean; onToggle: () => void; v: (typeof V)[Variant]; compact: boolean }) {
   return (
     <div>
       <h3 className="text-base font-medium">
@@ -50,7 +54,8 @@ function Item({ id, q, a, open, onToggle, v }: { id: string; q: string; a: strin
           aria-expanded={open}
           aria-controls={`${id}-p`}
           onClick={onToggle}
-          className={`group flex w-full items-center gap-3 rounded-tag py-5 text-left text-lead transition-colors duration-250 focus-visible:outline-2 focus-visible:outline-offset-2 ${v.focus} ${open ? v.open : v.closed}`}
+          style={compact ? { paddingBottom: open ? 12 : 20, transition: `padding-bottom 350ms ${EASE}, color 250ms ${EASE}` } : undefined}
+          className={`group flex w-full items-center ${compact ? 'gap-3.5 text-base font-semibold leading-5' : 'gap-3 text-lead'} rounded-tag ${compact ? 'pt-5' : 'py-5'} text-left transition-colors duration-250 motion-reduce:transition-none! focus-visible:outline-2 focus-visible:outline-offset-2 ${v.focus} ${open ? v.open : v.closed}`}
         >
           <span className="relative size-3.5 shrink-0" aria-hidden="true">
             <svg viewBox="0 0 14 14" className="absolute inset-0 transition-[opacity,transform] duration-150 motion-reduce:transition-none" style={{ opacity: open ? 0 : 1, transform: open ? 'scale(.85)' : 'scale(1)' }}>
@@ -67,12 +72,12 @@ function Item({ id, q, a, open, onToggle, v }: { id: string; q: string; a: strin
         id={`${id}-p`}
         role="region"
         aria-labelledby={`${id}-t`}
-        className="grid motion-reduce:transition-none"
+        className="grid motion-reduce:transition-none!"
         style={{ gridTemplateRows: open ? '1fr' : '0fr', transition: `grid-template-rows 350ms ${EASE}` }}
       >
         <div className="min-h-0 overflow-hidden" inert={!open}>
           <p
-            className={`pb-6 pl-[26px] pr-2 text-base leading-6 motion-reduce:transition-none ${v.body}`}
+            className={`${compact ? 'pb-5 pl-7 pt-0 font-medium leading-5' : 'pb-6 pl-[26px] pr-2 leading-6'} text-base motion-reduce:transition-none! ${v.body}`}
             style={{ opacity: open ? 1 : 0, transform: open ? 'none' : 'translateY(-6px)', transition: `opacity 300ms ${EASE} 50ms, transform 300ms ${EASE} 50ms` }}
           >
             {a}
@@ -83,13 +88,13 @@ function Item({ id, q, a, open, onToggle, v }: { id: string; q: string; a: strin
   );
 }
 
-export function FaqAccordion({ categories = FAQ_CATEGORIES, variant = 'inverse', showChips = false, showSearch = false, className }: Props) {
+export function FaqAccordion({ categories = FAQ_GROUPS, variant = 'inverse', showChips = false, showSearch = false, compact = false, defaultOpenFirst = false, className }: Props) {
   const v = V[variant];
   const uid = useId();
   const [cat, setCat] = useState('all');
   const [raw, setRaw] = useState('');
   const [query, setQuery] = useState('');
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(defaultOpenFirst ? 'first' : null);
 
   useEffect(() => {
     const t = setTimeout(() => setQuery(raw.trim().toLowerCase()), 160);
@@ -135,10 +140,11 @@ export function FaqAccordion({ categories = FAQ_CATEGORIES, variant = 'inverse',
       <div role="list">
         {items.map((it, i) => {
           const id = `${uid}-${it.key}`;
+          const isOpen = openId === id || (openId === 'first' && i === 0);
           return (
             <div role="listitem" key={it.key}>
               {i > 0 && <div className={`h-px ${v.divider}`} />}
-              <Item id={id} q={it.q} a={it.a} open={openId === id} onToggle={() => setOpenId(openId === id ? null : id)} v={v} />
+              <Item id={id} q={it.q} a={it.a} open={isOpen} onToggle={() => setOpenId(isOpen ? null : id)} v={v} compact={compact} />
             </div>
           );
         })}
@@ -150,14 +156,22 @@ export function FaqAccordion({ categories = FAQ_CATEGORIES, variant = 'inverse',
 
 export function FaqSection() {
   return (
-    <section id="faq" aria-labelledby="faq-heading" className="px-4 py-section sm:px-6">
-      <div className="mx-auto max-w-wide rounded-card-lg bg-inverse px-6 py-14 sm:px-12 sm:py-20">
-        <div className="mx-auto max-w-col">
-          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-inverse-ink/50">Questions</p>
-          <h2 id="faq-heading" className="mb-10 text-balance text-h2 text-inverse-ink sm:mb-12">
-            Straight answers, nothing hidden
+    <section id="faq" aria-labelledby="faq-heading" className="bg-inverse px-4 py-section sm:px-6">
+      <div className="mx-auto grid max-w-col gap-[18px] lg:grid-cols-[430px_minmax(0,1fr)] lg:gap-10">
+        <div className="pt-3.5">
+          <p className="mb-4 text-lg font-semibold leading-[22px] text-inverse-ink/60">FAQ</p>
+          <h2 id="faq-heading" className="text-balance text-[2.125rem] font-medium leading-[2.375rem] tracking-[-0.01em] text-inverse-ink lg:text-4xl lg:leading-10">
+            Some frequently asked questions.
           </h2>
-          <FaqAccordion variant="inverse" showChips />
+        </div>
+        <div className="-mt-1.5">
+          <FaqAccordion variant="inverse" categories={[{ id: 'featured', label: 'Featured', items: FEATURED_FAQS }]} compact defaultOpenFirst />
+          <Link
+            href="/faq"
+            className="mt-5 inline-block text-sm font-semibold leading-[18px] tracking-[-0.01em] text-inverse-ink underline decoration-inverse-ink/30 decoration-2 underline-offset-4 transition-colors duration-150 hover:decoration-inverse-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-inverse-ink motion-reduce:transition-none"
+          >
+            See all questions
+          </Link>
         </div>
       </div>
     </section>

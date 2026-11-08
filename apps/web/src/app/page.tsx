@@ -22,8 +22,8 @@ export default function HomePage() {
       <FeatureCells />
       <BillSection />
       <ComparisonSection />
-      <FaqSection />
       <WaitlistSection />
+      <FaqSection />
     </main>
   );
 }
