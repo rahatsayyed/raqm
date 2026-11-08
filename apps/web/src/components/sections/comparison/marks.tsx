@@ -21,7 +21,7 @@ const GLYPH = 'size-4 shrink-0';
 
 export function RowIcon({ name }: { name: IconName }) {
   return (
-    <span aria-hidden="true" className="flex h-[1lh] shrink-0 items-center text-ink-subtle max-sm:hidden">
+    <span aria-hidden="true" className="flex h-[1lh] shrink-0 items-center text-ink-subtle">
       <svg viewBox="0 0 24 24" className={GLYPH} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d={ICONS[name]} />
       </svg>
@@ -57,26 +57,23 @@ function Dash() {
   );
 }
 
-const SHORT: Record<string, { full: string; short: string }> = {
-  yes: { full: 'Yes', short: 'Yes' },
-  no: { full: 'Not yet', short: 'No' },
-  limit: { full: 'Varies by app', short: 'Varies' },
+const SHORT: Record<string, { full: string }> = {
+  yes: { full: 'Yes' },
+  no: { full: 'Not yet' },
+  limit: { full: 'Varies by app' },
 };
 
 function Label({ value }: { value: string }): ReactNode {
   const known = SHORT[value];
   if (!known) return <span className="min-w-0 break-words">{value}</span>;
   return (
-    <>
-      <span className="min-w-0 max-[399px]:sr-only sm:hidden">{known.short}</span>
-      <span className="hidden min-w-0 sm:inline">{known.full}</span>
-    </>
+    <span className="min-w-0">{known.full}</span>
   );
 }
 
 export function RaqmValue({ value }: { value: CellValue }) {
   return (
-    <span className="flex items-start gap-1.5 min-[400px]:gap-2.5">
+    <span className="flex items-start gap-2.5">
       <Check />
       <Label value={value} />
     </span>
@@ -86,7 +83,7 @@ export function RaqmValue({ value }: { value: CellValue }) {
 export function OtherValue({ value }: { value: CellValue }) {
   const known = SHORT[value];
   return (
-    <span className="flex items-start gap-1.5 min-[400px]:gap-2">
+    <span className="flex items-start gap-2">
       {value === 'yes' ? <Check /> : known && <Dash />}
       <Label value={value} />
     </span>

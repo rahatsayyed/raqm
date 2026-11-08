@@ -11,7 +11,13 @@ import { HOME_ROWS } from '@/content/comparison';
 gsap.registerPlugin(ScrollTrigger);
 
 export type { CellValue, IconName };
-export type ComparisonRow = { feature: string; other: CellValue; raqm: CellValue; note?: string; icon?: IconName };
+export type ComparisonRow = {
+  feature: string;
+  other: CellValue;
+  raqm: CellValue;
+  note?: string;
+  icon?: IconName;
+};
 
 type Props = {
   rows?: ComparisonRow[];
@@ -22,21 +28,18 @@ type Props = {
   className?: string;
 };
 
-const WIDE = 'sm:grid-cols-[minmax(0,1fr)_220px_140px] md:grid-cols-[minmax(0,1fr)_280px_168px] lg:grid-cols-[minmax(0,1fr)_316px_188px]';
-const COLS_MARKS = `grid-cols-[minmax(0,1fr)_84px_60px] min-[400px]:grid-cols-[minmax(0,1fr)_100px_76px] ${WIDE}`;
-const COLS_TEXT = `grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_minmax(0,1fr)] ${WIDE}`;
-const isMark = (v: CellValue) => v === 'yes' || v === 'no' || v === 'limit';
-const F_PAD = 'pl-2.5 pr-1.5 sm:pl-3.5 sm:pr-2';
-const R_PAD = 'px-2.5 sm:px-4 lg:px-5';
-const O_PAD = 'px-2 sm:px-3.5';
-const TEXT = 'text-xs leading-4 min-[400px]:text-[13px] sm:text-[15px] sm:leading-5 lg:text-base font-medium tracking-[-0.01em]';
-const TITLE = 'text-sm font-semibold leading-[18px] tracking-[-0.01em] sm:text-base sm:leading-5 lg:text-lg lg:leading-[22px]';
+const COLS = 'grid-cols-[minmax(0,1fr)_280px_168px] lg:grid-cols-[minmax(0,1fr)_316px_188px]';
+const F_PAD = 'pl-3.5 pr-2';
+const R_PAD = 'px-4 lg:px-5';
+const O_PAD = 'px-3.5';
+const TEXT = 'text-base leading-5 font-medium tracking-[-0.01em]';
+const TITLE = 'text-base font-semibold leading-5 tracking-[-0.01em] lg:text-lg lg:leading-[22px]';
 
 function Logo() {
   return (
     <span
       aria-hidden="true"
-      className="grid size-6 shrink-0 place-items-center rounded-tag bg-brand font-mono text-[13px] leading-none text-brand-ink sm:size-8 sm:text-base lg:size-[39px] lg:text-xl"
+      className="grid size-8 shrink-0 place-items-center rounded-tag bg-brand font-mono text-base leading-none text-brand-ink lg:size-[39px] lg:text-xl"
     >
       R
     </span>
@@ -45,23 +48,15 @@ function Logo() {
 
 function AppGlyph() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="size-6 shrink-0 text-ink-subtle max-[399px]:hidden sm:size-7" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="size-7 shrink-0 text-ink-subtle" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round">
       <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
       <path d="M9 9h.01M15 9h.01M9 15h.01M15 15h.01" strokeLinecap="round" strokeWidth="2.5" />
     </svg>
   );
 }
 
-export function ComparisonCard({
-  rows = HOME_ROWS,
-  otherLabel = 'Other apps',
-  raqmLabel = 'Raqm',
-  raqmBadge = 'On-device',
-  featureLabel = 'Features',
-  className = '',
-}: Props) {
+export function ComparisonCard({ rows = HOME_ROWS, otherLabel = 'Other apps', raqmLabel = 'Raqm', raqmBadge = 'On-device', featureLabel = 'Features', className = '' }: Props) {
   const ref = useRef<HTMLDivElement>(null);
-  const cols = rows.every((r) => isMark(r.raqm) && isMark(r.other)) ? COLS_MARKS : COLS_TEXT;
   const last = rows.length + 1;
   const footer = rows.length + 2;
 
@@ -86,12 +81,18 @@ export function ComparisonCard({
   );
 
   return (
-    <div className={`rounded-container bg-surface p-1.5 shadow-1 ${className}`}>
+    <div
+      role="region"
+      tabIndex={0}
+      aria-label="Comparison table, scroll sideways"
+      className={`-my-4 -mr-4 overflow-x-auto overscroll-x-contain py-4 pr-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] [scrollbar-color:var(--color-line)_transparent] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:-mr-6 sm:pr-6 lg:mr-0 lg:pr-0 ${className}`}
+    >
+    <div className="min-w-[766px] rounded-container bg-surface p-1.5 shadow-1">
       <div
         ref={ref}
         role="table"
         aria-label={`${raqmLabel} compared with ${otherLabel}`}
-        className={`relative grid gap-x-1.5 ${cols}`}
+        className={`relative grid gap-x-1.5 ${COLS}`}
         style={{ gridTemplateRows: `repeat(${rows.length + 2}, auto)` }}
       >
         <div aria-hidden="true" className="col-start-2 rounded-cell bg-inverse" style={{ gridRow: `1 / ${rows.length + 3}` }}>
@@ -103,22 +104,21 @@ export function ComparisonCard({
 
         <div role="row" className="contents">
           <div role="columnheader" className={`relative z-10 col-start-1 flex min-h-[84px] items-center py-5 ${F_PAD}`} style={{ gridRow: 1 }}>
-            <span className="text-sm font-semibold leading-[18px] tracking-[-0.01em] text-ink sm:text-base sm:leading-5">{featureLabel}</span>
+            <span className="text-base font-semibold leading-5 tracking-[-0.01em] text-ink">{featureLabel}</span>
           </div>
           <div role="columnheader" className={`relative z-10 col-start-2 flex min-h-[84px] items-center justify-between gap-4 py-5 ${R_PAD}`} style={{ gridRow: 1 }}>
-            <span className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <span className="flex min-w-0 items-center gap-3">
               <Logo />
               <span className={`${TITLE} text-inverse-ink`}>{raqmLabel}</span>
             </span>
-            <span className="inline-flex h-6 shrink-0 items-center self-start rounded-pill bg-inverse-ink/30 px-2 text-xs font-semibold leading-[14px] tracking-[-0.01em] text-inverse-ink max-md:hidden">
+            <span className="inline-flex h-6 shrink-0 items-center self-start rounded-pill bg-inverse-ink/30 px-2 text-xs font-semibold leading-[14px] tracking-[-0.01em] text-inverse-ink">
               {raqmBadge}
             </span>
           </div>
           <div role="columnheader" className={`relative z-10 col-start-3 flex min-h-[84px] items-center gap-2 py-5 ${O_PAD}`} style={{ gridRow: 1 }}>
             <AppGlyph />
             <span className={`${TITLE} min-w-0 text-ink`}>
-              <span className="min-[400px]:hidden">Others</span>
-              <span className="max-[399px]:hidden">{otherLabel}</span>
+              {otherLabel}
             </span>
           </div>
         </div>
@@ -154,11 +154,12 @@ export function ComparisonCard({
           <div role="cell" className="relative z-10 col-start-2 flex items-start py-5" style={{ gridRow: footer }}>
             <div className={`w-full ${R_PAD}`}>
               <WaitlistButton />
-              <p className="mt-2.5 text-center text-xs font-semibold leading-4 tracking-[-0.01em] text-inverse-ink/70 max-[479px]:hidden">Android and iPhone coming soon</p>
+              <p className="mt-2.5 text-center text-xs font-semibold leading-4 tracking-[-0.01em] text-inverse-ink/70">Android and iPhone coming soon</p>
             </div>
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

@@ -16,10 +16,9 @@ export function WaitlistButton() {
           scrollToHash('#waitlist');
         }
       }}
-      className="flex h-10 w-full items-center justify-center rounded-pill bg-inverse-ink px-3 text-sm font-semibold tracking-[-0.01em] text-inverse transition-[opacity,transform] duration-150 ease-out hover:opacity-90 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none motion-reduce:active:scale-100 min-[400px]:h-12 min-[400px]:px-4 lg:text-base"
+      className="flex h-12 w-full items-center justify-center rounded-pill bg-inverse-ink px-4 text-sm font-semibold tracking-[-0.01em] text-inverse transition-[opacity,transform] duration-150 ease-out hover:opacity-90 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none motion-reduce:active:scale-100 lg:text-base"
     >
-      <span className="min-[400px]:hidden">Join</span>
-      <span className="max-[399px]:hidden">Join the waitlist</span>
+      Join the waitlist
     </Link>
   );
 }
