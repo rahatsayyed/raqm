@@ -18,13 +18,13 @@ const CELLS = {
 
 type Id = keyof typeof CELLS;
 
-const home = (id: Id, feature: string): ComparisonRow => ({ feature, icon: CELLS[id].icon, raqm: CELLS[id].raqm, other: CELLS[id].otherMark });
+const home = (id: Id, feature: string, raqm?: string): ComparisonRow => ({ feature, icon: CELLS[id].icon, raqm: raqm ?? CELLS[id].raqm, other: CELLS[id].otherMark });
 const free = (id: Id, feature: string): ComparisonRow => ({ feature, icon: CELLS[id].icon, raqm: CELLS[id].raqm, other: CELLS[id].other });
 
 export const HOME_ROWS: ComparisonRow[] = [
   home('data', 'Your data stays on your phone'),
-  home('account', 'No account or sign-up needed'),
-  home('bank', 'No bank login or linking'),
+  home('account', 'No account or sign-up needed', 'No sign-up, ever'),
+  home('bank', 'No bank login or linking', 'No bank login'),
   home('offline', 'Works offline'),
   home('sms', 'Reads bank SMS automatically (Android)'),
   home('widget', 'Home-screen widgets (Android)'),
