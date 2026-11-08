@@ -6,6 +6,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { OtherValue, RaqmValue, RowIcon, type CellValue, type IconName } from './comparison/marks';
 import { WaitlistButton } from './comparison/WaitlistButton';
+import { ScrollHint } from './comparison/ScrollHint';
 import { HOME_ROWS } from '@/content/comparison';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -57,6 +58,7 @@ function AppGlyph() {
 
 export function ComparisonCard({ rows = HOME_ROWS, otherLabel = 'Other apps', raqmLabel = 'Raqm', raqmBadge = 'On-device', featureLabel = 'Features', className = '' }: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
   const last = rows.length + 1;
   const footer = rows.length + 2;
 
@@ -82,10 +84,11 @@ export function ComparisonCard({ rows = HOME_ROWS, otherLabel = 'Other apps', ra
 
   return (
     <div
+      ref={scroller}
       role="region"
       tabIndex={0}
       aria-label="Comparison table, scroll sideways"
-      className={`-my-4 -mr-4 overflow-x-auto overscroll-x-contain py-4 pr-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] [scrollbar-color:var(--color-line)_transparent] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:-mr-6 sm:pr-6 lg:mr-0 lg:pr-0 ${className}`}
+      className={`-mt-4 -mr-4 -mb-12 overflow-x-auto overscroll-x-contain pt-4 pr-4 pb-12 lg:-my-4 lg:py-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] [scrollbar-color:var(--color-line)_transparent] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:-mr-6 sm:pr-6 lg:mr-0 lg:pr-0 ${className}`}
     >
     <div className="min-w-[766px] rounded-container bg-surface p-1.5 shadow-1">
       <div
@@ -160,6 +163,7 @@ export function ComparisonCard({ rows = HOME_ROWS, otherLabel = 'Other apps', ra
         </div>
       </div>
     </div>
+    <ScrollHint scrollerRef={scroller} />
     </div>
   );
 }
