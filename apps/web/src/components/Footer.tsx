@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { StoreBadges } from './content/StoreBadge';
+import { StoreBadgesWithQr } from './AppStoreBadges';
 
 const COLUMNS = [
   {
@@ -68,13 +68,21 @@ export function Footer() {
                 Join the waitlist with just an email. No account, no card.
               </p>
             </div>
-            <StoreBadges />
+            <StoreBadgesWithQr align="start" className="w-full" />
           </div>
         </div>
 
         <div className="mb-16 flex flex-col items-start gap-8 md:flex-row md:justify-between">
           <div className="max-w-[260px]">
-            <p className="mb-4 flex h-5 items-center font-sans text-xl font-semibold leading-5 tracking-[-0.02em]">Raqm</p>
+            <p className="mb-4 flex h-6 items-center gap-2.5 font-sans text-xl font-semibold leading-5 tracking-[-0.02em]">
+              <span
+                aria-hidden="true"
+                className="grid size-7 place-items-center rounded-tag bg-brand font-mono text-sm leading-none text-brand-ink"
+              >
+                R
+              </span>
+              Raqm
+            </p>
             <p className="font-sans text-sm font-medium leading-4 text-inverse-ink/50">
               A private expense tracker that works on your phone.
             </p>

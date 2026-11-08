@@ -8,12 +8,17 @@ const SCAN_STEPS = [
 
 const BLURB = 'Download Raqm and let it sort every rupee for you.';
 
-function BadgeWithQr({ store }: { store: StoreId }) {
+type Align = 'center' | 'start';
+type Placement = 'top' | 'bottom';
+
+function BadgeWithQr({ store, align, placement }: { store: StoreId; align: Align; placement: Placement }) {
+  const anchor = align === 'center' ? 'left-1/2 w-80 max-w-[calc(100vw-2rem)] -translate-x-1/2' : 'left-0 w-[min(20rem,100%)]';
+  const side = placement === 'top' ? 'bottom-full pb-3' : 'top-full pt-3';
   return (
-    <div className="group relative inline-flex">
+    <div className={`group inline-flex ${align === 'center' ? 'relative' : ''}`}>
       <StoreBadge store={store} />
 
-      <div className="pointer-events-none absolute bottom-full left-1/2 z-10 w-80 -translate-x-1/2 pb-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+      <div className={`pointer-events-none absolute z-10 ${anchor} ${side} opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100`}>
         <div className="rounded-container border border-line bg-surface p-2 text-left shadow-3">
           <div className="flex items-start gap-4 rounded-cell bg-surface-sunken p-1">
             <div className="flex-1 p-2">
@@ -42,11 +47,25 @@ function BadgeWithQr({ store }: { store: StoreId }) {
   );
 }
 
-export function AppStoreBadges() {
+export function StoreBadgesWithQr({
+  className = '',
+  align = 'center',
+  placement = 'top',
+}: {
+  className?: string;
+  align?: Align;
+  placement?: Placement;
+}) {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-2.5">
-      <BadgeWithQr store="android" />
-      <BadgeWithQr store="ios" />
+    <div
+      className={`flex flex-wrap items-center gap-2.5 ${align === 'center' ? 'justify-center' : 'relative'} ${className}`}
+    >
+      <BadgeWithQr store="android" align={align} placement={placement} />
+      <BadgeWithQr store="ios" align={align} placement={placement} />
     </div>
   );
+}
+
+export function AppStoreBadges() {
+  return <StoreBadgesWithQr />;
 }

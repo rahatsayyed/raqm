@@ -6,6 +6,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { OtherValue, RaqmValue, RowIcon, type CellValue, type IconName } from './comparison/marks';
 import { WaitlistButton } from './comparison/WaitlistButton';
+import { HOME_ROWS } from '@/content/comparison';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -20,17 +21,6 @@ type Props = {
   featureLabel?: string;
   className?: string;
 };
-
-export const DEFAULT_COMPARISON_ROWS: ComparisonRow[] = [
-  { feature: 'Your data stays on your phone', icon: 'phone', other: 'limit', raqm: 'yes' },
-  { feature: 'No account or sign-up needed', icon: 'user', other: 'limit', raqm: 'yes' },
-  { feature: 'No bank login or linking', icon: 'bank', other: 'limit', raqm: 'yes' },
-  { feature: 'Works offline', icon: 'wifi', other: 'limit', raqm: 'yes' },
-  { feature: 'Reads bank SMS automatically (Android)', icon: 'sms', other: 'limit', raqm: 'yes' },
-  { feature: 'Home-screen widgets (Android)', icon: 'widget', other: 'limit', raqm: 'yes' },
-  { feature: 'Export your transactions', icon: 'export', other: 'limit', raqm: 'yes' },
-  { feature: 'Budgets and analytics', icon: 'chart', other: 'yes', raqm: 'yes' },
-];
 
 const WIDE = 'sm:grid-cols-[minmax(0,1fr)_220px_140px] md:grid-cols-[minmax(0,1fr)_280px_168px] lg:grid-cols-[minmax(0,1fr)_316px_188px]';
 const COLS_MARKS = `grid-cols-[minmax(0,1fr)_84px_60px] min-[400px]:grid-cols-[minmax(0,1fr)_100px_76px] ${WIDE}`;
@@ -63,7 +53,7 @@ function AppGlyph() {
 }
 
 export function ComparisonCard({
-  rows = DEFAULT_COMPARISON_ROWS,
+  rows = HOME_ROWS,
   otherLabel = 'Other apps',
   raqmLabel = 'Raqm',
   raqmBadge = 'On-device',
@@ -137,11 +127,11 @@ export function ComparisonCard({
           const row = i + 2;
           const top = i === 0 ? 'pt-5' : '';
           const bottom = i === rows.length - 1 ? 'pb-5' : 'pb-[18px]';
-          const cell = `relative z-10 flex min-h-5 items-center ${top} ${bottom} ${TEXT}`;
+          const cell = `relative z-10 flex min-h-5 items-start ${top} ${bottom} ${TEXT}`;
           return (
             <div role="row" key={r.feature} className="contents">
               <div role="rowheader" className={`${cell} col-start-1 ${F_PAD}`} style={{ gridRow: row }}>
-                <span data-cell className="flex items-center gap-2 text-ink-muted">
+                <span data-cell className="flex items-start gap-2 text-ink-muted">
                   {r.icon && <RowIcon name={r.icon} />}
                   <span className="min-w-0 break-words">{r.feature}</span>
                 </span>

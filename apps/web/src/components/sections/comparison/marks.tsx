@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 export type CellValue = 'yes' | 'no' | 'limit' | string;
-export type IconName = 'phone' | 'user' | 'bank' | 'wifi' | 'sms' | 'widget' | 'export' | 'chart';
+export type IconName = 'phone' | 'user' | 'bank' | 'wifi' | 'sms' | 'widget' | 'export' | 'chart' | 'transfer' | 'refund' | 'trash';
 
 const ICONS: Record<IconName, string> = {
   phone: 'M8 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM11 18h2',
@@ -12,31 +12,48 @@ const ICONS: Record<IconName, string> = {
   widget: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   export: 'M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19h14',
   chart: 'M5 20V10M12 20V4M19 20v-7',
+  transfer: 'M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4',
+  refund: 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3',
+  trash: 'M5 7h14M10 4h4M7 7l1 13h8l1-13M10 11v5M14 11v5',
 };
 
 const GLYPH = 'size-4 shrink-0';
 
 export function RowIcon({ name }: { name: IconName }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className={`${GLYPH} text-ink-subtle max-sm:hidden`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d={ICONS[name]} />
-    </svg>
+    <span aria-hidden="true" className="flex h-[1lh] shrink-0 items-center text-ink-subtle max-sm:hidden">
+      <svg viewBox="0 0 24 24" className={GLYPH} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d={ICONS[name]} />
+      </svg>
+    </span>
+  );
+}
+
+function Mark({ children }: { children: ReactNode }) {
+  return (
+    <span aria-hidden="true" className="flex h-[1lh] shrink-0 items-center">
+      {children}
+    </span>
   );
 }
 
 function Check() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className={GLYPH} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4.5 12.5l4.5 4.5L19.5 7" />
-    </svg>
+    <Mark>
+      <svg viewBox="0 0 24 24" className={GLYPH} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4.5 12.5l4.5 4.5L19.5 7" />
+      </svg>
+    </Mark>
   );
 }
 
 function Dash() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className={`${GLYPH} text-ink-subtle`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <path d="M6 12h12" />
-    </svg>
+    <Mark>
+      <svg viewBox="0 0 24 24" className={`${GLYPH} text-ink-subtle`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <path d="M6 12h12" />
+      </svg>
+    </Mark>
   );
 }
 
@@ -59,7 +76,7 @@ function Label({ value }: { value: string }): ReactNode {
 
 export function RaqmValue({ value }: { value: CellValue }) {
   return (
-    <span className="flex items-center gap-1.5 min-[400px]:gap-2.5">
+    <span className="flex items-start gap-1.5 min-[400px]:gap-2.5">
       <Check />
       <Label value={value} />
     </span>
@@ -69,7 +86,7 @@ export function RaqmValue({ value }: { value: CellValue }) {
 export function OtherValue({ value }: { value: CellValue }) {
   const known = SHORT[value];
   return (
-    <span className="flex items-center gap-1.5 min-[400px]:gap-2">
+    <span className="flex items-start gap-1.5 min-[400px]:gap-2">
       {value === 'yes' ? <Check /> : known && <Dash />}
       <Label value={value} />
     </span>
