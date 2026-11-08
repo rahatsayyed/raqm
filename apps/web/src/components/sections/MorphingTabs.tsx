@@ -82,7 +82,7 @@ export function MorphingTabs({
   const shownFirst = useRef(true);
   const activeRef = useRef(active);
   const tweenRef = useRef<gsap.core.Tween | null>(null);
-  const flags = useRef({ hover: false, focus: false, visible: true });
+  const flags = useRef({ visible: true });
 
   useEffect(() => {
     activeRef.current = active;
@@ -217,8 +217,7 @@ export function MorphingTabs({
   );
 
   const syncPlay = useCallback(() => {
-    const f = flags.current;
-    tweenRef.current?.paused(f.hover || f.focus || !f.visible);
+    tweenRef.current?.paused(!flags.current.visible);
   }, []);
 
   useGSAP(
@@ -273,19 +272,10 @@ export function MorphingTabs({
     tabRefs.current[next]?.focus();
   };
 
-  const setFlag = (k: 'hover' | 'focus', v: boolean) => {
-    flags.current[k] = v;
-    syncPlay();
-  };
-
   return (
     <div
       ref={wrapRef}
       className={cn('relative overflow-hidden rounded-card-lg bg-inverse pb-4 text-inverse-ink', className)}
-      onPointerEnter={() => setFlag('hover', true)}
-      onPointerLeave={() => setFlag('hover', false)}
-      onFocus={() => setFlag('focus', true)}
-      onBlur={() => setFlag('focus', false)}
     >
       <svg
         ref={svgRef}

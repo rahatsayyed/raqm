@@ -69,12 +69,12 @@ export function FeatureCells({ className }: { className?: string }) {
         <p className="mt-3 text-lead text-ink-muted">Twelve quiet details that keep your numbers honest.</p>
       </div>
       <div ref={ref} className="mx-auto max-w-col rounded-container bg-surface p-1.5 shadow-2 shadow-ring">
-        <ul className="grid auto-rows-fr gap-0.5 overflow-hidden rounded-cell sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid auto-rows-fr gap-0.5 overflow-hidden rounded-t-cell sm:grid-cols-2 lg:grid-cols-3">
           {featureCells.map((c) => (
             <li
               key={c.title}
               data-cell
-              className="flex min-h-[150px] flex-col gap-3 bg-surface-sunken p-5 transition-colors duration-200 [@media(hover:hover)]:hover:bg-[color-mix(in_oklab,var(--color-surface-sunken)_86%,var(--color-ink))]"
+              className="flex min-h-[150px] flex-col gap-4 justify-between bg-surface-sunken p-5 transition-colors duration-200 [@media(hover:hover)]:hover:bg-[color-mix(in_oklab,var(--color-surface-sunken)_86%,var(--color-ink))]"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -97,7 +97,7 @@ export function FeatureCells({ className }: { className?: string }) {
         </ul>
         <div
           data-widgets
-          className="mt-0.5 grid items-end overflow-hidden rounded-cell bg-surface-sunken lg:h-[340px] lg:grid-cols-2"
+          className="mt-0.5 grid items-end overflow-hidden rounded-b-cell bg-surface-sunken lg:h-[340px] lg:grid-cols-2"
         >
           <div className="relative flex items-end self-stretch px-6 pt-6">
             <div
@@ -130,6 +130,17 @@ export function FeatureCells({ className }: { className?: string }) {
             </div>
           </div>
         </div>
+        <p className="flex items-center justify-center gap-2 px-4 pt-3.5 pb-2 text-center text-xs leading-4 font-medium text-ink-muted">
+          <span className="flex items-center gap-1" aria-hidden="true">
+            <svg viewBox="0 0 24 24" className="size-3.5" fill="currentColor">
+              <path d="M5 3.4v17.2c0 .6.7 1 1.2.6l14.3-8.6c.5-.3.5-.9 0-1.2L6.2 2.8C5.7 2.4 5 2.8 5 3.4z" />
+            </svg>
+            <svg viewBox="0 0 384 512" className="size-3" fill="currentColor">
+              <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-14.9 0-49.3-19.7-76-19.7C60.6 141 0 184.8 0 273.5c0 26.2 4.8 53.3 14.4 81.2 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-57.7-90-57.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+            </svg>
+          </span>
+          <span>Android first. iPhone is in progress.</span>
+        </p>
       </div>
     </section>
   );
