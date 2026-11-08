@@ -40,36 +40,36 @@ function StoreBadge({
         event.preventDefault();
         scrollToHash('#waitlist');
       }}
-      className="group relative inline-flex focus-visible:outline-none"
+      className="group relative inline-flex rounded-pill focus-visible:outline-none"
     >
-      <span className="inline-flex items-center gap-3 rounded-md bg-ink-headline px-5 py-3 text-surface transition-transform duration-150 active:scale-[0.98] group-focus-visible:outline group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-accent-primary">
+      <span className="inline-flex h-[54px] items-center gap-3 rounded-pill bg-inverse px-6 text-inverse-ink transition-[opacity,transform] duration-200 ease-out group-hover:opacity-85 active:scale-[0.98] group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-brand">
         <Icon className="size-5 shrink-0" />
         <span className="flex flex-col items-start leading-tight">
-          <span className="font-body text-[10px] text-[color-mix(in_srgb,var(--color-surface)_75%,transparent)]">
+          <span className="text-[10px] text-inverse-ink/70">
             {storeLabel}
           </span>
-          <span className="font-body text-sm font-semibold">{storeName}</span>
+          <span className="text-sm font-semibold">{storeName}</span>
         </span>
       </span>
 
       <div className="pointer-events-none absolute bottom-full left-1/2 z-10 w-80 -translate-x-1/2 pb-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100">
-        <div className="rounded-outer border border-border-subtle bg-surface p-2 text-left shadow-lg">
-          <div className="flex items-start gap-4 bg-gray-100 rounded-sm p-1">
+        <div className="rounded-container bg-surface p-2 text-left border border-line shadow-3">
+          <div className="flex items-start gap-4 rounded-cell bg-surface-sunken p-1">
             <div className="flex-1 p-2">
-              <Icon className="mb-2 size-4 shrink-0 text-ink-headline" />
-              <p className="font-body text-sm text-ink-body">{blurb}</p>
+              <Icon className="mb-2 size-4 shrink-0 text-ink" />
+              <p className="text-sm text-ink-muted">{blurb}</p>
             </div>
-            <div className="flex size-28 shrink-0 items-center justify-center rounded-inner border-2 border-gray-50 bg-surface-raised font-body text-[10px] text-ink-label">
+            <div className="flex size-28 shrink-0 items-center justify-center rounded-chip border border-line bg-surface text-[10px] text-ink-subtle">
               QR code
             </div>
           </div>
-          <ol className="flex flex-col px-3 mt-3">
+          <ol className="flex flex-col mt-3 px-3">
             {SCAN_STEPS.map((step) => (
               <li
                 key={step.number}
-                className="flex items-end font-medium gap-2 border-t border-border-subtle py-2 font-body text-xs text-ink-body first:border-t-0 first:pt-0"
+                className="flex items-end font-medium gap-2 border-t border-line py-2 text-xs text-ink-muted first:border-t-0 first:pt-0"
               >
-                <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-border-subtle text-[10px] text-ink-label">
+                <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-pill border border-line text-[10px] text-ink-subtle">
                   {step.number}
                 </span>
                 <span>{step.text}</span>

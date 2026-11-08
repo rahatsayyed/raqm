@@ -207,44 +207,77 @@ export function getFeatureBySlug(slug: string): FeatureDeepDive | undefined {
   return featureDeepDives.find((feature) => feature.slug === slug);
 }
 
-export const FEATURE_CARD_VARIANTS = [
-  {
-    isDark: false,
-    bandBg: 'bg-surface border-border-subtle',
-    title: 'text-ink-headline',
-    body: 'text-ink-body',
-    cta: 'text-accent-primary',
-    badgeLive: 'bg-accent-deep text-accent-primary',
-    badgeMuted: 'bg-surface text-ink-label',
-    panel: 'glass-card',
-  },
-  {
-    isDark: false,
-    bandBg: 'bg-surface-raised border-border-subtle',
-    title: 'text-ink-headline',
-    body: 'text-ink-body',
-    cta: 'text-accent-primary',
-    badgeLive: 'bg-accent-deep text-accent-primary',
-    badgeMuted: 'bg-surface text-ink-label',
-    panel: 'glass-card',
-  },
-  {
-    isDark: true,
-    bandBg: 'bg-ink-headline border-ink-headline',
-    title: 'text-surface',
-    body: 'text-[color-mix(in_srgb,var(--color-surface)_72%,transparent)]',
-    cta: 'text-accent-deep',
-    badgeLive: 'bg-accent-deep text-accent-primary',
-    badgeMuted: 'bg-[color-mix(in_srgb,var(--color-surface)_12%,transparent)] text-[color-mix(in_srgb,var(--color-surface)_75%,transparent)]',
-    panel: 'rounded-outer border border-[color-mix(in_srgb,var(--color-surface)_16%,transparent)] bg-[color-mix(in_srgb,var(--color-surface)_8%,transparent)]',
-  },
-] as const;
-
-export function getFeatureCardVariant(slug: string) {
-  const index = featureDeepDives.findIndex((feature) => feature.slug === slug);
-  return FEATURE_CARD_VARIANTS[index % FEATURE_CARD_VARIANTS.length];
+export interface ShowcaseTab {
+  id: 'capture' | 'categorize' | 'budgets' | 'insights';
+  label: string;
+  title: string;
+  body: string;
+  points: string[];
 }
 
-export function featureViewTransitionName(slug: string) {
-  return `feature-card-${slug}`;
+export const showcaseTabs: ShowcaseTab[] = [
+  {
+    id: 'capture',
+    label: 'Capture',
+    title: 'The SMS arrives. The entry is already there.',
+    body: 'Raqm reads your bank texts on the phone itself, so every spend lands in your timeline without you typing a thing.',
+    points: ['120+ bank SMS formats', 'PDF statements for quiet accounts', 'Cash added in a few taps'],
+  },
+  {
+    id: 'categorize',
+    label: 'Sort',
+    title: 'Fix a merchant once. It stays fixed.',
+    body: 'Rename a merchant or change its category one time and every future transaction follows. Splits and groups keep odd purchases honest.',
+    points: ['Merchant rules that stick', 'Split one bill across categories', 'Self-transfers kept out of spend'],
+  },
+  {
+    id: 'budgets',
+    label: 'Budgets',
+    title: 'A daily number you can actually trust.',
+    body: 'Safe-to-spend accounts for what is left in the period and what is still budgeted, and your month starts on your pay day.',
+    points: ['Nudge at 80% of a budget', 'Custom pay-cycle day', 'Optional rollover per category'],
+  },
+  {
+    id: 'insights',
+    label: 'Insights',
+    title: 'See where the month went, calmly.',
+    body: 'Category totals net out refunds, subscriptions get flagged, and nothing is shown to shame you. Just what already happened.',
+    points: ['Refunds netted against the spend', 'Recurring charges flagged', 'Month-over-month at a glance'],
+  },
+];
+
+export interface ProcessStep {
+  title: string;
+  body: string;
 }
+
+export const processSteps: ProcessStep[] = [
+  { title: 'Get the SMS', body: 'Every debit and credit already lands as a text. Raqm just listens.' },
+  { title: 'Let Raqm read it', body: 'Amount, merchant and category are read on your phone. Nothing leaves it.' },
+  { title: 'See your month', body: 'A clean timeline and budgets that are already up to date.' },
+];
+
+export type CellIcon =
+  | 'bank' | 'file' | 'cash' | 'tag' | 'split' | 'swap'
+  | 'refund' | 'gauge' | 'bell' | 'calendar' | 'repeat' | 'list';
+
+export interface FeatureCell {
+  icon: CellIcon;
+  title: string;
+  body: string;
+}
+
+export const featureCells: FeatureCell[] = [
+  { icon: 'bank', title: '120+ banks', body: 'Indian and international SMS formats, parsed the moment they arrive.' },
+  { icon: 'file', title: 'PDF statements', body: 'Upload a bank or UPI statement for accounts that never text you.' },
+  { icon: 'cash', title: 'Cash, logged fast', body: 'Add a cash expense in a few taps and it sits beside everything else.' },
+  { icon: 'tag', title: 'Merchant renames', body: 'Fix one name and every future transaction from that merchant follows.' },
+  { icon: 'split', title: 'Split a purchase', body: 'Divide one transaction across categories, or group small ones into one entry.' },
+  { icon: 'swap', title: 'Self-transfers', body: 'Matching debit and credit between your accounts stay out of spending.' },
+  { icon: 'refund', title: 'Refunds netted', body: 'A matching credit is linked back, so totals show what you kept.' },
+  { icon: 'gauge', title: 'Safe-to-spend', body: 'A daily number that knows what is left and what is still budgeted.' },
+  { icon: 'bell', title: 'Early alerts', body: 'A nudge at 80% of a category budget, and again when it is passed.' },
+  { icon: 'calendar', title: 'Pay-cycle months', body: 'Start your month on the 25th, the 1st, or whenever you get paid.' },
+  { icon: 'repeat', title: 'Subscriptions', body: 'Same merchant, same amount, every month, flagged for you.' },
+  { icon: 'list', title: 'Grocery lists', body: 'Named lists with a running total and the last price you paid.' },
+];

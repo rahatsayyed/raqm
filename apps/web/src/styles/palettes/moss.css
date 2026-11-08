@@ -1,0 +1,20 @@
+:root[data-palette="moss"] {
+  --canvas: #F6F5F0;
+  --surface: #FFFFFF;
+  --surface-sunken: #EDEBE3;
+  --ink: #12140F;
+  --ink-muted: #4B4F46;
+  --ink-subtle: #5F6358;
+  --line: rgb(18 20 15 / 0.09);
+  --ring: #2E5D4E;
+  --brand: #2E5D4E;
+  --brand-ink: #FFFFFF;
+  --brand-soft: #DCE9E3;
+  --inverse: #101A15;
+  --inverse-ink: #F2F4EF;
+  --inverse-line: rgb(255 255 255 / 0.12);
+  --positive: #2B7A4B;
+  --warning: #8F5E1A;
+  --negative: #B4483A;
+  --shadow-ink: 18 20 15;
+}

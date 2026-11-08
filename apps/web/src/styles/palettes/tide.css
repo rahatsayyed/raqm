@@ -1,0 +1,20 @@
+:root[data-palette="tide"] {
+  --canvas: #F5F7FA;
+  --surface: #FFFFFF;
+  --surface-sunken: #E8EDF3;
+  --ink: #0E1622;
+  --ink-muted: #475569;
+  --ink-subtle: #586579;
+  --line: rgb(14 22 34 / 0.09);
+  --ring: #23408E;
+  --brand: #23408E;
+  --brand-ink: #FFFFFF;
+  --brand-soft: #DEE6F7;
+  --inverse: #0B1530;
+  --inverse-ink: #EEF2FB;
+  --inverse-line: rgb(255 255 255 / 0.12);
+  --positive: #1F7A52;
+  --warning: #8F5E1A;
+  --negative: #B83D3D;
+  --shadow-ink: 14 22 34;
+}

@@ -1,0 +1,20 @@
+:root[data-palette="clay"] {
+  --canvas: #F8F4EE;
+  --surface: #FFFDFA;
+  --surface-sunken: #EFE7DC;
+  --ink: #1F1712;
+  --ink-muted: #5A4C42;
+  --ink-subtle: #6C5E52;
+  --line: rgb(31 23 18 / 0.10);
+  --ring: #A94A29;
+  --brand: #A94A29;
+  --brand-ink: #FFFFFF;
+  --brand-soft: #F6E1D6;
+  --inverse: #2A1A12;
+  --inverse-ink: #F7EFE8;
+  --inverse-line: rgb(255 255 255 / 0.12);
+  --positive: #3F7A4A;
+  --warning: #8F5E1A;
+  --negative: #B3322B;
+  --shadow-ink: 31 23 18;
+}

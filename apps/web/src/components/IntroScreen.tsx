@@ -89,24 +89,24 @@ export function IntroScreen() {
     <div ref={rootRef} aria-hidden="true" className="intro-overlay pointer-events-none fixed inset-0">
       <div
         ref={topRef}
-        className="absolute inset-x-0 top-0 flex h-[calc(50dvh+1px)] items-end justify-center bg-accent-primary pb-3"
+        className="absolute inset-x-0 top-0 flex h-[calc(50dvh+1px)] items-end justify-center bg-brand pb-3"
       >
         <div className="overflow-hidden px-4 pb-[0.2em]">
           <span
             ref={wordRef}
             translate="no"
             style={{ visibility: 'hidden' }}
-            className="block font-display text-[clamp(4.5rem,22vw,11rem)] leading-[1.05] text-accent-deep"
+            className="block font-sans font-medium tracking-tight text-[clamp(4.5rem,22vw,11rem)] leading-[1.05] text-brand-ink"
           >
             Raqm
           </span>
         </div>
       </div>
-      <div ref={bottomRef} className="absolute inset-x-0 bottom-0 h-[calc(50dvh+1px)] bg-accent-primary" />
+      <div ref={bottomRef} className="absolute inset-x-0 bottom-0 h-[calc(50dvh+1px)] bg-brand" />
       <span
         ref={lineRef}
         style={{ transform: 'scaleX(0)' }}
-        className="absolute left-6 right-6 top-1/2 h-px origin-center bg-accent-deep/60 sm:left-12 sm:right-12"
+        className="absolute left-6 right-6 top-1/2 h-px origin-center bg-brand-ink/60 sm:left-12 sm:right-12"
       />
     </div>
   );

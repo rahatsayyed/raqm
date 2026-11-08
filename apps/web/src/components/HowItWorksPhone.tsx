@@ -59,7 +59,7 @@ const KEY_ROWS = [
 
 function StatusBar({ time }: { time: string }) {
   return (
-    <div className="relative z-10 flex shrink-0 items-center justify-between px-5 pt-3 font-mono text-[10px] text-ink-headline">
+    <div className="relative z-10 flex shrink-0 items-center justify-between px-5 pt-3 font-mono text-[10px] text-ink">
       <span>{time}</span>
       <span className="flex items-center gap-1.5">
         <svg viewBox="0 0 16 12" className="h-2.5 w-3.5" aria-hidden="true">
@@ -79,8 +79,8 @@ function ProgressDots({ dotsRef }: { dotsRef: React.RefObject<HTMLDivElement | n
   return (
     <div ref={dotsRef} className="relative z-10 mt-2 flex shrink-0 gap-1 px-5">
       {STEPS.map((step) => (
-        <span key={step.number} data-dot className="h-[3px] flex-1 rounded-full bg-border-subtle">
-          <span data-dot-fill className="block h-full w-0 rounded-full bg-accent-primary" />
+        <span key={step.number} data-dot className="h-[3px] flex-1 rounded-pill bg-line">
+          <span data-dot-fill className="block h-full w-0 rounded-pill bg-brand" />
         </span>
       ))}
     </div>
@@ -89,7 +89,7 @@ function ProgressDots({ dotsRef }: { dotsRef: React.RefObject<HTMLDivElement | n
 
 function MessageMark() {
   return (
-    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-surface-raised text-ink-label">
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-tag bg-surface-sunken text-ink-subtle">
       <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
         <path
           d="M4 5h16v11H9l-4 4V5Z"
@@ -106,7 +106,7 @@ function MessageMark() {
 
 function SpinnerIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 animate-spin text-accent-primary" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-4 w-4 animate-spin text-brand" aria-hidden="true">
       <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2" />
       <path d="M21 12a9 9 0 0 0-9-9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
@@ -116,7 +116,7 @@ function SpinnerIcon() {
 function CategoryIcon({ kind }: { kind: SampleCategory }) {
   const common = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   return (
-    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-deep text-accent-primary">
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-pill bg-brand-soft text-brand">
       <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
         {kind === 'food' && <path {...common} d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 21V3c-2 1.5-3 4-3 7v3h3" />}
         {kind === 'transport' && <path {...common} d="M5 16V11l2-5h10l2 5v5H5ZM5 11h14M8 19v-3M16 19v-3" />}
@@ -127,7 +127,7 @@ function CategoryIcon({ kind }: { kind: SampleCategory }) {
   );
 }
 
-function PinIcon({ className = 'text-accent-primary' }: { className?: string }) {
+function PinIcon({ className = 'text-brand' }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={`h-4 w-4 shrink-0 ${className}`} aria-hidden="true">
       <path
@@ -144,7 +144,7 @@ function PinIcon({ className = 'text-accent-primary' }: { className?: string }) 
 
 function NoteIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-ink-label" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-ink-subtle" aria-hidden="true">
       <path
         d="M6 3h9l3 3v15H6V3Z M15 3v3h3"
         fill="none"
@@ -188,10 +188,10 @@ function MiniKeyboard({
   keyboardRef: React.RefObject<HTMLDivElement | null>;
   registerKeyRef: (char: string, el: HTMLSpanElement | null) => void;
 }) {
-  const keyClass = 'flex h-6 flex-1 items-center justify-center rounded-[4px] bg-surface font-body text-[9px] lowercase text-ink-body';
+  const keyClass = 'flex h-6 flex-1 items-center justify-center rounded-tag bg-surface font-sans text-[9px] lowercase text-ink-muted';
   return (
-    <div ref={keyboardRef} className="absolute inset-x-0 bottom-0 z-20 bg-surface-raised border-t border-border-subtle pb-2 pt-0">
-      <div className="flex items-center divide-x divide-border-subtle border-b border-border-subtle px-2 py-1 font-body text-[9px] text-ink-label">
+    <div ref={keyboardRef} className="absolute inset-x-0 bottom-0 z-20 bg-surface-sunken border-t border-line pb-2 pt-0">
+      <div className="flex items-center divide-x divide-line border-b border-line px-2 py-1 font-sans text-[9px] text-ink-subtle">
         <span className="flex-1 px-1 text-center">Team</span>
         <span className="flex-1 px-1 text-center">Lunch</span>
         <span className="flex-1 px-1 text-center">Standup</span>
@@ -212,16 +212,16 @@ function MiniKeyboard({
           </div>
         ))}
         <div className="flex justify-center gap-[3px]">
-          <span className="flex h-6 flex-[1.3] items-center justify-center rounded-[4px] bg-surface font-body text-[9px] text-ink-label">⇧</span>
-          <span className="flex h-6 flex-[1.3] items-center justify-center rounded-[4px] bg-surface font-body text-[9px] text-ink-label">⌫</span>
+          <span className="flex h-6 flex-[1.3] items-center justify-center rounded-tag bg-surface font-sans text-[9px] text-ink-subtle">⇧</span>
+          <span className="flex h-6 flex-[1.3] items-center justify-center rounded-tag bg-surface font-sans text-[9px] text-ink-subtle">⌫</span>
         </div>
         <div className="mt-1 flex justify-center gap-[3px]">
-          <span className="flex h-6 flex-1 items-center justify-center rounded-[4px] bg-surface font-body text-[9px] text-ink-label">,</span>
-          <span ref={(el) => registerKeyRef(' ', el)} className="flex h-6 flex-[5] items-center justify-center rounded-[4px] bg-surface" style={{ transformOrigin: 'center' }}>
-            <span className="font-body text-[8px] text-ink-label">English (India)</span>
+          <span className="flex h-6 flex-1 items-center justify-center rounded-tag bg-surface font-sans text-[9px] text-ink-subtle">,</span>
+          <span ref={(el) => registerKeyRef(' ', el)} className="flex h-6 flex-[5] items-center justify-center rounded-tag bg-surface" style={{ transformOrigin: 'center' }}>
+            <span className="font-sans text-[8px] text-ink-subtle">English (India)</span>
           </span>
-          <span className="flex h-6 flex-1 items-center justify-center rounded-[4px] bg-surface font-body text-[9px] text-ink-label">.</span>
-          <span className="flex h-6 flex-[1.3] items-center justify-center rounded-[4px] bg-accent-primary text-surface">
+          <span className="flex h-6 flex-1 items-center justify-center rounded-tag bg-surface font-sans text-[9px] text-ink-subtle">.</span>
+          <span className="flex h-6 flex-[1.3] items-center justify-center rounded-tag bg-brand text-brand-ink">
             <EnterIcon />
           </span>
         </div>
@@ -307,8 +307,7 @@ export function HowItWorksPhone() {
         const pillItems = captions.querySelectorAll<HTMLElement>('[data-pill]');
         const calloutEls = callouts.querySelectorAll<HTMLElement>('[data-callout]');
 
-        gsap.set(bannerRef.current, { yPercent: -160, opacity: 0 });
-        gsap.set(detailRef.current, { yPercent: 100, opacity: 0 });
+                gsap.set(detailRef.current, { yPercent: 100, opacity: 0 });
         gsap.set(dashboardRef.current, { xPercent: 100, opacity: 0 });
         gsap.set(scanRef.current, { opacity: 0 });
         gsap.set(scanLabelRef.current, { opacity: 0, y: 6 });
@@ -349,19 +348,9 @@ export function HowItWorksPhone() {
         };
         setStep(0);
 
-        gsap.from(headingRef.current, {
-          opacity: 0,
-          y: 24,
-          duration: 0.6,
-          ease: 'power2.out',
-          scrollTrigger: { trigger: headingRef.current, start: 'top 85%', once: true },
-        });
-
         const tl = gsap.timeline({ paused: true });
 
-        // SMS pops onto the lock screen like a real heads-up notification
-        tl.to(bannerRef.current, { yPercent: 0, opacity: 1, duration: 0.22, ease: 'back.out(1.7)' });
-        tl.to({}, { duration: 0.28 });
+        tl.to({}, { duration: 0.5 });
 
         // 01 -> 02: scan reveal
         tl.addLabel('a1')
@@ -401,7 +390,7 @@ export function HowItWorksPhone() {
           const keyEl = keyElRefs.current[ch];
           if (!keyEl) return;
           const at = typingStart + (i / Math.max(1, chars.length - 1)) * typingDuration;
-          tl.to(keyEl, { scale: 0.85, backgroundColor: 'var(--color-accent-deep)', duration: 0.035, yoyo: true, repeat: 1 }, at);
+          tl.to(keyEl, { scale: 0.85, backgroundColor: 'var(--color-brand-soft)', duration: 0.035, yoyo: true, repeat: 1 }, at);
         });
 
         tl.to(keyboardRef.current, { yPercent: 100, duration: 0.28, ease: 'power2.in' }, '+=0.05')
@@ -436,7 +425,11 @@ export function HowItWorksPhone() {
         let staticMode = false;
 
         const update = () => {
-          if (staticMode) return;
+          if (staticMode) {
+            // Reset once the phone top drops to mid-viewport (~50% of it still visible).
+            if (fit.getBoundingClientRect().top >= window.innerHeight * 0.5) exitStatic();
+            return;
+          }
           const vh = window.innerHeight;
           const range = Math.max(1, wrap.offsetHeight - vh);
           const off = -wrap.getBoundingClientRect().top;
@@ -444,16 +437,17 @@ export function HowItWorksPhone() {
           if (p <= 0) completed = false;
           const engage = clamp01(p / 0.03);
           const exit = clamp01((p - 0.93) / 0.06);
-          const overlayIn = clamp01((off + 0.0866 * vh) / (0.0926 * vh));
+          const overlayIn = clamp01(off / (0.25 * vh));
           const overlayOut = 1 - clamp01((p - 0.9279) / 0.0463);
           const scale = frameScale() * (0.93 + 0.07 * engage - 0.1 * exit);
           const y = -12 + 12 * engage + 48 * exit;
 
           fit.style.transform = `translateY(${y}px) scale(${scale})`;
-          overlay.style.opacity = String(0.7 * Math.min(overlayIn, overlayOut));
+          overlay.style.opacity = String(0.4 * Math.min(overlayIn, overlayOut));
           const uiOpacity = String(engage * (1 - exit));
           captions.style.opacity = uiOpacity;
           callouts.style.opacity = uiOpacity;
+          if (headingRef.current) headingRef.current.style.opacity = uiOpacity;
           tl.time(timeForProgress(clamp01(p)), false);
           setStep(stepForProgress(clamp01(p)));
         };
@@ -484,6 +478,7 @@ export function HowItWorksPhone() {
           overlay.style.opacity = '0';
           captions.style.opacity = '0';
           callouts.style.opacity = '0';
+          if (headingRef.current) headingRef.current.style.opacity = '0';
           tl.time(tl.duration(), false);
           setStep(STEPS.length - 1);
 
@@ -524,6 +519,7 @@ export function HowItWorksPhone() {
           tl.kill();
           fit.style.transform = '';
           overlay.style.opacity = '';
+          if (headingRef.current) headingRef.current.style.opacity = '';
         };
       });
 
@@ -541,22 +537,22 @@ export function HowItWorksPhone() {
 
   return (
     <div className="w-full">
-      <div ref={headingRef} className="mx-auto w-full max-w-6xl px-4 pb-10 pt-16 sm:pb-12 sm:pt-24">
-        <span className="mb-3 block font-mono text-xs text-ink-label opacity-60">01 / 05</span>
-        <h2 className="mb-4 text-balance font-display text-4xl text-ink-headline sm:text-5xl">How it works</h2>
-        <p className="max-w-xl font-body text-base text-ink-body sm:text-lg">
-          One SMS, quietly upgraded. Follow a single spend from notification to dashboard.
-        </p>
-      </div>
-
-      <div ref={wrapRef} className="relative h-[320vh] sm:h-[460vh] motion-reduce:h-auto">
+      <div ref={wrapRef} className="pointer-events-none relative h-[320vh] sm:h-[460vh] motion-reduce:h-auto sm:motion-reduce:h-auto">
         <div ref={stickyRef} className="sticky top-0 flex h-[100dvh] items-center justify-center overflow-hidden motion-reduce:static motion-reduce:h-auto motion-reduce:overflow-visible motion-reduce:py-12">
-          <div ref={overlayRef} aria-hidden="true" className="absolute inset-0 z-10 bg-ink-headline opacity-0 motion-reduce:hidden" />
+          <div
+            ref={headingRef}
+            className="absolute left-1/2 top-5 z-30 -translate-x-1/2 motion-reduce:static motion-reduce:mb-8 motion-reduce:translate-x-0 motion-reduce:text-center"
+          >
+            <h2 className="whitespace-nowrap rounded-pill bg-surface px-4 py-2 text-sm font-medium text-ink shadow-ring motion-reduce:inline-block">
+              How it works <span className="font-normal text-ink-subtle">· one SMS, quietly upgraded</span>
+            </h2>
+          </div>
+          <div ref={overlayRef} aria-hidden="true" className="absolute inset-0 z-10 bg-inverse opacity-0 motion-reduce:hidden" />
 
           <div ref={fitRef} className="relative z-20 flex flex-col items-center motion-reduce:[zoom:1.2]">
             <div className="relative">
-              <div className="h-[520px] w-[264px] rounded-[2rem] bg-ink-headline p-[2px] shadow-[0_30px_60px_-20px_rgba(20,20,15,0.35)]">
-                <div className="flex h-full flex-col overflow-hidden rounded-[1.9rem] border border-border-subtle bg-surface shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+              <div className="h-[520px] w-[264px] rounded-card-lg bg-ink p-[2px] shadow-4 ring-1 ring-inverse-line">
+                <div className="flex h-full flex-col overflow-hidden rounded-[calc(var(--radius-card-lg)-2px)] bg-canvas">
                   <StatusBar time={statusTime} />
                   <ProgressDots dotsRef={dotsRef} />
 
@@ -565,38 +561,38 @@ export function HowItWorksPhone() {
                     <div ref={screenARef} className="absolute inset-0 flex flex-col items-center overflow-hidden px-3 pt-3">
                       <div
                         aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,color-mix(in_srgb,var(--color-accent-primary)_10%,transparent),transparent_60%)]"
+                        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,color-mix(in_srgb,var(--color-brand)_10%,transparent),transparent_60%)]"
                       />
                       <div
                         ref={bannerRef}
-                        className="absolute inset-x-3 top-3 rounded-[14px] border border-border-subtle bg-surface p-2.5 shadow-[0_10px_30px_-12px_rgba(20,20,15,0.3)]"
+                        className="absolute inset-x-3 top-3 rounded-cell border border-line bg-surface p-2.5 shadow-3"
                       >
                         <div ref={plainRef} className="relative flex items-start gap-2">
                           <MessageMark />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="truncate font-body text-xs font-semibold text-ink-headline">{tx.source}</span>
-                              <span className="shrink-0 font-body text-[9px] text-ink-label">now</span>
+                              <span className="truncate font-sans text-xs font-semibold text-ink">{tx.source}</span>
+                              <span className="shrink-0 font-sans text-[9px] text-ink-subtle">now</span>
                             </div>
-                            <p className="mt-0.5 font-mono text-[9px] leading-snug text-ink-body">
+                            <p className="mt-0.5 font-mono text-[9px] leading-snug text-ink-muted">
                               Rs.420.00 debited from A/c XX2461 on {smsDate} to VPA swiggy@ybl. Avl Bal Rs.24,560.00
                             </p>
                           </div>
                         </div>
 
-                        <div ref={scanRef} className="pointer-events-none absolute inset-0 overflow-hidden rounded-[14px]">
-                          <span className="absolute inset-0 animate-pulse rounded-[14px] shadow-[0_0_0_1.5px_color-mix(in_srgb,var(--color-accent-primary)_45%,transparent),0_0_22px_color-mix(in_srgb,var(--color-accent-primary)_25%,transparent)]" />
-                          <div ref={scanLineRef} className="absolute inset-x-0 h-1/2 bg-gradient-to-b from-transparent via-accent-primary/50 to-transparent" />
+                        <div ref={scanRef} className="pointer-events-none absolute inset-0 overflow-hidden rounded-cell">
+                          <span className="absolute inset-0 animate-pulse rounded-cell shadow-[0_0_0_1.5px_color-mix(in_srgb,var(--color-brand)_45%,transparent),0_0_22px_color-mix(in_srgb,var(--color-brand)_25%,transparent)]" />
+                          <div ref={scanLineRef} className="absolute inset-x-0 h-1/2 bg-gradient-to-b from-transparent via-brand/50 to-transparent" />
                         </div>
 
                         <div ref={upgradedRef} className="absolute inset-2.5 flex items-center gap-2">
                           <CategoryIcon kind={tx.kind} />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="truncate font-body text-xs font-semibold text-ink-headline">{tx.merchant}</span>
-                              <span className="shrink-0 font-mono text-xs font-semibold text-ink-headline">{stripSign(tx.amount)}</span>
+                              <span className="truncate font-sans text-xs font-semibold text-ink">{tx.merchant}</span>
+                              <span className="shrink-0 font-mono text-xs font-semibold text-ink">{stripSign(tx.amount)}</span>
                             </div>
-                            <div className="mt-0.5 truncate font-body text-[10px] text-ink-label">
+                            <div className="mt-0.5 truncate font-sans text-[10px] text-ink-subtle">
                               {tx.source} · {tx.category} · {bodyTime}
                             </div>
                           </div>
@@ -604,13 +600,13 @@ export function HowItWorksPhone() {
                       </div>
 
                       <div ref={scanLabelRef} className="absolute inset-x-0 top-[8.5rem] flex flex-col items-center gap-2">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-deep">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-pill bg-brand-soft">
                           <SpinnerIcon />
                         </span>
-                        <span className="font-body text-[11px] font-medium text-ink-label">Parsing on-device…</span>
+                        <span className="font-sans text-[11px] font-medium text-ink-subtle">Parsing on-device…</span>
                       </div>
 
-                      <p className="pointer-events-none absolute bottom-4 left-0 right-0 px-6 text-center font-body text-[9px] leading-snug text-ink-label/70">
+                      <p className="pointer-events-none absolute bottom-4 left-0 right-0 px-6 text-center font-sans text-[9px] leading-snug text-ink-subtle/70">
                         Notifications keep coming through as normal. Raqm just quietly upgrades them.
                       </p>
                     </div>
@@ -618,57 +614,57 @@ export function HowItWorksPhone() {
                     {/* Screen B: transaction detail */}
                     <div ref={detailRef} className="absolute inset-0 flex flex-col px-3 pt-1">
                       <div className="flex items-center gap-2">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-raised text-ink-label">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-pill bg-surface-sunken text-ink-subtle">
                           <svg viewBox="0 0 24 24" className="h-3 w-3" aria-hidden="true">
                             <path d="m15 6-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         </span>
-                        <span className="font-body text-[10px] font-medium uppercase tracking-wider text-ink-label">Transaction</span>
+                        <span className="font-sans text-[10px] font-medium uppercase tracking-wider text-ink-subtle">Transaction</span>
                       </div>
 
                       <div className="mt-3 flex items-center gap-2">
                         <CategoryIcon kind={tx.kind} />
                         <div className="min-w-0 flex-1">
-                          <div className="truncate font-body text-sm font-semibold text-ink-headline">{tx.merchant}</div>
-                          <span className="mt-0.5 inline-block w-fit rounded-full bg-accent-deep px-2 py-0.5 font-body text-[9px] font-medium text-accent-primary">
+                          <div className="truncate font-sans text-sm font-semibold text-ink">{tx.merchant}</div>
+                          <span className="mt-0.5 inline-block w-fit rounded-pill bg-brand-soft px-2 py-0.5 font-sans text-[9px] font-medium text-brand">
                             {tx.category}
                           </span>
                         </div>
-                        <span className="shrink-0 font-mono text-sm font-semibold text-ink-headline">{tx.amount}</span>
+                        <span className="shrink-0 font-mono text-sm font-semibold text-ink">{tx.amount}</span>
                       </div>
 
-                      <div className="my-3 h-px bg-border-subtle" />
+                      <div className="my-3 h-px bg-line" />
 
                       <div ref={noteBoxRef} className="flex flex-col gap-2">
-                        <div className="flex items-start gap-2 rounded-[12px] bg-surface px-3 py-2.5">
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-raised">
+                        <div className="flex items-start gap-2 rounded-chip bg-surface px-3 py-2.5">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-pill bg-surface-sunken">
                             <NoteIcon />
                           </span>
                           <div className="min-w-0 flex-1 pt-0.5">
-                            <div className="font-body text-[9px] uppercase tracking-wider text-ink-label">Note</div>
+                            <div className="font-sans text-[9px] uppercase tracking-wider text-ink-subtle">Note</div>
                             <div className="mt-0.5 flex items-center">
                               <span ref={noteTextWrapRef} className="inline-block overflow-hidden whitespace-nowrap align-bottom">
-                                <span className="font-body text-[11px] text-ink-body">{NOTE_TEXT}</span>
+                                <span className="font-sans text-[11px] text-ink-muted">{NOTE_TEXT}</span>
                               </span>
-                              <span className="ml-px inline-block h-3 w-[1.5px] shrink-0 animate-pulse bg-accent-primary align-bottom" />
+                              <span className="ml-px inline-block h-3 w-[1.5px] shrink-0 animate-pulse bg-brand align-bottom" />
                             </div>
                           </div>
                         </div>
-                        <span ref={tagRef} className="w-fit rounded-full bg-surface-raised px-2.5 py-1 font-body text-[9px] font-medium text-ink-body">
+                        <span ref={tagRef} className="w-fit rounded-pill bg-surface-sunken px-2.5 py-1 font-sans text-[9px] font-medium text-ink-muted">
                           #Work
                         </span>
                       </div>
 
-                      <div ref={locationRowRef} className="relative mt-2 h-[8.5rem] overflow-hidden rounded-[12px]">
+                      <div ref={locationRowRef} className="relative mt-2 h-[8.5rem] overflow-hidden rounded-chip">
                         <img src={MAP_IMAGE_URL} alt="Map of Koramangala, Bengaluru" loading="lazy" className="h-full w-full object-cover" />
-                        <div className="pointer-events-none absolute inset-0" style={{ boxShadow: 'inset 0 0 22px 6px rgba(0,0,0,0.35)' }} />
-                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
-                        <span className="absolute left-1/2 top-[46%] flex h-6 w-6 -translate-x-1/2 -translate-y-full items-center justify-center rounded-full bg-surface shadow-[0_2px_8px_rgba(20,20,15,0.35)]">
-                          <PinIcon className="h-3.5 w-3.5 text-accent-primary" />
+                        <div className="pointer-events-none absolute inset-0" style={{ boxShadow: "inset 0 0 22px 6px rgb(var(--shadow-ink) / 0.35)" }} />
+                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-inverse/65 via-inverse/5 to-transparent" />
+                        <span className="absolute left-1/2 top-[46%] flex h-6 w-6 -translate-x-1/2 -translate-y-full items-center justify-center rounded-pill bg-surface shadow-3">
+                          <PinIcon className="h-3.5 w-3.5 text-brand" />
                         </span>
                         <div className="absolute bottom-1.5 left-3 right-3">
-                          <div className="font-body text-[8px] uppercase tracking-wider text-surface/70">Location</div>
-                          <div className="truncate font-body text-[11px] font-medium text-surface">Koramangala, Bengaluru</div>
+                          <div className="font-sans text-[8px] uppercase tracking-wider text-inverse-ink/70">Location</div>
+                          <div className="truncate font-sans text-[11px] font-medium text-inverse-ink">Koramangala, Bengaluru</div>
                         </div>
                       </div>
                     </div>
@@ -682,22 +678,22 @@ export function HowItWorksPhone() {
 
                     {/* Screen C: dashboard glimpse */}
                     <div ref={dashboardRef} className="absolute inset-0 flex flex-col px-3 pt-0.5">
-                      <div className="relative overflow-hidden rounded-[14px] glass-card p-3">
+                      <div className="relative overflow-hidden rounded-cell border border-line bg-surface p-3 shadow-1">
                         <div
                           aria-hidden="true"
-                          className="pointer-events-none absolute -right-6 -top-10 h-28 w-32 rounded-full bg-accent-primary/15 blur-2xl"
+                          className="pointer-events-none absolute -right-6 -top-10 h-28 w-32 rounded-pill bg-brand/15 blur-2xl"
                         />
-                        <div className="relative flex items-center gap-1 font-body text-[10px] font-medium text-ink-label">
+                        <div className="relative flex items-center gap-1 font-sans text-[10px] font-medium text-ink-subtle">
                           {monthName} <ChevronDown />
                         </div>
                         <div className="relative mt-1.5 flex items-center justify-between gap-2">
                           <div className="min-w-0">
-                            <div className="font-mono text-xl font-semibold leading-none tracking-tight text-ink-headline">{d.spent}</div>
-                            <div className="mt-1 font-body text-[10px] text-ink-label">spent this month</div>
+                            <div className="font-mono text-xl font-semibold leading-none tracking-tight text-ink">{d.spent}</div>
+                            <div className="mt-1 font-sans text-[10px] text-ink-subtle">spent this month</div>
                           </div>
                           <div className="relative h-10 w-10 shrink-0">
                             <svg viewBox="0 0 44 44" className="h-10 w-10 -rotate-90" aria-hidden="true">
-                              <circle cx="22" cy="22" r={RING_RADIUS} fill="none" strokeWidth="4" className="stroke-surface-raised" />
+                              <circle cx="22" cy="22" r={RING_RADIUS} fill="none" strokeWidth="4" className="stroke-surface-sunken" />
                               <circle
                                 cx="22"
                                 cy="22"
@@ -705,68 +701,68 @@ export function HowItWorksPhone() {
                                 fill="none"
                                 strokeWidth="4"
                                 strokeLinecap="round"
-                                className="stroke-accent-primary"
+                                className="stroke-brand"
                                 strokeDasharray={RING_CIRCUMFERENCE}
                                 strokeDashoffset={dashOffset}
                               />
                             </svg>
-                            <div className="absolute inset-0 flex items-center justify-center font-mono text-[9px] font-semibold text-ink-headline">
+                            <div className="absolute inset-0 flex items-center justify-center font-mono text-[9px] font-semibold text-ink">
                               {d.usedPct}%
                             </div>
                           </div>
                         </div>
-                        <span className="relative mt-2 inline-flex items-center gap-1 rounded-[8px] bg-accent-deep px-1.5 py-0.5 font-body text-[9px] font-medium text-accent-primary">
+                        <span className="relative mt-2 inline-flex items-center gap-1 rounded-tag bg-brand-soft px-1.5 py-0.5 font-sans text-[9px] font-medium text-brand">
                           <TrendDownIcon />
                           {d.lessThanLastMonth} less than {prevMonthName}
                         </span>
-                        <div className="relative my-2 h-px bg-border-subtle" />
+                        <div className="relative my-2 h-px bg-line" />
                         <div className="relative flex items-stretch gap-3">
                           <div>
-                            <div className="font-body text-[8px] uppercase tracking-wider text-ink-label">Safe to spend today</div>
-                            <div className="mt-0.5 font-mono text-xs font-semibold text-ink-headline">{d.safeToSpendPerDay}</div>
+                            <div className="font-sans text-[8px] uppercase tracking-wider text-ink-subtle">Safe to spend today</div>
+                            <div className="mt-0.5 font-mono text-xs font-semibold text-ink">{d.safeToSpendPerDay}</div>
                           </div>
-                          <span className="w-px bg-border-subtle" />
+                          <span className="w-px bg-line" />
                           <div>
-                            <div className="font-body text-[8px] uppercase tracking-wider text-ink-label">Earned</div>
-                            <div className="mt-0.5 font-mono text-xs font-semibold text-ink-headline">{d.earned}</div>
+                            <div className="font-sans text-[8px] uppercase tracking-wider text-ink-subtle">Earned</div>
+                            <div className="mt-0.5 font-mono text-xs font-semibold text-ink">{d.earned}</div>
                           </div>
                         </div>
                       </div>
 
                       <div className="mt-2 flex items-center justify-between px-0.5">
-                        <span className="font-body text-[11px] font-semibold text-ink-headline">Recent transactions</span>
-                        <span className="font-body text-[10px] font-medium text-accent-primary">See all ›</span>
+                        <span className="font-sans text-[11px] font-semibold text-ink">Recent transactions</span>
+                        <span className="font-sans text-[10px] font-medium text-brand">See all ›</span>
                       </div>
-                      <div className="mt-1 flex flex-col divide-y divide-border-subtle rounded-[12px] bg-surface">
+                      <div className="mt-1 flex flex-col divide-y divide-line rounded-chip bg-surface">
                         {[tx, tx2, tx3].map((row) => (
                           <div key={row.merchant} className="flex items-center gap-2 px-2.5 py-1.5">
                             <CategoryIcon kind={row.kind} />
                             <div className="min-w-0 flex-1">
-                              <div className="truncate font-body text-[11px] font-semibold text-ink-headline">{row.merchant}</div>
-                              <div className="truncate font-body text-[9px] text-ink-label">{row.category}</div>
+                              <div className="truncate font-sans text-[11px] font-semibold text-ink">{row.merchant}</div>
+                              <div className="truncate font-sans text-[9px] text-ink-subtle">{row.category}</div>
                             </div>
-                            <span className="shrink-0 font-mono text-[11px] font-semibold text-ink-headline">{row.amount}</span>
+                            <span className="shrink-0 font-mono text-[11px] font-semibold text-ink">{row.amount}</span>
                           </div>
                         ))}
                       </div>
 
                       <div className="mt-2 flex items-center justify-between px-0.5">
-                        <span className="font-body text-[11px] font-semibold text-ink-headline">Categories</span>
-                        <span className="font-body text-[10px] font-medium text-accent-primary">See all ›</span>
+                        <span className="font-sans text-[11px] font-semibold text-ink">Categories</span>
+                        <span className="font-sans text-[10px] font-medium text-brand">See all ›</span>
                       </div>
                       <div className="mt-1 flex flex-col gap-1.5">
                         {SAMPLE_CATEGORIES.slice(0, 2).map((cat) => (
-                          <div key={cat.name} className="flex items-center gap-2 rounded-[12px] bg-surface px-2.5 py-1.5">
+                          <div key={cat.name} className="flex items-center gap-2 rounded-chip bg-surface px-2.5 py-1.5">
                             <CategoryIcon kind={cat.kind} />
                             <div className="min-w-0 flex-1">
-                              <div className="truncate font-body text-[11px] font-semibold text-ink-headline">{cat.name}</div>
-                              <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-raised">
-                                <div className="h-full rounded-full bg-accent-primary" style={{ width: `${cat.pct}%` }} />
+                              <div className="truncate font-sans text-[11px] font-semibold text-ink">{cat.name}</div>
+                              <div className="mt-1 h-1 overflow-hidden rounded-pill bg-surface-sunken">
+                                <div className="h-full rounded-pill bg-brand" style={{ width: `${cat.pct}%` }} />
                               </div>
                             </div>
                             <div className="shrink-0 text-right">
-                              <div className="font-mono text-[11px] font-semibold text-ink-headline">{cat.spent}</div>
-                              <div className="font-body text-[8px] text-ink-label">of {cat.budget}</div>
+                              <div className="font-mono text-[11px] font-semibold text-ink">{cat.spent}</div>
+                              <div className="font-sans text-[8px] text-ink-subtle">of {cat.budget}</div>
                             </div>
                           </div>
                         ))}
@@ -789,19 +785,19 @@ export function HowItWorksPhone() {
                       className={`pointer-events-none absolute hidden h-[18px] items-center lg:flex ${left ? 'flex-row-reverse' : ''}`}
                       style={{ top: step.y - 9, ...(left ? { right: FRAME_W - step.x } : { left: step.x }) }}
                     >
-                      <span className="h-1 w-1 shrink-0 rounded-full bg-ink-headline" />
+                      <span className="h-1 w-1 shrink-0 rounded-pill bg-ink" />
                       <span
                         className="h-px shrink-0"
                         style={{
                           width: ink + CALLOUT_REACH_PX,
-                          background: `linear-gradient(${dir}, var(--color-ink-headline) ${ink}px, var(--color-surface) ${ink}px)`,
+                          background: `linear-gradient(${dir}, var(--color-ink) ${ink}px, var(--color-inverse-ink) ${ink}px)`,
                         }}
                       />
                       <span className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap ${left ? 'mr-2.5' : 'ml-2.5'}`}>
-                        <span className="flex h-[19px] w-[19px] items-center justify-center rounded-full border border-surface/85 font-mono text-[9px] font-bold text-surface">
+                        <span className="flex h-[19px] w-[19px] items-center justify-center rounded-pill border border-inverse-ink/85 font-mono text-[9px] font-bold text-inverse-ink">
                           {step.number}
                         </span>
-                        <span className="font-body text-[11px] font-medium text-surface">{step.caption}</span>
+                        <span className="font-sans text-[11px] font-medium text-inverse-ink">{step.caption}</span>
                       </span>
                     </div>
                   );
@@ -810,14 +806,14 @@ export function HowItWorksPhone() {
             </div>
 
             <div ref={captionsRef} className="mt-4 flex flex-col items-center lg:hidden motion-reduce:hidden">
-              <span className="h-4 w-px bg-surface/70" />
+              <span className="h-4 w-px bg-inverse-ink/70" />
               <div className="relative mt-2 h-[24px] w-[260px]">
                 {STEPS.map((step) => (
                   <div key={step.number} data-pill className="absolute inset-0 flex items-center justify-center gap-2">
-                    <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-surface/70 font-mono text-[9px] font-bold text-surface">
+                    <span className="flex h-[18px] w-[18px] items-center justify-center rounded-pill border border-inverse-ink/70 font-mono text-[9px] font-bold text-inverse-ink">
                       {step.number}
                     </span>
-                    <span className="font-body text-[12px] font-medium text-surface/90">{step.caption}</span>
+                    <span className="font-sans text-[12px] font-medium text-inverse-ink/90">{step.caption}</span>
                   </div>
                 ))}
               </div>
@@ -825,8 +821,8 @@ export function HowItWorksPhone() {
 
             <ol className="mt-6 hidden w-[264px] flex-col gap-2 motion-reduce:flex">
               {STEPS.map((step) => (
-                <li key={step.number} className="flex items-center gap-2 font-body text-xs font-medium text-ink-headline">
-                  <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-border-subtle font-mono text-[9px] font-bold">
+                <li key={step.number} className="flex items-center gap-2 font-sans text-xs font-medium text-ink">
+                  <span className="flex h-[18px] w-[18px] items-center justify-center rounded-pill border border-line font-mono text-[9px] font-bold">
                     {step.number}
                   </span>
                   {step.caption}

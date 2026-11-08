@@ -1,0 +1,20 @@
+:root[data-palette="graphite"] {
+  --canvas: #F4F4F2;
+  --surface: #FFFFFF;
+  --surface-sunken: #E9E9E6;
+  --ink: #111111;
+  --ink-muted: #484848;
+  --ink-subtle: #606060;
+  --line: rgb(17 17 17 / 0.10);
+  --ring: #C23210;
+  --brand: #C23210;
+  --brand-ink: #FFFFFF;
+  --brand-soft: #FCEAE4;
+  --inverse: #141414;
+  --inverse-ink: #F2F2F0;
+  --inverse-line: rgb(255 255 255 / 0.12);
+  --positive: #2B7A4B;
+  --warning: #8F5E1A;
+  --negative: #B3322B;
+  --shadow-ink: 17 17 17;
+}

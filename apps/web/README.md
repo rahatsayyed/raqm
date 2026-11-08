@@ -5,6 +5,8 @@ finance tracker. Next.js (App Router), Tailwind CSS v4, GSAP + Lenis for
 motion, Supabase for waitlist signups. Design system and content decisions
 are recorded in `DESIGN.md`.
 
+Live site: https://raqm.money (set `NEXT_PUBLIC_SITE_URL` to override).
+
 ## Commands
 
 ```bash

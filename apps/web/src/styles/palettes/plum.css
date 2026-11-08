@@ -1,0 +1,20 @@
+:root[data-palette="plum"] {
+  --canvas: #F8F4F7;
+  --surface: #FFFFFF;
+  --surface-sunken: #EEE6EC;
+  --ink: #1A1019;
+  --ink-muted: #54434F;
+  --ink-subtle: #6D5A68;
+  --line: rgb(26 16 25 / 0.09);
+  --ring: #6B2D5C;
+  --brand: #6B2D5C;
+  --brand-ink: #FFFFFF;
+  --brand-soft: #F0DCEA;
+  --inverse: #25101F;
+  --inverse-ink: #F6EDF4;
+  --inverse-line: rgb(255 255 255 / 0.12);
+  --positive: #2B7A4B;
+  --warning: #8F5E1A;
+  --negative: #B3322B;
+  --shadow-ink: 26 16 25;
+}

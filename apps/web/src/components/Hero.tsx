@@ -7,79 +7,70 @@ import { AppStoreBadges } from './AppStoreBadges';
 import { HeroParallax } from './HeroParallax';
 import { INTRO_REVEAL_EVENT } from './IntroScreen';
 import { TxTicker } from './TxTicker';
+import { HERO_PEEK_PAD } from './heroPeek';
 
 export function Hero() {
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  const lineRef = useRef<HTMLSpanElement>(null);
+  const rootRef = useRef<HTMLElement>(null);
 
-  useGSAP(() => {
-    const title = titleRef.current;
-    const line = lineRef.current;
-    if (!title || !line) return;
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
 
-    const mm = gsap.matchMedia();
+      mm.add('(prefers-reduced-motion: no-preference)', () => {
+        const items = gsap.utils.toArray<HTMLElement>('[data-hero-item]');
+        const introPending = document.documentElement.dataset.intro === 'play';
 
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
-      const restWidth = line.getBoundingClientRect().width;
-      const titleWidth = title.getBoundingClientRect().width;
+        gsap.set(items, { opacity: 0, y: 18 });
+        const tl = gsap
+          .timeline({ paused: introPending, delay: 0.1 })
+          .to(items, { opacity: 1, y: 0, duration: 0.8, ease: 'expo.out', stagger: 0.08, clearProps: 'transform' });
 
-      const introPending = document.documentElement.dataset.intro === 'play';
+        if (!introPending) return;
+        const start = () => tl.play();
+        window.addEventListener(INTRO_REVEAL_EVENT, start, { once: true });
+        const fallback = setTimeout(start, 5000);
+        return () => {
+          window.removeEventListener(INTRO_REVEAL_EVENT, start);
+          clearTimeout(fallback);
+        };
+      });
 
-      gsap.set(line, { width: 2 });
-      const tl = gsap
-        .timeline({ paused: introPending, delay: 0.2, onComplete: () => gsap.set(line, { clearProps: 'width' }) })
-        .to(line, { width: titleWidth, duration: 0.9, ease: 'power2.out' })
-        .to(line, { width: restWidth, duration: 0.8, ease: 'power2.inOut' }, '+=0.1');
-
-      if (!introPending) return;
-      const start = () => tl.play();
-      window.addEventListener(INTRO_REVEAL_EVENT, start, { once: true });
-      const fallback = setTimeout(start, 5000);
-      return () => {
-        window.removeEventListener(INTRO_REVEAL_EVENT, start);
-        clearTimeout(fallback);
-      };
-    });
-
-    return () => mm.revert();
-  });
+      return () => mm.revert();
+    },
+    { scope: rootRef }
+  );
 
   return (
-    <>
-      <section id="hero" className="relative overflow-hidden px-4 pb-16 pt-20 sm:px-6 sm:pb-20 sm:pt-28">
-        <HeroParallax />
-        <div className="relative mx-auto flex max-w-4xl flex-col items-center text-center">
-          <span className="mb-8 inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface/70 px-4 py-2 font-body text-sm text-ink-body">
-            <svg viewBox="0 0 24 24" className="h-4 w-4 text-ink-label" aria-hidden="true">
-              <rect x="7" y="3" width="10" height="18" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
-              <path d="M11 18h2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-             Waitlist is open
-          </span>
-          <h1
-            ref={titleRef}
-            className="font-display text-[3.4rem] leading-[0.95] tracking-tight text-ink-headline sm:text-8xl lg:text-[8.5rem]"
-          >
-            <span className="block">Every spend.</span>
-            <span className="block">Zero typing.</span>
-          </h1>
-          <div aria-hidden="true" className="mt-9 flex gap-4 sm:mt-11 sm:gap-6">
-            <span ref={lineRef} className="h-px w-24 rounded-full bg-black sm:w-36" />
-          </div>
-          <p className="mt-9 max-w-xl font-body text-lg text-ink-body sm:mt-11 sm:text-xl">
-            Type it, say it, snap a statement, or just do nothing - Raqm logs it for you. Nothing ever leaves your
-            phone.
-          </p>
-          <div className="mt-9">
-            <AppStoreBadges />
-          </div>
-          <p className="mt-2 font-body text-sm text-ink-label">
-            <span className="font-mono text-base font-semibold text-accent-primary">120+</span> Indian and international
-            banks supported
-          </p>
+    <section
+      ref={rootRef}
+      id="hero"
+      className={`relative flex min-h-[100dvh] flex-col items-center overflow-hidden px-4 pt-32 sm:px-6 sm:pt-40 ${HERO_PEEK_PAD}`}
+    >
+      <HeroParallax />
+      <div className="relative mx-auto flex max-w-[640px] flex-col items-center text-center">
+        <span
+          data-hero-item
+          className="mb-6 inline-flex items-center gap-2 rounded-pill bg-surface px-4 py-2 text-sm text-ink-muted shadow-ring"
+        >
+          <span className="h-1.5 w-1.5 rounded-pill bg-brand" aria-hidden="true" />
+          Waitlist is open
+        </span>
+        <h1 data-hero-item className="text-balance text-h1 text-ink">
+          Every spend.
+          <br />
+          Zero typing.
+        </h1>
+        <p data-hero-item className="mt-6 max-w-[34rem] text-lead text-ink-muted">
+          Type it, say it, snap a statement, or just do nothing. Raqm logs it for you. Nothing ever leaves your phone.
+        </p>
+        <div data-hero-item className="mt-8">
+          <AppStoreBadges />
         </div>
-      </section>
-      <TxTicker />
-    </>
+        <p data-hero-item className="mt-8 text-sm text-ink-subtle">
+          <span className="font-mono font-medium text-ink">120+</span> Indian and international banks supported
+        </p>
+      </div>
+      <TxTicker className="absolute inset-x-0 bottom-[calc(min(36dvh,340px)-1rem)]" />
+    </section>
   );
 }
