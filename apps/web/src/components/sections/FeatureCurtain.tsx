@@ -30,7 +30,7 @@ const PEOPLE = [
 const FACTS = ['No account or analytics', 'No account', 'Works offline'];
 
 const card = 'flex flex-col rounded-container border border-line bg-surface p-5 shadow-1 text-ink';
-const eyebrow = 'font-mono text-[12px] uppercase tracking-wide opacity-70';
+const eyebrow = 'font-mono text-[12px] uppercase tracking-wide';
 
 function Ring() {
   const r = 34;
@@ -129,14 +129,14 @@ export function FeatureCurtain() {
                 <div className="flex flex-col gap-2">
                   {SMS.map((s) => (
                     <div key={s.merchant} className="flex items-center gap-3 rounded-cell bg-brand-ink/10 px-3 py-2.5">
-                      <span className="rounded-tag bg-brand-ink/15 px-2 py-0.5 font-mono text-[11px]">{s.bank}</span>
+                      <span className="rounded-tag bg-inverse/30 px-2 py-0.5 font-mono text-[11px]">{s.bank}</span>
                       <span className="flex-1 truncate text-[14px]">{s.merchant}</span>
-                      <span className="hidden font-mono text-[11px] opacity-70 sm:inline">{s.cat}</span>
+                      <span className="hidden font-mono text-[11px] opacity-90 sm:inline">{s.cat}</span>
                       <span className="font-mono text-[13px]">{s.amt}</span>
                     </div>
                   ))}
                 </div>
-                <p className="font-mono text-[12px] opacity-80">120+ bank formats, read the moment they arrive</p>
+                <p className="font-mono text-[12px] opacity-90">120+ bank formats, read the moment they arrive</p>
               </div>
 
               <div data-card className={`${card} justify-between gap-4`}>
@@ -205,7 +205,7 @@ export function FeatureCurtain() {
                   <Lock />
                   <div>
                     <p className="text-h3 text-inherit">Private on-device</p>
-                    <p className="mt-1 max-w-[26rem] text-[14px] leading-snug opacity-80">Reading, sorting and totals all happen on your phone. Your SMS and transactions never leave it.</p>
+                    <p className="mt-1 max-w-[26rem] text-[14px] leading-snug opacity-90">Reading, sorting and totals all happen on your phone. Your SMS and transactions never leave it.</p>
                   </div>
                 </div>
                 <ul className="flex flex-wrap gap-2">

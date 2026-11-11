@@ -17,7 +17,7 @@ const RING_RADIUS = 17;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 const dashOffset = RING_CIRCUMFERENCE * (1 - d.usedPct / 100);
 const NOTE_TEXT = 'Team lunch after standup';
-const MAP_IMAGE_URL = '/images/koramangala-map.jpg';
+const MAP_IMAGE_URL = '/images/koramangala-map.webp';
 
 function formatStatusTime(d: Date) {
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
