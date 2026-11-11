@@ -12,10 +12,10 @@ import { MOSS, OG_DEFAULT_ALT, OG_SIZE } from '@/lib/seo/constants';
 import { HOME_SEO } from '@/lib/seo/pages';
 import './globals.css';
 
-const PaletteSwitcher = dynamic(() => import('@/components/PaletteSwitcher').then((m) => m.PaletteSwitcher));
-  // process.env.NODE_ENV === 'production'
-    // ? null
-    // : 
+const PaletteSwitcher =
+  process.env.NODE_ENV === 'production'
+    ? null
+    : dynamic(() => import('@/components/PaletteSwitcher').then((m) => m.PaletteSwitcher));
 
 const INTRO_GATE = `try{var d=document.documentElement,s=matchMedia('(prefers-reduced-motion: reduce)').matches||location.pathname!=='/'||location.hash||sessionStorage.getItem('raqm-intro')==='1';d.dataset.intro=s?'skip':'play'}catch(e){document.documentElement.dataset.intro='skip'}`;
 
